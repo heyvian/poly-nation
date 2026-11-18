@@ -1,21 +1,18 @@
 # Poly Nation
 
-**ARCH 606 – Studio III · Vian Esterhuizen**
+A system for testing the **programming** and **cross-pollination** of a mixed-use modular district (ARCH 606 Studio III, Vian Esterhuizen). The app models floor-space requirements per program and evaluates how programs are distributed and adjacent to one another across a fixed modular grid.
 
-Poly Nation is a "pollination" of programs: a radically mixed-use, modular waterfront district on the Bow River in Calgary. It layers **Sex** (love hotel), **Support** (senior care, daycare) and **Safety** (marine firehall) alongside **Infinite Rinse**, a public water-treatment facility and museum that remediates creosote-contaminated ground. Play, eroticism, hedonism and pleasure are treated as productive forces.
+## Purpose
 
-![Aerial view of the Poly Nation complex](docs/images/aerial-complex.png)
+- Test whether a proposed allocation of modules meets the program and floor-area requirements.
+- Test cross-pollination: how programs are layered and adjacent (e.g. sex / support / safety) rather than segregated.
+- Make it easy to vary the allocation and compare outcomes.
 
-## Concept
+## Requirements
 
-- **Pixel farm** – the whole district is assembled from one repeating modular unit, with programs distinguished by colour.
-- **Hubs** – radial "sunflower" clusters of linear modules around a central core; one hub is anchored by a tall tower with a swing-ride crown.
-- **Site plan** – (1) modular hubs, (2) distributed modules, (3) midway rides, plus a ferris wheel in the river.
-- **Context** – the Fifth City studio brief, concerned with creosote contamination along the Bow River.
+### Floor space
 
-## Program
-
-Total target: **20,000 m² GFA**.
+- Total gross floor area (GFA): **20,000 m²**.
 
 | Program | GFA | Share | ≈ Modules (÷ 81 m²) |
 | --- | --- | --- | --- |
@@ -26,50 +23,37 @@ Total target: **20,000 m² GFA**.
 | Senior care | 2,000 m² | 10% | 24.7 |
 | **Total** | **20,000 m²** | **100%** | **≈ 246.9** |
 
-## Modular unit
+### Modular unit
 
 | Dimension | Value |
 | --- | --- |
 | Width | 4.5 m |
 | Length | 18 m |
 | Height | 4 m |
-| Footprint | 81 m² |
+| Floor area per module | 81 m² |
 
-20,000 m² ÷ 81 m² ≈ 247 modules. Rounded per program (93 / 99 / 19 / 12 / 25 = 248 modules) the total is 20,088 m², so exactly 20,000 m² requires about 247 modules or deliberately non-modular space. Module counts count floor area; stacked modules count each level.
+- 20,000 m² ÷ 81 m² ≈ 247 modules. Rounding each program up gives 93 / 99 / 19 / 12 / 25 = 248 modules (20,088 m²), so the app must decide how to reconcile to exactly 20,000 m² (e.g. 247 modules, or non-modular space).
+- Stacked modules count floor area on each level.
 
-## Infinite Rinse
+### Functional requirements
 
-A water treatment facility and museum that remediates creosote through continuous circulation and filtration of water:
+- Define programs with a target GFA and a module count derived from the module size.
+- Place modules into a layout (hubs of modules around a core, distributed modules, midway rides) and track GFA per program against its target.
+- Report total GFA and deviation from 20,000 m² and from each program's share.
+- Evaluate cross-pollination: adjacency and layering between programs, and mix within each cluster.
+- Support alternate allocations so scenarios can be compared.
 
-1. **Public intake** – the kids' splash park drains to intake pumps.
-2. **Injection / rinse wells** – wash contaminated soil and groundwater.
-3. **Extraction / pump-out wells** – capture contaminant-laden water.
-4. **Treatment** – physical, chemical and adsorptive.
-5. **Recirculation** – treated water returns to the splash park, site uses and continued rinsing.
+## Programs
 
-A cut-off barrier wall protects the riverfront. Clean water is demonstrated publicly, with surfactant added downstream before re-injection. Recreation (water park, log ride) is part of the remediation infrastructure, and the facility includes public education and exhibition space.
+- **Infinite Rinse** – a water treatment facility and museum that remediates creosote through continuous circulation: public intake, injection/rinse wells, extraction wells, treatment, recirculation. Includes public education and exhibition space.
+- **Love hotel** – the largest program (Sex).
+- **Senior care** and **daycare** (Support).
+- **Marine firehall** (Safety) – boat bays and a river dock.
 
-![Remediation diagram](docs/images/remediation-diagram.png)
+## Context
 
-![Infinite Rinse gallery overlooking the clarifiers](docs/images/gallery.png)
+Bow River, Calgary; Fifth City studio brief concerned with creosote contamination.
 
-![Poly Nation waterworks atrium](docs/images/atrium.png)
+## Reference material
 
-## Design strategies (Phase 3 reflection)
-
-Flexible architecture risks needing massive machinery, which undermines play. Strategies:
-
-- Small-scale, hands-on changeability: movable benches, tables and fire pits; bike racks that turn into games.
-- Empty module slots become communal patios or balconies.
-- Colour-coded structural supports that can host bird nests.
-- Easily modifiable facades in colour and material.
-
-## Drawings
-
-Phase 2 includes south and east elevations (1:500), the firehall plan (1:200, boat bays and river dock), a sample 2-bedroom residential module plan (1:50) and a physical site model.
-
-## Repository contents
-
-- `docs/images/` – renderings and diagrams
-- `docs/pdfs/phase-2.pdf` – Phase 2 drawings
-- `docs/pdfs/phase-3-reflection.pdf` – Phase 3 reflection
+Studio drawings and reflection are in `docs/pdfs/` (`phase-2.pdf`, `phase-3-reflection.pdf`).
