@@ -1,0 +1,28 @@
+# Changelog
+
+## Codex handoff — V3.6 unchanged
+- Packaged exact current index and illustrated rationale, prior HTML snapshots, previews, context, and portable regression tests. No app behavior changed during packaging.
+
+## V3.6
+- Integrated printable Design Rationale (11 illustrated sections), standalone companion.
+- Full exterior promenade with program-influenced amenity zones and entry/climb approaches; outdoor area excluded from enclosed cap.
+- Fully cyclic swing animation and visitor queue/load/ride/unload; 30-second top dwell, speed-dependent chain angle.
+- Added navigation to exterior destinations and completed ride memory. No scoring formula change.
+
+## V3.5
+- Single sidebar, persistent Topology Designer + relationship strength, taller model viewport and score below canvas.
+
+## V3.4
+- Persistent cross-pollination dashboard, quick independent comparison trial; initially above canvas.
+
+## V3.3
+- Climbing wall width slider, 19.8 m height cap, reserved docks, outward slide crossing, climbing round trip scoring.
+
+## V3.1–V3.2
+- Furnished shared lobbies and per-program clustering; agent-based navigation; weighted encounter score, memory/fun bonuses and comparative trials.
+
+## V3.0
+- Grouped settings, numeric inputs, budget indicator, responsive UI, visibility and population geometry fixes.
+
+## V2.x
+- Core/module allocation, cap, dynamic circular room packing, topology, vacancies, entrance and circulation, roof, slide and swing, opaque façade, room minimum, cutaways, avatar placeholders, persistence and Rhino interchange. See COPILOT.md for exact version notes and docs/DESIGN_HISTORY.md for student direction.

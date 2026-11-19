@@ -1,73 +1,28 @@
-# Poly Nation
+# Poly Nation Cross Pollination Laboratory
+**Codex handoff · V3.6 baseline · November 2026**
 
-A system for testing the **programming** and **cross-pollination** of a mixed-use modular district (ARCH 606 Studio III, Vian Esterhuizen). The app models floor-space requirements per program and evaluates how programs are distributed and adjacent to one another across a fixed modular grid.
+A student-directed architectural research instrument for the Poly Nation / Infinite Rinse studio project: a stable mixed-use ring, adaptive plug-in modules, relationships, play and multispecies occupation, with a heuristic cross-pollination performance metric.
 
-## Purpose
+## Continue in Codex
+1. Extract this ZIP to a normal local folder. Open the `Poly_Nation_Codex` folder in Codex (rather than giving it only the HTML file).
+2. Open `index.html` in a browser for the current model. `Design_Rationale.html` opens the illustrated design record separately. The in-app button works without that additional file because the rationale is embedded.
+3. Start a new Codex conversation with the supplied `START_HERE.txt` prompt. `AGENTS.md` establishes ongoing project instructions.
+4. Optional but recommended: initialize a local Git repository, commit this untouched baseline, then use small commits for changes. No repository or remote is configured by this handoff.
+5. If you have a configuration saved in the previous browser session, export its JSON from the existing app and import it in the new one. This ZIP includes the source/defaults, not your personal browser localStorage, saved runs or current camera.
 
-- Test whether a proposed allocation of modules meets the program and floor-area requirements.
-- Test cross-pollination: how programs are layered and adjacent (e.g. sex / support / safety) rather than segregated.
-- Make it easy to vary the allocation and compare outcomes.
+## Files
+- `index.html` — exact last delivered V3.6 working source, vanilla HTML/CSS/JS. WebGL with software Canvas fallback. Native Rhino 3DM uses an optional network CDN; offline Rhino Python script is available. The app itself otherwise requires no build/dependencies.
+- `Design_Rationale.html` — exact illustrated presentation page.
+- `AGENTS.md` — design and implementation guardrails.
+- `docs/` — authorship, rationale (searchable text companion), simulation/scoring, project chronology, roadmap and architecture map.
+- `COPILOT.md` — extensive original engineering handoff, including historical changes and test notes; use the latest sections and actual source when old notes conflict.
+- `archive/` — earlier standalone HTML builds for reference and rollback, not active source. Open them only if needed; browser storage key is shared, so use a separate browser profile or local JSON backup to avoid conflicts.
+- `previews/` — images from V3.6 previous tests, not new renderings.
+- `references/` — selected studio briefs, diagrams, reports and prior Copilot brief, copied unchanged for context. These are not app dependencies or newly reviewed/evidentiary claims; consult the actual documents for source content.
+- `tests/` — optional developer regression tests, not required for use.
 
-## Requirements
+## Running locally
+Double-click `index.html`, or from this directory `python -m http.server 8000` then open `http://localhost:8000`. Using a consistent local URL can help with browser storage; imported JSON is the portable record. Do not expose the server publicly. Optional smoke tests are documented in `tests/README.md`.
 
-### Floor space
-
-- Total gross floor area (GFA): **20,000 m²**.
-
-| Program | GFA | Share | ≈ Modules (÷ 81 m²) |
-| --- | --- | --- | --- |
-| Infinite Rinse – water treatment and museum | 7,500 m² | 37.5% | 92.6 |
-| Love hotel | 8,000 m² | 40% | 98.8 |
-| Marine firehall | 1,500 m² | 7.5% | 18.5 |
-| Daycare | 1,000 m² | 5% | 12.3 |
-| Senior care | 2,000 m² | 10% | 24.7 |
-| **Total** | **20,000 m²** | **100%** | **≈ 246.9** |
-
-### Modular unit
-
-| Dimension | Value |
-| --- | --- |
-| Width | 4.5 m |
-| Length | 18 m |
-| Height | 4 m |
-| Floor area per module | 81 m² |
-
-- 20,000 m² ÷ 81 m² ≈ 247 modules. Rounding each program up gives 93 / 99 / 19 / 12 / 25 = 248 modules (20,088 m²), so the app must decide how to reconcile to exactly 20,000 m² (e.g. 247 modules, or non-modular space).
-- Stacked modules count floor area on each level.
-
-### Functional requirements
-
-- Define programs with a target GFA and a module count derived from the module size.
-- Place modules into a layout (hubs of modules around a core, distributed modules, midway rides) and track GFA per program against its target.
-- Report total GFA and deviation from 20,000 m² and from each program's share.
-- Evaluate cross-pollination: adjacency and layering between programs, and mix within each cluster.
-- Support alternate allocations so scenarios can be compared.
-
-## Programs
-
-- **Infinite Rinse** – a water treatment facility and museum that remediates creosote through continuous circulation: public intake, injection/rinse wells, extraction wells, treatment, recirculation. Includes public education and exhibition space.
-- **Love hotel** – the largest program (Sex).
-- **Senior care** and **daycare** (Support).
-- **Marine firehall** (Safety) – boat bays and a river dock.
-
-## Running the laboratory
-
-Open `index.html` in a modern browser. There is no build step or dependency.
-
-```
-index.html          UI markup; defines CSS and JS load order
-src/css/            01-base … 06-layout (cascade order matters)
-src/js/             01-config … 17-ui-shell (classic scripts sharing one scope; load order matters)
-```
-
-JS files, in order: config and state, controls, relations and room layout, features, the `derive()` solver, topology map, mesh builder, visitor simulation, cross-pollination score, renderer, update loop, persistence, export, UI start-up. Each file is commented.
-
-Note: the app's module height constant is 3.5 m, while the brief specifies 4 m.
-
-## Context
-
-Bow River, Calgary; Fifth City studio brief concerned with creosote contamination.
-
-## Reference material
-
-Studio drawings and reflection are in `docs/pdfs/` (`phase-2.pdf`, `phase-3-reflection.pdf`).
+## Source of truth and limits
+The app and embedded rationale are preserved byte-for-byte. Earlier notes describe superseded behavior; do not blindly restore them. The narrative is a synthesis of the available conversation, original handoff and rationale, not a complete verbatim chat transcript. No observed social data, engineered ride safety, BIM/code validation or remediation process simulation is included. The latest known V3.6 checks were software-rendered browser tests; native Rhino and hardware GPU output still require local verification. See `docs/AUTHORSHIP.md` and `docs/SIMULATION.md`.

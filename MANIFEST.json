@@ -1,0 +1,300 @@
+{
+  "baseline": "V3.6",
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 52,
+      "sha256": "88321e18e998a152b69df880550831b39471309aa444146c8d8cfabb24adf69e"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 5564,
+      "sha256": "a939fc796e59eec99d9b272a8578d99a27ff183fb19f5a67a14e3f9740f14718"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 1642,
+      "sha256": "6069c78b0fb6bfe60f82237e2ce5d4c585eb88c2a79b9b683e7ab25db37b6f14"
+    },
+    {
+      "path": "COPILOT.md",
+      "bytes": 41445,
+      "sha256": "8317cf0caa1b8a86bdec10282f26feff209ceefe0e7e45a6e36cc7996058cc3c"
+    },
+    {
+      "path": "Design_Rationale.html",
+      "bytes": 504101,
+      "sha256": "dc81bd0e7c48a18e981e74ceaff86cd71b708bf3501112458e73437e21e70632"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3534,
+      "sha256": "d5e5828ac3bb02bd6d8f1380523459d2af74eb9595cbc912c7504a6dcc38e9c6"
+    },
+    {
+      "path": "START_HERE.txt",
+      "bytes": 710,
+      "sha256": "def6fadb1de289187d2a4516a03d0d508e3d600918ebe81cb1bec878db2565ff"
+    },
+    {
+      "path": "archive/Poly_Nation_Cross_Pollination_Laboratory_v3_1.html",
+      "bytes": 157625,
+      "sha256": "74e492e39f38e838612bf299a1e1bf917c77b2358d0054af514e0ee0faa42c55"
+    },
+    {
+      "path": "archive/Poly_Nation_Cross_Pollination_Laboratory_v3_2.html",
+      "bytes": 174127,
+      "sha256": "20e7079df8a6a290554818402c7c28bf662a48c4470a6996f3d5407c819019b5"
+    },
+    {
+      "path": "archive/Poly_Nation_Cross_Pollination_Laboratory_v3_3.html",
+      "bytes": 179889,
+      "sha256": "8abc4059c95d74641de55affa300c8c3125333324770a8e1e2ac2fdbeed22e42"
+    },
+    {
+      "path": "archive/Poly_Nation_Cross_Pollination_Laboratory_v3_4.html",
+      "bytes": 184971,
+      "sha256": "fd477e36eb208b3e019588a1ea5b008603f314f471fb3121c22b60a23f4dafec"
+    },
+    {
+      "path": "archive/Poly_Nation_Cross_Pollination_Laboratory_v3_5.html",
+      "bytes": 193417,
+      "sha256": "02cb087fc434648a6a26d3d9f907ddce8f60cab6d67b91931905213d1ba2db36"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab.html",
+      "bytes": 35434,
+      "sha256": "8931389ed09c8e56dd82c2b7a70d902392c55836c42f307cc98fdc787caab7f4"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2.html",
+      "bytes": 43611,
+      "sha256": "6740b99c10500b56a56b8695ea8274db03088a07b2b32543202e461d1d150b78"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_1.html",
+      "bytes": 43611,
+      "sha256": "cb086811c2f718c0c27479947c909e750de95a19054eb73da4d4dea16688bccb"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_2.html",
+      "bytes": 46753,
+      "sha256": "7b1337b00f7e49dc4392a83db9147277a3dc8a1a7a50a71cd937beea83efbebb"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_3.html",
+      "bytes": 49255,
+      "sha256": "ef2be2cdf19f7ff62f9807b5f8f47c3647a1d8ccdea0ed4e2fcac1a214bb3c89"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_4.html",
+      "bytes": 54628,
+      "sha256": "05ff26f94590fbdbf4e55f4e14b777c24aea9b12786c6770c7d61c32ababd14b"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_4_1.html",
+      "bytes": 55329,
+      "sha256": "7a368f7314771b5513914fd37645a34974e0bcf1a4db38e7aea9a416c8961dca"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_5.html",
+      "bytes": 66245,
+      "sha256": "64b8188d591ebfe40406cc506e754836e8b5dfc73fbdb77d1e4a8ab306c86b7d"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_6.html",
+      "bytes": 75762,
+      "sha256": "e4415f3196d7980dbc708d5c8cf1708357901debbadb6449244253035032ccd3"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_7.html",
+      "bytes": 86210,
+      "sha256": "06a8819ef36fccdef8da6fb25b1bad44d4dd197597896fe9a39f3f5a7f2fa3c1"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_8.html",
+      "bytes": 89706,
+      "sha256": "2f5c6cdedaf2d035beb9730d87cddca3a7c2122b76cff77a99c2c0bc251e8088"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_8_1.html",
+      "bytes": 90082,
+      "sha256": "ec92c3ee9e8c3d5718026f9956f92f76045b1949c926d3b5e38558f40dd610f7"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_9.html",
+      "bytes": 105981,
+      "sha256": "781eeac7cb7e62258daa4033eb77cdf3a0a283e4a18fa9e1af6397ad87f9528d"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_9_1.html",
+      "bytes": 106079,
+      "sha256": "d8cd53f97882ed96ccb6f6024e26f0df9393d7643f63fbadc547f956270c7261"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_9_2.html",
+      "bytes": 106079,
+      "sha256": "0f106c2d96b45dad085aee466a8a5a3e14bc76d883b02669efaf5597110c46b2"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_9_3.html",
+      "bytes": 106395,
+      "sha256": "eac5923a6b6794b1d6770b72b0880f61ac06e2aca162b0de3061a7edf10325f0"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_9_4.html",
+      "bytes": 108156,
+      "sha256": "2aa117f1297fa1fceca783075b01219b625f01ea9ff63916340125b97f5f34af"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_9_5.html",
+      "bytes": 110443,
+      "sha256": "698ee5f8ab786f4d3c2636975ddf4565e032da4702de79efad3ac0c578d5b8a8"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v2_9_6.html",
+      "bytes": 117222,
+      "sha256": "9df27cb936b96510bfea56b566f50fa75dc8dd77bfc15044b396730a8a19abb4"
+    },
+    {
+      "path": "archive/Poly_Nation_Massing_Lab_v3_0.html",
+      "bytes": 133604,
+      "sha256": "cf16b9dff3b1f7bda2c0978dd9cee0db16c7d759d2dfaa357233122f4efa6ed8"
+    },
+    {
+      "path": "docs/AUTHORSHIP.md",
+      "bytes": 4300,
+      "sha256": "08db556f4c044f892cb67c21ec9db217291a091c921fcc486a707688b340dca3"
+    },
+    {
+      "path": "docs/CODE_MAP.md",
+      "bytes": 2030,
+      "sha256": "4b9542965f16474ff8748b9976e34acaef61c4f0527f9973d98a4d58f90eb979"
+    },
+    {
+      "path": "docs/DESIGN_HISTORY.md",
+      "bytes": 3405,
+      "sha256": "c2cf4d147999f48d20847031476341a5f253ab8daefd29af9e2eb34eb9c12a30"
+    },
+    {
+      "path": "docs/DESIGN_RATIONALE.md",
+      "bytes": 27861,
+      "sha256": "316f33e5b85abade97b4c69cd8c7c0d4dc005eb485f41bd006421ed049f4fd3e"
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "bytes": 1376,
+      "sha256": "019460af731b7ba9c5a9b1c8979c033aa146cf83fa9b1e1e4387181b56153471"
+    },
+    {
+      "path": "docs/SIMULATION.md",
+      "bytes": 5046,
+      "sha256": "b413db2084b8e57eda5fc8eaa5f49d61783f73a746bce2d2bddf1751e941cf03"
+    },
+    {
+      "path": "index.html",
+      "bytes": 706367,
+      "sha256": "2c72b56a105edddcb88c866fc9710f39cee907bacc104fd7d063f0002c1cf03c"
+    },
+    {
+      "path": "previews/boarding-preview.png",
+      "bytes": 334127,
+      "sha256": "02706ba0dd0ad14d5cc7d735f2c2434075018dbee256a11e841a705e747d5d30"
+    },
+    {
+      "path": "previews/model-preview.png",
+      "bytes": 314528,
+      "sha256": "5fbdae36166feb1f61de5e9dc2e3d0763cf9c95442584836ce45963cf1cff71b"
+    },
+    {
+      "path": "previews/plaza-preview.png",
+      "bytes": 442029,
+      "sha256": "48f3335d4c6c7e44ea620e683a2d42f26ae2dfc2bbd71d28df7f582007d0eafc"
+    },
+    {
+      "path": "previews/rationale-mobile.png",
+      "bytes": 80290,
+      "sha256": "418e67d2d5fbc3ada3dc71e04b80d4564b3b3bf3d3ccd5db1d7fa5d334c5f4c1"
+    },
+    {
+      "path": "previews/rationale-preview.png",
+      "bytes": 224235,
+      "sha256": "30308b3a6bb1795ffde4cd38a889f23fcfffdd8e3ca888629aad2be76c8f1f4c"
+    },
+    {
+      "path": "previews/score-rationale.png",
+      "bytes": 170680,
+      "sha256": "6da61c949b3269c40bf715a702a30eac525b35f078b20a7c615ec2667dc2b607"
+    },
+    {
+      "path": "references/02_mgp_resource.pdf",
+      "bytes": 10038014,
+      "sha256": "d689e0eecda95ff38b159f7c525ce0b1fc896d818ae0cf0973a16f52b3027d88"
+    },
+    {
+      "path": "references/16-Jacklin.pdf",
+      "bytes": 1819818,
+      "sha256": "44ab3082e7e3fc38393b0b47303ea9484c1f6a7f8bc335871f47560ef5aa402a"
+    },
+    {
+      "path": "references/261113-ARCH-606-PHASE-3.pdf",
+      "bytes": 905936,
+      "sha256": "9acfb3005aecd281dff09afbc2161ec2dd93bb652e506b18afdb48dce3bf3c9c"
+    },
+    {
+      "path": "references/Poly_Nation_Copilot_Brief.md",
+      "bytes": 8332,
+      "sha256": "3a6dd47145b3c7564a043c6df10401fe6340a688d83bfc7e714f10d152199c6a"
+    },
+    {
+      "path": "references/Poly_Nation_Drawn_Redlines.pdf",
+      "bytes": 4092143,
+      "sha256": "fb3e0d27185c2e81ce35cfa6afa6b1c2e42384a35c8a09944f91f11e6f122e0a"
+    },
+    {
+      "path": "references/Poly_Nation_Phase3_Complete_Design_Package.pdf",
+      "bytes": 25653625,
+      "sha256": "6ba4f106b1958c3ba2d894701cc1b2c89946202bf2b65722489d57da896c7ce5"
+    },
+    {
+      "path": "references/Poly_Nation_Systems_Diagrams.pdf",
+      "bytes": 31884,
+      "sha256": "a60df1009434e04e3bf01cef877a15ce5aa8fc5f8da7351e2e982dcd31acbf13"
+    },
+    {
+      "path": "references/README.md",
+      "bytes": 617,
+      "sha256": "328c97580a6dcfbcfea102443f459bacd757b41aa336999f20a2db181fcb37a8"
+    },
+    {
+      "path": "references/aep-assessment-potential-risks-to-human-health-from-creosote-community-of-west-hillhurst-2022.pdf",
+      "bytes": 6071566,
+      "sha256": "5b280d29fe7297974b60bed35a0a57ac163033d7a04dfef931e411cc02a8f1be"
+    },
+    {
+      "path": "references/arch606-esterhuizen-vian-phase-2.pdf",
+      "bytes": 16085973,
+      "sha256": "1274552734854e9996e1fc6b98613cbdf721bc4ef7a54988af03e66885ada30d"
+    },
+    {
+      "path": "references/west-village-area-redevelopment-plan.pdf",
+      "bytes": 6363008,
+      "sha256": "21a688830c9417e85f6e468036ea2564c44e4dc8f14ea9ba135464ee2be719ee"
+    },
+    {
+      "path": "tests/README.md",
+      "bytes": 910,
+      "sha256": "55f67fed3a179a8ba6f8ca88d54adbf9d7ca83fd67e9fdcd1c57163e5444b67c"
+    },
+    {
+      "path": "tests/test_poly36.py",
+      "bytes": 3231,
+      "sha256": "363c36d929145260cd26a6f69a19c807ac5c81f7cb240d2ceb2a9c277c6afc96"
+    },
+    {
+      "path": "tests/test_poly36_features.py",
+      "bytes": 3348,
+      "sha256": "cbefadeab9a418df8825aab74d450f8cfad1887e23c4a163a5ef872d4843c85f"
+    }
+  ]
+}
