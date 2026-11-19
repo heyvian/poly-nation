@@ -1,6 +1,6 @@
 # Design rationale — text companion to Design_Rationale.html
 
-Extracted from the existing illustrated V3.6 record. The HTML page retains diagrams, visual hierarchy and presentation formatting. Early decisions are paraphrased where original messages are unavailable.
+Text companion to the illustrated architectural record. Early decisions are paraphrased where original messages are unavailable.
 
 Poly Nation – Design Rationale
 
@@ -24,7 +24,7 @@ Computational implementation and iterative assistance
 
 ChatGPT (AI-assisted development)
 
-V3.5 laboratory · actual prior-version interface, not a proposed rendering.
+Generated axonometric showing the annular core, radial modules, public roof and atrium swing.
 
 Designer-led
 
@@ -36,13 +36,13 @@ AI implementation
 
 How can it be computed?
 
-ChatGPT converted the brief into working HTML/CSS/JavaScript, geometry, layout heuristics, graph routing, scoring mathematics, controls, visualizations and export code.
+ChatGPT translated the brief into generated geometry, room and module placement, circulation networks and an encounter simulation.
 
 Iterative decisions
 
 What was refined together?
 
-Specific room ranges, clearance allowances, clustering heuristics, numerical scoring values, navigation details and presentation layouts include AI proposals, student corrections and revisions.
+Room sizes, clearances, clustering rules, circulation details and encounter weights include AI proposals, student corrections and revisions.
 
 Attribution rule:
 
@@ -68,7 +68,7 @@ means the design requirement or concept is traceable to the student's requests, 
 
 09 Experiments
 
-10 Interface
+10 Placement
 
 11 Materials
 
@@ -178,7 +178,7 @@ Student request · V2.9 iteration (quotation punctuation normalized)
 
 Relationships are the design input.
 
-The diagram is a configurable set of program relationships, not a literal plan of the building.
+The Topology Designer starts with a graph of program relationships. The same graph shapes rooms in the permanent ring and docks along its edge.
 
 Example relationship settings, not the default. By default all inter-program relationships are neutral and explicit clustering is off.
 
@@ -186,7 +186,7 @@ Designer-led
 
 Design decisions
 
-Manipulate the representation of program relationships using draggable nodes, with a separate Clustering strength slider for same-program grouping.
+Use the distance between nodes to weight pair relationships. Group each program’s rooms and modules around one part of the ring when clustering is selected.
 
 Explicitly distinguish attraction, repulsion and neutrality between program pairs. Start every pair neutral; do not impose a social hierarchy before the experiment.
 
@@ -198,7 +198,7 @@ AI implementation
 
 Heuristics
 
-Node distance weights attraction. Repel prioritizes separation among nearby rooms and modules on the same floor. Vertical neighbors are allowed. Selected programs cluster even at 0%, with the slider adding emphasis. The seeded room and dock solvers balance those preferences with area, circulation and the available geometry.
+Attraction favors adjacent rooms and can create a shared lobby where space allows. Repel prioritizes separation among rooms and modules on the same floor, while permitting vertical neighbors and shared public routes. Neutral carries no pair-specific preference. Selected programs cluster even at 0%, with the slider adding emphasis independently of the pair relationships. The seeded room and dock solvers balance those preferences with area, circulation and the available geometry.
 
 Ground-first Firehall
 
@@ -460,7 +460,7 @@ A score reports modeled co-presence, not actual social exchange. The current cod
 
 Compare architectures as hypotheses.
 
-The user controls the model rather than accepting a single optimized building.
+Compare alternatives to see how the core, docks and public routes change where people and animals may meet.
 
 Feedback loop: modify design parameters, generate a building, simulate occupation, observe the score, then reconsider the architecture.
 
@@ -480,45 +480,31 @@ Seeded layout and agent behavior; separate five-simulated-minute comparative tri
 
 Student request · V3.2 iteration
 
-10 / INTERFACE AS AN INSTRUMENT
+10 / PROGRAM PLACEMENT
 
-The experiment comes before the settings.
+Where programs meet the ring.
 
-The interface communicates the relationship between architectural input and social output.
+The permanent rooms and removable modules share one circulation network. Their different lifespans allow a program to expand at the edge or consolidate in the core as its needs change.
 
-V3.5 hierarchy: one settings rail, prominent Topology Designer, large 3D viewport, immediately visible cross-pollination score.
+Generated ground-floor plan (seed 606) with Firehall clustering and Love Hotel–Daycare Repel. The five red Firehall modules occupy neighboring docks near the red Firehall room. The lower-left gap in the modules leaves room for the entry approach.
 
-Designer-led
+Adjacency at the edge
 
-Interaction decisions
+Rooms can create a sheltered gathering point, and nearby docks give the same program room to expand. The outer corridor reaches the module doors. Programs that repel can occupy separate stretches of the same floor and still reach the lifts, roof and promenade through common routes.
 
-Keep the massing model as the central object, with a clear orbit camera and enough zoom to inspect detail. Add X-ray, independent room/module/façade views and top-down floor cutaways.
+The case for an empty dock
 
-Keep the Topology Designer and Clustering strength slider permanently accessible, not buried in a tab.
+The entrance, slide and climb reserve parts of the perimeter. Where the slide blocks a dock, an interior room can meet the façade and the circulation can pass behind it. Other open docks can stay available for a future module or support a balcony, garden or retail use.
 
-Prioritize the score as a primary result: initially consider a HUD, then explicitly move it below the canvas to avoid covering the building.
+Testing a local change
 
-Reject the overly extensive V3.0 UI overhaul, return to the earlier visual style, favor a single small settings column and group less-important controls under Building, Modules and Features (with allocation, visitors and score also accessible).
-
-Name the project Poly Nation Cross Pollination Laboratory.
-
-AI implementation
-
-Interaction design
-
-Responsive layout, compact sidebar, tab navigation, numeric controls, toolbars, area readouts and dashboard. HTML/CSS/JS renderer, local state, JSON save/load, deterministic variants and native/offline Rhino export workflows were implemented by AI. User guided the hierarchy and rejected/revised earlier solutions; exact layout and styling are an AI execution of that direction.
-
-Direct edits and on-demand detail
-
-The model previews a room, module or available dock in amber before a programming edit. The solver checks the enclosed area cap, dock reservations, same-floor Repel and entrance access, then updates the area schedule, shared lobbies and simulated routes for an accepted edit.
-
-On laptop layouts, the canvas resizes to keep the score and model controls visible. Area details opens the schedule on demand. The wordmark takes its plan-view motif from the annular core and radial modules.
+Reassigning a room or module, or adding a module at an eligible dock, tests a local change to the larger scheme. The model checks the enclosed area cap, dock reservations, same-floor Repel and entrance access before updating shared lobbies and circulation for the revised plan.
 
 11 / MATERIAL STUDY
 
 Compare structure and cladding.
 
-The designer asked to compare structure and cladding after setting the massing, using exploded axonometrics and a live view of the overall building.
+The study holds the massing fixed so the designer can compare material assemblies for the permanent ring and removable modules.
 
 Core ring and Firehall module axonometrics
 
@@ -526,15 +512,15 @@ The illustrated pages show the cladding and structure as separate layers.
 
 From massing to materials
 
-Materials starts from a separate copy of the current massing. Update from massing refreshes that copy on request. Labeled swatches assign structure and cladding to the whole building, the core, the core by program, all modules, or modules by program. Six collapsible cards highlight the active assignment and show typical assemblies for the core ring and each module program.
+The core ring and the removable modules have different structural roles. A continuous core supports rooms and public routes. Repeated module framing could simplify connections to the core while allowing finishes to vary by program. The exploded drawings make it possible to examine the frame and envelope independently.
 
 Comparative estimates
 
-The cost study applies editable CAD rates to the core floor area, modeled façade area and enclosed module quantities. Starting assumptions are $350 per m² of floor for the reference concrete structure and $95 per m² of wall for the reference corrugated cladding. The estimate covers those assemblies. The live summary reports typical structural behavior and the diversity of materials used.
+The cost study applies editable CAD rates to the core floor area, modeled façade area and enclosed module quantities. Starting assumptions are $350 per m² of floor for the reference concrete structure and $95 per m² of wall for the reference corrugated cladding. Estimated assembly mass, typical structural behavior and the range of finishes help compare the consequences of a material choice across the building.
 
 Design direction and implementation
 
-The student directed the separate Materials phase, the comparison by program, the exploded drawings and the approximate CAD analysis. The assistant implemented the snapshot workflow, material library, quantity takeoff and starting rates. The diagrams and strength descriptions support schematic comparisons.
+The student directed the comparison by program, the exploded drawings and the approximate CAD analysis. The assistant assembled the material library, quantity takeoff and initial assumptions. The diagrams and strength descriptions support schematic comparisons.
 
 12 / PROCESS & AUTHORSHIP RECORD
 
@@ -562,33 +548,27 @@ Route search, collision tests, corridor sectors, hub carving, topology heuristic
 
 V2.8 → V2.9.6
 
-Plaza extension, neutral default, roof park with retail, slide-facing rooms and detours, solid wall, color revisions, floor cap slider, cutaways and bigger rooms, diverse people and animals.
+Plaza extension, neutral default, roof park with retail, slide-facing rooms and detours, solid wall, adjustable floor area cap, bigger rooms, diverse people and animals.
 
-Plaza/roof furnishings, room size/minimum ranges, wall thickness, ride speed research and animation, schematic figures, controls and area accounting.
+Plaza and roof furnishings, room size ranges, wall thickness, ride speed research, schematic figures and area accounting.
 
 V3.0 → V3.1
 
-UI feedback; lobbies as places of gathering; agent movement, room visits, temporary attraction, elevators, greenhouse, entrance/exit, fun; topology priority; optional clustering for any program.
+Lobbies as places of gathering, agent movement, room visits, temporary attraction, elevators, greenhouse, entry and exit, play, and optional clustering for any program.
 
-UI prototypes, rug/seating mesh, seeded pathfinding, routing rules, time and movement distributions, concentration solver, animal route proposals.
+Lobby furnishings, seeded pathfinding, routing rules, time and movement distributions, clustering solver and animal route proposals.
 
 V3.2
 
 Concept of a weighted encounter score, spatial hierarchy, room memory, fun-memory enhancement, configuration comparison.
 
-Exact scoring formula, normalization, timers, thresholds, extra multipliers, repeat-contact limits, fixed-length trial and dashboard implementation.
+Exact scoring formula, normalization, timers, thresholds, extra multipliers, repeat-contact limits and fixed-length trials.
 
 V3.3
 
 Adjustable climbing wall, module displacement, slide bows outward, CCC height precedent, compulsory descent.
 
 Route bulge and clearance assumption, height conversion, blocked-slot calculation, climbing state logic and tests.
-
-V3.4 → V3.5
-
-Score prominence; topology & strength visibility; prefer original look and single-column organization, taller canvas, score below it.
-
-Two alternative dashboard/UX layouts; responsive implementation and regression tests.
 
 V3.6
 
@@ -598,17 +578,17 @@ Authorship synthesis and diagrams, plaza geometry and route graph, activity dist
 
 After V3.6
 
-Ground-first Firehall, same-floor Repel, direct programming edits, a fixed model workspace on laptops, and a separate Materials study with exploded assemblies.
+Ground-first Firehall, same-floor Repel, local program changes, a longer swing dwell with less outward tilt, and a material study with exploded assemblies.
 
-Placement constraints and hover feedback, on-demand area schedule, radial plan wordmark, snapshot and material assignment logic, and comparative CAD assumptions.
+Placement and circulation checks, revised swing motion, assembly quantity takeoff and comparative CAD assumptions.
 
 Suggested presentation statement
 
-“I developed the architectural concept, program relationships, modular and permanent spatial logic, circulation and gathering strategy, recreational features, and the research premise of measuring cross-pollination through weighted encounters. I directed iterative changes to the application's behavior and interface. I used ChatGPT to translate those decisions into an interactive computational model, including geometry generation, spatial allocation, agent routing, numerical scoring, user-interface code, and export tools. The assistant also proposed implementation assumptions and refinements, including specific numerical weights, thresholds and algorithms, which I could review and adjust. The model is an exploratory design instrument rather than an empirically validated simulation.”
+“I developed the architectural concept, program relationships, modular and permanent spatial logic, circulation and gathering strategy, recreational features, and the research premise of measuring cross-pollination through weighted encounters. I used ChatGPT to translate those decisions into a computational model that generates layouts, routes agents and measures modeled encounters. I directed revisions to the way rooms, modules and public routes are arranged. I could review and adjust the proposed weights, thresholds and assumptions. The model supports architectural exploration.”
 
 Evidence and scope
 
-The available development conversation, the original Copilot brief and the versioned repository inform this record. Earlier sections preserve the design sequence. The current application and its browser tests were used to verify the later topology, programming, interface and Materials workflows. Early attribution draws on the available prompt summaries.
+The available development conversation, the original Copilot brief and the versioned repository inform this record. Earlier sections preserve the design sequence. The current model and its browser tests were used to verify the later topology, programming and material studies. Early attribution draws on the available prompt summaries.
 
 The live model shows the generated geometry. The design diagrams and material estimates are schematic comparisons. The original architectural drawings remain part of the studio reference material.
 

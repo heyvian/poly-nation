@@ -16,6 +16,9 @@ with sync_playwright() as p:
  assert page.locator('.dr-section').count()==12 and page.locator('.dr-svg').count()>=8
  assert page.locator('.dr-hero-image img').evaluate('(im)=>im.complete && im.naturalWidth>0')
  page.screenshot(path=str(out/'rationale-preview.png'))
+ page.get_by_role('link', name='10 Placement').click()
+ assert page.get_by_role('heading', name='Where programs meet the ring.').is_visible()
+ assert page.locator('#dr10 img').evaluate('(im)=>im.complete && im.naturalWidth>0')
  page.get_by_role('link', name='11 Materials').click()
  assert page.get_by_role('heading', name='Compare structure and cladding.').is_visible()
  assert page.locator('#dr11 img').evaluate_all('(images)=>images.length===2 && images.every(image=>image.complete && image.naturalWidth>0)')

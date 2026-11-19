@@ -11,7 +11,7 @@ In Massing, turn on **Edit programming** and click a room, module, or available 
 
 **Materials** starts from a separate copy of the current massing and saves the study locally in the browser. **Update from massing** refreshes that copy. Use the swatch palettes to assign structure and cladding to the building, core, or module programs. Open any of the six assembly cards to see its exploded axonometric below the live model. **Cost & analysis** shows CAD estimates by assembly, per-module averages, and a building summary based on the chosen materials. **Estimate assumptions** sets the two benchmark rates. The estimates cover the core ring and enclosed modules. Use **Material design rationale** to keep your own notes alongside the study.
 
-Use **Design rationale** to open the illustrated design record. Export JSON to carry a saved design to another browser or machine.
+Use **Design rationale** to open the illustrated design record. Refreshing the same browser tab reopens the active view. Export JSON to carry a saved design to another browser or machine.
 
 ## Files
 - `index.html` — active standalone app, vanilla HTML/CSS/JS. WebGL with software Canvas fallback. Native Rhino 3DM uses an optional network CDN; offline Rhino Python script is available. The app itself otherwise requires no build/dependencies.

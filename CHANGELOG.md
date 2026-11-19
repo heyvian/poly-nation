@@ -1,5 +1,9 @@
 # Changelog
 
+## Design Rationale and workspace restoration
+- Refocused the illustrated and text rationale on architectural programming, module placement, circulation, and materials. Showed how the Topology Designer shapes a generated ground-floor plan.
+- Reloading a browser tab restores the active Massing, Materials, or Design Rationale view.
+
 ## Programming preview
 - Highlighted editable rooms, modules, and docks on hover with the location and program shown before selection.
 

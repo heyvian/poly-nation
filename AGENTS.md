@@ -3,6 +3,7 @@
 ## Start here
 - The active app is `index.html`, developed from the V3.6 handoff. Open directly in a browser or serve locally; no npm build. Read `README.md`, `docs/DESIGN_RATIONALE.md`, `docs/SIMULATION.md` and `docs/AUTHORSHIP.md` before substantive changes. `COPILOT.md` is the long chronological engineering brief; later entries supersede earlier descriptions. `Design_Rationale.html` is the standalone illustrated presentation record, also embedded in the app.
 - The student is the design director. Implement their requested logic; do not silently substitute a different architecture or empirical claim. Clearly flag proposed design changes, numerical assumptions and uncertainties. Distinguish user decisions from AI contributions when updating the rationale.
+- Focus the Design Rationale on architecture, including program, module placement, circulation and materials. Present the Topology Designer as a method for shaping spatial relationships. Leave interface and layout history in the engineering record.
 - Preserve the original muted diagrammatic palette and single-rail layout. The Topology Designer and Clustering strength stay prominent; large canvas; live cross-pollination score directly below, not a HUD covering the model. Less important controls grouped into Building, Modules, Features, Allocation, Visitors, Score. Do not undertake a major UI overhaul unasked.
 
 ## Non-negotiable current design intent
