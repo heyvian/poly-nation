@@ -219,6 +219,137 @@
  .material-controls { border-right: 0; }
 }
 
+/* The assembly schedule shares the paper, ink, and diagram colors of the massing tools. */
+.material-model { flex-direction: column; }
+.material-view-switch {
+ display: flex;
+ gap: 6px;
+ padding: 10px 14px;
+ border-bottom: 1px solid var(--line);
+ background: var(--paper);
+}
+.material-view-switch button[aria-pressed="true"] {
+ background: #dce8dd;
+ border-color: #a7b9ad;
+ color: #294b3f;
+}
+.material-assemblies {
+ flex: 1;
+ min-height: 0;
+ overflow: auto;
+ padding: 16px clamp(12px, 2.5vw, 34px) 26px;
+ background: #eef1e9;
+}
+#material3D[hidden], #materialAssemblies[hidden] { display: none; }
+.assembly-heading {
+ display: flex;
+ align-items: baseline;
+ justify-content: space-between;
+ gap: 12px;
+ margin-bottom: 12px;
+ padding: 0;
+ border: 0;
+ background: transparent;
+}
+.assembly-heading h2, .assembly-heading p { margin: 0; }
+.assembly-heading p { margin-top: 4px; }
+.assembly-estimates { max-width: 340px; font-size: 11px; }
+.assembly-estimates summary { white-space: nowrap; }
+.assembly-estimates p { margin: 5px 0 0; line-height: 1.5; }
+.module-assemblies {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(min(255px, 100%), 1fr));
+ gap: 10px;
+}
+.assembly-module-title { margin: 18px 0 8px; }
+.assembly-card {
+ min-width: 0;
+ display: grid;
+ align-content: start;
+ gap: 8px;
+ padding: 10px;
+ border: 1px solid var(--line);
+ border-radius: 6px;
+ background: var(--paper);
+}
+.assembly-card-head {
+ display: flex;
+ align-items: baseline;
+ justify-content: space-between;
+ gap: 8px;
+ padding: 0;
+ border: 0;
+ background: transparent;
+}
+.assembly-card-head h3, .assembly-card-head h4 { margin: 0; color: var(--ink); }
+.assembly-card-head button { padding: 4px 7px; min-height: 25px; white-space: nowrap; font-size: 11px; }
+.assembly-card h4::before {
+ content: "";
+ display: inline-block;
+ width: 8px;
+ height: 8px;
+ margin-right: 6px;
+ background: var(--program-color);
+ border-radius: 2px;
+}
+.assembly-variant { display: grid; gap: 4px; font-size: 11px; color: var(--muted); }
+.assembly-variant select { width: 100%; }
+.assembly-figure {
+ position: relative;
+ margin: 0;
+ min-width: 0;
+ background: #f0f2e9;
+ border: 1px solid var(--line);
+ border-radius: 4px;
+}
+.assembly-figure canvas {
+ display: block;
+ width: 100%;
+ height: 177px;
+}
+.assembly-fig-label {
+ position: absolute;
+ left: 8px;
+ font-size: 9px;
+ color: #4d6257;
+ letter-spacing: 0.06em;
+ text-transform: uppercase;
+ pointer-events: none;
+}
+.assembly-fig-label.cladding { top: 7px; }
+.assembly-fig-label.structure { bottom: 6px; }
+.assembly-card-core { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+.assembly-card-core > header { grid-column: 1 / -1; }
+.assembly-card-core .assembly-figure { grid-row: span 2; }
+.assembly-card-core canvas { height: 245px; }
+.assembly-layer { min-width: 0; }
+.assembly-layer + .assembly-layer { border-top: 1px solid var(--line); margin-top: 7px; padding-top: 7px; }
+.assembly-layer h5, .assembly-layer p { margin: 0; }
+.assembly-layer h5 { font-size: 10px; color: var(--muted); font-weight: 600; }
+.assembly-layer p { font-size: 11px; line-height: 1.35; }
+.assembly-layer .assembly-material { display: flex; gap: 5px; align-items: center; font-weight: 650; }
+.assembly-layer .assembly-material::before {
+ content: "";
+ width: 9px;
+ height: 9px;
+ flex: none;
+ border-radius: 2px;
+ background: var(--swatch);
+}
+#returnToAssembly { display: none; }
+@media (max-width: 899px) {
+ #returnToAssembly:not([hidden]) { display: block; }
+ .material-model { height: auto; }
+ .material-assemblies { max-height: none; overflow: visible; }
+ .material-viewport { height: clamp(280px, 56dvh, 580px); }
+}
+@media (max-width: 580px) {
+ .assembly-heading { align-items: start; flex-direction: column; gap: 5px; }
+ .assembly-card-core { grid-template-columns: minmax(0, 1fr); }
+ .assembly-card-core .assembly-figure { grid-row: auto; }
+ .assembly-card-core canvas { height: 205px; }
+}
+
 /* V3.6: self-contained presentation page, scoped to avoid altering laboratory UI. */
 #designRationale[hidden],#materialsPhase[hidden]{display:none!important}body.materials-open>.layout{display:none!important}body.materials-open .app-header .header-actions>*:not(#openMaterials){display:none!important}body.dr-open>.layout{display:none!important}body.dr-open .app-header .header-actions>*:not(#openRationale){display:none!important}body.dr-open #openRationale{background:#dce8dd;color:var(--accent)}
 .rationale{background:#f7f8f3;overflow:auto;min-height:0;flex:1;color:#293b30;font-size:14px;line-height:1.55}.dr-wrap{max-width:1270px;margin:auto;padding:24px clamp(16px,4vw,56px) 40px}.dr-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 28px;flex-wrap:wrap}.dr-kicker,.dr-section-heading>span{font-size:10px;letter-spacing:1.75px;font-weight:700;color:#66776a;text-transform:uppercase}.dr-hero{display:grid;grid-template-columns:1.04fr 1fr;gap:34px;align-items:center}.dr-hero h2{font-size:clamp(36px,5vw,66px);font-weight:650;letter-spacing:-.055em;line-height:1.01;margin:12px 0 18px}.dr-lead{font-size:17px;color:#53665a;line-height:1.55;max-width:52ch}.dr-credit{border-top:1px solid #cdd6ca;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;padding-top:14px;margin-top:24px;font-size:12px}.dr-credit span{color:#617065}.dr-hero-image{margin:0;background:white;border:1px solid var(--line);border-radius:7px;padding:9px}.dr-hero-image img{width:100%;height:auto;display:block;border-radius:4px}.dr-hero-image figcaption{padding:7px 5px 0}.dr-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#d6ded2;border:1px solid #d6ded2;margin:28px 0 14px;border-radius:6px;overflow:hidden}.dr-summary>div{background:#fffefa;padding:20px}.dr-summary h3{font-size:18px!important;margin:8px 0}.dr-key{font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap;display:inline-block;border-radius:3px;padding:2px 6px;vertical-align:middle;color:#fff}.dr-key.student{background:#426e55}.dr-key.ai{background:#657684}.dr-key.shared{background:#8b7854}.dr-note{font-size:12px;line-height:1.6;color:#657368;border-left:2px solid #9db09a;padding:5px 0 5px 12px;margin:16px 0}.dr-nav{display:flex;flex-wrap:wrap;gap:7px 15px;border-top:1px solid #d5dcd1;border-bottom:1px solid #d5dcd1;padding:13px 0;margin:24px 0 10px}.dr-nav a{font-size:12px;text-decoration:none;color:#37654d;font-weight:600}.dr-nav a:hover{text-decoration:underline}.dr-section{padding:34px 0;border-bottom:1px solid #d2d9ce;scroll-margin-top:16px}.dr-section-heading h2{font-size:clamp(25px,3.5vw,37px);font-weight:650;letter-spacing:-.04em;line-height:1.15;margin:8px 0}.dr-section-heading>p{font-size:15px;color:#647368;margin:0 0 23px}.dr-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}.dr-pair figure,.dr-score-method figure{margin:0;min-width:0}.dr-svg{width:100%;height:auto;display:block;border:1px solid #dce2d8;border-radius:7px;font-family:system-ui,-apple-system,sans-serif}.rationale figcaption{font-size:11.5px;line-height:1.5;color:#708073;margin-top:8px}.rationale h3{font-size:15px;font-weight:700;color:#314738;margin:16px 0 7px}.dr-pair>div h3:first-child,.dr-score-method>div h3:first-child{margin-top:1px}.dr-pair h3 .dr-key{margin-right:5px}.rationale p{margin:7px 0 12px}.rationale ul{margin:6px 0 16px;padding-left:19px}.rationale li{padding:2px 0}.rationale blockquote{margin:19px 0 0;background:#edf1e9;border-left:3px solid #73947b;padding:13px 17px;font-size:15px;font-weight:500;color:#395341}.rationale blockquote cite{display:block;font-size:11px;font-style:normal;color:#6e7e70;font-weight:400;margin-top:7px}.dr-wide-diagram{max-width:850px;margin:20px auto 0}.dr-equation{padding:14px 16px;background:#e9eee5;border:1px solid #d1dacd;border-radius:5px;font-weight:550;margin:18px 0}.dr-equation small{display:block;color:#67786b;font-weight:400;margin-top:6px;font-size:12px}.dr-chart,.dr-score-chart{border:1px solid #dce2d8;background:#fffefa;border-radius:6px;padding:18px}.dr-chart-legend{display:flex;gap:15px;font-size:11px;color:#69766b;margin-bottom:13px}.dr-chart-legend i,.dr-program i:not(.dr-bar i){width:10px;height:10px;display:inline-block;vertical-align:middle;border-radius:2px;margin-right:6px}.dr-program{margin:14px 0}.dr-program>div:first-child{display:flex;justify-content:space-between;gap:8px;font-size:13px}.dr-program small{font-size:11px;color:#758075}.dr-bar{display:flex;height:12px;margin:6px 0 3px;background:#e3e8df;border-radius:2px;overflow:hidden}.dr-bar i{display:block;height:100%}.dr-total{margin-top:19px;border-top:1px solid #cfd8cc;padding-top:11px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}.dr-total strong{font-size:22px;letter-spacing:-.8px}.dr-weight{display:grid;grid-template-columns: minmax(110px,1.2fr) minmax(50px,1fr) 26px;gap:8px;align-items:center;font-size:12px;margin:12px 0}.dr-weight b{text-align:right;font-variant-numeric:tabular-nums}.dr-weight-track{background:#e5e9e1;height:14px;border-radius:2px;overflow:hidden}.dr-weight-track i{display:block;height:100%}.dr-score-method{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:25px 0 15px}.dr-multipliers{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dr-multipliers>div{background:#fffefa;padding:10px;border:1px solid #dce2d8;border-radius:4px}.dr-multipliers b{display:block;font-size:22px;line-height:1.2;color:#426c52}.dr-multipliers span{font-size:11px;color:#617365}.dr-method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.dr-method-grid>div{padding:15px;background:white;border:1px solid #dce2d8;border-radius:5px}.dr-method-grid p{font-size:12px;margin-bottom:0}.dr-text-pair{margin-top:15px}.dr-table-wrap{overflow-x:auto}.dr-audit{width:100%;border-collapse:collapse;background:#fffefa;font-size:13px;line-height:1.5}.dr-audit th,.dr-audit td{border:1px solid #dce2d8;padding:12px;text-align:left;vertical-align:top}.dr-audit th{background:#e5ece1;font-weight:650}.dr-audit td:first-child{width:130px;font-weight:650}.dr-audit td:nth-child(2){width:43%}.dr-author-statement{background:#e7eee4;border:1px solid #cdd9c8;padding:18px 22px;margin:24px 0;border-radius:6px}.dr-author-statement h3{margin:0 0 8px}.dr-author-statement p{font-size:15px;margin:0}.dr-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:25px;font-size:11px;color:#68796c}
@@ -227,7 +358,7 @@
 
 </style></head><body>
 <header class="app-header"><div><h1>Poly Nation Cross Pollination Laboratory</h1></div><div class="header-actions"><button id="openRationale" type="button" aria-controls="designRationale" aria-expanded="false">Design rationale</button><button id="openMaterials" type="button" aria-controls="materialsPhase" aria-expanded="false">Materials</button><button class="primary" id="shuffle" title="Generate a new layout with the same settings">New variation</button><button id="reset" title="Restore every setting to its default">Reset design</button><details class="file-menu"><summary>Files &amp; export</summary><div class="file-menu-content"><button id="import">Load JSON</button><input accept=".json,application/json" hidden="" id="importFile" type="file"/><button id="export">Save JSON</button><div class="menu-label">3D geometry</div><button id="export3DM">Export 3DM</button><button id="exportRhinoScript" title="Offline alternative: run this generated Python script inside Rhino">Rhino script</button></div></details><span aria-live="polite" id="exportStatus" role="status"></span><span class="credit" id="saveStatus" style="align-self:center"></span></div></header>
-<div class="layout"><aside id="design-panel"><div class="topology-persistent" id="program-panel-0"><div class="section"><h2>Topology Designer <button class="mobile-jump" id="returnModelMobile" type="button" style="font-size:11px;min-height:25px;padding:3px 7px">Model ↑</button></h2><p class="hint topology-instructions"><strong>Drag nodes</strong> closer together or farther apart to adjust how strongly programs relate.<br><strong>Click a line</strong> to cycle through Attract, Repel, and Neutral.<br><strong>Click a node</strong> to toggle clustering for that program. Use Clustering strength to tighten the grouping. Selected programs still cluster at 0%.<br>These settings guide the placement of internal rooms and modules.</p><svg aria-label="Draggable program relationship map" class="wheel" id="wheel" viewbox="0 0 400 280"></svg><div class="relationship-key"><span><i style="border-color:#47866a"></i>Attract</span><span><i style="border-color:#999f99;border-top-style:dotted"></i>Neutral</span><span><i style="border-color:#bd665c;border-top-style:dashed"></i>Repel</span></div><div id="affinityField"></div><div aria-live="polite" class="hint relation-status-compact" id="relationStatus">Click a line to cycle its relationship. Clustering strength applies to the programs toggled on.</div><div class="legend" id="legend" style="margin-top:5px"></div><p class="hint cluster-status-compact" id="clusterStatus">Clustering off for all programs.</p><p class="hint" id="repelStatus" role="status" hidden></p><button class="topology-reset" id="neutralize" style="">Reset relationships to neutral</button><details class="topology-advanced"><summary>Program pairs &amp; advanced settings</summary><details class="pair-controls"><summary>All program pairs</summary><div class="pair-list" id="pairList"></div></details><p class="hint">Room sizes vary by use; levels and radial bands are laid out independently. Core mixing encourages different programs to share boundaries. Modules respond to adjacent rooms on their own level.</p><div class="readout"><span>Adjacency score (lower is better)</span><b id="score"></b></div></details></div></div><div class="design-scroll"><div aria-label="Design and simulation settings" class="panel-tabs" role="tablist"><button aria-controls="design-panel-0" aria-selected="true" data-panel="design-panel-0" id="design-panel-0-tab" role="tab" tabindex="0" type="button">Building</button><button aria-controls="design-panel-1" aria-selected="false" data-panel="design-panel-1" id="design-panel-1-tab" role="tab" tabindex="-1" type="button">Modules</button><button aria-controls="design-panel-2" aria-selected="false" data-panel="design-panel-2" id="design-panel-2-tab" role="tab" tabindex="-1" type="button">Features</button><button aria-controls="cpPaneAllocation" aria-selected="false" data-panel="cpPaneAllocation" id="cpPaneAllocation-tab" role="tab" tabindex="-1" type="button">Allocation</button><button aria-controls="cpPaneVisitors" aria-selected="false" data-panel="cpPaneVisitors" id="cpPaneVisitors-tab" role="tab" tabindex="-1" type="button">Visitors</button><button aria-controls="cpPaneScore" aria-selected="false" data-panel="cpPaneScore" id="cpPaneScore-tab" role="tab" tabindex="-1" type="button">Score</button></div><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; entrance calculations</summary><div class="readout"><span>Entrance / lobby</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><button id="cpTrial" style="width:100%;margin-bottom:8px">Run 5-minute comparison</button><div aria-live="polite" class="hint" id="cpTrialStatus"></div><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details><h2 style="margin-top:14px">Comparison history</h2><div id="cpHistory"></div><button id="cpClear" style="margin-top:6px">Clear comparisons</button><p class="hint">Trials use the same seed, visitor count and scoring weights for fairer comparisons. Design changes restart live scoring. All active humans and animals contribute regardless of visibility. Live rates stabilize with time; use fixed-duration trials to compare designs.</p></div></div></aside>
+<div class="layout"><aside id="design-panel"><div class="topology-persistent" id="program-panel-0"><div class="section"><h2>Topology Designer <button class="mobile-jump" id="returnModelMobile" type="button" style="font-size:11px;min-height:25px;padding:3px 7px">Model ↑</button></h2><p class="hint topology-instructions"><strong>Drag nodes</strong> closer together or farther apart to adjust how strongly programs relate.<br><strong>Click a line</strong> to cycle through Attract, Repel, and Neutral.<br><strong>Click a node</strong> to toggle clustering for that program. Use Clustering strength to tighten the grouping. Selected programs still cluster at 0%.<br>These settings guide the placement of internal rooms and modules.</p><svg aria-label="Draggable program relationship map" class="wheel" id="wheel" viewbox="0 0 400 280"></svg><div class="relationship-key"><span><i style="border-color:#47866a"></i>Attract</span><span><i style="border-color:#999f99;border-top-style:dotted"></i>Neutral</span><span><i style="border-color:#bd665c;border-top-style:dashed"></i>Repel</span></div><div id="affinityField"></div><div aria-live="polite" class="hint relation-status-compact" id="relationStatus">Click a line to cycle its relationship. Clustering strength applies to the programs toggled on.</div><div class="legend" id="legend" style="margin-top:5px"></div><p class="hint cluster-status-compact" id="clusterStatus">Clustering off for all programs.</p><p class="hint" id="repelStatus" role="status" hidden></p><p class="hint" id="firehallStatus" role="status" hidden></p><button class="topology-reset" id="neutralize" style="">Reset relationships to neutral</button><details class="topology-advanced"><summary>Program pairs &amp; advanced settings</summary><details class="pair-controls"><summary>All program pairs</summary><div class="pair-list" id="pairList"></div></details><p class="hint">Room sizes vary by use; levels and radial bands are laid out independently. Core mixing encourages different programs to share boundaries. Modules respond to adjacent rooms on their own level.</p><div class="readout"><span>Adjacency score (lower is better)</span><b id="score"></b></div></details></div></div><div class="design-scroll"><div aria-label="Design and simulation settings" class="panel-tabs" role="tablist"><button aria-controls="design-panel-0" aria-selected="true" data-panel="design-panel-0" id="design-panel-0-tab" role="tab" tabindex="0" type="button">Building</button><button aria-controls="design-panel-1" aria-selected="false" data-panel="design-panel-1" id="design-panel-1-tab" role="tab" tabindex="-1" type="button">Modules</button><button aria-controls="design-panel-2" aria-selected="false" data-panel="design-panel-2" id="design-panel-2-tab" role="tab" tabindex="-1" type="button">Features</button><button aria-controls="cpPaneAllocation" aria-selected="false" data-panel="cpPaneAllocation" id="cpPaneAllocation-tab" role="tab" tabindex="-1" type="button">Allocation</button><button aria-controls="cpPaneVisitors" aria-selected="false" data-panel="cpPaneVisitors" id="cpPaneVisitors-tab" role="tab" tabindex="-1" type="button">Visitors</button><button aria-controls="cpPaneScore" aria-selected="false" data-panel="cpPaneScore" id="cpPaneScore-tab" role="tab" tabindex="-1" type="button">Score</button></div><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; entrance calculations</summary><div class="readout"><span>Entrance / lobby</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><button id="cpTrial" style="width:100%;margin-bottom:8px">Run 5-minute comparison</button><div aria-live="polite" class="hint" id="cpTrialStatus"></div><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details><h2 style="margin-top:14px">Comparison history</h2><div id="cpHistory"></div><button id="cpClear" style="margin-top:6px">Clear comparisons</button><p class="hint">Trials use the same seed, visitor count and scoring weights for fairer comparisons. Design changes restart live scoring. All active humans and animals contribute regardless of visibility. Live rates stabilize with time; use fixed-duration trials to compare designs.</p></div></div></aside>
 <main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><div class="view-top"><span class="eyebrow">3D model</span><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button id="editProgramming" type="button" aria-pressed="false">Edit programming</button><button id="chooseProgramLocation" type="button" hidden>Choose location</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span><span id="seedLabel">Seed 606</span></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
 <div class="cp-main"><div class="cp-dash-head"><h2>Cross pollination</h2><span class="cp-live-status" id="cpLiveStatus">Starting</span></div><div class="cp-main-value"><b id="cpScore" title="Weighted points per 100 active visitor-minutes">—</b><span>weighted points /<br/>100 visitor-min</span></div></div>
 <div class="cp-dash-stats"><div><span>Encounters</span><b id="cpDashEncounters">0</b></div><div><span>Different rooms</span><b id="cpDashMemory">0</b></div><div><span>Cross-species</span><b id="cpDashSpecies">0</b></div><div><span>Simulated time</span><b id="cpDashTime">0m 0s</b></div></div>
@@ -308,6 +439,7 @@
    <label for="materialFacade">Exterior finish</label>
    <select id="materialFacade"></select>
    <p class="hint material-effective" id="materialEffective"></p>
+   <button id="returnToAssembly" type="button" hidden>Return to assembly</button>
   </div>
   <fieldset class="material-display">
    <legend>Model display</legend>
@@ -322,7 +454,24 @@
   </details>
  </aside>
  <div class="material-model">
-  <div class="viewport material-viewport"><canvas id="materialsCanvas" aria-label="Three-dimensional material study model"></canvas>
+  <nav class="material-view-switch" aria-label="Material view">
+   <button id="materialAssembliesView" type="button" aria-pressed="true" aria-controls="materialAssemblies">Assembly schedule</button>
+   <button id="materialModelView" type="button" aria-pressed="false" aria-controls="material3D">3D model</button>
+  </nav>
+  <section id="materialAssemblies" class="material-assemblies" aria-labelledby="materialAssemblyTitle">
+   <header class="assembly-heading">
+    <div><h2 id="materialAssemblyTitle">Assembly schedule</h2>
+    <p class="hint">Compare the core ring and the module assemblies by program.</p></div>
+    <details class="assembly-estimates">
+     <summary>Estimate basis</summary>
+     <p>Approximate mass per m² of floor for structure and per m² of wall for cladding. Cost is a relative installation index. Cast-in-place concrete and corrugated steel each set the 1× reference for their layer. Strength describes typical structural behavior. These values are study assumptions.</p>
+    </details>
+   </header>
+   <div id="materialCoreAssembly"></div>
+   <h3 class="assembly-module-title">Modules by program</h3>
+   <div id="materialModuleAssemblies" class="module-assemblies"></div>
+  </section>
+  <div id="material3D" class="viewport material-viewport" hidden><canvas id="materialsCanvas" aria-label="Three-dimensional material study model"></canvas>
    <div class="view-top">
     <span class="eyebrow">Material study model</span>
     <div class="actions">
@@ -454,6 +603,7 @@ const VACANCY = [
 const OUTER_WALL_THICKNESS = 0.5;
 const facadeThickness = (m) => Math.min(OUTER_WALL_THICKNESS, m.width * 0.45);
 // Preferred gross program-zone sizes. The global minimum is enforced by the packing pass.
+const FIREHALL = PROGRAMS.findIndex((program) => program.id === 'fire');
 const ROOM_RANGES = [
   [150, 540],
   [80, 210],
@@ -1755,8 +1905,9 @@ function derive() {
     let layout = pack(0);
     const hasRepel = Object.values(state.relations).includes('repel');
     const activeClusters = PROGRAMS.map((_, id) => id).filter((id) => state.cluster[id]);
-    const requestedRooms = Object.keys(state.roomPrograms).filter(key =>
-      key.startsWith(String(state.seed) + ':')).length;
+    const requestedRooms = Object.keys(state.roomPrograms).filter((key) =>
+      key.startsWith(String(state.seed) + ':')
+    ).length;
     if (hasRepel || activeClusters.length || requestedRooms) {
       // Compare seeded alternatives when the first floor quotas leave conflicts or
       // scatter a selected program. Penalize missing area as well as angular drift.
@@ -1937,7 +2088,7 @@ function derive() {
       requestedCounts[program]++;
     }
   }
-  const { placement, score, conflicts, conflictingSlots } = place(
+  const { placement, score, conflicts, conflictingSlots, firehall } = place(
     activeSlots,
     slotN,
     requestedCounts,
@@ -1947,6 +2098,7 @@ function derive() {
   counts.fill(0);
   activeSlots.forEach((slot, i) => {
     slot.p = placement[i];
+    if (firehall.omitted.has(slot.i)) delete slot.editKey;
     if (slot.p !== EMPTY) counts[slot.p]++;
   });
   const vacancyCounts = assignVacancies(activeSlots, k),
@@ -1980,6 +2132,8 @@ function derive() {
     vacancyCounts,
     score,
     conflictingSlots,
+    firehallUnplaced: firehall.unplaced,
+    firehallOmitted: firehall.omitted,
     repelConflicts:
       conflicts +
       (Object.values(state.relations).includes('repel') ? repellingRoomContacts(rooms) : 0),
@@ -2067,6 +2221,73 @@ function designPlaza(R, lobby, slots, climb) {
       (climb ? 0.5 * (mouth * mouth - climb.face * climb.face) * 2 * climb.half : 0)
   };
 }
+// Firehall docks start at grade. Higher floors are limited by both their own available
+// docks and the number on the floor below. A manual upper dock also reserves capacity below.
+function planFirehall(slots, columns, count, pins, dockConflicts) {
+  const floors = Array.from({ length: state.floors }, () => []);
+  const byDock = new Map(slots.map((slot, i) => [slot.i, i]));
+  const eligible = slots.map((slot, i) => {
+    if (dockConflicts?.[i][FIREHALL]) return false;
+    for (const offset of [-1, 1]) {
+      const neighbor = byDock.get(slot.f * columns + mod(slot.j + offset, columns));
+      if (programsRepel(FIREHALL, pins.get(neighbor))) return false;
+    }
+    return true;
+  });
+  const omitted = new Set();
+  for (const [i, program] of pins) {
+    if (program === FIREHALL && !eligible[i]) {
+      pins.delete(i);
+      omitted.add(slots[i].i);
+    }
+  }
+  slots.forEach((slot, i) => {
+    if (eligible[i] && (!pins.has(i) || pins.get(i) === FIREHALL)) floors[slot.f].push(i);
+  });
+  const limits = floors.map((floor) => floor.length);
+  for (let f = 1; f < limits.length; f++) limits[f] = Math.min(limits[f], limits[f - 1]);
+
+  function minimums() {
+    const needed = floors.map((floor) => floor.filter((i) => pins.get(i) === FIREHALL).length);
+    for (let f = needed.length - 2; f >= 0; f--) needed[f] = Math.max(needed[f], needed[f + 1]);
+    return needed;
+  }
+  const available = limits.reduce((sum, limit) => sum + limit, 0);
+  const plannedCount = Math.min(count, available);
+  let minimum = minimums();
+  // Defer an upper-floor pin if there is no way to support it with the requested inventory.
+  while (
+    minimum.some((value, floor) => value > limits[floor]) ||
+    minimum.reduce((sum, value) => sum + value, 0) > plannedCount
+  ) {
+    const highest = [...pins.keys()]
+      .filter((i) => pins.get(i) === FIREHALL)
+      .sort((a, b) => slots[b].f - slots[a].f || b - a)[0];
+    pins.delete(highest);
+    omitted.add(slots[highest].i);
+    minimum = minimums();
+  }
+
+  const assigned = new Set();
+  const targetByFloor = [];
+  let remaining = plannedCount;
+  for (let f = 0; f < floors.length; f++) {
+    const reserveAbove = minimum.slice(f + 1).reduce((sum, value) => sum + value, 0);
+    const limitBelow = targetByFloor[f - 1] ?? Infinity;
+    const target = Math.min(limits[f], limitBelow, remaining - reserveAbove);
+    targetByFloor.push(target);
+    remaining -= target;
+    const free = floors[f].filter((i) => !pins.has(i));
+    const pinnedCount = floors[f].length - free.length;
+    // Any chosen dock can move within its floor during the topology passes.
+    const ordered = free
+      .slice()
+      .sort((a, b) => +(slots[b].anchor === FIREHALL) - +(slots[a].anchor === FIREHALL) || a - b);
+    for (const i of ordered.slice(0, target - pinnedCount)) assigned.add(i);
+  }
+  return { assigned, eligible, omitted, unplaced: count - plannedCount };
+}
+
 // SEEDED TOPOLOGY SOLVER — fixed inventory; swap labels including vacancies; local pair energy.
 function place(slots, n, counts, rooms = [], pins = new Map()) {
   const N = slots.length,
@@ -2086,29 +2307,6 @@ function place(slots, n, counts, rooms = [], pins = new Map()) {
       }
       centers[id] = Math.hypot(x, z) > 1e-7 ? mod(Math.atan2(z, x), TAU) : clusterAngle(id);
     }
-  // Reserve explicit user choices, then use the original demand to fill unpinned docks.
-  const remaining = counts.slice();
-  for (const program of pins.values()) remaining[program]--;
-  const remainingTotal = counts.reduce((sum, count) => sum + count, 0) - pins.size;
-  const labels = [];
-  remaining.forEach((count, id) => {
-    for (let j = 0; j < count; j++) labels.push(id);
-  });
-  while (labels.length > remainingTotal) {
-    const program = remaining.indexOf(Math.max(...remaining));
-    labels.splice(labels.lastIndexOf(program), 1);
-    remaining[program]--;
-  }
-  const free = slots.map((_, i) => i).filter((i) => !pins.has(i));
-  while (labels.length < free.length) labels.push(EMPTY);
-  for (let i = labels.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [labels[i], labels[j]] = [labels[j], labels[i]];
-  }
-  for (const [index, program] of pins) a[index] = program;
-  free.forEach((index, position) => {
-    a[index] = labels[position];
-  });
   // One same-floor conflict outweighs every soft score changed by a single swap.
   const separationCost = 100;
   const hasRepel = Object.values(state.relations).includes('repel');
@@ -2130,6 +2328,47 @@ function place(slots, n, counts, rooms = [], pins = new Map()) {
         );
       })
     : null;
+  const fixed = new Map(pins);
+  const inventoryTotal = counts.reduce((sum, count) => sum + count, 0);
+  const pinnedFirehall = [...pins.values()].filter((program) => program === FIREHALL).length;
+  const firehallDemand = Math.max(counts[FIREHALL], pinnedFirehall);
+  const firehallBudget = Math.min(firehallDemand, inventoryTotal - pins.size + pinnedFirehall);
+  const firehall = planFirehall(slots, n, firehallBudget, fixed, dockConflicts);
+  firehall.unplaced += firehallDemand - firehallBudget;
+
+  // Reserve explicit edits and Firehall floor counts, then fill the remaining docks.
+  const remaining = counts.slice();
+  remaining[FIREHALL] = 0;
+  remaining[UNUSED] = (remaining[UNUSED] || 0) + firehall.unplaced;
+  for (const program of fixed.values()) if (program !== FIREHALL) remaining[program]--;
+  const firehallCount =
+    firehall.assigned.size + [...fixed.values()].filter((program) => program === FIREHALL).length;
+  const remainingTotal =
+    inventoryTotal -
+    firehallCount -
+    [...fixed.values()].filter((program) => program !== FIREHALL).length;
+  const labels = [];
+  remaining.forEach((count, id) => {
+    for (let j = 0; j < count; j++) labels.push(id);
+  });
+  while (labels.length > remainingTotal) {
+    const program = remaining.indexOf(Math.max(...remaining));
+    labels.splice(labels.lastIndexOf(program), 1);
+    remaining[program]--;
+  }
+  while (labels.length < remainingTotal) labels.push(UNUSED);
+  const free = slots.map((_, i) => i).filter((i) => !fixed.has(i));
+  const unassigned = free.filter((i) => !firehall.assigned.has(i));
+  while (labels.length < unassigned.length) labels.push(EMPTY);
+  for (let i = labels.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [labels[i], labels[j]] = [labels[j], labels[i]];
+  }
+  for (const [index, program] of fixed) a[index] = program;
+  for (const index of firehall.assigned) a[index] = FIREHALL;
+  unassigned.forEach((index, position) => {
+    a[index] = labels[position];
+  });
   const dist = Array.from({ length: 5 }, (_, i) =>
     Array.from({ length: 5 }, (_, j) => RELATIONSHIP_WEIGHT * relationCost(i, j))
   );
@@ -2192,6 +2431,10 @@ function place(slots, n, counts, rooms = [], pins = new Map()) {
       const i = free[Math.floor(rng() * free.length)],
         j = free[Math.floor(rng() * free.length)];
       if (a[i] === a[j]) continue;
+      if (a[i] === FIREHALL || a[j] === FIREHALL) {
+        const destination = a[i] === FIREHALL ? j : i;
+        if (slots[i].f !== slots[j].f || !firehall.eligible[destination]) continue;
+      }
       const before = local(i, j);
       [a[i], a[j]] = [a[j], a[i]];
       const change = local(i, j) - before,
@@ -2216,7 +2459,7 @@ function place(slots, n, counts, rooms = [], pins = new Map()) {
       conflictingSlots.add(slots[i].i);
     });
   }
-  return { placement: a, score: score / Math.max(1, N), conflicts, conflictingSlots };
+  return { placement: a, score: score / Math.max(1, N), conflicts, conflictingSlots, firehall };
 }
 // PROGRAM MAP — diagram coordinates are normalized independently of its display proportions.
 let activeNode = null;
@@ -5803,6 +6046,8 @@ function applyProgramEdit(selection, program) {
     const updatedSlot = slot && candidate.slots.find((entry) => entry.editKey === key);
     if (adding && candidate.count <= before.count) {
       error = 'No additional module fits within the current area cap and dock reservations.';
+    } else if (slot && program === FIREHALL && !updatedSlot) {
+      error = 'This Firehall dock needs a compatible dock on each floor below it.';
     } else if (room ? updatedRoom?.id !== program : updatedSlot?.p !== program) {
       error = 'The selected location is unavailable in the recalculated layout.';
     } else if (
@@ -6283,6 +6528,11 @@ function update() {
     fmt(Math.max(0, state.areaCap - m.total)) + ' m² remaining of ' + fmt(state.areaCap) + ' m²';
   $('seedLabel').textContent = 'Seed ' + state.seed;
   $('score').textContent = m.score.toFixed(3);
+  const firehallStatus = $('firehallStatus');
+  firehallStatus.hidden = !m.firehallUnplaced && !m.firehallOmitted.size;
+  firehallStatus.textContent = m.firehallUnplaced
+    ? m.firehallUnplaced + ' requested Firehall modules could not fit under the ground-first rule.'
+    : 'Some saved Firehall docks conflict with the ground-first rule.';
   const repelStatus = $('repelStatus');
   repelStatus.hidden = m.repelConflicts === 0;
   repelStatus.textContent =
@@ -7089,6 +7339,287 @@ requestAnimationFrame(animateSwingFrame);
   );
 })();
 
+// Comparative study assumptions, per m² of floor for structure and per m² of wall for finish.
+// Cost indices compare layers independently. Strength describes system behavior, not capacity.
+const STRUCTURE_STUDY = {
+  concrete: [420, 1, 'Stiff, continuous slabs and walls'],
+  precast: [330, 1.1, 'Stiff panels; connections govern continuity'],
+  'wood-stud': [55, 0.7, 'Light, closely spaced framing'],
+  clt: [100, 1.2, 'Stiff plate action across panels'],
+  glulam: [85, 1.3, 'Spanning beams and discrete posts'],
+  'steel-frame': [95, 1.2, 'Efficient long spans; needs lateral bracing'],
+  'light-steel': [50, 0.8, 'Light framing; braced wall assemblies'],
+  'space-frame': [75, 1.5, 'Triangulated load paths in two directions'],
+  masonry: [280, 1.1, 'Strong in compression; limited tension']
+};
+const CLADDING_STUDY = {
+  concrete: [72, 1.8, 'Rigid panel'],
+  'board-concrete': [85, 2, 'Rigid, textured panel'],
+  cedar: [12, 1.4, 'Light boards; can dent'],
+  'charred-wood': [13, 1.6, 'Light boards; finish can abrade'],
+  plywood: [10, 1.1, 'Light sheet; exposed edges need protection'],
+  corrugated: [8, 1, 'Light skin; can dent'],
+  aluminum: [6, 1.5, 'Light skin; can dent'],
+  zinc: [9, 1.9, 'Durable skin; can dent'],
+  vinyl: [4, 0.7, 'Light skin; vulnerable to impact'],
+  'fiber-cement': [17, 1.25, 'Rigid sheet; edges can chip'],
+  brick: [138, 1.75, 'Rigid veneer; joints matter'],
+  stone: [82, 2.2, 'Rigid panels; heavy at attachments'],
+  stucco: [25, 1.15, 'Continuous finish; may crack'],
+  glazing: [35, 2.4, 'Rigid glazing; framing and joints matter']
+};
+
+function assemblyVariants(entries, fallback) {
+  const groups = new Map();
+  for (const { values, quantity } of entries) {
+    const key = values.structure + '/' + values.facade;
+    const group = groups.get(key) || { key, values, quantity: 0 };
+    group.quantity += quantity;
+    groups.set(key, group);
+  }
+  return groups.size
+    ? [...groups.values()].sort((a, b) => b.quantity - a.quantity)
+    : [{ key: fallback.structure + '/' + fallback.facade, values: fallback, quantity: 0 }];
+}
+
+// Render a schematic axonometric with space between the finish and its support system.
+function drawExplodedAssembly(canvas, values, ring) {
+  const width = canvas.clientWidth,
+    height = canvas.clientHeight;
+  if (!width || !height) return;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(dpr, dpr);
+  ctx.lineJoin = 'round';
+  const structure = STRUCTURAL_SYSTEMS[values.structure],
+    finish = EXTERIOR_FINISHES[values.facade];
+  const scale = Math.min((width - 30) / (ring ? 11.2 : 10.8), (height - 23) / 11.4);
+  const project = ([x, y, z]) => [
+    width / 2 + 0.86 * (x - z) * scale,
+    height / 2 + (2.75 + 0.46 * (x + z) - y) * scale
+  ];
+  function path(points, fill, stroke, weight = 0.7) {
+    ctx.beginPath();
+    points.map(project).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    if (fill) {
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = weight;
+      ctx.stroke();
+    }
+  }
+  const line = (a, b, stroke, weight) => path([a, b], null, stroke, weight);
+  const panel = (corners, tint, seam) => path(corners, tint, seam);
+  const edge = '#496052';
+  const paintedStructure = structure.color + '92';
+  const paintedFinish = values.facade === 'glazing' ? finish.color + '96' : finish.color;
+  const dashed = (points) => {
+    ctx.setLineDash([3, 3]);
+    points.forEach((point) =>
+      line([point[0], 0.1, point[1]], [point[0], 5.55, point[1]], '#91a69a')
+    );
+    ctx.setLineDash([]);
+  };
+  if (ring) {
+    const radius = 4.35,
+      inner = clamp(ring.r / ring.R, 0.15, 0.93) * radius;
+    const point = (r, angle, y) => [r * Math.cos(angle), y, r * Math.sin(angle)];
+    const segments = 48;
+    const at = (index) => (index * TAU) / segments;
+    const band = (y, fill, seam) => {
+      for (let i = 0; i < segments; i++)
+        panel(
+          [
+            point(inner, at(i), y),
+            point(radius, at(i), y),
+            point(radius, at(i + 1), y),
+            point(inner, at(i + 1), y)
+          ],
+          fill,
+          fill
+        );
+      for (const r of [inner, radius])
+        path(
+          Array.from({ length: segments + 1 }, (_, i) => point(r, at(i), y)),
+          null,
+          seam
+        );
+    };
+    dashed([
+      [-radius * 0.7, radius * 0.7],
+      [radius * 0.7, -radius * 0.7]
+    ]);
+    band(0, paintedStructure, edge);
+    const levels = clamp(ring.layers.length, 1, 10);
+    const thickness = 2.4 / levels;
+    const postCount = structure.frame === 'stud' ? 28 : 14;
+    for (let level = 0; level < levels; level++) {
+      const low = level * thickness,
+        high = low + thickness;
+      for (let i = 0; i < postCount; i++) {
+        const a = (i * TAU) / postCount,
+          next = ((i + 1) * TAU) / postCount;
+        const r = radius * 0.98;
+        line(
+          point(r, a, low),
+          point(r, a, high),
+          structure.color,
+          structure.frame === 'solid' ? 2 : 1.5
+        );
+        if (structure.frame === 'brace')
+          line(point(r, a, low), point(r, next, high), structure.color);
+      }
+      band(high, paintedStructure, edge);
+    }
+    // An open seam in the raised skin makes the courtyard and the shell depth legible.
+    const shell = Array.from({ length: segments }, (_, i) => i).filter((i) => i < 5 || i >= 12);
+    shell.sort((a, b) => Math.cos(at(a) - Math.PI / 4) - Math.cos(at(b) - Math.PI / 4));
+    for (const i of shell) {
+      const a = at(i),
+        z = at(i + 1);
+      panel(
+        [
+          point(radius, a, 4.2),
+          point(radius, z, 4.2),
+          point(radius, z, 5.55),
+          point(radius, a, 5.55)
+        ],
+        paintedFinish,
+        finish.seam
+      );
+      if (finish.course) line(point(radius, a, 4.85), point(radius, z, 4.85), finish.seam);
+    }
+    return;
+  }
+
+  // Module dimensions are proportional to the standard 4.5 × 18 m bay.
+  const x = 1.02,
+    z = 4.08;
+  const slab = (y, fill, stroke) =>
+    panel(
+      [
+        [-x, y, -z],
+        [x, y, -z],
+        [x, y, z],
+        [-x, y, z]
+      ],
+      fill,
+      stroke
+    );
+  dashed([
+    [-x, -z],
+    [x, z],
+    [-x, z]
+  ]);
+  slab(0, paintedStructure, edge);
+  for (const side of [-1, 1]) {
+    if (structure.frame === 'solid') {
+      panel(
+        [
+          [side * x, 0, -z],
+          [side * x, 0, z],
+          [side * x, 2.4, z],
+          [side * x, 2.4, -z]
+        ],
+        paintedStructure,
+        edge
+      );
+      for (const station of [-z / 2, 0, z / 2])
+        line([side * x, 0, station], [side * x, 2.4, station], structure.color);
+    } else {
+      const stations = structure.frame === 'stud' ? 12 : 5;
+      for (let i = 0; i <= stations; i++) {
+        const position = -z + (2 * z * i) / stations;
+        line([side * x, 0, position], [side * x, 2.4, position], structure.color, 1.6);
+        if (structure.frame === 'brace' && i < stations)
+          line(
+            [side * x, 0, position],
+            [side * x, 2.4, position + (2 * z) / stations],
+            structure.color
+          );
+      }
+    }
+    line([side * x, 2.4, -z], [side * x, 2.4, z], structure.color, 1.8);
+  }
+  for (const station of [-z, -z / 2, 0, z / 2, z])
+    line([-x, 2.4, station], [x, 2.4, station], structure.color, 1.4);
+  // Show the long elevation and end panel below the detached roof sheet.
+  panel(
+    [
+      [x, 4.05, -z],
+      [x, 4.05, z],
+      [x, 5.15, z],
+      [x, 5.15, -z]
+    ],
+    paintedFinish,
+    finish.seam
+  );
+  panel(
+    [
+      [-x, 4.05, z],
+      [x, 4.05, z],
+      [x, 5.15, z],
+      [-x, 5.15, z]
+    ],
+    paintedFinish,
+    finish.seam
+  );
+  slab(5.55, paintedFinish, finish.seam);
+  if (finish.joint)
+    for (let s = -z + 0.6; s < z; s += finish.joint < 0.7 ? 0.55 : 1.35) {
+      line([x, 4.05, s], [x, 5.15, s], finish.seam);
+      line([-x, 5.55, s], [x, 5.55, s], finish.seam);
+    }
+  if (finish.course)
+    for (const y of [4.32, 4.6, 4.88]) {
+      line([x, y, -z], [x, y, z], finish.seam);
+      line([-x, y, z], [x, y, z], finish.seam);
+    }
+}
+
+function assemblyLayerMarkup(values) {
+  const structure = STRUCTURAL_SYSTEMS[values.structure],
+    finish = EXTERIOR_FINISHES[values.facade];
+  const [structureMass, structureCost, strength] = STRUCTURE_STUDY[values.structure];
+  const [claddingMass, claddingCost, resilience] = CLADDING_STUDY[values.facade];
+  function layer(label, preset, weight, basis, cost, behavior) {
+    return (
+      '<section class="assembly-layer"><h5>' +
+      label +
+      '</h5><p class="assembly-material" style="--swatch:' +
+      preset.color +
+      '">' +
+      preset.name +
+      '</p><p>≈ ' +
+      weight +
+      ' kg/m² ' +
+      basis +
+      ' · ' +
+      cost +
+      '× cost</p><p>' +
+      behavior +
+      '</p></section>'
+    );
+  }
+  return (
+    layer(
+      'Structure',
+      structure,
+      structureMass,
+      'floor',
+      structureCost,
+      'Strength profile · ' + strength
+    ) + layer('Cladding', finish, claddingMass, 'wall', claddingCost, resilience)
+  );
+}
+
 // Work on a detached massing snapshot. Changing massing never mutates the material study.
 (function () {
   const phase = $('materialsPhase');
@@ -7158,7 +7689,8 @@ requestAnimationFrame(animateSwingFrame);
   }
 
   function present() {
-    if (!phase.hidden && mesh && viewport.ctx) paintSoftware(mesh, viewport, studyCamera);
+    if (!phase.hidden && !modelView.hidden && mesh && viewport.ctx)
+      paintSoftware(mesh, viewport, studyCamera);
   }
   function redraw() {
     if (frame) return;
@@ -7168,6 +7700,7 @@ requestAnimationFrame(animateSwingFrame);
     });
   }
   function rebuild() {
+    if (modelView.hidden) return;
     const view = { ...study.view, showRooms: !study.structureView || study.programColors };
     mesh = buildMesh(study.model, false, view, study);
     redraw();
@@ -7175,6 +7708,152 @@ requestAnimationFrame(animateSwingFrame);
   new ResizeObserver(redraw).observe(materialCanvas);
 
   const option = (label, value) => new Option(label, value);
+
+  const modelView = $('material3D');
+  const assemblyView = $('materialAssemblies');
+  const diagramObserver = new ResizeObserver((entries) => {
+    for (const { target: canvas } of entries) {
+      const render = diagrams.get(canvas);
+      if (render) render();
+    }
+  });
+  const diagrams = new Map();
+  const currentVariants = new Map();
+  const returnToAssembly = $('returnToAssembly');
+  let selectedAssembly;
+  returnToAssembly.onclick = () => {
+    showAssemblyView(true);
+    const card = $('assembly-' + selectedAssembly);
+    card?.scrollIntoView({ block: 'start' });
+    card?.focus({ preventScroll: true });
+  };
+
+  function showAssemblyView(showSchedule) {
+    assemblyView.hidden = !showSchedule;
+    modelView.hidden = showSchedule;
+    $('materialAssembliesView').setAttribute('aria-pressed', String(showSchedule));
+    $('materialModelView').setAttribute('aria-pressed', String(!showSchedule));
+    if (showSchedule) diagrams.forEach((render) => render());
+    else rebuild();
+  }
+
+  function editAssembly(program) {
+    selectedAssembly = program == null ? 'core' : String(program);
+    returnToAssembly.hidden = false;
+    scope.value = program == null ? 'core' : 'moduleProgram';
+    syncTargets();
+    if (program != null) {
+      target.value = String(program);
+      syncAssignment();
+    }
+    $('materialStructure').focus();
+  }
+
+  function makeAssemblyCard(title, variants, ring, program = null) {
+    const card = document.createElement('article');
+    const key = ring ? 'core' : String(program);
+    card.id = 'assembly-' + key;
+    card.tabIndex = -1;
+    card.className = ring ? 'assembly-card assembly-card-core' : 'assembly-card';
+    if (!ring) card.style.setProperty('--program-color', PROGRAMS[program].color);
+    const tag = ring ? 'h3' : 'h4';
+    card.innerHTML =
+      '<header class="assembly-card-head"><' +
+      tag +
+      '>' +
+      title +
+      '</' +
+      tag +
+      '><button type="button">' +
+      (ring ? 'Edit core' : 'Edit program') +
+      '</button></header>' +
+      '<figure class="assembly-figure"><span class="assembly-fig-label cladding">Cladding</span>' +
+      '<canvas role="img"></canvas><span class="assembly-fig-label structure">Structure</span></figure>' +
+      '<div class="assembly-specs"></div>';
+    card.querySelector('button').addEventListener('click', () => editAssembly(program));
+    const canvas = card.querySelector('canvas');
+    const specs = card.querySelector('.assembly-specs');
+    const choice = document.createElement('select');
+    choice.setAttribute('aria-label', title + ' assembly variant');
+    const variantLabel = document.createElement('label');
+    variantLabel.className = 'assembly-variant';
+    variantLabel.textContent = variants.length > 1 ? 'Assembly variant' : '';
+    for (const variant of variants) {
+      const count = ring
+        ? fmt(variant.quantity) + ' m² of core rooms'
+        : variant.quantity + (variant.quantity === 1 ? ' module' : ' modules');
+      const text =
+        variants.length === 1
+          ? count
+          : count +
+            ' · ' +
+            STRUCTURAL_SYSTEMS[variant.values.structure].name +
+            ' / ' +
+            EXTERIOR_FINISHES[variant.values.facade].name;
+      choice.append(option(text, variant.key));
+    }
+    const remembered = currentVariants.get(key);
+    if (variants.some((variant) => variant.key === remembered)) choice.value = remembered;
+    if (variants.length > 1) {
+      variantLabel.append(choice);
+    } else {
+      variantLabel.textContent = choice.options[0].textContent;
+    }
+    card.querySelector('.assembly-figure').after(variantLabel);
+    const paint = () => {
+      const variant = variants.find((variant) => variant.key === choice.value);
+      drawExplodedAssembly(canvas, variant.values, ring);
+    };
+    function showVariant() {
+      const { values } = variants.find((variant) => variant.key === choice.value);
+      currentVariants.set(key, choice.value);
+      specs.innerHTML = assemblyLayerMarkup(values);
+      canvas.setAttribute(
+        'aria-label',
+        title +
+          ', exploded axonometric. ' +
+          STRUCTURAL_SYSTEMS[values.structure].name +
+          ' structure and ' +
+          EXTERIOR_FINISHES[values.facade].name +
+          ' cladding.'
+      );
+      paint();
+    }
+    choice.addEventListener('change', showVariant);
+    diagrams.set(canvas, paint);
+    diagramObserver.observe(canvas);
+    showVariant();
+    return card;
+  }
+
+  function refreshAssemblies() {
+    diagramObserver.disconnect();
+    diagrams.clear();
+    const { model: snapshot, assignments } = study;
+    const core = assemblyVariants(
+      snapshot.rooms.map((room) => ({
+        values: materialValues(assignments, 'core', room.id),
+        quantity: room.area
+      })),
+      materialValues(assignments, 'core')
+    );
+    $('materialCoreAssembly').replaceChildren(makeAssemblyCard('Core ring', core, snapshot));
+    $('materialModuleAssemblies').replaceChildren(
+      ...PROGRAMS.map((program, id) => {
+        const modules = snapshot.slots
+          .filter((slot) => slot.p === id)
+          .map((slot) => ({
+            values: materialValues(assignments, 'module', id, materialSlotKey(snapshot, slot)),
+            quantity: 1
+          }));
+        const variants = assemblyVariants(modules, materialValues(assignments, 'module', id));
+        return makeAssemblyCard(program.name, variants, null, id);
+      })
+    );
+  }
+
+  $('materialAssembliesView').addEventListener('click', () => showAssemblyView(true));
+  $('materialModelView').addEventListener('click', () => showAssemblyView(false));
 
   function currentKey() {
     return $('materialTargetField').hidden ? scope.value : scope.value + ':' + target.value;
@@ -7248,6 +7927,7 @@ requestAnimationFrame(animateSwingFrame);
     $('materialStructureView').checked = study.structureView;
     $('materialNotes').value = study.notes;
     syncTargets();
+    refreshAssemblies();
     rebuild();
   }
 
@@ -7267,6 +7947,7 @@ requestAnimationFrame(animateSwingFrame);
       if (!Object.keys(assignment).length) delete study.assignments[key];
       syncAssignment();
       saveStudy();
+      refreshAssemblies();
       rebuild();
     });
   }

@@ -113,7 +113,7 @@ with sync_playwright() as p:
      return {
        roomConcentration: concentration(points),
        moduleConcentration: concentration(modules.map(slot => ({angle: slot.angle, weight: 1}))),
-       stacks: modules.filter(slot => layout.slots[slot.i + layout.slotN]?.p === id).length,
+       perFloor: Array.from({length:state.floors}, (_, floor) => modules.filter(slot=>slot.f===floor).length),
        moduleCount: modules.length,
      };
    }
@@ -122,9 +122,30 @@ with sync_playwright() as p:
  for case in firehall:
   on, off = case['on'], case['off']
   assert on['roomConcentration'] > off['roomConcentration'] + 0.2, case
-  assert on['moduleConcentration'] > off['moduleConcentration'] + 0.1, case
-  assert on['stacks'] > off['stacks'] and on['moduleCount'] == off['moduleCount'], case
- print('Firehall clustering concentrates core rooms and modules and increases vertical stacks', firehall, flush=True)
+  assert on['moduleConcentration'] > off['moduleConcentration'], case
+  assert on['moduleCount'] == off['moduleCount'], case
+  assert on['perFloor'] == off['perFloor'] == [on['moduleCount'], 0, 0, 0], case
+ print('Firehall clustering and ground-first placement passed', firehall, flush=True)
+ firehall_overflow = page.evaluate('''() => {
+   state = defaults();
+   state.floors = 3;
+   const columns = 5;
+   const slots = [2, 3, 3].flatMap((count, f) =>
+     Array.from({length:count}, (_, j) => ({i:f*columns+j,f,j,angle:j*TAU/columns,anchor:UNUSED})));
+   const counts = [0,0,5,0,0,0];
+   const scenario = (slots, pins) => {
+     const result = place(slots, columns, counts, [], pins);
+     return {
+       perFloor: [0,1,2].map(f => slots.filter((slot,i) => slot.f===f && result.placement[i]===FIREHALL).length),
+       unplaced: result.firehall.unplaced,
+       omitted: [...result.firehall.omitted]
+     };
+   };
+   return {overflow: scenario(slots,new Map()), noGround: scenario(slots.filter(s=>s.f>0),new Map([[5,FIREHALL]]))};
+ }''')
+ assert firehall_overflow['overflow'] == {'perFloor':[2,2,1], 'unplaced':0, 'omitted':[]}, firehall_overflow
+ assert firehall_overflow['noGround']['perFloor'] == [0,0,0] and firehall_overflow['noGround']['unplaced'] == 5, firehall_overflow
+ print('Firehall overflow respects the cap on each higher floor', firehall_overflow, flush=True)
  # reset and show ground plaza from above, moving ride pose proof.
  page.evaluate('state=defaults();state.simRunning=false;state.animateSwing=false;update();camera.el=Math.PI/2-.012;camera.zoom=.87;draw()');page.wait_for_timeout(150);page.screenshot(path=str(out/'plaza-preview.png'))
  # score compare deterministic geometry, not just screenshot

@@ -1,5 +1,9 @@
 # Changelog
 
+## Assembly schedule and Firehall placement
+- Added exploded axonometrics for the core and module programs, with material variants, comparative mass and cost, and a qualitative strength profile.
+- Firehall modules now fill compatible ground-floor docks first, with each upper floor capped by the count below.
+
 ## Materials and manual programming
 - Added an independent Materials workspace with a refreshable massing snapshot, structural and exterior assignments, and saved rationale notes.
 - Added room and module program editing and dock insertion in the massing model, with solver validation before applying an edit.
