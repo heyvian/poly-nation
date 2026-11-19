@@ -1,5 +1,8 @@
 # Changelog
 
+## Massing settings
+- Made the settings rail roomier and increased tab, label, and input sizes. The Topology Designer can collapse to give the settings more vertical space.
+
 ## Fast comparison trials
 - Both trial buttons use the latest massing edits and show progress, results, or cancellation in place.
 - The trial processes five simulated minutes at browser speed using the existing fixed time steps and scoring.
