@@ -77,6 +77,52 @@ with sync_playwright() as p:
  for layout in topology.values():
   assert layout['counts'] == [layout['modules'].count(program) for program in range(len(layout['counts']))]
  print('topology modes affect placement at zero clustering; clustering increases core-to-module alignment', flush=True)
+ separation = page.evaluate('''() => [606, 608, 612].map(seed => {
+   state = defaults();
+   state.seed = seed;
+   state.affinity = 0;
+   state.relations['1-3'] = 'repel';
+   const layout = derive();
+   const {slots, slotN} = layout;
+   const horizontal = slots.filter(slot =>
+     programsRepel(slot.p, slots[slot.f * slotN + (slot.j + 1) % slotN].p)).length;
+   const vertical = slots.filter(slot =>
+     programsRepel(slot.p, slots[slot.i + slotN]?.p)).length;
+   return {seed, horizontal, vertical, sameFloorConflicts: layout.repelConflicts};
+ })''')
+ assert all(case['sameFloorConflicts'] == case['horizontal'] == 0 and case['vertical'] > 0
+            for case in separation), separation
+ print('Love Hotel and Daycare separated on the same floors with vertical neighbors allowed', separation, flush=True)
+ firehall = page.evaluate('''() => {
+   const id = PROGRAMS.findIndex(program => program.short === 'FH');
+   function measure(seed, clusterEnabled) {
+     state = defaults();
+     state.seed = seed;
+     state.cluster[id] = clusterEnabled;
+     const layout = derive();
+     const rooms = layout.rooms.filter(room => room.id === id);
+     const modules = layout.slots.filter(slot => slot.p === id);
+     const points = rooms.map(room => ({angle: (room.start + room.end) / 2, weight: room.area}));
+     function concentration(samples) {
+       const x = samples.reduce((sum, sample) => sum + sample.weight * Math.cos(sample.angle), 0);
+       const z = samples.reduce((sum, sample) => sum + sample.weight * Math.sin(sample.angle), 0);
+       return Math.hypot(x, z) / samples.reduce((sum, sample) => sum + sample.weight, 0);
+     }
+     return {
+       roomConcentration: concentration(points),
+       moduleConcentration: concentration(modules.map(slot => ({angle: slot.angle, weight: 1}))),
+       stacks: modules.filter(slot => layout.slots[slot.i + layout.slotN]?.p === id).length,
+       moduleCount: modules.length,
+     };
+   }
+   return [606, 608, 609].map(seed => ({seed, off: measure(seed, false), on: measure(seed, true)}));
+ }''')
+ for case in firehall:
+  on, off = case['on'], case['off']
+  assert on['roomConcentration'] > off['roomConcentration'] + 0.2, case
+  assert on['moduleConcentration'] > off['moduleConcentration'] + 0.1, case
+  assert on['stacks'] > off['stacks'] and on['moduleCount'] == off['moduleCount'], case
+ print('Firehall clustering concentrates core rooms and modules and increases vertical stacks', firehall, flush=True)
  # reset and show ground plaza from above, moving ride pose proof.
  page.evaluate('state=defaults();state.simRunning=false;state.animateSwing=false;update();camera.el=Math.PI/2-.012;camera.zoom=.87;draw()');page.wait_for_timeout(150);page.screenshot(path=str(out/'plaza-preview.png'))
  # score compare deterministic geometry, not just screenshot

@@ -196,7 +196,7 @@ AI implementation
 
 Heuristics
 
-Node distance sets the magnitude of each edge mode, including at zero clustering strength. The seeded room generator balances area, mixing and nearby program costs. The module solver preserves counts while swapping labels around horizontal and vertical neighbors and nearby core rooms. For selected programs, Clustering strength encourages rooms to share an angular region and modules to group near those rooms. All of these placement preferences depend on available space.
+Node distance sets the attraction weight, including at zero clustering strength. Repel prioritizes separation among nearby rooms and modules on the same floor and allows neighbors on other floors. The seeded room generator balances area, mixing and nearby program costs. The module solver preserves counts while swapping labels around horizontal and vertical neighbors and nearby core rooms. For selected programs, Clustering strength encourages rooms to share an angular region and modules to group and stack near those rooms. All of these placement preferences depend on available space.
 
 “The default for all program types should be neutral”
 
