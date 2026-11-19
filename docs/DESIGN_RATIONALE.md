@@ -70,7 +70,9 @@ means the design requirement or concept is traceable to the student's requests, 
 
 10 Interface
 
-11 Record
+11 Materials
+
+12 Record
 
 01 / ARCHITECTURAL FRAMEWORK
 
@@ -196,7 +198,11 @@ AI implementation
 
 Heuristics
 
-Node distance sets the attraction weight, including at zero clustering strength. Repel prioritizes separation among nearby rooms and modules on the same floor and allows neighbors on other floors. The seeded room generator balances area, mixing and nearby program costs. The module solver preserves counts while swapping labels around horizontal and vertical neighbors and nearby core rooms. For selected programs, Clustering strength encourages rooms to share an angular region and modules to group and stack near those rooms. All of these placement preferences depend on available space.
+Node distance weights attraction. Repel prioritizes separation among nearby rooms and modules on the same floor. Vertical neighbors are allowed. Selected programs cluster even at 0%, with the slider adding emphasis. The seeded room and dock solvers balance those preferences with area, circulation and the available geometry.
+
+Ground-first Firehall
+
+Firehall modules fill compatible ground-floor docks first. Each higher floor can have at most as many Firehall modules as the floor directly below. Clustering can still group the Firehall around a common part of the ring.
 
 “The default for all program types should be neutral”
 
@@ -502,7 +508,35 @@ Interaction design
 
 Responsive layout, compact sidebar, tab navigation, numeric controls, toolbars, area readouts and dashboard. HTML/CSS/JS renderer, local state, JSON save/load, deterministic variants and native/offline Rhino export workflows were implemented by AI. User guided the hierarchy and rejected/revised earlier solutions; exact layout and styling are an AI execution of that direction.
 
-11 / PROCESS & AUTHORSHIP RECORD
+Direct edits and on-demand detail
+
+The model previews a room, module or available dock in amber before a programming edit. The solver checks the enclosed area cap, dock reservations, same-floor Repel and entrance access, then updates the area schedule, shared lobbies and simulated routes for an accepted edit.
+
+On laptop layouts, the canvas resizes to keep the score and model controls visible. Area details opens the schedule on demand. The wordmark takes its plan-view motif from the annular core and radial modules.
+
+11 / MATERIAL STUDY
+
+Compare structure and cladding.
+
+The designer asked to compare structure and cladding after setting the massing, using exploded axonometrics and a live view of the overall building.
+
+Core ring and Firehall module axonometrics
+
+The illustrated pages show the cladding and structure as separate layers.
+
+From massing to materials
+
+Materials starts from a separate copy of the current massing. Update from massing refreshes that copy on request. Labeled swatches assign structure and cladding to the whole building, the core, the core by program, all modules, or modules by program. Six collapsible cards highlight the active assignment and show typical assemblies for the core ring and each module program.
+
+Comparative estimates
+
+The cost study applies editable CAD rates to the core floor area, modeled façade area and enclosed module quantities. Starting assumptions are $350 per m² of floor for the reference concrete structure and $95 per m² of wall for the reference corrugated cladding. The estimate covers those assemblies. The live summary reports typical structural behavior and the diversity of materials used.
+
+Design direction and implementation
+
+The student directed the separate Materials phase, the comparison by program, the exploded drawings and the approximate CAD analysis. The assistant implemented the snapshot workflow, material library, quantity takeoff and starting rates. The diagrams and strength descriptions support schematic comparisons.
+
+12 / PROCESS & AUTHORSHIP RECORD
 
 Design direction vs. implementation.
 
@@ -562,20 +596,22 @@ Presentation-ready design-authorship record; continuous exterior plaza, program-
 
 Authorship synthesis and diagrams, plaza geometry and route graph, activity distribution, 106-second ride cycle, pendulum approximation and boarding/unloading logic.
 
+After V3.6
+
+Ground-first Firehall, same-floor Repel, direct programming edits, a fixed model workspace on laptops, and a separate Materials study with exploded assemblies.
+
+Placement constraints and hover feedback, on-demand area schedule, radial plan wordmark, snapshot and material assignment logic, and comparative CAD assumptions.
+
 Suggested presentation statement
 
 “I developed the architectural concept, program relationships, modular and permanent spatial logic, circulation and gathering strategy, recreational features, and the research premise of measuring cross-pollination through weighted encounters. I directed iterative changes to the application's behavior and interface. I used ChatGPT to translate those decisions into an interactive computational model, including geometry generation, spatial allocation, agent routing, numerical scoring, user-interface code, and export tools. The assistant also proposed implementation assumptions and refinements, including specific numerical weights, thresholds and algorithms, which I could review and adjust. The model is an exploratory design instrument rather than an empirically validated simulation.”
 
 Evidence and scope
 
-This record is based on the available November 18–19, 2026 development conversation (visible later messages and retrieved summaries of earlier user prompts), the original
+The available development conversation, the original Copilot brief and the versioned repository inform this record. Earlier sections preserve the design sequence. The current application and its browser tests were used to verify the later topology, programming, interface and Materials workflows. Early attribution draws on the available prompt summaries.
 
-Poly_Nation_Copilot_Brief.md
-
-, and the versioned application files from the initial massing tool through V3.5. The exact V3.5 code was inspected for the current parameter defaults, allocation/topology, route graph, agent behavior and scoring logic. Versioned code verifies what was implemented, not who first authored a concept. The earliest exchange is not available here as a complete verbatim transcript, so early attribution is based on the retrieved prompt summaries. The page does not independently certify authorship or validate the architecture, simulator, code, remediation process, accessibility or safety.
-
-V3.6 adds this design record, the continuous program-influenced exterior plaza and a full swing ride cycle. These add destinations and change the modeled pattern of encounters; the numerical scoring formula is unchanged. All diagrams on this page are newly authored schematics of documented decisions, not original student drawings or measured outputs. The live model remains the place to inspect actual generated geometry.
+The live model shows the generated geometry. The design diagrams and material estimates are schematic comparisons. The original architectural drawings remain part of the studio reference material.
 
 POLY NATION / CROSS POLLINATION LABORATORY
 
-Design rationale · V3.6
+Design rationale · November 2026

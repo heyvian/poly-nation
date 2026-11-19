@@ -13,9 +13,13 @@ with sync_playwright() as p:
  print('baseline', {k:v for k,v in baseline.items() if k!='state'},flush=True)
  page.locator('#openRationale').click(); page.wait_for_timeout(200)
  assert page.locator('#designRationale').is_visible() and not page.locator('.layout').is_visible()
- assert page.locator('.dr-section').count()==11 and page.locator('.dr-svg').count()>=8
+ assert page.locator('.dr-section').count()==12 and page.locator('.dr-svg').count()>=8
  assert page.locator('.dr-hero-image img').evaluate('(im)=>im.complete && im.naturalWidth>0')
  page.screenshot(path=str(out/'rationale-preview.png'))
+ page.get_by_role('link', name='11 Materials').click()
+ assert page.get_by_role('heading', name='Compare structure and cladding.').is_visible()
+ assert page.locator('#dr11 img').evaluate_all('(images)=>images.length===2 && images.every(image=>image.complete && image.naturalWidth>0)')
+ assert page.get_by_role('link', name='12 Record').get_attribute('href') == '#dr12'
  page.locator('.dr-nav a[href="#dr08"]').click();page.wait_for_timeout(200);page.screenshot(path=str(out/'score-rationale.png'))
  page.locator('#openRationale').click();page.wait_for_timeout(250)
  assert page.locator('.layout').is_visible() and not page.locator('#designRationale').is_visible()
