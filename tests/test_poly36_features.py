@@ -65,6 +65,12 @@ with sync_playwright() as p:
  expect(entries.first).to_contain_text('606 → 607')
  expect(entries.first).to_contain_text('Trial settings changed')
  expect(entries.first.locator('dt').filter(has_text='Enclosed area cap')).to_have_count(0)
+ expect(entries.first.locator('.trial-diff-group h4')).to_have_text(
+     ['Settings changed', 'Changes in the model', 'Changes in encounters']
+ )
+ expect(entries.first.locator('.trial-diff-settings .trial-before')).to_have_text('606')
+ expect(entries.first.locator('.trial-diff-settings .trial-after')).to_have_text('607')
+ expect(entries.last.locator('.trial-after')).to_have_count(0)
  flags = page.evaluate('''() => {
    const baseline = {...cpHistory[1], rate: 100};
    return [110, 105, 95, 90].map(rate =>
@@ -73,9 +79,25 @@ with sync_playwright() as p:
  }''')
  assert flags == ['Major increase', 'Minor increase', 'Minor decrease', 'Major decrease'], flags
  page.locator('#cpClear').click()
- page.locator('#collapseTrial').click()
  page.evaluate('state.floors=defaults().floors;state.seed=defaults().seed;update()')
  print('both trial controls, pending design edits, five simulated minutes, and cancellation passed',flush=True)
+
+ page.evaluate('window.originalLayout = model')
+ page.locator('#cpOptimize').click()
+ suggestion = page.locator('#cpOptimizationResult')
+ expect(suggestion).to_be_visible(timeout=30000)
+ assert page.evaluate('model === window.originalLayout && state.dockVariant === 0')
+ expect(page.locator('#cpOptimizationScores')).to_contain_text('average of 3 matched trials')
+ page.locator('#cpApplyLayout').click()
+ assert page.evaluate('''() =>
+   state.dockVariant > 0 &&
+   eligibleModuleLayout(model, window.originalLayout) &&
+   JSON.stringify(model.rooms) === JSON.stringify(window.originalLayout.rooms) &&
+   model.slots.some(slot => slot.p !== window.originalLayout.slots[slot.i].p)
+ ''')
+ page.locator('#collapseTrial').click()
+ page.evaluate('state.dockVariant=0;update()')
+ print('module search preview and application kept built program areas and the core rooms',flush=True)
 
  pose = page.evaluate('''() => {
    const ride = model.feature.ride;

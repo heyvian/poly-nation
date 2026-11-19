@@ -1,5 +1,9 @@
 # Changelog
 
+## Layout optimization and trial comparisons
+- Added **Optimize layout** to the trial drawer. It compares alternate module placements under the current program areas, manual assignments, and topology rules, then offers a preview before applying a better-scoring result.
+- Put changed settings first in trial comparisons and highlight the new values. Layout and encounter changes follow.
+
 ## Trial log and Massing controls
 - Moved fast trials into a collapsible right-hand drawer shared with Area Schedule. The baseline records the design and scoring inputs, and later runs show changes from the preceding result with a model thumbnail per run.
 - Flagged comparable trial scores as minor or major increases or decreases.

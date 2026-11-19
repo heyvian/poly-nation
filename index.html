@@ -136,8 +136,20 @@
 }
 .trial-drawer .schedule-head { align-items: center; }
 .trial-drawer .schedule-head h2 { font-size: 15px; margin: 0; }
-.trial-actions { display: flex; align-items: center; gap: 9px; margin-top: 8px; }
+.trial-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; margin-top: 8px; }
 #cpTrialStatus { margin: 0; color: var(--muted); font-size: 11px; }
+#cpOptimizeStatus { margin: 6px 0 0; }
+.trial-optimization { margin-top: 10px; padding: 9px; border: 1px solid var(--line); border-radius: 6px; }
+.trial-optimization h3 { margin: 0 0 6px; font-size: 13px; }
+.trial-optimization img:not([hidden]) {
+ display: block;
+ width: 100%;
+ max-width: 230px;
+ height: auto;
+ border-radius: 3px;
+}
+.trial-optimization p { margin: 6px 0; font-size: 12px; }
+#cpApplyLayout { background: #dcebdd; color: #285742; }
 #cpHistory { display: grid; gap: 10px; margin: 10px 0; }
 #cpHistory:empty::before { content: 'Run a trial to record a baseline.'; }
 .trial-entry { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -158,10 +170,28 @@
 .trial-score-change[data-direction="decrease"] { background: #f3e0d6; color: #793e28; }
 .trial-changes { padding: 9px; border-top: 1px solid var(--line); }
 .trial-changes summary { font-size: 12px; }
-.trial-changes h4 { margin: 11px 0 3px; font-size: 11px; }
-.trial-changes dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 7px; font-size: 11px; }
+.trial-diff-group { margin-top: 10px; padding: 7px 8px; border-top: 1px solid var(--line); }
+.trial-changes h4 { margin: 0 0 5px; font-size: 12px; }
+.trial-changes h5 { margin: 8px 0 3px; font-size: 11px; }
+.trial-comparison .trial-diff-settings {
+ background: #eff5ed;
+ border-radius: 4px;
+ border-top-color: #b7cbb9;
+}
+.trial-comparison .trial-diff-settings h4 { color: #2d5945; }
+.trial-changes dl {
+ margin: 0;
+ display: grid;
+ grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+ gap: 4px 7px;
+ font-size: 11px;
+}
 .trial-changes dt { color: var(--muted); }
+.trial-comparison .trial-diff-settings dt { color: var(--ink); font-weight: 600; }
 .trial-changes dd { margin: 0; overflow-wrap: anywhere; }
+.trial-before, .trial-arrow { color: var(--muted); }
+.trial-after { padding: 1px 3px; border-radius: 3px; background: #edf0e9; font-weight: 650; }
+.trial-diff-settings .trial-after { background: #d6e8d6; color: #244a37; }
 .program-actions { position: absolute; right: 12px; bottom: 10px; justify-content: flex-end; }
 .program-actions button { background: #fcfcf6ed; font-size: 11px; }
 .program-actions [aria-pressed="true"] { background: #e1ecdf; border-color: #a0b9a3; }
@@ -537,9 +567,17 @@
   </div>
   <div class="trial-actions">
    <button id="cpTrial" type="button">Run fast trial</button>
+   <button id="cpOptimize" aria-controls="cpOptimizationResult" title="Compare module placements with program areas and topology fixed" type="button">Optimize layout</button>
    <span id="cpTrialStatus" role="status">5 simulated minutes</span>
   </div>
+  <p id="cpOptimizeStatus" class="hint" role="status" hidden></p>
  </div>
+ <section id="cpOptimizationResult" class="trial-optimization" aria-labelledby="cpOptimizationTitle" hidden>
+  <h3 id="cpOptimizationTitle">Suggested module layout</h3>
+  <img id="cpOptimizationThumbnail" alt="Suggested module layout" width="384" height="216" hidden>
+  <p id="cpOptimizationScores"></p>
+  <button id="cpApplyLayout" type="button">Apply layout</button>
+ </section>
  <div id="cpHistory"></div>
  <button id="cpClear" type="button" hidden>Clear comparisons</button>
 </section>
@@ -771,6 +809,7 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
     modules: 110,
     affinity: 70,
     seed: 606,
+    dockVariant: 0,
     split: PROGRAMS.map((p) => p.split),
     points: PROGRAMS.map((p) => p.pos.slice()),
     roof: true,
@@ -2016,7 +2055,7 @@ function autoGeometry(coreTotal, rinseCore) {
   return { R, r, width };
 }
 // Regenerate the architectural model from state. Fit floor area, reserve features, and then place the inventory.
-function derive() {
+function derive(dockVariant = state.dockVariant) {
   const sum = (a) => a.reduce((x, y) => x + y, 0),
     retailWant = (n) => apportion(state.vacancy, Math.max(0, n))[3];
   let manualClamped = false,
@@ -2316,7 +2355,8 @@ function derive() {
     slotN,
     requestedCounts,
     rooms,
-    pins
+    pins,
+    (state.seed + dockVariant) >>> 0
   );
   counts.fill(0);
   activeSlots.forEach((slot, i) => {
@@ -2512,9 +2552,9 @@ function planFirehall(slots, columns, count, pins, dockConflicts) {
 }
 
 // SEEDED TOPOLOGY SOLVER — fixed inventory; swap labels including vacancies; local pair energy.
-function place(slots, n, counts, rooms = [], pins = new Map()) {
+function place(slots, n, counts, rooms = [], pins = new Map(), seed = state.seed) {
   const N = slots.length,
-    rng = random(state.seed),
+    rng = random(seed),
     a = Array(N).fill(EMPTY),
     clusteringStrength = clusterStrength(),
     centers = Array(5).fill(null);
@@ -4956,9 +4996,9 @@ function dwellPoint(n, a) {
   return [base[0] + dx, base[1], base[2] + dz];
 }
 // Create a fresh simulation with its own seeded random stream and counters. Trials call this independently.
-function makeOccupancy(m) {
+function makeOccupancy(m, seed = state.seed) {
   const graph = buildNavigation(m),
-    rng = random((state.seed ^ 0x74b33ac) >>> 0),
+    rng = random((seed ^ 0x74b33ac) >>> 0),
     people = [],
     animals = [],
     skin = ['#e9c5a2', '#c39371', '#9e6b50', '#755039'],
@@ -5696,7 +5736,9 @@ function renderCrossScore() {
 const CP_TRIAL_SECONDS = 5 * 60;
 let cpHistory = [],
   cpTrialActive = null,
-  cpTrialNotice = '';
+  cpTrialNotice = '',
+  cpOptimization = null,
+  cpOptimizationChoice = null;
 // Identify comparable trial settings while allowing the architecture to vary between trials.
 function cpSignature() {
   return JSON.stringify({
@@ -5722,8 +5764,16 @@ function refreshTrialDashboard() {
       : '';
   $('cpQuickTrial').textContent = label;
   $('cpTrial').textContent = label;
+  $('cpQuickTrial').disabled = $('cpTrial').disabled = Boolean(cpOptimization);
+  $('cpOptimize').disabled = Boolean(cpTrialActive);
+  $('cpOptimize').textContent = cpOptimization ? 'Cancel search' : 'Optimize layout';
   $('cpDashTrialResult').textContent = status || result || '5 simulated minutes';
   $('cpTrialStatus').textContent = status || '5 simulated minutes';
+  if (cpOptimizationChoice && !isCurrentLayoutSearch(cpOptimizationChoice)) {
+    cpOptimizationChoice = null;
+    $('cpOptimizationResult').hidden = true;
+    setOptimizationStatus('Settings changed. Run Optimize layout again to compare.');
+  }
 }
 // Capture realized dimensions and program allocations alongside the inputs used for the trial.
 function trialLayout(model, trial) {
@@ -5787,16 +5837,7 @@ function trialLogSections(record) {
   const percent = (value) => trialValue(value, '%');
   const mode =
     typeof settings.autoCore === 'boolean' ? (settings.autoCore ? 'Auto' : 'Manual') : null;
-  const sections = {
-    Encounters: {
-      'Total encounters': trialValue(record.encounters),
-      'Different previous rooms': trialValue(record.cross),
-      'Different previous programs': trialValue(record.programEncounters),
-      'Human / non-human': trialValue(record.species),
-      'Different agent kinds': trialValue(record.kindEncounters),
-      'Recent play': trialValue(record.funEncounters),
-      'Active visitor-minutes': trialValue(record.visitorMinutes)
-    },
+  const inputs = {
     'Trial setup': {
       'Variation seed': trialValue(record.seed),
       'Human visitor setting': trialValue(record.visitors),
@@ -5806,32 +5847,17 @@ function trialLogSections(record) {
       Floors: trialValue(settings.floors),
       'Core sizing': mode,
       'Enclosed area cap': area(settings.areaCap),
-      'Enclosed area used': area(layout.enclosed),
-      'Outer footprint': area(
-        layout.footprint ?? (settings.autoCore === false ? settings.footprint : null)
-      ),
+      'Footprint setting': mode === 'Auto' ? 'Auto' : area(settings.footprint),
       'Preferred ring width': metres(settings.ringWidth),
-      'Actual ring width': metres(layout.width),
-      'Core and greenhouse area': area(record.core),
-      'Core rooms': trialValue(record.rooms),
       'Minimum room area setting': area(settings.minRoomArea),
       'Modules requested': trialValue(settings.modules),
-      'Modules installed': trialValue(record.modules)
+      'Module arrangement': settings.dockVariant ? 'Variation ' + settings.dockVariant : 'Original'
     },
     'Circulation and play': {
       'Entrance area setting': area(settings.lobby),
-      'Entrance area built': area(layout.lobby),
-      'Usable visitor entrance':
-        typeof layout.entry === 'boolean' ? (layout.entry ? 'Yes' : 'No') : null,
       'Preferred corridor width': metres(settings.corridorWidth),
-      'Corridor area': area(layout.corridors),
-      'Shared lobbies': trialValue(record.hubs),
-      'Exterior plaza': area(layout.plaza),
-      'Public roof': area(layout.roof),
       'Slide length setting': percent(settings.slideLength),
-      'Slide built': layout.slide === 0 ? 'Off' : metres(layout.slide),
-      'Climbing width': settings.climbWidth === 0 ? 'Off' : metres(settings.climbWidth),
-      'Climbing height': metres(layout.climb)
+      'Climbing width': settings.climbWidth === 0 ? 'Off' : metres(settings.climbWidth)
     },
     'Program allocation': {},
     'Vacant docks': {},
@@ -5842,8 +5868,7 @@ function trialLogSections(record) {
             .map((program) => program.name)
             .join(', ') || 'None'
         : null,
-      'Core program mixing': percent(settings.mix),
-      'Same-floor Repel conflicts': trialValue(layout.conflicts)
+      'Core program mixing': percent(settings.mix)
     },
     'Programming edits': {},
     'Scoring weights': Object.fromEntries(
@@ -5853,15 +5878,53 @@ function trialLogSections(record) {
       ])
     )
   };
+  const model = {
+    Massing: {
+      'Enclosed area used': area(layout.enclosed),
+      'Outer footprint': area(layout.footprint),
+      'Actual ring width': metres(layout.width),
+      'Core and greenhouse area': area(record.core),
+      'Core rooms': trialValue(record.rooms),
+      'Modules installed': trialValue(record.modules)
+    },
+    'Circulation and play': {
+      'Entrance area built': area(layout.lobby),
+      'Usable visitor entrance':
+        typeof layout.entry === 'boolean' ? (layout.entry ? 'Yes' : 'No') : null,
+      'Corridor area': area(layout.corridors),
+      'Shared lobbies': trialValue(record.hubs),
+      'Exterior plaza': area(layout.plaza),
+      'Public roof': area(layout.roof),
+      'Slide built': layout.slide === 0 ? 'Off' : metres(layout.slide),
+      'Climbing height': metres(layout.climb)
+    },
+    'Program allocation': {},
+    'Vacant docks': {},
+    'Program relationships': { 'Same-floor Repel conflicts': trialValue(layout.conflicts) }
+  };
+  const encounters = {
+    Encounters: {
+      'Total encounters': trialValue(record.encounters),
+      'Different previous rooms': trialValue(record.cross),
+      'Different previous programs': trialValue(record.programEncounters),
+      'Human / non-human': trialValue(record.species),
+      'Different agent kinds': trialValue(record.kindEncounters),
+      'Recent play': trialValue(record.funEncounters),
+      'Active visitor-minutes': trialValue(record.visitorMinutes)
+    }
+  };
   for (const [index, program] of PROGRAMS.entries()) {
-    const allocation = sections['Program allocation'];
-    allocation[program.name + ' · core preference'] = percent(settings.split?.[index]);
-    allocation[program.name + ' · built core'] = area(layout.coreAreas?.[index]);
-    allocation[program.name + ' · installed modules'] = trialValue(layout.moduleCounts?.[index]);
+    inputs['Program allocation'][program.name + ' · core preference'] = percent(
+      settings.split?.[index]
+    );
+    model['Program allocation'][program.name + ' · built core'] = area(layout.coreAreas?.[index]);
+    model['Program allocation'][program.name + ' · installed modules'] = trialValue(
+      layout.moduleCounts?.[index]
+    );
   }
   VACANCY.forEach((use, i) => {
-    sections['Vacant docks'][use.name + ' · preference'] = percent(settings.vacancy?.[i]);
-    sections['Vacant docks'][use.name + ' · slots'] = trialValue(layout.vacancyCounts?.[i]);
+    inputs['Vacant docks'][use.name + ' · preference'] = percent(settings.vacancy?.[i]);
+    model['Vacant docks'][use.name + ' · slots'] = trialValue(layout.vacancyCounts?.[i]);
   });
   if (settings.relations) {
     for (const [i, program] of PROGRAMS.entries())
@@ -5877,26 +5940,26 @@ function trialLogSections(record) {
           relationship !== 'neutral' && positioned
             ? ' · ' + percent(100 * relationMagnitude(i, j, points))
             : '';
-        sections['Program relationships'][program.short + ' / ' + PROGRAMS[j].short] =
+        inputs['Program relationships'][program.short + ' / ' + PROGRAMS[j].short] =
           MODES[relationship].name + weight;
       }
   }
   for (const [key, program] of Object.entries(settings.roomPrograms ?? {})) {
     const [, floor, band, angle] = key.split(':').map(Number);
     if (Number.isFinite(angle) && PROGRAMS[program])
-      sections['Programming edits'][
+      inputs['Programming edits'][
         `Room L${floor + 1}, band ${band + 1}, ${Math.round((angle * 180) / Math.PI)}°`
       ] = PROGRAMS[program].name;
   }
   for (const [key, edit] of Object.entries(settings.modulePrograms ?? {})) {
     const [, floor, dock] = key.split(':').map(Number);
     if (Number.isFinite(dock) && PROGRAMS[edit?.program])
-      sections['Programming edits'][`Dock ${dock + 1}, L${floor + 1}`] =
+      inputs['Programming edits'][`Dock ${dock + 1}, L${floor + 1}`] =
         (edit.from === null ? 'Added ' : '') + PROGRAMS[edit.program].name;
   }
   for (const [key, label] of Object.entries(CP_BONUSES))
-    sections['Scoring weights'][label] = trialValue(settings[key], '×', 2);
-  return sections;
+    inputs['Scoring weights'][label] = trialValue(settings[key], '×', 2);
+  return { settings: inputs, model, encounters };
 }
 
 function trialElement(tag, text = '', className = '') {
@@ -5928,11 +5991,48 @@ function appendTrialScoreChange(result, record, previous) {
   }
   const major = Math.abs(record.rate - previous.rate) >= Math.max(5, previous.rate * 0.1);
   const direction = delta > 0 ? 'increase' : 'decrease';
-  const label = trialElement('span', (major ? 'Major ' : 'Minor ') + direction, 'trial-score-change');
+  const label = trialElement(
+    'span',
+    (major ? 'Major ' : 'Minor ') + direction,
+    'trial-score-change'
+  );
   label.dataset.direction = direction;
   label.title = 'Major means at least 10% and 5 points versus the previous trial.';
   const signedDelta = (delta > 0 ? '+' : '−') + Math.abs(delta).toFixed(1);
   result.append(label, trialElement('small', signedDelta + ' pts vs previous'));
+}
+
+// Older trials can lack some fields. Only compare values recorded in both runs, except for added or removed edits.
+function renderTrialDiffGroup(name, title, sections, previousSections) {
+  const group = trialElement('div', '', 'trial-diff-group trial-diff-' + name);
+  group.append(trialElement('h4', title));
+  for (const [section, fields] of Object.entries(sections)) {
+    const list = trialElement('dl');
+    const previous = previousSections?.[section];
+    const edits = section === 'Programming edits';
+    const keys =
+      edits && previous
+        ? new Set([...Object.keys(fields), ...Object.keys(previous)])
+        : Object.keys(fields);
+    for (const key of keys) {
+      const after = fields[key] ?? (edits ? 'None' : null);
+      const before = previous?.[key] ?? (edits ? 'None' : null);
+      if (after == null || (previousSections && (before == null || before === after))) continue;
+      const value = trialElement('dd');
+      if (previousSections) {
+        value.append(
+          trialElement('span', before, 'trial-before'),
+          trialElement('span', ' → ', 'trial-arrow'),
+          trialElement('strong', after, 'trial-after')
+        );
+      } else value.textContent = after;
+      list.append(trialElement('dt', key), value);
+    }
+    if (!list.children.length) continue;
+    if (name !== 'encounters') group.append(trialElement('h5', section));
+    group.append(list);
+  }
+  return group.childElementCount > 1 ? group : null;
 }
 
 // Compare with the immediately preceding entry. Score deltas require matching trial settings.
@@ -5955,31 +6055,22 @@ function renderTrialEntry(record, previous, index) {
   header.append(result);
   card.append(header);
   const details = trialElement('details', '', 'trial-changes');
+  details.classList.toggle('trial-comparison', Boolean(previous));
   details.open = index === 0;
   details.append(trialElement('summary', previous ? 'What changed' : 'Baseline details'));
   const current = trialLogSections(record);
   const prior = previous ? trialLogSections(previous) : null;
-  let rowCount = 0;
-  for (const [section, fields] of Object.entries(current)) {
-    const list = trialElement('dl');
-    const edits = section === 'Programming edits';
-    const keys =
-      edits && prior
-        ? new Set([...Object.keys(fields), ...Object.keys(prior[section])])
-        : Object.keys(fields);
-    for (const key of keys) {
-      const value = fields[key] ?? (edits ? 'None' : null);
-      const before = prior?.[section][key] ?? (edits ? 'None' : null);
-      if (value == null || (prior && (before == null || before === value))) continue;
-      list.append(
-        trialElement('dt', key),
-        trialElement('dd', prior ? before + ' → ' + value : value)
-      );
-      rowCount++;
-    }
-    if (list.children.length) details.append(trialElement('h4', section), list);
+  const groupTitles = {
+    settings: previous ? 'Settings changed' : 'Trial settings',
+    model: previous ? 'Changes in the model' : 'Generated layout',
+    encounters: previous ? 'Changes in encounters' : 'Encounters'
+  };
+  for (const [name, title] of Object.entries(groupTitles)) {
+    const group = renderTrialDiffGroup(name, title, current[name], prior?.[name]);
+    if (group) details.append(group);
   }
-  if (!rowCount) details.append(trialElement('p', 'No recorded changes.', 'hint'));
+  if (details.childElementCount === 1)
+    details.append(trialElement('p', 'No recorded changes.', 'hint'));
   card.append(details);
   return card;
 }
@@ -6054,9 +6145,23 @@ function finishTrial(notice = '') {
   renderTrials();
 }
 
-// Advance a separate occupancy as fast as the browser can compute it, yielding between batches.
+// Yield during fixed-step trials so both the regular trial and the layout search can be cancelled.
+async function advanceTrialBatches(trial, isCurrent, onProgress = () => {}) {
+  while (trial.clock < CP_TRIAL_SECONDS) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    if (!isCurrent()) return false;
+    const deadline = performance.now() + 24;
+    do {
+      advanceScored(trial, 1);
+    } while (trial.clock < CP_TRIAL_SECONDS && performance.now() < deadline);
+    onProgress();
+  }
+  return true;
+}
+
 async function toggleTrial() {
   if ($('trialDrawer').hidden) openMassingDrawer($('trialDrawer'));
+  if (cpOptimization) return;
   if (cpTrialActive) {
     finishTrial('Trial cancelled.');
     return;
@@ -6073,18 +6178,15 @@ async function toggleTrial() {
       trial = makeOccupancy(trialModel);
     cpTrialActive = trial;
     refreshTrialDashboard();
-    while (trial.clock < CP_TRIAL_SECONDS) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      if (cpTrialActive !== trial) return;
-      if (pending || model !== trialModel || signature !== cpSignature()) {
-        finishTrial('Trial cancelled because the settings changed.');
-        return;
-      }
-      const deadline = performance.now() + 24;
-      do {
-        advanceScored(trial, 1);
-      } while (trial.clock < CP_TRIAL_SECONDS && performance.now() < deadline);
-      refreshTrialDashboard();
+    const completed = await advanceTrialBatches(
+      trial,
+      () =>
+        cpTrialActive === trial && !pending && model === trialModel && signature === cpSignature(),
+      refreshTrialDashboard
+    );
+    if (!completed) {
+      if (cpTrialActive === trial) finishTrial('Trial cancelled because the settings changed.');
+      return;
     }
     const score = trial.score;
     const previousNumber = cpHistory[0]?.number;
@@ -6121,6 +6223,150 @@ async function toggleTrial() {
 }
 $('cpQuickTrial').onclick = toggleTrial;
 $('cpTrial').onclick = toggleTrial;
+
+const CP_LAYOUT_ALTERNATIVES = 8;
+
+// A candidate changes only the module solver's random stream. Rooms, quotas and topology stay fixed.
+function eligibleModuleLayout(candidate, original) {
+  const sameArea = (a, b) => Math.abs(a - b) <= 0.01;
+  return (
+    sameArea(candidate.total, original.total) &&
+    original.core.every((area, i) => sameArea(area, candidate.core[i])) &&
+    original.counts.every((count, i) => count === candidate.counts[i]) &&
+    candidate.repelConflicts === 0 &&
+    candidate.firehallUnplaced === 0 &&
+    candidate.firehallOmitted.size === 0 &&
+    original.slots.every(
+      (slot) =>
+        !slot.editKey ||
+        (candidate.slots[slot.i]?.editKey === slot.editKey && candidate.slots[slot.i].p === slot.p)
+    )
+  );
+}
+
+function isCurrentLayoutSearch(search) {
+  return !pending && model === search.original && cpSignature() === search.signature;
+}
+
+function setOptimizationStatus(message) {
+  const status = $('cpOptimizeStatus');
+  status.textContent = message;
+  status.hidden = !message;
+}
+
+function finishLayoutSearch(message) {
+  cpOptimization = null;
+  setOptimizationStatus(message);
+  refreshTrialDashboard();
+}
+
+async function meanLayoutRate(layout, seeds, isCurrent) {
+  let sum = 0;
+  for (const seed of seeds) {
+    if (!isCurrent()) return null;
+    const trial = makeOccupancy(layout, seed);
+    if (trial.graph.entry == null || !(await advanceTrialBatches(trial, isCurrent))) return null;
+    sum += crossRate(trial);
+  }
+  return sum / seeds.length;
+}
+
+function showLayoutSuggestion(search, best, currentRate, seedCount) {
+  const image = $('cpOptimizationThumbnail');
+  const thumbnail = trialThumbnailSource(captureTrialThumbnail(best.layout));
+  if (thumbnail) image.src = thumbnail;
+  image.hidden = !thumbnail;
+  $('cpOptimizationScores').textContent =
+    currentRate.toFixed(1) +
+    ' → ' +
+    best.rate.toFixed(1) +
+    ' pts / 100 visitor-min · average of ' +
+    seedCount +
+    ' matched trials';
+  cpOptimizationChoice = { ...search, variant: best.variant };
+  $('cpOptimizationResult').hidden = false;
+}
+
+async function optimizeModuleLayout() {
+  if (cpOptimization) {
+    finishLayoutSearch('Layout search cancelled.');
+    return;
+  }
+  if (cpTrialActive) return;
+  cpOptimizationChoice = null;
+  $('cpOptimizationResult').hidden = true;
+  let search = null;
+  let message = 'Layout search stopped because the settings changed.';
+  try {
+    if (pending) {
+      cancelAnimationFrame(pending);
+      update();
+    }
+    if (!model?.count) {
+      message = 'The model needs modules to search for alternate placements.';
+      return;
+    }
+    const original = model;
+    search = { original, signature: cpSignature() };
+    const isCurrent = () => cpOptimization === search && isCurrentLayoutSearch(search);
+    const seeds = [state.seed, (state.seed ^ 0x9e3779b9) >>> 0, (state.seed ^ 0x85ebca6b) >>> 0];
+    const firstVariant = state.dockVariant;
+    cpOptimization = search;
+    $('trialDrawer').scrollTop = 0;
+    setOptimizationStatus('Scoring your current module layout…');
+    refreshTrialDashboard();
+    const currentRate = await meanLayoutRate(original, seeds, isCurrent);
+    if (!isCurrent()) return;
+    if (currentRate == null) {
+      message = 'The model needs a usable entrance to compare visitor encounters.';
+      return;
+    }
+    const arrangementKey = (layout) => layout.slots.map((slot) => slot.p).join(',');
+    const seen = new Set([arrangementKey(original)]);
+    let best = null;
+    let checked = 0;
+    for (let i = 1; i <= CP_LAYOUT_ALTERNATIVES; i++) {
+      setOptimizationStatus('Checking arrangement ' + i + ' of ' + CP_LAYOUT_ALTERNATIVES + '…');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (!isCurrent()) return;
+      const variant = (firstVariant + i) >>> 0;
+      const layout = derive(variant);
+      if (!eligibleModuleLayout(layout, original)) continue;
+      const key = arrangementKey(layout);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const rate = await meanLayoutRate(layout, seeds, isCurrent);
+      if (!isCurrent()) return;
+      if (rate == null) continue;
+      checked++;
+      if (!best || rate > best.rate) best = { layout, rate, variant };
+    }
+    if (!best) {
+      message = 'No alternate placement met the area and topology constraints.';
+    } else if (Number(best.rate.toFixed(1)) <= Number(currentRate.toFixed(1))) {
+      message = 'Your layout matched or beat the ' + checked + ' eligible alternatives.';
+    } else {
+      showLayoutSuggestion(search, best, currentRate, seeds.length);
+      message = 'Found a higher-scoring layout among ' + checked + ' eligible alternatives.';
+    }
+  } catch (error) {
+    console.error('Module layout search failed', error);
+    message = 'Layout search failed. Try again.';
+  } finally {
+    if (!search || cpOptimization === search) finishLayoutSearch(message);
+  }
+}
+
+$('cpOptimize').onclick = optimizeModuleLayout;
+$('cpApplyLayout').onclick = () => {
+  const choice = cpOptimizationChoice;
+  if (!choice || cpTrialActive || cpOptimization || !isCurrentLayoutSearch(choice)) return;
+  cpOptimizationChoice = null;
+  $('cpOptimizationResult').hidden = true;
+  state.dockVariant = choice.variant;
+  update();
+  setOptimizationStatus('Suggested module layout applied.');
+};
 
 // Render the current occupants as separate dynamic geometry so animation does not rebuild the architecture.
 function makePopulationMesh() {
@@ -7239,6 +7485,7 @@ function scheduleUpdate() {
 }
 $('shuffle').onclick = () => {
   state.seed = (state.seed + 1) >>> 0;
+  state.dockVariant = 0;
   scheduleUpdate();
 };
 $('reset').onclick = () => {
@@ -7394,6 +7641,7 @@ function applySaved(data) {
     modules: [0, 300],
     affinity: [0, 100],
     seed: [0, 4294967295],
+    dockVariant: [0, 4294967295],
     inspect: [0, 10],
     mix: [0, 100],
     slideLength: [0, 100],
@@ -7407,7 +7655,8 @@ function applySaved(data) {
   };
   for (const [k, [a, b]] of Object.entries(ranges))
     if (typeof s[k] === 'number' && Number.isFinite(s[k])) d[k] = clamp(s[k], a, b);
-  for (const k of ['floors', 'modules', 'seed', 'inspect', 'visitorCount']) d[k] = Math.round(d[k]);
+  for (const k of ['floors', 'modules', 'seed', 'dockVariant', 'inspect', 'visitorCount'])
+    d[k] = Math.round(d[k]);
   for (const k of [
     'autoCore',
     'roof',
