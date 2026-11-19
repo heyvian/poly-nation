@@ -83,10 +83,12 @@ with sync_playwright() as p:
  print('both trial controls, pending design edits, five simulated minutes, and cancellation passed',flush=True)
 
  page.evaluate('window.originalLayout = model')
+ detail_trial.click()
+ page.wait_for_function('cpHistory.length === 1 && !cpTrialActive')
  page.locator('#cpOptimize').click()
  suggestion = page.locator('#cpOptimizationResult')
  expect(suggestion).to_be_visible(timeout=30000)
- assert page.evaluate('model === window.originalLayout && state.dockVariant === 0')
+ assert page.evaluate('model === window.originalLayout && state.dockVariant === 0 && cpHistory.length === 1')
  expect(page.locator('#cpOptimizationScores')).to_contain_text('average of 3 matched trials')
  page.locator('#cpApplyLayout').click()
  assert page.evaluate('''() =>
@@ -95,9 +97,13 @@ with sync_playwright() as p:
    JSON.stringify(model.rooms) === JSON.stringify(window.originalLayout.rooms) &&
    model.slots.some(slot => slot.p !== window.originalLayout.slots[slot.i].p)
  ''')
+ page.wait_for_function('cpHistory.length === 2 && !cpTrialActive')
+ assert page.evaluate('cpHistory[0].settings.dockVariant === state.dockVariant')
+ expect(entries.first.locator('.trial-diff-settings')).to_contain_text('Module arrangement')
+ expect(entries.first.locator('.trial-thumbnail')).to_be_visible()
  page.locator('#collapseTrial').click()
  page.evaluate('state.dockVariant=0;update()')
- print('module search preview and application kept built program areas and the core rooms',flush=True)
+ print('applying the optimization kept program areas and ran a fast trial',flush=True)
 
  pose = page.evaluate('''() => {
    const ride = model.feature.ride;

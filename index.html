@@ -552,7 +552,7 @@
 <div aria-label="Design and simulation settings" class="panel-tabs" role="tablist"><button aria-controls="design-panel-0" aria-selected="true" data-panel="design-panel-0" id="design-panel-0-tab" role="tab" tabindex="0" type="button">Building</button><button aria-controls="design-panel-1" aria-selected="false" data-panel="design-panel-1" id="design-panel-1-tab" role="tab" tabindex="-1" type="button">Modules</button><button aria-controls="design-panel-2" aria-selected="false" data-panel="design-panel-2" id="design-panel-2-tab" role="tab" tabindex="-1" type="button">Features</button><button aria-controls="cpPaneAllocation" aria-selected="false" data-panel="cpPaneAllocation" id="cpPaneAllocation-tab" role="tab" tabindex="-1" type="button">Allocation</button><button aria-controls="cpPaneVisitors" aria-selected="false" data-panel="cpPaneVisitors" id="cpPaneVisitors-tab" role="tab" tabindex="-1" type="button">Visitors</button><button aria-controls="cpPaneScore" aria-selected="false" data-panel="cpPaneScore" id="cpPaneScore-tab" role="tab" tabindex="-1" type="button">Score</button></div>
 <div class="design-scroll" id="designSettings"><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; entrance calculations</summary><div class="readout"><span>Entrance / lobby</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details></div></div></aside>
 <main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span></div>
-<div class="actions program-actions"><button id="editProgramming" type="button" aria-pressed="false">Edit programming</button><button id="chooseProgramLocation" type="button" hidden>Choose location</button></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
+<div class="actions program-actions"><button id="editProgramming" type="button" aria-pressed="false">Edit programming</button></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
 <div class="cp-main"><div class="cp-dash-head"><h2>Cross pollination</h2><span class="cp-live-status" id="cpLiveStatus">Starting</span></div><div class="cp-main-value"><b id="cpScore" title="Weighted points per 100 active visitor-minutes">—</b><span>weighted points /<br/>100 visitor-min</span></div></div>
 <div class="cp-dash-stats"><div><span>Encounters</span><b id="cpDashEncounters">0</b></div><div><span title="Encounters where both agents last left different rooms or modules">Different prior rooms</span><b id="cpDashMemory">0</b></div><div><span>Cross-species</span><b id="cpDashSpecies">0</b></div><div><span>Simulated time</span><b id="cpDashTime">0m 0s</b></div></div>
 <div class="cp-dash-trial"><button id="cpQuickTrial" aria-controls="trialDrawer" title="Simulate five minutes in a separate trial" type="button">Run fast trial</button><span id="cpDashTrialResult" role="status">5 simulated minutes</span><div class="cp-dash-links">
@@ -583,13 +583,12 @@
 </section>
 </main>
 </div>
-<dialog class="program-dialog" id="programDialog" aria-labelledby="programDialogTitle">
+<dialog class="program-dialog" id="programDialog" aria-labelledby="programDialogTitle" aria-describedby="programSelection">
  <form id="programForm">
   <h2 id="programDialogTitle">Edit programming</h2>
-  <label for="programLocation">Room or dock</label>
-  <select id="programLocation"></select>
+  <p id="programSelection"></p>
   <label for="programChoice">Program</label>
-  <select id="programChoice"></select>
+  <select id="programChoice" autofocus></select>
   <p id="programFeedback" class="hint" role="status"></p>
   <div class="actions">
    <button id="cancelProgram" type="button">Cancel</button>
@@ -6366,6 +6365,7 @@ $('cpApplyLayout').onclick = () => {
   state.dockVariant = choice.variant;
   update();
   setOptimizationStatus('Suggested module layout applied.');
+  toggleTrial();
 };
 
 // Render the current occupants as separate dynamic geometry so animation does not rebuild the architecture.
@@ -6917,13 +6917,12 @@ function programLocationLabel({ room, slot }) {
 function initProgrammingEditor() {
   const toggle = $('editProgramming');
   const dialog = $('programDialog');
-  const locations = $('programLocation');
   const programs = $('programChoice');
   const feedback = $('programFeedback');
   const label = $('programHoverLabel');
   let hoverFrame = 0;
   let hoverPoint = null;
-  let options = [];
+  let selection = null;
   let pointerStart = null;
   PROGRAMS.forEach((program, id) => programs.add(new Option(program.name, id)));
 
@@ -6970,37 +6969,15 @@ function initProgrammingEditor() {
     });
   }
 
-  function showSelection() {
-    const { room, slot } = options[Number(locations.value)];
+  function openEditor(pick) {
+    clearHover();
+    selection = { pick, model };
+    const { room, slot } = pick;
     const id = room?.id ?? slot.p;
+    $('programSelection').textContent = programLocationLabel(pick);
     programs.value = PROGRAMS[id] ? String(id) : '0';
     $('applyProgram').textContent = slot?.p === EMPTY ? 'Add module' : 'Apply program';
     feedback.textContent = '';
-  }
-
-  function openEditor(selected = null) {
-    clearHover();
-    if (pending) update();
-    const choices = [
-      ...model.rooms
-        .filter((room) => !state.inspect || room.f < state.inspect)
-        .map((room) => ({ room })),
-      ...model.slots
-        .filter((slot) => !slot.blocked && (!state.inspect || slot.f < state.inspect))
-        .map((slot) => ({ slot }))
-    ];
-    if (!choices.length) return;
-    options = choices;
-    locations.replaceChildren(
-      ...choices.map((entry, index) => new Option(programLocationLabel(entry), index))
-    );
-    const index = choices.findIndex((entry) =>
-      selected?.room
-        ? selected.room.editKey === entry.room?.editKey
-        : selected?.slot?.i === entry.slot?.i
-    );
-    locations.value = String(Math.max(0, index));
-    showSelection();
     dialog.showModal();
   }
 
@@ -7008,19 +6985,24 @@ function initProgrammingEditor() {
     clearHover();
     programEditing = !programEditing;
     toggle.setAttribute('aria-pressed', String(programEditing));
-    $('chooseProgramLocation').hidden = !programEditing;
     $('programEditHint').hidden = !programEditing;
     $('orbitHint').hidden = programEditing;
     if (programEditing) syncProgrammingHint(model);
     canvas.classList.toggle('program-picking', programEditing);
     refreshView();
   };
-  $('chooseProgramLocation').onclick = () => openEditor();
-  locations.onchange = showSelection;
   $('cancelProgram').onclick = () => dialog.close();
+  dialog.addEventListener('close', () => {
+    if (!dialog.open) selection = null;
+  });
   $('programForm').onsubmit = (event) => {
     event.preventDefault();
-    const error = applyProgramEdit(options[Number(locations.value)], Number(programs.value));
+    // A recalculated model has new room and dock identities.
+    if (!selection || pending || model !== selection.model) {
+      feedback.textContent = 'The layout changed. Close this editor and select the location again.';
+      return;
+    }
+    const error = applyProgramEdit(selection.pick, Number(programs.value));
     if (error) feedback.textContent = error;
     else dialog.close();
   };
@@ -7042,6 +7024,11 @@ function initProgrammingEditor() {
       Math.hypot(start.x - event.clientX, start.y - event.clientY) > 5
     )
       return;
+    // Pick against the latest layout if a field edit queued a rebuild.
+    if (pending) {
+      cancelAnimationFrame(pending);
+      update();
+    }
     const selected = pickMassingLocation(event.clientX, event.clientY);
     if (selected) openEditor(selected.pick);
   });

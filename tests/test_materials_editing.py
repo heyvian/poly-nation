@@ -6,6 +6,43 @@ import shutil
 from threading import Thread
 from playwright.sync_api import expect, sync_playwright
 
+def editable_points(page, kind, limit=1):
+    # Project top faces from the rendered mesh and verify the pointer can reach each target.
+    return page.evaluate("""({kind, limit}) => {
+      const mesh = softwareMesh;
+      const box = canvas.getBoundingClientRect();
+      const back = [Math.cos(camera.el) * Math.cos(camera.az), Math.sin(camera.el),
+        Math.cos(camera.el) * Math.sin(camera.az)];
+      const right = unit(cross([0, 1, 0], back));
+      const up = unit(cross(back, right));
+      const extent = mesh.extent * 1.23;
+      const half = Math.max(extent, extent * box.height / box.width,
+        camera.el > 1.4 ? 0 : mesh.H * 0.68) * camera.zoom;
+      const scale = box.height / (2 * half);
+      const points = [];
+      for (const {start, end, pick} of mesh.programTargets) {
+        if (!pick) continue;
+        const {room, slot} = pick;
+        if (kind === 'room' ? !room : !slot ||
+            (kind === 'module' ? !PROGRAMS[slot.p] : slot.p !== EMPTY)) continue;
+        for (let i = start; i < end; i += 30) {
+          if (mesh.solid[i + 4] < 0.5) continue;
+          const point = [0, 1, 2].map(axis =>
+            (mesh.solid[i + axis] + mesh.solid[i + 10 + axis] + mesh.solid[i + 20 + axis]) / 3);
+          point[1] -= mesh.H * 0.47;
+          const x = box.left + box.width / 2 + dot(point, right) * scale;
+          const y = box.top + box.height / 2 - (dot(point, up) - camera.pan) * scale;
+          if (document.elementFromPoint(x, y) !== canvas || pickMassingLocation(x, y)?.pick !== pick)
+            continue;
+          points.push([x, y]);
+          if (points.length === limit) return points;
+          break;
+        }
+      }
+      return points;
+    }""", {'kind': kind, 'limit': limit})
+
+
 root = Path(__file__).resolve().parents[1]
 handler = partial(SimpleHTTPRequestHandler, directory=root)
 with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright() as p:
@@ -137,17 +174,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
 
     page.locator('#editProgramming').click()
     page.locator('#plan').click()
-    # Project the top of a top-floor program module into the canvas and click that actual mesh.
-    x,y=page.evaluate("""() => {
-   const slot=model.slots.find(s=>s.f===state.floors-1 && s.p>=0 && s.p<5);
-   const box=canvas.getBoundingClientRect(),mesh=softwareMesh;
-   const back=[Math.cos(camera.el)*Math.cos(camera.az),Math.sin(camera.el),Math.cos(camera.el)*Math.sin(camera.az)];
-   const right=unit(cross([0,1,0],back)),up=unit(cross(back,right));
-   const half=mesh.extent*1.23*Math.max(1,box.height/box.width)*camera.zoom,rad=model.R+.65+MODULE.depth/2;
-   const point=[rad*Math.cos(slot.angle),slot.f*4.2+.43+MODULE.height-mesh.H*.47,rad*Math.sin(slot.angle)];
-   return [box.left+box.width/2+dot(point,right)*box.height/(2*half),
-           box.top+box.height/2-(dot(point,up)-camera.pan)*box.height/(2*half)];
-    }""")
+    [(x, y)] = editable_points(page, 'module')
     saved_state = page.evaluate('JSON.stringify(state)')
     page.mouse.move(x,y)
     hover_label = page.locator('#programHoverLabel')
@@ -163,10 +190,13 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     expect(hover_label).to_have_text(hovered_dock)
     page.mouse.click(x,y)
     expect(hover_label).to_be_hidden()
-    expect(page.locator('#programDialog')).to_be_visible()
-    expect(page.locator('#programLocation option:checked')).to_have_text(hovered_dock)
+    dialog = page.locator('#programDialog')
+    selection = dialog.locator('#programSelection')
+    expect(dialog).to_be_visible()
+    expect(selection).to_have_text(hovered_dock)
+    expect(dialog.get_by_role('combobox')).to_have_count(1)
+    expect(page.get_by_role('button', name='Choose location')).to_have_count(0)
     expect(page.locator('#applyProgram')).to_have_text('Apply program')
-    assert 'Dock' in page.locator('#programLocation option:checked').inner_text()
     previous=int(page.locator('#programChoice').input_value())
     replacement=(previous+1)%5
     before_counts=page.evaluate('model.counts.slice()')
@@ -178,10 +208,9 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     assert page.evaluate('model.total<=state.areaCap+1e-5')
     print('direct click and module program/area reassignment passed',flush=True)
 
-    page.locator('#chooseProgramLocation').click()
-    choices=page.locator('#programLocation option').all()
-    room=next(item for item in choices if 'Room ' in item.inner_text())
-    page.locator('#programLocation').select_option(room.get_attribute('value'))
+    [room_point] = editable_points(page, 'room')
+    page.mouse.click(*room_point)
+    expect(selection).to_contain_text('Room ')
     room_program=int(page.locator('#programChoice').input_value())
     page.locator('#programChoice').select_option(str((room_program+1)%5))
     page.locator('#applyProgram').click()
@@ -191,14 +220,22 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
 
     room_key = page.evaluate('Object.keys(state.roomPrograms)[0]')
     before_count=page.evaluate('model.count')
-    page.locator('#chooseProgramLocation').click()
-    available=[item.get_attribute('value') for item in page.locator('#programLocation option').all() if 'Available for a module' in item.inner_text()]
-    for value in available[:8]:
-        page.locator('#programLocation').select_option(value)
+    page.locator('#inspect').select_option('1')
+    page.wait_for_function('!pending')
+    available = editable_points(page, 'empty dock', limit=8)
+    assert available
+    for dock_point in available:
+        page.mouse.click(*dock_point)
+        expect(selection).to_contain_text('Available for a module')
+        expect(page.locator('#applyProgram')).to_have_text('Add module')
         page.locator('#programChoice').select_option('2')
         page.locator('#applyProgram').click()
-        if not page.locator('#programDialog').is_visible(): break
-    else: raise AssertionError(page.locator('#programFeedback').inner_text())
+        if not dialog.is_visible():
+            break
+        feedback = page.locator('#programFeedback').inner_text()
+        page.locator('#cancelProgram').click()
+    else:
+        raise AssertionError(feedback)
     assert page.evaluate('model.count')==before_count+1
     assert page.evaluate('(key)=>model.rooms.some(room=>room.editKey===key && room.id===state.roomPrograms[key])', room_key)
     assert page.evaluate('model.total<=state.areaCap+1e-5 && !model.slots.some(s=>s.blocked&&s.p!==EMPTY)')
@@ -248,5 +285,13 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     mobile.locator('#returnToAssembly').click()
     expect(mobile.locator('#assembly-2 button')).to_be_focused()
     assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+    mobile.locator('#openMaterials').click()
+    mobile.locator('#editProgramming').tap()
+    mobile.locator('#plan').tap()
+    [module_point] = editable_points(mobile, 'module')
+    mobile.touchscreen.tap(*module_point)
+    expect(mobile.locator('#programSelection')).to_contain_text('Dock ')
+    expect(mobile.locator('#programDialog').get_by_role('combobox')).to_have_count(1)
+    mobile.locator('#cancelProgram').tap()
     assert not errors, errors
     server.shutdown()
