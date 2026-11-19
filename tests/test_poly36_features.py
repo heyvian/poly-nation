@@ -1,11 +1,53 @@
 from pathlib import Path
 import os, shutil
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 root=Path(__file__).resolve().parents[1]; src=root/'index.html'; out=root/'tests'/'output'; out.mkdir(exist_ok=True)
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium') or None,args=['--no-sandbox','--disable-dev-shm-usage','--disable-webgl'])
  page=browser.new_page(viewport={'width':1440,'height':900});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.set_content(src.read_text(),wait_until='domcontentloaded');page.wait_for_function('model && occupancy');page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
+ quick_trial = page.locator('#cpQuickTrial')
+ quick_result = page.locator('#cpDashTrialResult')
+ expect(quick_result).to_have_text('5 simulated minutes')
+ # Committing a number field as the trial button receives focus queues the layout for the next frame.
+ started = page.evaluate('''() => {
+   const floors = document.querySelector('input[aria-label="Floors"]');
+   floors.value = '5';
+   floors.dispatchEvent(new Event('change'));
+   if (!pending) throw new Error('Expected a pending layout');
+   $('cpQuickTrial').click();
+   return $('cpDashTrialResult').textContent;
+ }''')
+ assert started == 'Simulating 5 min · 0%'
+ page.wait_for_function('cpHistory.length === 1 && !cpTrialActive')
+ assert page.evaluate('cpHistory[0].settings.floors') == 5
+ result = page.evaluate('''() => {
+   const reference = makeOccupancy(model);
+   advanceScored(reference, 300);
+   return {
+     expected: crossRate(reference),
+     actual: cpHistory[0].rate,
+     encounters: cpHistory[0].encounters,
+     expectedEncounters: reference.score.encounters,
+     liveTime: occupancy.clock,
+   };
+ }''')
+ assert result['actual'] == result['expected'] and result['encounters'] == result['expectedEncounters'], result
+ assert result['liveTime'] == 0, result
+ expect(quick_result).to_have_text(f"Last trial · {result['actual']:.1f}")
+ page.locator('#openScoreDetails').click()
+ detail_trial = page.locator('#cpTrial')
+ detail_trial.click()
+ page.wait_for_function('cpHistory.length === 2 && !cpTrialActive')
+ assert page.evaluate('cpHistory[0].rate === cpHistory[1].rate && occupancy.clock === 0')
+ page.evaluate('$("cpTrial").click(); $("cpQuickTrial").click()')
+ expect(detail_trial).to_have_text('Run fast trial')
+ expect(quick_result).to_have_text('Trial cancelled.')
+ assert page.evaluate('!cpTrialActive && cpHistory.length === 2')
+ page.locator('#cpClear').click()
+ page.evaluate('state.floors=defaults().floors;update()')
+ print('both trial controls, pending design edits, five simulated minutes, and cancellation passed',flush=True)
+
  pose = page.evaluate('''() => {
    const ride = model.feature.ride;
    const cruise = swingPose(ride, 0);

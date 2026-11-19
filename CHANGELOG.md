@@ -1,5 +1,9 @@
 # Changelog
 
+## Fast comparison trials
+- Both trial buttons use the latest massing edits and show progress, results, or cancellation in place.
+- The trial processes five simulated minutes at browser speed using the existing fixed time steps and scoring.
+
 ## Design Rationale and workspace restoration
 - Refocused the illustrated and text rationale on architectural programming, module placement, circulation, and materials. Showed how the Topology Designer shapes a generated ground-floor plan.
 - Reloading a browser tab restores the active Massing, Materials, or Design Rationale view.
