@@ -50,6 +50,20 @@ A system for testing the **programming** and **cross-pollination** of a mixed-us
 - **Senior care** and **daycare** (Support).
 - **Marine firehall** (Safety) – boat bays and a river dock.
 
+## Running the laboratory
+
+Open `index.html` in a modern browser. There is no build step or dependency.
+
+```
+index.html          UI markup; defines CSS and JS load order
+src/css/            01-base … 06-layout (cascade order matters)
+src/js/             01-config … 17-ui-shell (classic scripts sharing one scope; load order matters)
+```
+
+JS files, in order: config and state, controls, relations and room layout, features, the `derive()` solver, topology map, mesh builder, visitor simulation, cross-pollination score, renderer, update loop, persistence, export, UI start-up. Each file is commented.
+
+Note: the app's module height constant is 3.5 m, while the brief specifies 4 m.
+
 ## Context
 
 Bow River, Calgary; Fifth City studio brief concerned with creosote contamination.

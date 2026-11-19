@@ -1,0 +1,218 @@
+/* Live cross-pollination dashboard docked next to the model. */
+/* V3.4: keep the principal research metric next to the model. */
+.cp-dashboard {
+  display: grid;
+  grid-template-columns: minmax(145px, 1.2fr) minmax(190px, 1.55fr) minmax(
+      112px,
+      0.8fr
+    );
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f0f4ef;
+  border-bottom: 1px solid #cbd8ce;
+  flex: none;
+  color: #294638;
+  min-width: 0;
+}
+.cp-main {
+  min-width: 0;
+}
+.cp-dash-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.cp-dash-head h2 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.15px;
+}
+.cp-live-status {
+  font-size: 10px;
+  color: #5d7567;
+  white-space: nowrap;
+}
+.cp-main-value {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 3px;
+}
+.cp-main-value b {
+  font-size: clamp(28px, 3vw, 42px);
+  line-height: 1.03;
+  letter-spacing: -1.6px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #315b47;
+}
+.cp-main-value span {
+  font-size: 10px;
+  line-height: 1.2;
+  color: #5c7364;
+}
+.cp-dash-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 8px;
+  border-left: 1px solid #d4ded4;
+  padding-left: 12px;
+}
+.cp-dash-stats > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cp-dash-stats span {
+  font-size: 10px;
+  color: #607466;
+  line-height: 1.2;
+}
+.cp-dash-stats b {
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+.cp-dash-trial {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  min-width: 0;
+}
+.cp-dash-trial button {
+  min-height: 28px;
+  padding: 4px 7px;
+  font-size: 11px;
+  background: #fffefa;
+  border-color: #9cb4a3;
+  color: #315543;
+  white-space: nowrap;
+}
+.cp-dash-trial button:hover {
+  background: #dce9e1;
+}
+.cp-dash-trial span {
+  font-size: 10px;
+  line-height: 1.25;
+  color: #586e60;
+  overflow-wrap: anywhere;
+}
+.cp-dash-trial [hidden] {
+  display: none;
+}
+.cp-persistent h2 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.cp-dashboard .cp-live-status[data-paused="true"] {
+  color: #8a6a47;
+}
+@media (min-width: 1150px) {
+  .center .viewport {
+    height: clamp(190px, calc(100dvh - 490px), 590px);
+  }
+  .center.schedule-expanded .viewport {
+    height: clamp(120px, 22dvh, 255px);
+  }
+}
+@media (min-width: 760px) and (max-width: 1149px) {
+  .cp-dashboard {
+    grid-template-columns: minmax(130px, 1fr) minmax(145px, 1fr);
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .cp-dash-trial {
+    grid-column: 1/-1;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .center .viewport {
+    height: clamp(175px, calc(100dvh - 470px), 510px);
+  }
+  .center.schedule-expanded .viewport {
+    height: clamp(110px, 20dvh, 230px);
+  }
+}
+@media (min-width: 1150px) and (max-width: 1320px) {
+  .cp-dashboard {
+    grid-template-columns: minmax(128px, 1.1fr) minmax(156px, 1.25fr) minmax(
+        100px,
+        0.8fr
+      );
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .cp-main-value {
+    gap: 5px;
+  }
+  .cp-dash-stats {
+    padding-left: 8px;
+  }
+  .cp-dash-head h2 {
+    font-size: 12px;
+  }
+  .cp-main-value span {
+    font-size: 9px;
+  }
+}
+@media (max-width: 759px) {
+  .cp-dashboard {
+    grid-template-columns: minmax(136px, 1fr) minmax(155px, 1fr);
+    gap: 6px 8px;
+    padding: 7px 9px;
+  }
+  .cp-dash-head h2 {
+    font-size: 12px;
+  }
+  .cp-main-value b {
+    font-size: 29px;
+  }
+  .cp-dash-stats {
+    padding-left: 7px;
+    gap: 3px 5px;
+  }
+  .cp-dash-stats b {
+    font-size: 13px;
+  }
+  .cp-dash-stats span,
+  .cp-main-value span {
+    font-size: 9px;
+  }
+  .cp-dash-trial {
+    grid-column: 1/-1;
+    flex-direction: row;
+    align-items: center;
+    gap: 7px;
+  }
+  .cp-dash-trial button {
+    min-height: 24px;
+    font-size: 10px;
+  }
+  .center .viewport {
+    height: clamp(140px, 24dvh, 220px);
+  }
+  .model-stage {
+    max-height: 76dvh;
+  }
+}
+@media (max-width: 340px) {
+  .cp-dashboard {
+    grid-template-columns: 1fr;
+  }
+  .cp-dash-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding-left: 0;
+    border-left: 0;
+  }
+  .cp-main-value b {
+    font-size: 26px;
+  }
+}
+
