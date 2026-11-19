@@ -1,5 +1,9 @@
 # Changelog
 
+## Materials rendering and identity
+- Added visible material names to the palettes and used depth-tested Materials rendering to clean up overlapping surfaces.
+- Added a Poly Nation wordmark and an SVG mark based on the radial plan.
+
 ## Materials workspace
 - Kept the live model visible above six collapsible, scope-highlighted assembly cards. Replaced material selectors with swatches and removed individual module editing.
 - Added editable CAD benchmarks, an assembly takeoff with per-unit and total estimates, and a live summary of structural behavior and material diversity.
