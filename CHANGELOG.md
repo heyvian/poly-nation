@@ -1,5 +1,8 @@
 # Changelog
 
+## Topology controls
+- Renamed Relationship strength to Clustering strength. The slider adjusts grouping and alignment for the selected programs. Attract, Neutral and Repel keep their own weights in the core, at module docks and in visitor routing.
+
 ## Swing ride refinement
 - Doubled the time at the top from 30 to 60 seconds, for a 136-second cycle. Reduced cruise radius from 15 to 12 m and cruise speed from 60 to 40 km/h to lessen outward chain tilt.
 

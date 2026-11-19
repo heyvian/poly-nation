@@ -184,7 +184,7 @@ Designer-led
 
 Design decisions
 
-Manipulate the representation of program relationships using draggable nodes and a relationship-strength slider.
+Manipulate the representation of program relationships using draggable nodes, with a separate Clustering strength slider for same-program grouping.
 
 Explicitly distinguish attraction, repulsion and neutrality between program pairs. Start every pair neutral; do not impose a social hierarchy before the experiment.
 
@@ -196,7 +196,7 @@ AI implementation
 
 Heuristics
 
-Node distance sets the magnitude of an explicitly chosen edge mode; strength scales the effect. The seeded room generator balances area, mixing and nearby program costs. The module solver preserves counts while swapping labels to favor horizontal/vertical neighbors and matching core anchors. Clustering biases rooms toward an angular region and reserves nearby module slots. This is a soft, space-limited heuristic rather than proof of perfect alignment or complete separation.
+Node distance sets the magnitude of each edge mode, including at zero clustering strength. The seeded room generator balances area, mixing and nearby program costs. The module solver preserves counts while swapping labels around horizontal and vertical neighbors and nearby core rooms. For selected programs, Clustering strength encourages rooms to share an angular region and modules to group near those rooms. All of these placement preferences depend on available space.
 
 “The default for all program types should be neutral”
 
@@ -230,7 +230,7 @@ AI implementation
 
 Geometry rules
 
-Generate annular corridor sectors, optional inner band, opposing lift sectors and room-door thresholds. Carve a purple shared zone out of adjacent attracted rooms only when strength, area and minimum clearance allow it; neutral and repel pairs keep independent entrances. The AI chose numerical thresholds, 500 mm nominal wall thickness (reduced if needed), and a rerouting method. A shared public corridor is still available to repelled programs.
+Generate annular corridor sectors, optional inner band, opposing lift sectors and room-door thresholds. Carve a purple shared zone out of adjacent attracted rooms when area and minimum clearance allow it; neutral and repel pairs keep independent entrances. The AI chose numerical thresholds, 500 mm nominal wall thickness (reduced if needed), and a rerouting method. A shared public corridor is still available to repelled programs.
 
 Slide-side topology changes the floor plan: the normal outer ring gives way locally to an inward bypass.
 
@@ -488,7 +488,7 @@ Interaction decisions
 
 Keep the massing model as the central object, with a clear orbit camera and enough zoom to inspect detail. Add X-ray, independent room/module/façade views and top-down floor cutaways.
 
-Keep the Topology Designer and relationship-strength slider permanently accessible, not buried in a tab.
+Keep the Topology Designer and Clustering strength slider permanently accessible, not buried in a tab.
 
 Prioritize the score as a primary result: initially consider a HUD, then explicitly move it below the canvas to avoid covering the building.
 
