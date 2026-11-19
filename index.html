@@ -219,114 +219,101 @@
  .material-controls { border-right: 0; }
 }
 
-/* The assembly schedule shares the paper, ink, and diagram colors of the massing tools. */
+/* The model uses the remaining height above the fixed assembly and estimate panel. */
 .material-model { flex-direction: column; }
+.material-board {
+ flex: none;
+ min-width: 0;
+ padding: 9px 12px 11px;
+ background: #eef1e9;
+ border-top: 1px solid var(--line);
+}
 .material-view-switch {
  display: flex;
+ align-items: center;
  gap: 6px;
- padding: 10px 14px;
- border-bottom: 1px solid var(--line);
- background: var(--paper);
+ margin-bottom: 8px;
 }
+.material-view-switch button { min-height: 26px; padding: 4px 8px; font-size: 11px; }
 .material-view-switch button[aria-pressed="true"] {
  background: #dce8dd;
  border-color: #a7b9ad;
  color: #294b3f;
 }
-.material-assemblies {
- flex: 1;
- min-height: 0;
- overflow: auto;
- padding: 16px clamp(12px, 2.5vw, 34px) 26px;
- background: #eef1e9;
-}
-#material3D[hidden], #materialAssemblies[hidden] { display: none; }
-.assembly-heading {
- display: flex;
- align-items: baseline;
- justify-content: space-between;
- gap: 12px;
- margin-bottom: 12px;
- padding: 0;
- border: 0;
- background: transparent;
-}
-.assembly-heading h2, .assembly-heading p { margin: 0; }
-.assembly-heading p { margin-top: 4px; }
-.assembly-estimates { max-width: 340px; font-size: 11px; }
-.assembly-estimates summary { white-space: nowrap; }
-.assembly-estimates p { margin: 5px 0 0; line-height: 1.5; }
-.module-assemblies {
+.material-view-switch .cost-basis { margin-left: auto; }
+.assembly-cards {
  display: grid;
- grid-template-columns: repeat(auto-fit, minmax(min(255px, 100%), 1fr));
- gap: 10px;
+ grid-template-columns: repeat(3, minmax(0, 1fr));
+ gap: 6px;
 }
-.assembly-module-title { margin: 18px 0 8px; }
 .assembly-card {
  min-width: 0;
- display: grid;
- align-content: start;
- gap: 8px;
- padding: 10px;
  border: 1px solid var(--line);
- border-radius: 6px;
+ border-radius: 5px;
  background: var(--paper);
 }
-.assembly-card-head {
- display: flex;
- align-items: baseline;
- justify-content: space-between;
- gap: 8px;
- padding: 0;
+.assembly-card[data-editing="true"] { border-color: #7e9a88; background: #e0ebe0; }
+.assembly-card button {
+ display: grid;
+ grid-template-columns: 1fr auto;
+ text-align: left;
+ gap: 2px 4px;
+ width: 100%;
+ min-height: 38px;
  border: 0;
+ padding: 5px 7px;
  background: transparent;
 }
-.assembly-card-head h3, .assembly-card-head h4 { margin: 0; color: var(--ink); }
-.assembly-card-head button { padding: 4px 7px; min-height: 25px; white-space: nowrap; font-size: 11px; }
-.assembly-card h4::before {
+.assembly-card button[aria-expanded="true"] { box-shadow: inset 0 -2px #547765; }
+.assembly-card .assembly-name { font-size: 11px; font-weight: 650; }
+.assembly-card .assembly-meta { font-size: 10px; color: var(--muted); }
+.assembly-card .assembly-chevron { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+.assembly-name::before {
  content: "";
  display: inline-block;
- width: 8px;
- height: 8px;
- margin-right: 6px;
+ width: 7px;
+ height: 7px;
+ margin-right: 5px;
  background: var(--program-color);
  border-radius: 2px;
 }
-.assembly-variant { display: grid; gap: 4px; font-size: 11px; color: var(--muted); }
-.assembly-variant select { width: 100%; }
+#assemblyDetail:not([hidden]) {
+ display: grid;
+ grid-template-columns: minmax(180px, 1.25fr) minmax(0, 1fr);
+ grid-template-rows: auto 1fr;
+ gap: 4px 10px;
+ margin-top: 7px;
+ padding: 7px;
+ border: 1px solid var(--line);
+ border-radius: 5px;
+ background: var(--paper);
+}
 .assembly-figure {
  position: relative;
+ grid-row: 1 / 3;
  margin: 0;
  min-width: 0;
  background: #f0f2e9;
  border: 1px solid var(--line);
  border-radius: 4px;
 }
-.assembly-figure canvas {
- display: block;
- width: 100%;
- height: 177px;
-}
+.assembly-figure canvas { display: block; width: 100%; height: clamp(113px, 21dvh, 182px); }
 .assembly-fig-label {
  position: absolute;
- left: 8px;
+ left: 6px;
  font-size: 9px;
  color: #4d6257;
- letter-spacing: 0.06em;
  text-transform: uppercase;
  pointer-events: none;
 }
-.assembly-fig-label.cladding { top: 7px; }
-.assembly-fig-label.structure { bottom: 6px; }
-.assembly-card-core { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
-.assembly-card-core > header { grid-column: 1 / -1; }
-.assembly-card-core .assembly-figure { grid-row: span 2; }
-.assembly-card-core canvas { height: 245px; }
-.assembly-layer { min-width: 0; }
-.assembly-layer + .assembly-layer { border-top: 1px solid var(--line); margin-top: 7px; padding-top: 7px; }
+.assembly-fig-label.cladding { top: 5px; }
+.assembly-fig-label.structure { bottom: 4px; }
+.assembly-variant { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 10px; }
+.assembly-variant select { min-width: 0; max-width: 100%; }
 .assembly-layer h5, .assembly-layer p { margin: 0; }
 .assembly-layer h5 { font-size: 10px; color: var(--muted); font-weight: 600; }
 .assembly-layer p { font-size: 11px; line-height: 1.35; }
+.assembly-layer + .assembly-layer { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; }
 .assembly-layer .assembly-material { display: flex; gap: 5px; align-items: center; font-weight: 650; }
 .assembly-layer .assembly-material::before {
  content: "";
@@ -336,18 +323,51 @@
  border-radius: 2px;
  background: var(--swatch);
 }
+.material-palette { margin: 4px 0; padding: 0; border: 0; min-width: 0; }
+.material-palette legend { margin: 0 0 4px; font-size: 12px; font-weight: 650; }
+.material-swatches { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+.material-swatches button {
+ min-height: 24px;
+ border: 1px solid #a8b7ad;
+ padding: 0;
+ border-radius: 3px;
+ background: var(--chip, #f3f5ee);
+ color: var(--ink);
+ font-size: 11px;
+}
+.material-swatches button[aria-pressed="true"] { outline: 2px solid #315847; outline-offset: 1px; }
+.material-swatches .joint { background: repeating-linear-gradient(90deg, var(--chip) 0 4px, var(--seam) 4px 5px); }
+.material-swatches .course { background: repeating-linear-gradient(0deg, var(--chip) 0 4px, var(--seam) 4px 5px); }
+.material-choice { margin: 5px 0 0; font-size: 11px; color: var(--muted); }
+.material-estimate {
+ display: grid;
+ grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+ gap: 10px 16px;
+ align-items: start;
+}
+.material-estimate[hidden] { display: none; }
+.material-estimate h3 { font-size: 13px; margin: 0 0 3px; }
+.material-estimate p { margin: 3px 0 6px; font-size: 11px; line-height: 1.35; }
+.material-estimate table { width: 100%; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
+.material-estimate td, .material-estimate th { padding: 2px 3px; text-align: right; border-bottom: 1px solid var(--line); }
+.material-estimate :is(td, th):first-child { text-align: left; }
+.material-estimate .material-total { font-size: 17px; color: #315847; }
+.material-rate-form { display: grid; gap: 7px; }
+.material-rate-form label { display: grid; gap: 4px; }
+.material-rate-form p { margin: 0; }
 #returnToAssembly { display: none; }
+@media (min-width: 1250px) {
+ .assembly-cards { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
 @media (max-width: 899px) {
  #returnToAssembly:not([hidden]) { display: block; }
  .material-model { height: auto; }
- .material-assemblies { max-height: none; overflow: visible; }
- .material-viewport { height: clamp(280px, 56dvh, 580px); }
+ .material-viewport { flex: none; height: clamp(260px, 50dvh, 525px); }
 }
 @media (max-width: 580px) {
- .assembly-heading { align-items: start; flex-direction: column; gap: 5px; }
- .assembly-card-core { grid-template-columns: minmax(0, 1fr); }
- .assembly-card-core .assembly-figure { grid-row: auto; }
- .assembly-card-core canvas { height: 205px; }
+ .material-estimate { grid-template-columns: 1fr; }
+ #assemblyDetail:not([hidden]) { grid-template-columns: 1fr; }
+ .assembly-figure { grid-row: auto; }
 }
 
 /* V3.6: self-contained presentation page, scoped to avoid altering laboratory UI. */
@@ -428,17 +448,21 @@
     <option value="coreProgram">Core by program</option>
     <option value="modules">All modules</option>
     <option value="moduleProgram">Modules by program</option>
-    <option value="module">Individual module</option>
    </select>
    <div class="material-target" id="materialTargetField" hidden>
     <label id="materialTargetLabel" for="materialTarget">Program</label>
     <select id="materialTarget"></select>
    </div>
-   <label for="materialStructure">Structural system</label>
-   <select id="materialStructure"></select>
-   <label for="materialFacade">Exterior finish</label>
-   <select id="materialFacade"></select>
-   <p class="hint material-effective" id="materialEffective"></p>
+   <fieldset class="material-palette">
+    <legend>Structural system</legend>
+    <div class="material-swatches" id="materialStructure"></div>
+    <p class="material-choice" id="structureChoice" aria-live="polite"></p>
+   </fieldset>
+   <fieldset class="material-palette">
+    <legend>Exterior finish</legend>
+    <div class="material-swatches" id="materialFacade"></div>
+    <p class="material-choice" id="facadeChoice" aria-live="polite"></p>
+   </fieldset>
    <button id="returnToAssembly" type="button" hidden>Return to assembly</button>
   </div>
   <fieldset class="material-display">
@@ -454,24 +478,7 @@
   </details>
  </aside>
  <div class="material-model">
-  <nav class="material-view-switch" aria-label="Material view">
-   <button id="materialAssembliesView" type="button" aria-pressed="true" aria-controls="materialAssemblies">Assembly schedule</button>
-   <button id="materialModelView" type="button" aria-pressed="false" aria-controls="material3D">3D model</button>
-  </nav>
-  <section id="materialAssemblies" class="material-assemblies" aria-labelledby="materialAssemblyTitle">
-   <header class="assembly-heading">
-    <div><h2 id="materialAssemblyTitle">Assembly schedule</h2>
-    <p class="hint">Compare the core ring and the module assemblies by program.</p></div>
-    <details class="assembly-estimates">
-     <summary>Estimate basis</summary>
-     <p>Approximate mass per m² of floor for structure and per m² of wall for cladding. Cost is a relative installation index. Cast-in-place concrete and corrugated steel each set the 1× reference for their layer. Strength describes typical structural behavior. These values are study assumptions.</p>
-    </details>
-   </header>
-   <div id="materialCoreAssembly"></div>
-   <h3 class="assembly-module-title">Modules by program</h3>
-   <div id="materialModuleAssemblies" class="module-assemblies"></div>
-  </section>
-  <div id="material3D" class="viewport material-viewport" hidden><canvas id="materialsCanvas" aria-label="Three-dimensional material study model"></canvas>
+  <div class="viewport material-viewport" id="material3D"><canvas id="materialsCanvas" aria-label="Three-dimensional material study model"></canvas>
    <div class="view-top">
     <span class="eyebrow">Material study model</span>
     <div class="actions">
@@ -482,7 +489,49 @@
    </div>
    <div class="view-bottom"><span>Drag to orbit · Scroll to zoom</span></div>
   </div>
+  <section class="material-board" aria-label="Assembly schedule and analysis">
+   <nav class="material-view-switch" aria-label="Material details">
+    <button id="materialAssembliesView" type="button" aria-pressed="true" aria-controls="materialAssemblies">Assemblies</button>
+    <button id="materialAnalysisView" type="button" aria-pressed="false" aria-controls="materialAnalysis">Cost &amp; analysis</button>
+    <button id="openMaterialRates" class="cost-basis" type="button">Estimate assumptions</button>
+   </nav>
+   <div id="materialAssemblies">
+    <div class="assembly-cards" id="assemblyCards"></div>
+    <div id="assemblyDetail" hidden></div>
+   </div>
+   <div class="material-estimate" id="materialAnalysis" hidden>
+    <section aria-labelledby="materialCostTitle">
+     <h3 id="materialCostTitle">Installed assemblies · CAD</h3>
+     <p class="material-total" id="materialCostTotal"></p>
+     <table>
+      <thead><tr><th scope="col">Assembly</th><th scope="col">Qty</th><th scope="col">Avg / unit</th><th scope="col">Subtotal</th></tr></thead>
+      <tbody id="materialCostRows"></tbody>
+     </table>
+    </section>
+    <section aria-labelledby="materialAnalysisTitle">
+     <h3 id="materialAnalysisTitle">Building summary</h3>
+     <p id="materialBuildingSummary"></p>
+     <h3>What these choices mean</h3>
+     <p id="materialStructuralSummary"></p>
+     <p id="materialDiversitySummary"></p>
+    </section>
+   </div>
+  </section>
  </div>
+ <dialog class="program-dialog" id="materialRatesDialog" aria-labelledby="materialRatesTitle">
+  <form class="material-rate-form" id="materialRatesForm" method="dialog">
+   <h2 id="materialRatesTitle">Estimate assumptions</h2>
+   <label>Concrete structure benchmark · CAD/m² of floor
+    <input id="materialStructureRate" type="number" min="0" max="10000" step="1" required>
+   </label>
+   <label>Corrugated cladding benchmark · CAD/m² of wall
+    <input id="materialCladdingRate" type="number" min="0" max="10000" step="1" required>
+   </label>
+   <p class="hint">The starting rates are editable study assumptions. Each material uses its installation cost index against the benchmark for its layer. Mass figures are approximate per m² of floor or wall.</p>
+   <p class="hint">The estimate covers the core ring and enclosed modules. It includes the core wall openings from the model and counts the four module walls at gross area. Site works, glazing at the atrium, rooftop extras, services, and taxes are outside this estimate.</p>
+   <button class="primary" type="submit">Apply assumptions</button>
+  </form>
+ </dialog>
 </section>
 <script>
 'use strict';
@@ -3214,9 +3263,35 @@ function drawMaterialModule(b, slot, x, y, z, preview, values) {
       );
 }
 
-function drawMaterialFacade(b, model, floor, span, y, height, preview) {
-  const [start, end] = span;
-  // Split visible wall spans at room boundaries so program overrides follow the captured plan.
+// Keep opening extents and program boundaries shared by the preview and the cost takeoff.
+function coreFacadeSpans(model, floor, floorHeight = 4.2) {
+  const fullHeightHoles = [],
+    doorHoles = [];
+  if (model.lobby.area && floor < model.lobby.levels)
+    fullHeightHoles.push([model.lobby.angle, model.lobby.span / 2]);
+  for (const slot of model.slots)
+    if (slot.f === floor && !slot.blocked && (slot.p !== EMPTY || slot.use !== 'empty'))
+      doorHoles.push([slot.angle, Math.min(0.45, 1.1 / model.R)]);
+  for (const connection of model.feature.slide?.connections || [])
+    if (connection.floor === floor)
+      fullHeightHoles.push([connection.angle, Math.min(0.35, 1.45 / model.R)]);
+  const y = floor * floorHeight + 0.45,
+    doorHeight = 2.35;
+  return [
+    ...openArcs([...fullHeightHoles, ...doorHoles]).map((span) => ({
+      span,
+      y,
+      height: doorHeight
+    })),
+    ...openArcs(fullHeightHoles).map((span) => ({
+      span,
+      y: y + doorHeight,
+      height: floorHeight - 0.23 - doorHeight
+    }))
+  ];
+}
+
+function coreFacadeSegments(model, floor, [start, end]) {
   const rooms = model.layers[floor][model.bandN - 1];
   const cuts = [
     start,
@@ -3225,11 +3300,17 @@ function drawMaterialFacade(b, model, floor, span, y, height, preview) {
       .filter((angle) => angle > start && angle < end),
     end
   ].sort((a, b) => a - b);
+  const spans = [];
   for (let i = 1; i < cuts.length; i++) {
     const a = cuts[i - 1],
-      z = cuts[i];
-    if (z - a < 1e-6) continue;
-    const program = roomAt(rooms, (a + z) / 2);
+      b = cuts[i];
+    if (b - a > 1e-6) spans.push({ start: a, end: b, program: roomAt(rooms, (a + b) / 2) });
+  }
+  return spans;
+}
+
+function drawMaterialFacade(b, model, floor, span, y, height, preview) {
+  for (const { start: a, end: z, program } of coreFacadeSegments(model, floor, span)) {
     const { structure, facade } = materialValues(preview.assignments, 'core', program);
     const system = STRUCTURAL_SYSTEMS[structure],
       finish = EXTERIOR_FINISHES[facade];
@@ -3743,7 +3824,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         c = rgb(v.color);
       const values =
         preview &&
-        s.p !== EMPTY &&
+        (s.p !== EMPTY || s.use === 'retail') &&
         materialValues(preview.assignments, 'module', s.p, materialSlotKey(m, s));
       const frameColor = values ? rgb(STRUCTURAL_SYSTEMS[values.structure].color) : edge;
       if (exporting || view.supports) {
@@ -3941,28 +4022,13 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   if (exporting || (view.showFacade && !view.xray))
     for (let f = 0; f < view.floors; f++) {
       if (!visible(f)) continue;
-      const fullHeightHoles = [],
-        doorHoles = [];
-      if (m.lobby.area && f < m.lobby.levels)
-        fullHeightHoles.push([m.lobby.angle, m.lobby.span / 2]);
-      for (const s of m.slots)
-        if (s.f === f && !s.blocked && (s.p !== EMPTY || s.use !== 'empty'))
-          doorHoles.push([s.angle, Math.min(0.45, 1.1 / m.R)]);
-      for (const c of m.feature.slide?.connections || [])
-        if (c.floor === f) fullHeightHoles.push([c.angle, Math.min(0.35, 1.45 / m.R)]);
       mark(`Facade_L${f + 1}`, `Solid exterior wall / L${f + 1}`);
-      const y = f * floorH + 0.45,
-        h = floorH - 0.23,
-        doorH = 2.35,
-        wall = rgb('#c9c8bf'),
-        inner = m.R - facadeThickness(m),
-        outer = m.R;
-      function drawWall(span, bottom, height) {
-        if (preview) drawMaterialFacade(b, m, f, span, bottom, height, preview);
-        else sector(inner, outer, ...span, bottom, height, wall);
+      const wall = rgb('#c9c8bf'),
+        inner = m.R - facadeThickness(m);
+      for (const { span, y, height } of coreFacadeSpans(m, f, floorH)) {
+        if (preview) drawMaterialFacade(b, m, f, span, y, height, preview);
+        else sector(inner, m.R, ...span, y, height, wall);
       }
-      for (const span of openArcs([...fullHeightHoles, ...doorHoles])) drawWall(span, y, doorH);
-      for (const span of openArcs(fullHeightHoles)) drawWall(span, y + doorH, h - doorH);
     }
 
   // Full-height outdoor climbing wall. The reserved dock strip stays unoccupied.
@@ -7343,30 +7409,30 @@ requestAnimationFrame(animateSwingFrame);
 // Cost indices compare layers independently. Strength describes system behavior, not capacity.
 const STRUCTURE_STUDY = {
   concrete: [420, 1, 'Stiff, continuous slabs and walls'],
-  precast: [330, 1.1, 'Stiff panels; connections govern continuity'],
+  precast: [330, 1.1, 'Stiff panels with continuity governed by connections'],
   'wood-stud': [55, 0.7, 'Light, closely spaced framing'],
   clt: [100, 1.2, 'Stiff plate action across panels'],
   glulam: [85, 1.3, 'Spanning beams and discrete posts'],
-  'steel-frame': [95, 1.2, 'Efficient long spans; needs lateral bracing'],
-  'light-steel': [50, 0.8, 'Light framing; braced wall assemblies'],
+  'steel-frame': [95, 1.2, 'Efficient long spans with lateral bracing'],
+  'light-steel': [50, 0.8, 'Light framing with braced wall assemblies'],
   'space-frame': [75, 1.5, 'Triangulated load paths in two directions'],
-  masonry: [280, 1.1, 'Strong in compression; limited tension']
+  masonry: [280, 1.1, 'Strong in compression with limited tension capacity']
 };
 const CLADDING_STUDY = {
   concrete: [72, 1.8, 'Rigid panel'],
   'board-concrete': [85, 2, 'Rigid, textured panel'],
-  cedar: [12, 1.4, 'Light boards; can dent'],
-  'charred-wood': [13, 1.6, 'Light boards; finish can abrade'],
-  plywood: [10, 1.1, 'Light sheet; exposed edges need protection'],
-  corrugated: [8, 1, 'Light skin; can dent'],
-  aluminum: [6, 1.5, 'Light skin; can dent'],
-  zinc: [9, 1.9, 'Durable skin; can dent'],
-  vinyl: [4, 0.7, 'Light skin; vulnerable to impact'],
-  'fiber-cement': [17, 1.25, 'Rigid sheet; edges can chip'],
-  brick: [138, 1.75, 'Rigid veneer; joints matter'],
-  stone: [82, 2.2, 'Rigid panels; heavy at attachments'],
-  stucco: [25, 1.15, 'Continuous finish; may crack'],
-  glazing: [35, 2.4, 'Rigid glazing; framing and joints matter']
+  cedar: [12, 1.4, 'Light boards that can dent'],
+  'charred-wood': [13, 1.6, 'Light boards with a finish that can abrade'],
+  plywood: [10, 1.1, 'Light sheet with exposed edges that need protection'],
+  corrugated: [8, 1, 'Light skin that can dent'],
+  aluminum: [6, 1.5, 'Light skin that can dent'],
+  zinc: [9, 1.9, 'Durable skin that can dent'],
+  vinyl: [4, 0.7, 'Light skin vulnerable to impact'],
+  'fiber-cement': [17, 1.25, 'Rigid sheet with edges that can chip'],
+  brick: [138, 1.75, 'Rigid veneer that relies on its joints'],
+  stone: [82, 2.2, 'Rigid panels with heavy loads at attachments'],
+  stucco: [25, 1.15, 'Continuous finish that may crack'],
+  glazing: [35, 2.4, 'Rigid glazing supported by frames and joints']
 };
 
 function assemblyVariants(entries, fallback) {
@@ -7620,6 +7686,80 @@ function assemblyLayerMarkup(values) {
   );
 }
 
+// CAD scenario rates are editable assumptions. Apply each layer's index to its own physical area.
+const DEFAULT_MATERIAL_RATES = { structure: 350, facade: 95 };
+
+function estimateMaterialAssemblies(model, assignments, rates) {
+  const core = { label: 'Core ring', count: 1, cost: 0, mass: 0 };
+  const modules = PROGRAMS.map((program) => ({ label: program.name, count: 0, cost: 0, mass: 0 }));
+  const other = { label: 'Other enclosed modules', count: 0, cost: 0, mass: 0 };
+  const structureAreas = new Map();
+  const finishes = new Set();
+  const modulePairs = new Set();
+  const moduleSystems = new Set();
+  let structuralCost = 0;
+  function measure(row, kind, key, area) {
+    if (area <= 0) return;
+    const catalog = kind === 'structure' ? STRUCTURE_STUDY : CLADDING_STUDY;
+    const [mass, multiplier] = catalog[key];
+    const cost = area * rates[kind] * multiplier;
+    row.cost += cost;
+    row.mass += area * mass;
+    if (kind === 'structure') {
+      structureAreas.set(key, (structureAreas.get(key) || 0) + area);
+      structuralCost += cost;
+    } else finishes.add(key);
+  }
+
+  // Allocate modeled room area by program and price the remaining annulus at the core default.
+  let roomsArea = 0;
+  for (const room of model.rooms) {
+    roomsArea += room.area;
+    measure(core, 'structure', materialValues(assignments, 'core', room.id).structure, room.area);
+  }
+  measure(
+    core,
+    'structure',
+    materialValues(assignments, 'core').structure,
+    Math.max(0, model.ringArea - roomsArea)
+  );
+  for (let floor = 0; floor < model.layers.length; floor++)
+    for (const wall of coreFacadeSpans(model, floor))
+      for (const span of coreFacadeSegments(model, floor, wall.span)) {
+        const { facade } = materialValues(assignments, 'core', span.program);
+        measure(core, 'facade', facade, (span.end - span.start) * model.R * wall.height);
+      }
+
+  const moduleWallArea = 2 * (MODULE.width + MODULE.depth) * MODULE.height;
+  for (const slot of model.slots) {
+    if (slot.blocked || (slot.p === EMPTY && slot.use !== 'retail')) continue;
+    const row = modules[slot.p] || other;
+    const values = materialValues(assignments, 'module', slot.p, materialSlotKey(model, slot));
+    row.count++;
+    measure(row, 'structure', values.structure, MODULE.area);
+    measure(row, 'facade', values.facade, moduleWallArea);
+    modulePairs.add(values.structure + '/' + values.facade);
+    moduleSystems.add(values.structure);
+  }
+
+  const rows = [core, ...modules];
+  if (other.count) rows.push(other);
+  const total = rows.reduce((sum, row) => sum + row.cost, 0);
+  const mass = rows.reduce((sum, row) => sum + row.mass, 0);
+  const leadingStructure = [...structureAreas].sort((a, b) => b[1] - a[1])[0];
+  return {
+    rows,
+    total,
+    mass,
+    structuralCost,
+    leadingStructure,
+    structureAreas,
+    finishes,
+    modulePairs,
+    moduleSystems
+  };
+}
+
 // Work on a detached massing snapshot. Changing massing never mutates the material study.
 (function () {
   const phase = $('materialsPhase');
@@ -7689,8 +7829,7 @@ function assemblyLayerMarkup(values) {
   }
 
   function present() {
-    if (!phase.hidden && !modelView.hidden && mesh && viewport.ctx)
-      paintSoftware(mesh, viewport, studyCamera);
+    if (!phase.hidden && mesh && viewport.ctx) paintSoftware(mesh, viewport, studyCamera);
   }
   function redraw() {
     if (frame) return;
@@ -7700,7 +7839,6 @@ function assemblyLayerMarkup(values) {
     });
   }
   function rebuild() {
-    if (modelView.hidden) return;
     const view = { ...study.view, showRooms: !study.structureView || study.programColors };
     mesh = buildMesh(study.model, false, view, study);
     redraw();
@@ -7709,105 +7847,120 @@ function assemblyLayerMarkup(values) {
 
   const option = (label, value) => new Option(label, value);
 
-  const modelView = $('material3D');
   const assemblyView = $('materialAssemblies');
-  const diagramObserver = new ResizeObserver((entries) => {
-    for (const { target: canvas } of entries) {
-      const render = diagrams.get(canvas);
-      if (render) render();
-    }
-  });
-  const diagrams = new Map();
+  const analysisView = $('materialAnalysis');
+  const details = $('assemblyDetail');
   const currentVariants = new Map();
-  const returnToAssembly = $('returnToAssembly');
-  let selectedAssembly;
-  returnToAssembly.onclick = () => {
-    showAssemblyView(true);
-    const card = $('assembly-' + selectedAssembly);
-    card?.scrollIntoView({ block: 'start' });
-    card?.focus({ preventScroll: true });
-  };
+  let cards = [];
+  let expandedAssembly = null;
+  let drawDetail = null;
+  const diagramObserver = new ResizeObserver(() => drawDetail?.());
 
-  function showAssemblyView(showSchedule) {
-    assemblyView.hidden = !showSchedule;
-    modelView.hidden = showSchedule;
-    $('materialAssembliesView').setAttribute('aria-pressed', String(showSchedule));
-    $('materialModelView').setAttribute('aria-pressed', String(!showSchedule));
-    if (showSchedule) diagrams.forEach((render) => render());
-    else rebuild();
+  function showMaterialPanel(showAssemblies) {
+    assemblyView.hidden = !showAssemblies;
+    analysisView.hidden = showAssemblies;
+    $('materialAssembliesView').setAttribute('aria-pressed', String(showAssemblies));
+    $('materialAnalysisView').setAttribute('aria-pressed', String(!showAssemblies));
+    if (showAssemblies) drawDetail?.();
   }
 
-  function editAssembly(program) {
-    selectedAssembly = program == null ? 'core' : String(program);
-    returnToAssembly.hidden = false;
-    scope.value = program == null ? 'core' : 'moduleProgram';
-    syncTargets();
-    if (program != null) {
-      target.value = String(program);
+  function syncAssemblyHeaders() {
+    for (const { key, program } of cards) {
+      const card = $('assembly-' + key);
+      const open = expandedAssembly === key;
+      const editing =
+        scope.value === 'building' ||
+        (key === 'core'
+          ? scope.value.startsWith('core')
+          : scope.value === 'modules' ||
+            (scope.value === 'moduleProgram' && Number(target.value) === program));
+      card.dataset.editing = String(editing);
+      const button = card.querySelector('button');
+      button.setAttribute('aria-expanded', String(open));
+      button.querySelector('.assembly-chevron').textContent = open ? '−' : '+';
+    }
+  }
+
+  function toggleAssembly({ key, program }) {
+    if (expandedAssembly === key) {
+      expandedAssembly = null;
+    } else {
+      expandedAssembly = key;
+      scope.value = key === 'core' ? 'core' : 'moduleProgram';
+      syncTargets();
+      if (program != null) target.value = String(program);
       syncAssignment();
     }
-    $('materialStructure').focus();
+    syncAssemblyHeaders();
+    renderAssemblyDetail();
   }
 
-  function makeAssemblyCard(title, variants, ring, program = null) {
+  function buildAssemblyHeader(cardData) {
+    const { key, title, program, variants } = cardData;
+    const count = variants.reduce((total, variant) => total + variant.quantity, 0);
     const card = document.createElement('article');
-    const key = ring ? 'core' : String(program);
+    card.className = 'assembly-card';
     card.id = 'assembly-' + key;
-    card.tabIndex = -1;
-    card.className = ring ? 'assembly-card assembly-card-core' : 'assembly-card';
-    if (!ring) card.style.setProperty('--program-color', PROGRAMS[program].color);
-    const tag = ring ? 'h3' : 'h4';
-    card.innerHTML =
-      '<header class="assembly-card-head"><' +
-      tag +
-      '>' +
-      title +
-      '</' +
-      tag +
-      '><button type="button">' +
-      (ring ? 'Edit core' : 'Edit program') +
-      '</button></header>' +
+    card.style.setProperty('--program-color', PROGRAMS[program]?.color || '#547765');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-controls', 'assemblyDetail');
+    const titleText = document.createElement('span');
+    titleText.className = 'assembly-name';
+    titleText.textContent = title;
+    const meta = document.createElement('span');
+    meta.className = 'assembly-meta';
+    meta.textContent =
+      key === 'core' ? fmt(count) + ' m² of rooms' : count + (count === 1 ? ' module' : ' modules');
+    const chevron = document.createElement('span');
+    chevron.className = 'assembly-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    button.append(titleText, meta, chevron);
+    button.addEventListener('click', () => toggleAssembly(cardData));
+    card.append(button);
+    return card;
+  }
+
+  function renderAssemblyDetail() {
+    diagramObserver.disconnect();
+    drawDetail = null;
+    const card = cards.find((card) => card.key === expandedAssembly);
+    details.hidden = !card;
+    if (!card) {
+      details.replaceChildren();
+      return;
+    }
+    const { title, key, variants, ring } = card;
+    details.setAttribute('aria-label', title + ' assembly details');
+    details.innerHTML =
       '<figure class="assembly-figure"><span class="assembly-fig-label cladding">Cladding</span>' +
       '<canvas role="img"></canvas><span class="assembly-fig-label structure">Structure</span></figure>' +
-      '<div class="assembly-specs"></div>';
-    card.querySelector('button').addEventListener('click', () => editAssembly(program));
-    const canvas = card.querySelector('canvas');
-    const specs = card.querySelector('.assembly-specs');
-    const choice = document.createElement('select');
-    choice.setAttribute('aria-label', title + ' assembly variant');
-    const variantLabel = document.createElement('label');
-    variantLabel.className = 'assembly-variant';
-    variantLabel.textContent = variants.length > 1 ? 'Assembly variant' : '';
+      '<div class="assembly-variant"></div><div class="assembly-specs"></div>';
+    const canvas = details.querySelector('canvas');
+    const spec = details.querySelector('.assembly-specs');
+    const variantHeader = details.querySelector('.assembly-variant');
+    variantHeader.append(title);
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', title + ' assembly variant');
     for (const variant of variants) {
-      const count = ring
-        ? fmt(variant.quantity) + ' m² of core rooms'
-        : variant.quantity + (variant.quantity === 1 ? ' module' : ' modules');
-      const text =
-        variants.length === 1
-          ? count
-          : count +
+      const qty = ring ? fmt(variant.quantity) + ' m²' : variant.quantity + ' modules';
+      select.append(
+        option(
+          qty +
             ' · ' +
             STRUCTURAL_SYSTEMS[variant.values.structure].name +
             ' / ' +
-            EXTERIOR_FINISHES[variant.values.facade].name;
-      choice.append(option(text, variant.key));
+            EXTERIOR_FINISHES[variant.values.facade].name,
+          variant.key
+        )
+      );
     }
-    const remembered = currentVariants.get(key);
-    if (variants.some((variant) => variant.key === remembered)) choice.value = remembered;
-    if (variants.length > 1) {
-      variantLabel.append(choice);
-    } else {
-      variantLabel.textContent = choice.options[0].textContent;
-    }
-    card.querySelector('.assembly-figure').after(variantLabel);
-    const paint = () => {
-      const variant = variants.find((variant) => variant.key === choice.value);
-      drawExplodedAssembly(canvas, variant.values, ring);
-    };
+    if (variants.some((variant) => variant.key === currentVariants.get(key)))
+      select.value = currentVariants.get(key);
+    if (variants.length > 1) variantHeader.append(select);
     function showVariant() {
-      const { values } = variants.find((variant) => variant.key === choice.value);
-      currentVariants.set(key, choice.value);
-      specs.innerHTML = assemblyLayerMarkup(values);
+      const { values } = variants.find((variant) => variant.key === select.value);
+      currentVariants.set(key, select.value);
       canvas.setAttribute(
         'aria-label',
         title +
@@ -7817,18 +7970,93 @@ function assemblyLayerMarkup(values) {
           EXTERIOR_FINISHES[values.facade].name +
           ' cladding.'
       );
-      paint();
+      spec.innerHTML = assemblyLayerMarkup(values);
+      drawDetail = () => drawExplodedAssembly(canvas, values, ring);
+      drawDetail();
     }
-    choice.addEventListener('change', showVariant);
-    diagrams.set(canvas, paint);
+    select.addEventListener('change', showVariant);
     diagramObserver.observe(canvas);
     showVariant();
-    return card;
+  }
+
+  const currency = new Intl.NumberFormat('en-CA', {
+    style: 'currency',
+    currency: 'CAD',
+    maximumFractionDigits: 0
+  });
+  const percent = (ratio) => Math.round(ratio * 100) + '%';
+  function updateMaterialAnalysis() {
+    const { model, assignments, rates } = study;
+    const takeoff = estimateMaterialAssemblies(model, assignments, rates);
+    $('materialCostTotal').textContent = '≈ ' + currency.format(takeoff.total) + ' CAD';
+    $('materialCostRows').replaceChildren(
+      ...takeoff.rows.map(({ label, count, cost }) => {
+        const row = document.createElement('tr');
+        for (const value of [
+          label,
+          count,
+          count ? currency.format(cost / count) : '—',
+          currency.format(cost)
+        ]) {
+          const cell = row.insertCell();
+          cell.textContent = value;
+        }
+        return row;
+      })
+    );
+    const coreShare = takeoff.total ? takeoff.rows[0].cost / takeoff.total : 0;
+    const pods = takeoff.rows.slice(1).reduce((sum, row) => sum + row.count, 0);
+    $('materialBuildingSummary').textContent =
+      'The ' +
+      fmt(model.total) +
+      ' m² design includes a ' +
+      fmt(model.ringArea) +
+      ' m² core ring and ' +
+      pods +
+      ' enclosed modules. ' +
+      'The assemblies measured here total roughly ' +
+      fmt(takeoff.mass / 1000) +
+      ' tonnes' +
+      (takeoff.total
+        ? ', and the core accounts for ' + percent(coreShare) + ' of estimated cost.'
+        : '.');
+    const [mainSystem, floorArea] = takeoff.leadingStructure || ['concrete', 0];
+    const measuredFloor = [...takeoff.structureAreas.values()].reduce((sum, area) => sum + area, 0);
+    const structureShare = takeoff.total ? takeoff.structuralCost / takeoff.total : 0;
+    $('materialStructuralSummary').textContent =
+      STRUCTURAL_SYSTEMS[mainSystem].name +
+      ' covers ' +
+      percent(measuredFloor ? floorArea / measuredFloor : 0) +
+      ' of the measured floor area. Its typical behavior is ' +
+      STRUCTURE_STUDY[mainSystem][2].replace(/^[A-Z]/, (letter) => letter.toLowerCase()) +
+      '.' +
+      (takeoff.total
+        ? ' Structure makes up ' + percent(structureShare) + ' of estimated cost.'
+        : '');
+    const systems = takeoff.structureAreas.size,
+      finishes = takeoff.finishes.size,
+      pairs = takeoff.modulePairs.size;
+    $('materialDiversitySummary').textContent =
+      systems +
+      (systems === 1 ? ' structural system' : ' structural systems') +
+      ' and ' +
+      finishes +
+      (finishes === 1 ? ' finish' : ' finishes') +
+      ' are in use. ' +
+      (pairs === 0
+        ? 'The study contains only the core assembly.'
+        : pairs === 1
+          ? 'Repeating one module assembly keeps detailing consistent.'
+          : takeoff.moduleSystems.size === 1
+            ? 'The modules share one structure but vary the cladding, so exterior finishes can distinguish programs without changing the framing.'
+            : 'The modules use ' +
+              pairs +
+              ' assemblies across ' +
+              takeoff.moduleSystems.size +
+              ' structural systems, with different framing and connection details.');
   }
 
   function refreshAssemblies() {
-    diagramObserver.disconnect();
-    diagrams.clear();
     const { model: snapshot, assignments } = study;
     const core = assemblyVariants(
       snapshot.rooms.map((room) => ({
@@ -7837,80 +8065,81 @@ function assemblyLayerMarkup(values) {
       })),
       materialValues(assignments, 'core')
     );
-    $('materialCoreAssembly').replaceChildren(makeAssemblyCard('Core ring', core, snapshot));
-    $('materialModuleAssemblies').replaceChildren(
-      ...PROGRAMS.map((program, id) => {
-        const modules = snapshot.slots
-          .filter((slot) => slot.p === id)
-          .map((slot) => ({
-            values: materialValues(assignments, 'module', id, materialSlotKey(snapshot, slot)),
-            quantity: 1
-          }));
-        const variants = assemblyVariants(modules, materialValues(assignments, 'module', id));
-        return makeAssemblyCard(program.name, variants, null, id);
-      })
-    );
+    cards = [{ key: 'core', title: 'Core ring', ring: snapshot, program: null, variants: core }];
+    for (const [id, program] of PROGRAMS.entries()) {
+      const modules = snapshot.slots
+        .filter((slot) => slot.p === id)
+        .map((slot) => ({
+          values: materialValues(assignments, 'module', id, materialSlotKey(snapshot, slot)),
+          quantity: 1
+        }));
+      const variants = assemblyVariants(modules, materialValues(assignments, 'module', id));
+      cards.push({ key: String(id), title: program.name, ring: null, program: id, variants });
+    }
+    $('assemblyCards').replaceChildren(...cards.map(buildAssemblyHeader));
+    syncAssemblyHeaders();
+    renderAssemblyDetail();
+    updateMaterialAnalysis();
   }
 
-  $('materialAssembliesView').addEventListener('click', () => showAssemblyView(true));
-  $('materialModelView').addEventListener('click', () => showAssemblyView(false));
+  $('materialAssembliesView').addEventListener('click', () => showMaterialPanel(true));
+  $('materialAnalysisView').addEventListener('click', () => showMaterialPanel(false));
+  $('returnToAssembly').onclick = () => {
+    showMaterialPanel(true);
+    const key = scope.value.startsWith('core')
+      ? 'core'
+      : scope.value === 'moduleProgram'
+        ? target.value
+        : '';
+    const button = $('assembly-' + key)?.querySelector('button') || $('materialAssembliesView');
+    button.scrollIntoView({ block: 'nearest' });
+    button.focus({ preventScroll: true });
+  };
+  const ratesDialog = $('materialRatesDialog');
+  $('openMaterialRates').onclick = () => {
+    $('materialStructureRate').value = study.rates.structure;
+    $('materialCladdingRate').value = study.rates.facade;
+    ratesDialog.showModal();
+  };
+  $('materialRatesForm').onsubmit = () => {
+    study.rates = {
+      structure: $('materialStructureRate').valueAsNumber,
+      facade: $('materialCladdingRate').valueAsNumber
+    };
+    saveStudy();
+    updateMaterialAnalysis();
+  };
 
   function currentKey() {
     return $('materialTargetField').hidden ? scope.value : scope.value + ':' + target.value;
   }
+  const paletteIds = { structure: 'materialStructure', facade: 'materialFacade' };
   function syncAssignment() {
-    const key = currentKey();
-    const assignment = study.assignments[key] || {};
-    for (const [field, id] of [
-      ['structure', 'materialStructure'],
-      ['facade', 'materialFacade']
-    ])
-      $(id).value = assignment[field] || '';
+    const assignment = study.assignments[currentKey()] || {};
     const family = scope.value.startsWith('core') ? 'core' : 'module';
-    const slot =
-      scope.value === 'module'
-        ? study.model.slots.find(
-            (candidate) => materialSlotKey(study.model, candidate) === target.value
-          )
-        : null;
-    const program = slot?.p ?? (scope.value.endsWith('Program') ? Number(target.value) : null);
-    const effective = materialValues(
-      study.assignments,
-      family,
-      program,
-      slot ? target.value : null
-    );
-    $('materialEffective').textContent =
-      scope.value === 'building'
-        ? 'Whole-building choices apply wherever a more specific assignment is inherited.'
-        : [
-            STRUCTURAL_SYSTEMS[effective.structure].name,
-            EXTERIOR_FINISHES[effective.facade].name
-          ].join(' · ');
-    for (const id of ['materialStructure', 'materialFacade'])
-      $(id).disabled = !$('materialTargetField').hidden && !target.value;
+    const program = scope.value.endsWith('Program') ? Number(target.value) : null;
+    const effective = materialValues(study.assignments, family, program);
+    for (const [field, id] of Object.entries(paletteIds)) {
+      for (const button of $(id).querySelectorAll('button'))
+        button.setAttribute(
+          'aria-pressed',
+          String(button.dataset.material === (assignment[field] || ''))
+        );
+      const catalog = MATERIAL_CATALOGUES[field];
+      $(field + 'Choice').textContent = assignment[field]
+        ? catalog[assignment[field]].name
+        : scope.value === 'building'
+          ? 'Inherit the core and module defaults'
+          : 'Inherited · ' + catalog[effective[field]].name;
+    }
+    syncAssemblyHeaders();
   }
   function syncTargets() {
     const previous = target.value;
-    const individual = scope.value === 'module';
     const byProgram = scope.value.endsWith('Program');
-    let choices = [];
-    if (individual) {
-      choices = study.model.slots
-        .filter((slot) => slot.p !== EMPTY)
-        .map((slot) =>
-          option(
-            'L' + (slot.f + 1) + ' · Dock ' + (slot.j + 1) + ' · ' + P[slot.p].name,
-            materialSlotKey(study.model, slot)
-          )
-        );
-    } else if (byProgram) {
-      choices = PROGRAMS.map((entry, id) => option(entry.name, String(id)));
-    }
-    target.replaceChildren(...(choices.length ? choices : [option('No installed modules', '')]));
-    if (choices.some((entry) => entry.value === previous)) target.value = previous;
-    $('materialTargetField').hidden = !(individual || byProgram);
-    $('materialTargetLabel').textContent = individual ? 'Module' : 'Program';
+    target.replaceChildren(...PROGRAMS.map((entry, id) => option(entry.name, String(id))));
+    if (previous) target.value = previous;
+    $('materialTargetField').hidden = !byProgram;
     syncAssignment();
   }
   function syncStudy() {
@@ -7926,30 +8155,42 @@ function assemblyLayerMarkup(values) {
     $('materialProgramColors').checked = study.programColors;
     $('materialStructureView').checked = study.structureView;
     $('materialNotes').value = study.notes;
+    study.rates = { ...DEFAULT_MATERIAL_RATES, ...study.rates };
+    $('returnToAssembly').hidden = false;
     syncTargets();
     refreshAssemblies();
     rebuild();
   }
 
-  for (const [field, id] of [
-    ['structure', 'materialStructure'],
-    ['facade', 'materialFacade']
-  ]) {
+  for (const [field, id] of Object.entries(paletteIds)) {
     const control = $(id);
-    control.append(option('Inherit', ''));
-    for (const [value, preset] of Object.entries(MATERIAL_CATALOGUES[field]))
-      control.append(option(preset.name, value));
-    control.addEventListener('change', () => {
-      const key = currentKey();
-      const assignment = (study.assignments[key] ||= {});
-      if (control.value) assignment[field] = control.value;
-      else delete assignment[field];
-      if (!Object.keys(assignment).length) delete study.assignments[key];
-      syncAssignment();
-      saveStudy();
-      refreshAssemblies();
-      rebuild();
-    });
+    const catalogue = MATERIAL_CATALOGUES[field];
+    const palette = [['', { name: 'Inherit' }], ...Object.entries(catalogue)];
+    for (const [value, preset] of palette) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.dataset.material = value;
+      chip.title = preset.name;
+      chip.setAttribute('aria-label', preset.name);
+      if (value) {
+        chip.style.setProperty('--chip', preset.color);
+        if (preset.seam) chip.style.setProperty('--seam', preset.seam);
+        if (preset.course) chip.classList.add('course');
+        else if (preset.joint) chip.classList.add('joint');
+      } else chip.textContent = 'Auto';
+      chip.addEventListener('click', () => {
+        const key = currentKey();
+        const assignment = (study.assignments[key] ||= {});
+        if (value) assignment[field] = value;
+        else delete assignment[field];
+        if (!Object.keys(assignment).length) delete study.assignments[key];
+        syncAssignment();
+        saveStudy();
+        refreshAssemblies();
+        rebuild();
+      });
+      control.append(chip);
+    }
   }
 
   scope.addEventListener('change', syncTargets);

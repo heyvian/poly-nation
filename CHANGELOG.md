@@ -1,5 +1,9 @@
 # Changelog
 
+## Materials workspace
+- Kept the live model visible above six collapsible, scope-highlighted assembly cards. Replaced material selectors with swatches and removed individual module editing.
+- Added editable CAD benchmarks, an assembly takeoff with per-unit and total estimates, and a live summary of structural behavior and material diversity.
+
 ## Assembly schedule and Firehall placement
 - Added exploded axonometrics for the core and module programs, with material variants, comparative mass and cost, and a qualitative strength profile.
 - Firehall modules now fill compatible ground-floor docks first, with each upper floor capped by the count below.
