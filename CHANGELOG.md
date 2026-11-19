@@ -1,5 +1,8 @@
 # Changelog
 
+## Swing ride refinement
+- Doubled the time at the top from 30 to 60 seconds, for a 136-second cycle. Reduced cruise radius from 15 to 12 m and cruise speed from 60 to 40 km/h to lessen outward chain tilt.
+
 ## Codex handoff — V3.6 unchanged
 - Packaged exact current index and illustrated rationale, prior HTML snapshots, previews, context, and portable regression tests. No app behavior changed during packaging.
 

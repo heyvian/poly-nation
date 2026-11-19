@@ -300,7 +300,7 @@ AI implementation
 
 Geometry and motion
 
-117 m modeled tower, 60 km/h cruise, 15 m seat radius and ≈10.6 rpm; speed-dependent seat geometry with a complete boarding-to-unloading cycle. Slide route selection, swept geometry and blocked-slot tests are AI-coded. The 19.8 m climb cap was taken from the referenced 65 ft precedent during development. The 5 m slide-to-climb clearance is an AI-selected planning assumption, not a safety-certified requirement; actual belay/fall zones and ride engineering require specialist design.
+117 m modeled tower, 40 km/h cruise, 12 m seat radius and ≈8.8 rpm; speed-dependent seat geometry with a complete boarding-to-unloading cycle. Slide route selection, swept geometry and blocked-slot tests are AI-coded. The 19.8 m climb cap was taken from the referenced 65 ft precedent during development. The 5 m slide-to-climb clearance is an AI-selected planning assumption, not a safety-certified requirement; actual belay/fall zones and ride engineering require specialist design.
 
 “no the slide generator doesn't have to avoid that strip but it just sticks out further from the facade there to create a safe climbing area”
 
@@ -310,9 +310,9 @@ Student corrections · V3.3 iteration
 
 Later student refinement · the swing as a timed event
 
-The student specified a queue while the ride is at the top, slowing and vertical hanging chains, descent and loading, acceleration and outward swing, 30 seconds at the top, return and unloading. The AI implemented a 106-second cycle, a speed-dependent pendulum approximation and simulated boarding. The existing rooftop boarding platform is the bottom of the ride; its capacity and the remaining phase durations are chosen model parameters, not engineered specifications.
+The student specified a queue while the ride is at the top, slowing and vertical hanging chains, descent and loading, acceleration and outward swing, 30 seconds at the top, return and unloading. The student later doubled the top dwell and asked for less outward swing. The AI implemented a 136-second cycle with a smaller seat radius and less chain tilt at cruise. The existing rooftop boarding platform is the bottom of the ride; its capacity and the remaining phase durations are chosen model parameters, not engineered specifications.
 
-106-second model cycle. The 30-second top dwell and sequence were specified by the student; the other durations, rotational approximation, 18 seats and rooftop boarding implementation are AI choices.
+136-second model cycle. The 60-second top dwell and sequence were specified by the student; the other durations, rotational approximation, 18 seats and rooftop boarding implementation are AI choices.
 
 07 / HUMAN & NON-HUMAN OCCUPATION
 

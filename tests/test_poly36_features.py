@@ -6,7 +6,31 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium') or None,args=['--no-sandbox','--disable-dev-shm-usage','--disable-webgl'])
  page=browser.new_page(viewport={'width':1440,'height':900});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.set_content(src.read_text(),wait_until='domcontentloaded');page.wait_for_function('model && occupancy');page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
- print('pose',page.evaluate('''()=>[0,30,52,66,84,100,106].map(t=>{const p=swingPose(model.feature.ride,t);return [t,p.phase,p.crown,p.rad,p.seatY,p.speed,p.tilt]})'''),flush=True)
+ pose = page.evaluate('''() => {
+   const ride = model.feature.ride;
+   const cruise = swingPose(ride, 0);
+   const descent = swingPose(ride, 60);
+   const unloading = swingPose(ride, 86);
+   const nextCruise = swingPose(ride, 136);
+   return {
+     radius: cruise.rad,
+     tiltDegrees: cruise.tilt * 180 / Math.PI,
+     speed: cruise.speed,
+     beforeDescent: swingPose(ride, 59.75).phase,
+     descent: descent.phase,
+     unloading: unloading.phase,
+     unloadingHeight: unloading.seatY - ride.roofLevel,
+     nextCruise: nextCruise.phase,
+     nextRound: nextCruise.round - cruise.round,
+   };
+ }''')
+ assert abs(pose['radius'] - 12) < 0.01, pose
+ assert 45 < pose['tiltDegrees'] < 50, pose
+ assert abs(pose['speed'] - 40) < 0.01, pose
+ assert pose['beforeDescent'] == 'At the top' and pose['descent'] == 'Descending', pose
+ assert pose['unloading'] == 'Unloading' and abs(pose['unloadingHeight'] - 0.36) < 0.01, pose
+ assert pose['nextCruise'] == 'At the top' and pose['nextRound'] == 1, pose
+ print('swing pose and 136-second cycle', pose, flush=True)
  print('defaults',page.evaluate('''()=>({area:model.total,plaza:model.plaza.area,zones:model.plaza.zones.map(x=>x.kind),reachable:occupancy.graph.reachable.size,outdoor:occupancy.graph.outdoor.length,climb:occupancy.graph.nodes.filter(q=>q.kind==='climbBase').map(q=>occupancy.graph.reachable.has(q.id)),swing:occupancy.graph.nodes.filter(q=>q.kind==='swing').map(q=>occupancy.graph.reachable.has(q.id))})'''),flush=True)
  res=page.evaluate('''()=>{const sim=makeOccupancy(model);let maxQueue=0,maxRiders=0,topRiders=0,unloaded=0;for(let i=0;i<420;i++){advanceScored(sim,1);const q=sim.people.filter(a=>a.rideQueued).length,n=sim.people.filter(a=>a.rideSeat!=null).length;maxQueue=Math.max(maxQueue,q);maxRiders=Math.max(maxRiders,n);if(swingPose(model.feature.ride,sim.clock).phase==='At the top')topRiders=Math.max(topRiders,n);unloaded=sim.completedSwings||0;}return {maxQueue,maxRiders,topRiders,unloaded,climbs:sim.completedClimbs,rate:crossRate(sim),encounters:sim.score.encounters,plaza:sim.score.by.plaza.count,fun:sim.fun};}''')
  print('simulation',res,flush=True);assert res['maxQueue']>0 and res['topRiders']>0 and res['unloaded']>0 and res['plaza']>0
