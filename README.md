@@ -5,7 +5,11 @@ A student-directed architectural research instrument for the Poly Nation / Infin
 
 ## Design workflow
 
-Open `index.html`, set the massing, and use the Topology Designer to set relationships between programs. Attract favors nearby rooms and modules and can create shared lobbies. Repel prioritizes separating neighbors on the same floor and allows vertical module neighbors. Clustering strength governs how closely selected programs group, including vertical alignment. The Materials phase is a placeholder for future material studies and their rationale.
+Open `index.html`, set the massing, and use the Topology Designer to set relationships between programs. Attract favors nearby rooms and modules and can create shared lobbies. Repel prioritizes separating neighbors on the same floor and allows vertical module neighbors. Clustering strength governs how closely selected programs group, including vertical alignment.
+
+In Massing, turn on **Edit programming** and click a room, module, or available dock. **Choose location** provides the same controls as a list. The solver checks edits against the area cap, reserved docks, same-floor repulsion, and entrance access. Room edits follow matching room locations. A different variation can make a saved location unavailable.
+
+**Materials** starts from a separate copy of the current massing and saves the study locally in the browser. Use **Update from massing** to replace the copy. Whole-building settings are inherited by the core and modules, with overrides by program and individual module. Structural systems and cladding are schematic visual studies. Use **Material design rationale** to keep your notes alongside the study.
 
 Use **Design rationale** to open the illustrated design record. Export JSON to carry a saved design to another browser or machine.
 

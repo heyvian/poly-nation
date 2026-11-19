@@ -1,5 +1,9 @@
 # Changelog
 
+## Materials and manual programming
+- Added an independent Materials workspace with a refreshable massing snapshot, structural and exterior assignments, and saved rationale notes.
+- Added room and module program editing and dock insertion in the massing model, with solver validation before applying an edit.
+
 ## Topology Designer
 - Selected programs now cluster at 0% strength, with the slider adding emphasis.
 - Widened the relationship diagram within the existing height.

@@ -155,6 +155,70 @@
  }
 }
 
+.viewport canvas.program-picking { cursor: crosshair; }
+.program-dialog {
+ width: min(420px, calc(100vw - 32px));
+ border: 1px solid var(--line);
+ border-radius: 8px;
+ padding: 18px;
+ background: var(--paper);
+ color: var(--ink);
+}
+.program-dialog::backdrop { background: #26322c66; }
+.program-dialog form { display: grid; gap: 8px; }
+.program-dialog h2, .program-dialog p { margin: 0; }
+.program-dialog select { width: 100%; }
+.program-dialog .actions { display: flex; justify-content: flex-end; gap: 8px; }
+/* The material model has its own camera, canvas, and scrollable controls. */
+.materials-phase {
+ display: grid;
+ grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+ flex: 1;
+ min-height: 0;
+ background: var(--paper);
+}
+.material-controls {
+ min-width: 0;
+ min-height: 0;
+ padding: 16px;
+ overflow: auto;
+ border-right: 1px solid var(--line);
+}
+.material-controls h2 { margin: 0; }
+.material-source, .material-fields, .material-display, .material-rationale {
+ margin: 14px 0 0;
+ padding: 12px 0 0;
+ border: 0;
+ border-top: 1px solid var(--line);
+}
+.material-source p { margin: 0 0 7px; }
+.material-source #materialStatus { margin: 7px 0 0; }
+.material-fields, .material-target { display: grid; gap: 6px; }
+.material-target[hidden] { display: none; }
+.material-fields label { margin-top: 5px; font-size: 12px; font-weight: 650; }
+.material-fields select { width: 100%; }
+.material-effective { margin: 4px 0 0; }
+.material-display legend { padding-right: 6px; font-size: 12px; font-weight: 650; }
+.material-display label { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; font-size: 12px; }
+.material-rationale label { display: block; margin: 8px 0 4px; font-size: 12px; }
+.material-rationale textarea {
+ width: 100%;
+ resize: vertical;
+ border: 1px solid var(--line);
+ border-radius: 4px;
+ padding: 7px;
+ font: inherit;
+ background: var(--paper);
+ color: inherit;
+}
+.material-model { display: flex; min-height: 0; min-width: 0; }
+.material-viewport { flex: 1; height: auto; min-height: 0; }
+@media (max-width: 899px) {
+ .materials-phase { grid-template-columns: minmax(0, 1fr); }
+ .material-model { order: -1; height: clamp(280px, 56dvh, 580px); }
+ .material-controls { border-right: 0; }
+}
+
 /* V3.6: self-contained presentation page, scoped to avoid altering laboratory UI. */
 #designRationale[hidden],#materialsPhase[hidden]{display:none!important}body.materials-open>.layout{display:none!important}body.materials-open .app-header .header-actions>*:not(#openMaterials){display:none!important}body.dr-open>.layout{display:none!important}body.dr-open .app-header .header-actions>*:not(#openRationale){display:none!important}body.dr-open #openRationale{background:#dce8dd;color:var(--accent)}
 .rationale{background:#f7f8f3;overflow:auto;min-height:0;flex:1;color:#293b30;font-size:14px;line-height:1.55}.dr-wrap{max-width:1270px;margin:auto;padding:24px clamp(16px,4vw,56px) 40px}.dr-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 28px;flex-wrap:wrap}.dr-kicker,.dr-section-heading>span{font-size:10px;letter-spacing:1.75px;font-weight:700;color:#66776a;text-transform:uppercase}.dr-hero{display:grid;grid-template-columns:1.04fr 1fr;gap:34px;align-items:center}.dr-hero h2{font-size:clamp(36px,5vw,66px);font-weight:650;letter-spacing:-.055em;line-height:1.01;margin:12px 0 18px}.dr-lead{font-size:17px;color:#53665a;line-height:1.55;max-width:52ch}.dr-credit{border-top:1px solid #cdd6ca;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;padding-top:14px;margin-top:24px;font-size:12px}.dr-credit span{color:#617065}.dr-hero-image{margin:0;background:white;border:1px solid var(--line);border-radius:7px;padding:9px}.dr-hero-image img{width:100%;height:auto;display:block;border-radius:4px}.dr-hero-image figcaption{padding:7px 5px 0}.dr-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#d6ded2;border:1px solid #d6ded2;margin:28px 0 14px;border-radius:6px;overflow:hidden}.dr-summary>div{background:#fffefa;padding:20px}.dr-summary h3{font-size:18px!important;margin:8px 0}.dr-key{font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap;display:inline-block;border-radius:3px;padding:2px 6px;vertical-align:middle;color:#fff}.dr-key.student{background:#426e55}.dr-key.ai{background:#657684}.dr-key.shared{background:#8b7854}.dr-note{font-size:12px;line-height:1.6;color:#657368;border-left:2px solid #9db09a;padding:5px 0 5px 12px;margin:16px 0}.dr-nav{display:flex;flex-wrap:wrap;gap:7px 15px;border-top:1px solid #d5dcd1;border-bottom:1px solid #d5dcd1;padding:13px 0;margin:24px 0 10px}.dr-nav a{font-size:12px;text-decoration:none;color:#37654d;font-weight:600}.dr-nav a:hover{text-decoration:underline}.dr-section{padding:34px 0;border-bottom:1px solid #d2d9ce;scroll-margin-top:16px}.dr-section-heading h2{font-size:clamp(25px,3.5vw,37px);font-weight:650;letter-spacing:-.04em;line-height:1.15;margin:8px 0}.dr-section-heading>p{font-size:15px;color:#647368;margin:0 0 23px}.dr-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}.dr-pair figure,.dr-score-method figure{margin:0;min-width:0}.dr-svg{width:100%;height:auto;display:block;border:1px solid #dce2d8;border-radius:7px;font-family:system-ui,-apple-system,sans-serif}.rationale figcaption{font-size:11.5px;line-height:1.5;color:#708073;margin-top:8px}.rationale h3{font-size:15px;font-weight:700;color:#314738;margin:16px 0 7px}.dr-pair>div h3:first-child,.dr-score-method>div h3:first-child{margin-top:1px}.dr-pair h3 .dr-key{margin-right:5px}.rationale p{margin:7px 0 12px}.rationale ul{margin:6px 0 16px;padding-left:19px}.rationale li{padding:2px 0}.rationale blockquote{margin:19px 0 0;background:#edf1e9;border-left:3px solid #73947b;padding:13px 17px;font-size:15px;font-weight:500;color:#395341}.rationale blockquote cite{display:block;font-size:11px;font-style:normal;color:#6e7e70;font-weight:400;margin-top:7px}.dr-wide-diagram{max-width:850px;margin:20px auto 0}.dr-equation{padding:14px 16px;background:#e9eee5;border:1px solid #d1dacd;border-radius:5px;font-weight:550;margin:18px 0}.dr-equation small{display:block;color:#67786b;font-weight:400;margin-top:6px;font-size:12px}.dr-chart,.dr-score-chart{border:1px solid #dce2d8;background:#fffefa;border-radius:6px;padding:18px}.dr-chart-legend{display:flex;gap:15px;font-size:11px;color:#69766b;margin-bottom:13px}.dr-chart-legend i,.dr-program i:not(.dr-bar i){width:10px;height:10px;display:inline-block;vertical-align:middle;border-radius:2px;margin-right:6px}.dr-program{margin:14px 0}.dr-program>div:first-child{display:flex;justify-content:space-between;gap:8px;font-size:13px}.dr-program small{font-size:11px;color:#758075}.dr-bar{display:flex;height:12px;margin:6px 0 3px;background:#e3e8df;border-radius:2px;overflow:hidden}.dr-bar i{display:block;height:100%}.dr-total{margin-top:19px;border-top:1px solid #cfd8cc;padding-top:11px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}.dr-total strong{font-size:22px;letter-spacing:-.8px}.dr-weight{display:grid;grid-template-columns: minmax(110px,1.2fr) minmax(50px,1fr) 26px;gap:8px;align-items:center;font-size:12px;margin:12px 0}.dr-weight b{text-align:right;font-variant-numeric:tabular-nums}.dr-weight-track{background:#e5e9e1;height:14px;border-radius:2px;overflow:hidden}.dr-weight-track i{display:block;height:100%}.dr-score-method{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:25px 0 15px}.dr-multipliers{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dr-multipliers>div{background:#fffefa;padding:10px;border:1px solid #dce2d8;border-radius:4px}.dr-multipliers b{display:block;font-size:22px;line-height:1.2;color:#426c52}.dr-multipliers span{font-size:11px;color:#617365}.dr-method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.dr-method-grid>div{padding:15px;background:white;border:1px solid #dce2d8;border-radius:5px}.dr-method-grid p{font-size:12px;margin-bottom:0}.dr-text-pair{margin-top:15px}.dr-table-wrap{overflow-x:auto}.dr-audit{width:100%;border-collapse:collapse;background:#fffefa;font-size:13px;line-height:1.5}.dr-audit th,.dr-audit td{border:1px solid #dce2d8;padding:12px;text-align:left;vertical-align:top}.dr-audit th{background:#e5ece1;font-weight:650}.dr-audit td:first-child{width:130px;font-weight:650}.dr-audit td:nth-child(2){width:43%}.dr-author-statement{background:#e7eee4;border:1px solid #cdd9c8;padding:18px 22px;margin:24px 0;border-radius:6px}.dr-author-statement h3{margin:0 0 8px}.dr-author-statement p{font-size:15px;margin:0}.dr-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:25px;font-size:11px;color:#68796c}
@@ -164,12 +228,26 @@
 </style></head><body>
 <header class="app-header"><div><h1>Poly Nation Cross Pollination Laboratory</h1></div><div class="header-actions"><button id="openRationale" type="button" aria-controls="designRationale" aria-expanded="false">Design rationale</button><button id="openMaterials" type="button" aria-controls="materialsPhase" aria-expanded="false">Materials</button><button class="primary" id="shuffle" title="Generate a new layout with the same settings">New variation</button><button id="reset" title="Restore every setting to its default">Reset design</button><details class="file-menu"><summary>Files &amp; export</summary><div class="file-menu-content"><button id="import">Load JSON</button><input accept=".json,application/json" hidden="" id="importFile" type="file"/><button id="export">Save JSON</button><div class="menu-label">3D geometry</div><button id="export3DM">Export 3DM</button><button id="exportRhinoScript" title="Offline alternative: run this generated Python script inside Rhino">Rhino script</button></div></details><span aria-live="polite" id="exportStatus" role="status"></span><span class="credit" id="saveStatus" style="align-self:center"></span></div></header>
 <div class="layout"><aside id="design-panel"><div class="topology-persistent" id="program-panel-0"><div class="section"><h2>Topology Designer <button class="mobile-jump" id="returnModelMobile" type="button" style="font-size:11px;min-height:25px;padding:3px 7px">Model ↑</button></h2><p class="hint topology-instructions"><strong>Drag nodes</strong> closer together or farther apart to adjust how strongly programs relate.<br><strong>Click a line</strong> to cycle through Attract, Repel, and Neutral.<br><strong>Click a node</strong> to toggle clustering for that program. Use Clustering strength to tighten the grouping. Selected programs still cluster at 0%.<br>These settings guide the placement of internal rooms and modules.</p><svg aria-label="Draggable program relationship map" class="wheel" id="wheel" viewbox="0 0 400 280"></svg><div class="relationship-key"><span><i style="border-color:#47866a"></i>Attract</span><span><i style="border-color:#999f99;border-top-style:dotted"></i>Neutral</span><span><i style="border-color:#bd665c;border-top-style:dashed"></i>Repel</span></div><div id="affinityField"></div><div aria-live="polite" class="hint relation-status-compact" id="relationStatus">Click a line to cycle its relationship. Clustering strength applies to the programs toggled on.</div><div class="legend" id="legend" style="margin-top:5px"></div><p class="hint cluster-status-compact" id="clusterStatus">Clustering off for all programs.</p><p class="hint" id="repelStatus" role="status" hidden></p><button class="topology-reset" id="neutralize" style="">Reset relationships to neutral</button><details class="topology-advanced"><summary>Program pairs &amp; advanced settings</summary><details class="pair-controls"><summary>All program pairs</summary><div class="pair-list" id="pairList"></div></details><p class="hint">Room sizes vary by use; levels and radial bands are laid out independently. Core mixing encourages different programs to share boundaries. Modules respond to adjacent rooms on their own level.</p><div class="readout"><span>Adjacency score (lower is better)</span><b id="score"></b></div></details></div></div><div class="design-scroll"><div aria-label="Design and simulation settings" class="panel-tabs" role="tablist"><button aria-controls="design-panel-0" aria-selected="true" data-panel="design-panel-0" id="design-panel-0-tab" role="tab" tabindex="0" type="button">Building</button><button aria-controls="design-panel-1" aria-selected="false" data-panel="design-panel-1" id="design-panel-1-tab" role="tab" tabindex="-1" type="button">Modules</button><button aria-controls="design-panel-2" aria-selected="false" data-panel="design-panel-2" id="design-panel-2-tab" role="tab" tabindex="-1" type="button">Features</button><button aria-controls="cpPaneAllocation" aria-selected="false" data-panel="cpPaneAllocation" id="cpPaneAllocation-tab" role="tab" tabindex="-1" type="button">Allocation</button><button aria-controls="cpPaneVisitors" aria-selected="false" data-panel="cpPaneVisitors" id="cpPaneVisitors-tab" role="tab" tabindex="-1" type="button">Visitors</button><button aria-controls="cpPaneScore" aria-selected="false" data-panel="cpPaneScore" id="cpPaneScore-tab" role="tab" tabindex="-1" type="button">Score</button></div><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; entrance calculations</summary><div class="readout"><span>Entrance / lobby</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><button id="cpTrial" style="width:100%;margin-bottom:8px">Run 5-minute comparison</button><div aria-live="polite" class="hint" id="cpTrialStatus"></div><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details><h2 style="margin-top:14px">Comparison history</h2><div id="cpHistory"></div><button id="cpClear" style="margin-top:6px">Clear comparisons</button><p class="hint">Trials use the same seed, visitor count and scoring weights for fairer comparisons. Design changes restart live scoring. All active humans and animals contribute regardless of visibility. Live rates stabilize with time; use fixed-duration trials to compare designs.</p></div></div></aside>
-<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><div class="view-top"><span class="eyebrow">3D model</span><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span>Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span><span id="seedLabel">Seed 606</span></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
+<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><div class="view-top"><span class="eyebrow">3D model</span><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button id="editProgramming" type="button" aria-pressed="false">Edit programming</button><button id="chooseProgramLocation" type="button" hidden>Choose location</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span><span id="seedLabel">Seed 606</span></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
 <div class="cp-main"><div class="cp-dash-head"><h2>Cross pollination</h2><span class="cp-live-status" id="cpLiveStatus">Starting</span></div><div class="cp-main-value"><b id="cpScore" title="Weighted points per 100 active visitor-minutes">—</b><span>weighted points /<br/>100 visitor-min</span></div></div>
 <div class="cp-dash-stats"><div><span>Encounters</span><b id="cpDashEncounters">0</b></div><div><span>Different rooms</span><b id="cpDashMemory">0</b></div><div><span>Cross-species</span><b id="cpDashSpecies">0</b></div><div><span>Simulated time</span><b id="cpDashTime">0m 0s</b></div></div>
 <div class="cp-dash-trial"><button id="cpQuickTrial" title="Run a separate five-minute trial using the current design and scoring settings" type="button">Run 5-min trial</button><span id="cpDashTrialResult">No trial yet</span><span hidden="" id="cpDashTrialProgress"></span><button id="openScoreDetails" title="Open detailed scoring, weights and comparison history" type="button">Score details</button></div>
 </section><div aria-label="Model visibility" class="model-tools"><div class="tool-row"><span class="tool-caption">Inspect</span><button id="viewXray" title="Flatten room massing and hide roof and facade for inspection">X-ray</button><button id="viewRooms">Rooms</button><button id="viewModules">Modules</button><button id="viewFacade" title="Show or hide the solid exterior wall">Façade</button><button id="viewRoof" title="Hide or show public rooftop deck and structures (all-level view)">Roof</button><label class="level-picker" for="inspect" style="">Visible levels <select id="inspect" style="font:inherit;padding:5px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink)"></select></label></div><div class="tool-row secondary-tools"><span class="tool-caption">Activity</span><button id="viewPeople" title="Show or hide people">People</button><button id="viewAnimals" title="Show or hide animals">Animals</button><button id="viewSim" title="Pause or resume the human and non-human movement simulation">Simulation</button><button id="viewSwing" title="Toggle idle ride animation when simulation is paused. When visitors are simulated, the ride follows their clock.">Swings</button></div></div><div class="metrics"><div class="metric"><b id="totalArea">—</b><span>Enclosed floor area (m²)</span></div><div class="metric"><b id="coreArea">—</b><span>Core + rooftop m²</span></div><div class="metric"><b id="moduleArea">—</b><span>Primary modular m²</span></div><div class="metric"><b id="totalModules">—</b><span>Primary modules</span></div></div><div class="budget-summary"><div aria-label="Enclosed area budget" aria-valuemax="20000" aria-valuemin="0" aria-valuenow="0" class="budget-track" id="budgetTrack" role="progressbar"><div id="budgetFill"></div></div><div aria-live="polite" class="budget-text" id="budgetText"></div><button id="focusSchedule" aria-controls="areaSchedulePanel" aria-expanded="false" title="Go to the full area schedule" type="button">Area details</button></div></div><section class="schedule" id="areaSchedulePanel" aria-labelledby="areaScheduleTitle" tabindex="-1" hidden><div class="schedule-head"><h2 id="areaScheduleTitle">Area schedule</h2><span class="hint" id="areaDelta"></span><span class="table-unit">m² unless noted</span><button id="collapseSchedule" type="button" aria-controls="areaSchedulePanel">Collapse</button></div><div class="area-bar" id="areaBar"></div><div class="table-wrap"><table><thead><tr><th>Program</th><th>Base goal</th><th>Core area</th><th>Pods</th><th>Total area</th><th>Δ vs base</th></tr></thead><tbody id="schedule"></tbody></table></div><div class="readout"><span>Primary area (excluding retail)</span><b id="primaryArea"></b></div><div class="readout"><span>Core rooms / zones</span><b id="roomCount"></b></div><details class="calc-details schedule-notes"><summary>How the area budget works</summary><p class="hint">The selected cap includes the core, greenhouse, all enclosed pods and rooftop enclosures. Retail, entrance, corridors, lifts, shared lobbies, and enclosed roof structures count toward the cap. Circulation reduces the remaining core room allocations; installed pods retain their 81 m² area. Open balconies and gardens are tracked separately. Manual geometry may leave unused budget or program deficits. * Retail slots are not primary modules. Conceptual GFA, not code-verified.</p></details></section></main>
 </div>
+<dialog class="program-dialog" id="programDialog" aria-labelledby="programDialogTitle">
+ <form id="programForm">
+  <h2 id="programDialogTitle">Edit programming</h2>
+  <label for="programLocation">Room or dock</label>
+  <select id="programLocation"></select>
+  <label for="programChoice">Program</label>
+  <select id="programChoice"></select>
+  <p id="programFeedback" class="hint" role="status"></p>
+  <div class="actions">
+   <button id="cancelProgram" type="button">Cancel</button>
+   <button class="primary" id="applyProgram" type="submit">Apply program</button>
+  </div>
+ </form>
+</dialog>
 <section id="designRationale" class="rationale" hidden aria-labelledby="drTitle">
  <div class="dr-wrap">
  <div class="dr-top"><span class="dr-kicker">POLY NATION / DESIGN RECORD / NOVEMBER 2026</span><div><button id="drPrint" type="button">Print / save as PDF</button> <button id="drBack" type="button">← Back to laboratory</button></div></div>
@@ -203,13 +281,58 @@
  </div>
 </section>
 
-<section class="rationale" id="materialsPhase" aria-labelledby="materialsTitle" hidden>
- <div class="dr-wrap">
-  <div class="dr-top"><span class="dr-kicker">Poly Nation / Material phase</span><button id="materialsBack" type="button">← Back to massing</button></div>
+<section class="materials-phase" id="materialsPhase" aria-labelledby="materialsTitle" hidden>
+ <aside class="material-controls" aria-label="Material assignments">
   <h2 id="materialsTitle" tabindex="-1">Materials</h2>
-  <p>After setting the massing, this phase will let you test materials for the building, façade, and modular units.</p>
-  <h3>Material design rationale</h3>
-  <p>A future design record will explain the material choices and how they were evaluated.</p>
+  <div class="material-source">
+   <p id="materialSnapshot" class="hint"></p>
+   <button id="updateMaterials" type="button">Update from massing</button>
+   <p id="materialStatus" class="hint" role="status"></p>
+  </div>
+  <div class="material-fields">
+   <label for="materialScope">Apply to</label>
+   <select id="materialScope">
+    <option value="building">Whole building</option>
+    <option value="core">Core building</option>
+    <option value="coreProgram">Core by program</option>
+    <option value="modules">All modules</option>
+    <option value="moduleProgram">Modules by program</option>
+    <option value="module">Individual module</option>
+   </select>
+   <div class="material-target" id="materialTargetField" hidden>
+    <label id="materialTargetLabel" for="materialTarget">Program</label>
+    <select id="materialTarget"></select>
+   </div>
+   <label for="materialStructure">Structural system</label>
+   <select id="materialStructure"></select>
+   <label for="materialFacade">Exterior finish</label>
+   <select id="materialFacade"></select>
+   <p class="hint material-effective" id="materialEffective"></p>
+  </div>
+  <fieldset class="material-display">
+   <legend>Model display</legend>
+   <label><input type="checkbox" id="materialProgramColors"> Show program colors on the exterior</label>
+   <label><input type="checkbox" id="materialStructureView"> Show structural systems</label>
+  </fieldset>
+  <details class="material-rationale">
+   <summary>Material design rationale</summary>
+   <label for="materialNotes">Record your material choices and tradeoffs</label>
+   <textarea id="materialNotes" rows="5" placeholder="What are you comparing, and why?"></textarea>
+   <p class="hint">Materials are shown schematically. The study records choices and visual differences.</p>
+  </details>
+ </aside>
+ <div class="material-model">
+  <div class="viewport material-viewport"><canvas id="materialsCanvas" aria-label="Three-dimensional material study model"></canvas>
+   <div class="view-top">
+    <span class="eyebrow">Material study model</span>
+    <div class="actions">
+     <button id="materialAxo" type="button">3D</button>
+     <button id="materialPlan" type="button">Plan</button>
+     <button id="materialFit" type="button">Fit</button>
+    </div>
+   </div>
+   <div class="view-bottom"><span>Drag to orbit · Scroll to zoom</span></div>
+  </div>
  </div>
 </section>
 <script>
@@ -300,6 +423,8 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
     animateSwing: true,
     minRoomArea: 80,
     cluster: [false, false, false, false, false],
+    roomPrograms: {},
+    modulePrograms: {},
     simRunning: true,
     simSpeed: 3,
     visitorCount: 36,
@@ -751,6 +876,40 @@ function refineRoomPlacement(layers) {
     }
   }
 }
+// Keep manual room assignments at the same physical location when the ring resizes.
+function assignRoomPrograms(rooms) {
+  const used = new Set();
+  for (const room of rooms) {
+    room.editKey = [state.seed, room.f, room.band, room.start.toFixed(5), room.end.toFixed(5)].join(
+      ':'
+    );
+    if (!Object.hasOwn(state.roomPrograms, room.editKey)) continue;
+    room.id = state.roomPrograms[room.editKey];
+    used.add(room);
+  }
+  for (const [key, program] of Object.entries(state.roomPrograms)) {
+    if (rooms.some((room) => room.editKey === key)) continue;
+    const [seed, floor, band, start, end] = key.split(':').map(Number);
+    if (seed !== state.seed) continue;
+    let best = null,
+      overlap = 0.55;
+    for (const room of rooms) {
+      if (used.has(room) || room.f !== floor || room.band !== band) continue;
+      const shared = Math.min(end, room.end) - Math.max(start, room.start);
+      const union = Math.max(end, room.end) - Math.min(start, room.start);
+      if (shared / union > overlap) {
+        best = room;
+        overlap = shared / union;
+      }
+    }
+    if (best) {
+      best.editKey = key;
+      best.id = program;
+      used.add(best);
+    }
+  }
+}
+
 // Pack the usable ring area into program rooms while keeping the floor plates and reservations fixed.
 function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0) {
   const rng = random((state.seed + attempt) ^ 0x719ae321),
@@ -920,6 +1079,8 @@ function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0) {
   refineRoomPlacement(layers);
   rooms.length = 0;
   for (const layer of layers) for (const list of layer) rooms.push(...list);
+  // Resolve manual programs before carving lobbies or routing the slide.
+  assignRoomPrograms(rooms);
   circulation.roomPacking = { minimum: state.minRoomArea, merged, alcoves, alcoveArea };
   // Carve common entrance lobbies from two attracted neighbors. Both rooms open into the shared space;
   // repelling/neutral pairs retain separate doors off their common corridor (no direct inter-room opening).
@@ -1594,7 +1755,9 @@ function derive() {
     let layout = pack(0);
     const hasRepel = Object.values(state.relations).includes('repel');
     const activeClusters = PROGRAMS.map((_, id) => id).filter((id) => state.cluster[id]);
-    if (hasRepel || activeClusters.length) {
+    const requestedRooms = Object.keys(state.roomPrograms).filter(key =>
+      key.startsWith(String(state.seed) + ':')).length;
+    if (hasRepel || activeClusters.length || requestedRooms) {
       // Compare seeded alternatives when the first floor quotas leave conflicts or
       // scatter a selected program. Penalize missing area as well as angular drift.
       const alignment = (rooms) =>
@@ -1610,18 +1773,30 @@ function derive() {
           return cost + (2 * missing + drift) / Math.max(1, ring[id]);
         }, 0);
       let conflicts = hasRepel ? repellingRoomContacts(layout.rooms) : 0;
+      const matchedRooms = (candidate) =>
+        candidate.rooms.filter((room) => Object.hasOwn(state.roomPrograms, room.editKey)).length;
+      let matches = matchedRooms(layout);
       let cost = alignment(layout.rooms);
       const clusterAttempts = Math.ceil(3 * clusterStrength());
       for (
         let attempt = 1;
-        attempt <= 5 && (conflicts > 0 || (activeClusters.length && attempt <= clusterAttempts));
+        attempt <= 5 &&
+        (matches < requestedRooms ||
+          conflicts > 0 ||
+          (activeClusters.length && attempt <= clusterAttempts));
         attempt++
       ) {
         const alternate = pack(attempt);
         const count = hasRepel ? repellingRoomContacts(alternate.rooms) : 0;
         const alternateCost = alignment(alternate.rooms);
-        if (count < conflicts || (count === conflicts && alternateCost < cost - 1e-7)) {
+        const alternateMatches = matchedRooms(alternate);
+        if (
+          alternateMatches > matches ||
+          (alternateMatches === matches &&
+            (count < conflicts || (count === conflicts && alternateCost < cost - 1e-7)))
+        ) {
           layout = alternate;
+          matches = alternateMatches;
           conflicts = count;
           cost = alternateCost;
         }
@@ -1737,8 +1912,43 @@ function derive() {
     }
   const activeSlots = slots.filter((s) => !s.blocked);
   counts.push(0);
-  const { placement, score, conflicts } = place(activeSlots, slotN, counts, rooms);
-  activeSlots.forEach((s, i) => (s.p = placement[i]));
+  const pins = new Map();
+  const pinnedEdits = [];
+  for (const [key, edit] of Object.entries(state.modulePrograms)) {
+    const [columns, floor, dock] = key.split(':').map(Number);
+    const index = activeSlots.findIndex(
+      (slot) => slot.f === floor && slot.j === Math.round((dock / columns) * slotN) % slotN
+    );
+    if (index < 0 || pins.size >= count || pins.has(index)) continue;
+    pins.set(index, edit.program);
+    pinnedEdits.push(edit);
+    activeSlots[index].editKey = key;
+  }
+  const added = pinnedEdits.filter((edit) => edit.from === null).length;
+  const requestedCounts = added
+    ? inventory(count - added, goalsForRetail(k, lobby.area, roofPlan.area))
+    : counts.slice();
+  while (requestedCounts.reduce((total, value) => total + value, 0) < count - added)
+    requestedCounts[counts.indexOf(Math.max(...counts))]++;
+  for (const { program, from } of pinnedEdits) {
+    if (from === null) requestedCounts[program]++;
+    else if (requestedCounts[from] > 0) {
+      requestedCounts[from]--;
+      requestedCounts[program]++;
+    }
+  }
+  const { placement, score, conflicts, conflictingSlots } = place(
+    activeSlots,
+    slotN,
+    requestedCounts,
+    rooms,
+    pins
+  );
+  counts.fill(0);
+  activeSlots.forEach((slot, i) => {
+    slot.p = placement[i];
+    if (slot.p !== EMPTY) counts[slot.p]++;
+  });
   const vacancyCounts = assignVacancies(activeSlots, k),
     retail = vacancyCounts[3] * MODULE.area,
     outdoor = (vacancyCounts[1] + vacancyCounts[2]) * MODULE.area,
@@ -1769,6 +1979,7 @@ function derive() {
     outdoor,
     vacancyCounts,
     score,
+    conflictingSlots,
     repelConflicts:
       conflicts +
       (Object.values(state.relations).includes('repel') ? repellingRoomContacts(rooms) : 0),
@@ -1857,7 +2068,7 @@ function designPlaza(R, lobby, slots, climb) {
   };
 }
 // SEEDED TOPOLOGY SOLVER — fixed inventory; swap labels including vacancies; local pair energy.
-function place(slots, n, counts, rooms = []) {
+function place(slots, n, counts, rooms = [], pins = new Map()) {
   const N = slots.length,
     rng = random(state.seed),
     a = Array(N).fill(EMPTY),
@@ -1875,16 +2086,29 @@ function place(slots, n, counts, rooms = []) {
       }
       centers[id] = Math.hypot(x, z) > 1e-7 ? mod(Math.atan2(z, x), TAU) : clusterAngle(id);
     }
+  // Reserve explicit user choices, then use the original demand to fill unpinned docks.
+  const remaining = counts.slice();
+  for (const program of pins.values()) remaining[program]--;
+  const remainingTotal = counts.reduce((sum, count) => sum + count, 0) - pins.size;
   const labels = [];
-  counts.forEach((count, id) => {
+  remaining.forEach((count, id) => {
     for (let j = 0; j < count; j++) labels.push(id);
   });
-  while (labels.length < N) labels.push(EMPTY);
+  while (labels.length > remainingTotal) {
+    const program = remaining.indexOf(Math.max(...remaining));
+    labels.splice(labels.lastIndexOf(program), 1);
+    remaining[program]--;
+  }
+  const free = slots.map((_, i) => i).filter((i) => !pins.has(i));
+  while (labels.length < free.length) labels.push(EMPTY);
   for (let i = labels.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [labels[i], labels[j]] = [labels[j], labels[i]];
   }
-  for (let i = 0; i < N; i++) a[i] = labels[i];
+  for (const [index, program] of pins) a[index] = program;
+  free.forEach((index, position) => {
+    a[index] = labels[position];
+  });
   // One same-floor conflict outweighs every soft score changed by a single swap.
   const separationCost = 100;
   const hasRepel = Object.values(state.relations).includes('repel');
@@ -1962,11 +2186,11 @@ function place(slots, n, counts, rooms = []) {
     for (const k of adj[j]) if (!adj[i].includes(k)) sum += edgeCost(k);
     return sum;
   }
-  if (N > 1) {
+  if (free.length > 1) {
     const steps = Math.min(22000, Math.max(2400, N * 48));
     for (let t = 0; t < steps; t++) {
-      const i = Math.floor(rng() * N),
-        j = Math.floor(rng() * N);
+      const i = free[Math.floor(rng() * free.length)],
+        j = free[Math.floor(rng() * free.length)];
       if (a[i] === a[j]) continue;
       const before = local(i, j);
       [a[i], a[j]] = [a[j], a[i]];
@@ -1977,11 +2201,22 @@ function place(slots, n, counts, rooms = []) {
   }
   let score =
     edges.reduce((s, e, i) => s + edgeCost(i), 0) + slots.reduce((s, _, i) => s + anchor(i), 0);
-  const conflicts = hasRepel
-    ? edges.filter((e) => e.sameFloor && programsRepel(a[e.i], a[e.j])).length +
-      a.filter((program, i) => dockConflicts[i][program]).length
-    : 0;
-  return { placement: a, score: score / Math.max(1, N), conflicts };
+  const conflictingSlots = new Set();
+  let conflicts = 0;
+  if (hasRepel) {
+    for (const { i, j, sameFloor } of edges) {
+      if (!sameFloor || !programsRepel(a[i], a[j])) continue;
+      conflicts++;
+      conflictingSlots.add(slots[i].i);
+      conflictingSlots.add(slots[j].i);
+    }
+    a.forEach((program, i) => {
+      if (!dockConflicts[i][program]) return;
+      conflicts++;
+      conflictingSlots.add(slots[i].i);
+    });
+  }
+  return { placement: a, score: score / Math.max(1, N), conflicts, conflictingSlots };
 }
 // PROGRAM MAP — diagram coordinates are normalized independently of its display proportions.
 let activeNode = null;
@@ -2155,8 +2390,15 @@ function meshBuilder() {
     lines = [],
     glass = [],
     groups = [];
-  function mark(layer, name = layer) {
-    groups.push({ layer, name, solid: solid.length, lines: lines.length, glass: glass.length });
+  function mark(layer, name = layer, pick = null) {
+    groups.push({
+      layer,
+      name,
+      solid: solid.length,
+      lines: lines.length,
+      glass: glass.length,
+      pick
+    });
   }
   function vertex(out, p, n, c, a = 1) {
     out.push(...p, ...n, ...c, a);
@@ -2557,15 +2799,221 @@ function buildSwing(b, ride, pose) {
     );
   }
 }
+// Material samples share the geometry and dimensions of the captured massing.
+const STRUCTURAL_SYSTEMS = {
+  concrete: { name: 'Cast-in-place reinforced concrete', color: '#a4a69e', frame: 'solid' },
+  precast: { name: 'Precast concrete', color: '#c0b8a9', frame: 'solid' },
+  'wood-stud': { name: 'Light wood framing (stick and frame)', color: '#c49b62', frame: 'stud' },
+  clt: { name: 'Cross-laminated timber (CLT)', color: '#b88453', frame: 'solid' },
+  glulam: { name: 'Glulam post and beam', color: '#93643c', frame: 'post' },
+  'steel-frame': { name: 'Structural steel frame', color: '#626c73', frame: 'post' },
+  'light-steel': { name: 'Light-gauge steel framing', color: '#899cf0', frame: 'stud' },
+  'space-frame': { name: 'Steel space frame', color: '#46606b', frame: 'brace' },
+  masonry: { name: 'Load-bearing masonry', color: '#9d6958', frame: 'solid' }
+};
+const EXTERIOR_FINISHES = {
+  concrete: { name: 'Architectural concrete', color: '#c0bdb2', seam: '#8d8a80', joint: 3 },
+  'board-concrete': {
+    name: 'Board-formed concrete',
+    color: '#b8b0a2',
+    seam: '#8d8070',
+    course: 0.38
+  },
+  cedar: { name: 'Cedar rainscreen', color: '#a96f47', seam: '#6b452c', joint: 0.42 },
+  'charred-wood': {
+    name: 'Charred timber cladding',
+    color: '#424143',
+    seam: '#6c6969',
+    joint: 0.48
+  },
+  plywood: {
+    name: 'Exterior-grade plywood panels',
+    color: '#cc9e68',
+    seam: '#926740',
+    joint: 1.25,
+    course: 1.25
+  },
+  corrugated: {
+    name: 'Corrugated galvanized steel',
+    color: '#8ea2aa',
+    seam: '#697b85',
+    joint: 0.36
+  },
+  aluminum: {
+    name: 'Aluminum standing-seam panels',
+    color: '#74878a',
+    seam: '#9faeb1',
+    joint: 0.6
+  },
+  zinc: { name: 'Zinc panels', color: '#6c7d85', seam: '#9ca7ad', joint: 0.9 },
+  vinyl: { name: 'Vinyl lap siding', color: '#d7d4be', seam: '#a6a189', course: 0.34 },
+  'fiber-cement': {
+    name: 'Fiber cement panels',
+    color: '#d5d1c7',
+    seam: '#969890',
+    joint: 1.2,
+    course: 1.2
+  },
+  brick: {
+    name: 'Brick veneer',
+    color: '#a15b47',
+    seam: '#d5b3a0',
+    joint: 0.85,
+    course: 0.28,
+    stagger: true
+  },
+  stone: {
+    name: 'Dimension stone panels',
+    color: '#c0ad93',
+    seam: '#96836a',
+    joint: 1.6,
+    course: 0.75
+  },
+  stucco: { name: 'Stucco', color: '#ded5bc', seam: '#aa9c80', joint: 6 },
+  glazing: {
+    name: 'Glazed curtain wall',
+    color: '#8eb5be',
+    seam: '#496771',
+    joint: 1.2,
+    course: 1.3
+  }
+};
+const MATERIAL_CATALOGUES = { structure: STRUCTURAL_SYSTEMS, facade: EXTERIOR_FINISHES };
+
+function materialSlotKey(layout, slot) {
+  return [layout.slotN, slot.f, slot.j, slot.p].join(':');
+}
+
+function materialValues(assignments, scope, program, slotKey) {
+  const scopes = ['building', scope === 'module' ? 'modules' : scope];
+  if (program != null) scopes.push(scope + 'Program:' + program);
+  if (slotKey) scopes.push('module:' + slotKey);
+  const defaults =
+    scope === 'core'
+      ? { structure: 'concrete', facade: 'concrete' }
+      : { structure: 'steel-frame', facade: 'corrugated' };
+  return Object.assign(defaults, ...scopes.map((key) => assignments[key]));
+}
+
+function finishColor(finish, program, preview) {
+  return rgb(preview.programColors && PROGRAMS[program] ? PROGRAMS[program].color : finish.color);
+}
+
+// Draw seams on each arc or planar elevation. Glazing is a color study here.
+function drawFinishJoints(finish, length, height, point, line) {
+  const seam = rgb(finish.seam);
+  const rows = finish.course ? Math.ceil(height / finish.course) : 1;
+  for (let row = 0; row < rows; row++) {
+    const y = (row * height) / rows,
+      next = ((row + 1) * height) / rows;
+    if (row > 0) {
+      const segments = Math.ceil(length / 0.8);
+      for (let i = 0; i < segments; i++)
+        line(point((i * length) / segments, y), point(((i + 1) * length) / segments, y), seam);
+    }
+    if (finish.joint)
+      for (
+        let x = finish.joint * (finish.stagger && row % 2 ? 0.5 : 1);
+        x < length;
+        x += finish.joint
+      )
+        line(point(x, y), point(x, next), seam);
+  }
+}
+
+function drawStructureBays(system, length, height, point, line) {
+  const color = rgb(system.color);
+  const bays = Math.max(1, Math.ceil(length / (system.frame === 'stud' ? 0.65 : 3.2)));
+  for (let i = 0; i < bays; i++) {
+    const x = (i * length) / bays,
+      next = ((i + 1) * length) / bays;
+    line(point(x, 0), point(x, height), color);
+    line(point(x, height), point(next, height), color);
+    line(point(x, 0), point(next, 0), color);
+    if (system.frame === 'brace') {
+      line(point(x, 0), point(next, height), color);
+      line(point(x, height), point(next, 0), color);
+    }
+  }
+  line(point(length, 0), point(length, height), color);
+}
+
+function drawMaterialModule(b, slot, x, y, z, preview, values) {
+  const { box, line } = b;
+  const { width, height, depth } = MODULE;
+  const angle = slot.angle;
+  const tangent = [-Math.sin(angle), Math.cos(angle)];
+  const radial = [Math.cos(angle), Math.sin(angle)];
+  const point = (across, along, up) => [
+    x + across * tangent[0] + along * radial[0],
+    y + up,
+    z + across * tangent[1] + along * radial[1]
+  ];
+  const finish = EXTERIOR_FINISHES[values.facade],
+    system = STRUCTURAL_SYSTEMS[values.structure];
+  const framing = preview.structureView && system.frame !== 'solid';
+  const color = preview.structureView ? rgb(system.color) : finishColor(finish, slot.p, preview);
+  box(x, y, z, width, framing ? 0.16 : height, depth, angle, color, true);
+  if (preview.structureView && !framing) return;
+  const elevation = framing
+    ? (length, locate) => drawStructureBays(system, length, height, locate, line)
+    : (length, locate) => drawFinishJoints(finish, length, height, locate, line);
+  for (const side of [-1, 1]) {
+    elevation(depth, (d, up) => point(side * (width / 2 + 0.025), d - depth / 2, up));
+    elevation(width, (w, up) => point(w - width / 2, side * (depth / 2 + 0.025), up));
+  }
+  if (!framing && finish.joint)
+    for (let d = finish.joint; d < depth; d += finish.joint)
+      line(
+        point(-width / 2, d - depth / 2, height + 0.025),
+        point(width / 2, d - depth / 2, height + 0.025),
+        rgb(finish.seam)
+      );
+}
+
+function drawMaterialFacade(b, model, floor, span, y, height, preview) {
+  const [start, end] = span;
+  // Split visible wall spans at room boundaries so program overrides follow the captured plan.
+  const rooms = model.layers[floor][model.bandN - 1];
+  const cuts = [
+    start,
+    ...rooms
+      .flatMap((room) => [room.start, room.end])
+      .filter((angle) => angle > start && angle < end),
+    end
+  ].sort((a, b) => a - b);
+  for (let i = 1; i < cuts.length; i++) {
+    const a = cuts[i - 1],
+      z = cuts[i];
+    if (z - a < 1e-6) continue;
+    const program = roomAt(rooms, (a + z) / 2);
+    const { structure, facade } = materialValues(preview.assignments, 'core', program);
+    const system = STRUCTURAL_SYSTEMS[structure],
+      finish = EXTERIOR_FINISHES[facade];
+    const point = (distance, up) => b.ringPoint(model.R + 0.028, a + distance / model.R, y + up);
+    const length = (z - a) * model.R;
+    if (preview.structureView && system.frame !== 'solid') {
+      drawStructureBays(system, length, height, point, b.line);
+    } else {
+      const color = preview.structureView
+        ? rgb(system.color)
+        : finishColor(finish, program, preview);
+      b.sector(model.R - facadeThickness(model), model.R, a, z, y, height, color);
+      if (!preview.structureView) drawFinishJoints(finish, length, height, point, b.line);
+    }
+  }
+}
+
 // Translate the derived plan into drawing geometry. Export uses the full model regardless of current cutaway.
-function buildMesh(m, exporting = false) {
+function buildMesh(m, exporting = false, view = state, preview = null) {
   const b = meshBuilder(),
     { solid, lines, glass, quad, tri, line, sector, box, ringPoint, mark, groups } = b;
-  const slab = rgb('#d8dcd4'),
+  const coreStructure = preview && materialValues(preview.assignments, 'core').structure;
+  const slab = rgb(coreStructure ? STRUCTURAL_SYSTEMS[coreStructure].color : '#d8dcd4'),
     edge = rgb('#a3aea3'),
     ground = rgb('#e4e8df');
   const floorH = 4.2,
-    H = state.floors * floorH;
+    H = view.floors * floorH;
   const extent = Math.max(m.R + MODULE.depth + 8, m.plaza ? m.plaza.outer + 2 : 0),
     plane = Math.max(170, extent * 2.6);
   mark('Reference');
@@ -2576,7 +3024,7 @@ function buildMesh(m, exporting = false) {
     [plane, -0.22, -plane],
     ground
   );
-  if (state.grid) {
+  if (view.grid) {
     let gridCol = rgb('#d3d9ce');
     for (let i = -Math.ceil(extent / 10) * 10; i <= extent + 10; i += 10) {
       line([i, -0.19, -extent - 10], [i, -0.19, extent + 10], gridCol);
@@ -2611,10 +3059,10 @@ function buildMesh(m, exporting = false) {
   } // central pedestrian route
   if (rr > 3) box(0, 0.32, 0, 1.6, 0.07, rr * 1.8, 0, rgb('#efeee3'));
   // Permanent ring: independent variable-size rooms, with diagrammatic seams.
-  const visible = (f) => exporting || !state.inspect || f < state.inspect;
-  const cut = !exporting && state.inspect > 0,
-    cutY = cut ? state.inspect * floorH + 0.22 : Infinity;
-  for (let f = 0; f < state.floors; f++) {
+  const visible = (f) => exporting || !view.inspect || f < view.inspect;
+  const cut = !exporting && view.inspect > 0,
+    cutY = cut ? view.inspect * floorH + 0.22 : Infinity;
+  for (let f = 0; f < view.floors; f++) {
     if (!visible(f)) continue;
     const y = f * floorH + 0.22;
     mark(`Core_L${f + 1}_Slab`);
@@ -2631,12 +3079,18 @@ function buildMesh(m, exporting = false) {
       );
     else sector(m.r - 0.08, m.R + 0.12, 0, TAU, y, 0.23, slab);
     for (const room of m.rooms) {
-      if (room.f !== f || (!exporting && !state.showRooms)) continue;
+      if (room.f !== f || (!exporting && !view.showRooms)) continue;
       mark(
         `Core_L${f + 1}_${P[room.id].id}`,
-        `Room_${f + 1}_${room.band}_${room.start.toFixed(3)}`
+        `Room_${f + 1}_${room.band}_${room.start.toFixed(3)}`,
+        view.programEditing ? { room } : null
       );
-      const c = rgb(P[room.id].color),
+      const c = rgb(
+          preview && !preview.programColors
+            ? STRUCTURAL_SYSTEMS[materialValues(preview.assignments, 'core', room.id).structure]
+                .color
+            : P[room.id].color
+        ),
         gap = Math.min(0.15 / ((room.r + room.R) / 2), (room.end - room.start) * 0.16),
         radialGap = m.bandN === 2 ? 0.13 : 0;
       const ra = room.r + (room.facadeFacing ? 0 : radialGap),
@@ -2644,7 +3098,7 @@ function buildMesh(m, exporting = false) {
           room.R - (room.facadeFacing ? 0 : radialGap),
           m.R - facadeThickness(m) - 0.035
         ),
-        flat = !exporting && state.xray,
+        flat = !exporting && view.xray,
         h = flat ? 0.13 : floorH - 0.31;
       if (rb <= ra + 0.001) continue;
       let portal = null;
@@ -2663,7 +3117,7 @@ function buildMesh(m, exporting = false) {
         h,
         c,
         portal,
-        !exporting && !state.inspect && state.showRoofDeck && !state.xray && f === state.floors - 1
+        !exporting && !view.inspect && view.showRoofDeck && !view.xray && f === view.floors - 1
       );
       if (portal) {
         const frame = rgb('#287fa7'),
@@ -2767,7 +3221,7 @@ function buildMesh(m, exporting = false) {
   // Accessible connection from the dock frame to the outer corridor; each occupied slot has a discrete threshold.
   for (const s of m.slots) {
     if (!visible(s.f) || s.blocked || (s.p === EMPTY && s.use === 'empty')) continue;
-    if (!exporting && !state.showModules) continue;
+    if (!exporting && !view.showModules) continue;
     mark(`Circulation_L${s.f + 1}_Dock_Thresholds`, `Dock_${s.j}`);
     const a = s.angle,
       rad = m.R + 0.325;
@@ -2794,7 +3248,7 @@ function buildMesh(m, exporting = false) {
       glaze = rgb('#c7dbd9');
     mark('Entrance_Lobby');
     sector(m.r, m.R, a, z, 0.23, 0.23, rgb('#e5d3ae'));
-    if (!cut || state.inspect > l.levels) sector(m.r, m.R, a, z, top - 0.2, 0.2, rgb('#e5d3ae'));
+    if (!cut || view.inspect > l.levels) sector(m.r, m.R, a, z, top - 0.2, 0.2, rgb('#e5d3ae'));
     for (const k of [a, z]) {
       quad(
         ringPoint(m.r, k, base),
@@ -3029,9 +3483,14 @@ function buildMesh(m, exporting = false) {
   }
 
   // Primary modules and adaptive uses share the same docking geometry.
-  if (exporting || state.showModules)
+  if (exporting || view.showModules)
     for (const s of m.slots) {
-      if (!visible(s.f) || s.blocked || (s.p === EMPTY && s.use === 'empty')) continue;
+      if (
+        !visible(s.f) ||
+        s.blocked ||
+        (s.p === EMPTY && s.use === 'empty' && !view.programEditing)
+      )
+        continue;
       const a = s.angle,
         center = m.R + 0.65 + MODULE.depth / 2,
         x = center * Math.cos(a),
@@ -3039,18 +3498,41 @@ function buildMesh(m, exporting = false) {
         y = s.f * floorH + 0.43;
       const v = s.p === EMPTY ? VACANCY.find((v) => v.id === s.use) : P[s.p],
         c = rgb(v.color);
-      if (exporting || state.supports) {
+      const values =
+        preview &&
+        s.p !== EMPTY &&
+        materialValues(preview.assignments, 'module', s.p, materialSlotKey(m, s));
+      const frameColor = values ? rgb(STRUCTURAL_SYSTEMS[values.structure].color) : edge;
+      if (exporting || view.supports) {
         mark(`Docking_L${s.f + 1}_Frames`, `Frame_${s.j}`);
         const rc = m.R + 0.35;
-        box(rc * Math.cos(a), y - 0.21, rc * Math.sin(a), 3.6, 0.18, 0.85, a, edge);
+        box(rc * Math.cos(a), y - 0.21, rc * Math.sin(a), 3.6, 0.18, 0.85, a, frameColor);
         for (const off of [-1.8, 1.8]) {
           const T = [-Math.sin(a), Math.cos(a)];
-          box(x + off * T[0], y - 0.17, z + off * T[1], 0.15, 0.14, MODULE.depth + 0.65, a, edge);
+          box(
+            x + off * T[0],
+            y - 0.17,
+            z + off * T[1],
+            0.15,
+            0.14,
+            MODULE.depth + 0.65,
+            a,
+            frameColor
+          );
         }
       }
-      mark(`Modules_L${s.f + 1}_${s.p === EMPTY ? s.use : P[s.p].id}`, `Slot_${s.j}`);
+      mark(
+        `Modules_L${s.f + 1}_${s.p === EMPTY ? s.use : P[s.p].id}`,
+        `Slot_${s.j}`,
+        view.programEditing ? { slot: s } : null
+      );
+      if (view.programEditing && s.p === EMPTY && s.use === 'empty') {
+        box(x, y, z, MODULE.width, 0.16, MODULE.depth, a, rgb('#9bbcae'), true);
+        continue;
+      }
       if (s.p !== EMPTY || s.use === 'retail') {
-        box(x, y, z, MODULE.width, MODULE.height, MODULE.depth, a, c, true);
+        if (values) drawMaterialModule(b, s, x, y, z, preview, values);
+        else box(x, y, z, MODULE.width, MODULE.height, MODULE.depth, a, c, true);
         if (s.use === 'retail') {
           const ra = m.R + 0.65 + MODULE.depth + 0.01;
           box(
@@ -3098,7 +3580,7 @@ function buildMesh(m, exporting = false) {
     }
 
   // Roof access, public park and retail. The atrium glass is not a walking surface.
-  if ((exporting || (!state.inspect && state.showRoofDeck && !state.xray)) && m.roofPlan) {
+  if ((exporting || (!view.inspect && view.showRoofDeck && !view.xray)) && m.roofPlan) {
     const p = m.roofPlan,
       y = p.y,
       walk = rgb('#dedbd0'),
@@ -3213,8 +3695,8 @@ function buildMesh(m, exporting = false) {
   }
   // Opaque exterior envelope. Keep full-height entrance/slide portals and door-sized docking openings.
   // The wall is inside the gross footprint; X-ray and the facade toggle affect the view only.
-  if (exporting || (state.showFacade && !state.xray))
-    for (let f = 0; f < state.floors; f++) {
+  if (exporting || (view.showFacade && !view.xray))
+    for (let f = 0; f < view.floors; f++) {
       if (!visible(f)) continue;
       const fullHeightHoles = [],
         doorHoles = [];
@@ -3232,10 +3714,12 @@ function buildMesh(m, exporting = false) {
         wall = rgb('#c9c8bf'),
         inner = m.R - facadeThickness(m),
         outer = m.R;
-      for (const [a, b] of openArcs([...fullHeightHoles, ...doorHoles]))
-        sector(inner, outer, a, b, y, doorH, wall);
-      for (const [a, b] of openArcs(fullHeightHoles))
-        sector(inner, outer, a, b, y + doorH, h - doorH, wall);
+      function drawWall(span, bottom, height) {
+        if (preview) drawMaterialFacade(b, m, f, span, bottom, height, preview);
+        else sector(inner, outer, ...span, bottom, height, wall);
+      }
+      for (const span of openArcs([...fullHeightHoles, ...doorHoles])) drawWall(span, y, doorH);
+      for (const span of openArcs(fullHeightHoles)) drawWall(span, y + doorH, h - doorH);
     }
 
   // Full-height outdoor climbing wall. The reserved dock strip stays unoccupied.
@@ -3246,10 +3730,10 @@ function buildMesh(m, exporting = false) {
       hi = c.angle + c.half,
       face = rgb('#baaa91'),
       holdColors = ['#ae6a59', '#537e94', '#d5ac56', '#81749c', '#719879'].map(rgb),
-      rgen = random(state.seed ^ 0x6acd9b7);
+      rgen = random(view.seed ^ 0x6acd9b7);
     mark('Climbing_Ground_Approach');
     sector(m.R + 0.02, m.R + 3.8, lo, hi, -0.19, 0.19, rgb('#bfae9c'));
-    for (let f = 0; f < state.floors && f * floorH < c.height; f++) {
+    for (let f = 0; f < view.floors && f * floorH < c.height; f++) {
       if (!visible(f)) continue;
       const y = f * floorH + 0.08,
         hgt = Math.min(floorH, c.height - y);
@@ -3309,7 +3793,7 @@ function buildMesh(m, exporting = false) {
     mark('Swing_Tower');
     sector(0, ride.towerRadius, 0, TAU, 0, Math.min(cutY, ride.height), rgb('#c78b51'));
   }
-  if (exporting || !state.inspect) {
+  if (exporting || !view.inspect) {
     mark('Swing_Tower');
     const mast = rgb('#c78b51'),
       platform = rgb('#e4d6b7');
@@ -3348,7 +3832,7 @@ function buildMesh(m, exporting = false) {
     );
     mark('Swing_Crown_and_Seats');
     buildSwing(b, ride, swingPose(ride, 0));
-    if (exporting || (state.roof && !state.xray)) {
+    if (exporting || (view.roof && !view.xray)) {
       mark('Atrium_Glass_Roof');
       const roofc = rgb('#c4dfde'),
         frame = rgb('#9aada8'),
@@ -3433,8 +3917,8 @@ function buildMesh(m, exporting = false) {
   }
 
   // Conceptual users and animals: low-poly occupancy placeholders for scale and inclusivity.
-  if (exporting && (state.showPeople || state.showAnimals)) {
-    let rng = random((state.seed * 1664525 + 1013904223) >>> 0);
+  if (exporting && (view.showPeople || view.showAnimals)) {
+    let rng = random((view.seed * 1664525 + 1013904223) >>> 0);
     const humanClothes = ['#7e97b8', '#c87f78', '#7fa888', '#b08bc1', '#c2a06f', '#7395a0'],
       humanHair = ['#6d5a49', '#4f443d', '#8a735d', '#473a31'],
       skins = ['#f0d1b5', '#d9b28b', '#b98562', '#8d5b3e'],
@@ -3461,7 +3945,7 @@ function buildMesh(m, exporting = false) {
           })
         : lowPolyPerson(box, x, y, z, a, personStyle());
     }
-    if (state.showPeople) {
+    if (view.showPeople) {
       mark('Placeholders_People');
       if (m.plaza) {
         const p = m.plaza;
@@ -3498,7 +3982,7 @@ function buildMesh(m, exporting = false) {
           );
         }
       }
-      if ((exporting || (!state.inspect && state.showRoofDeck && !state.xray)) && m.roofPlan) {
+      if ((exporting || (!view.inspect && view.showRoofDeck && !view.xray)) && m.roofPlan) {
         const p = m.roofPlan,
           y = p.y + 0.07,
           walkR = m.R - p.walk * 0.52;
@@ -3519,8 +4003,8 @@ function buildMesh(m, exporting = false) {
         putPerson(rad * Math.cos(a), groundY, rad * Math.sin(a), a + 0.4, i === 3);
       }
     }
-    if (state.showAnimals) {
-      rng = random((state.seed ^ 0x5f1bbcdc) >>> 0);
+    if (view.showAnimals) {
+      rng = random((view.seed ^ 0x5f1bbcdc) >>> 0);
       mark('Placeholders_Animals');
       let indoorDogs = 0;
       for (const q of m.circulation.regions) {
@@ -3554,7 +4038,7 @@ function buildMesh(m, exporting = false) {
           s: 0.85 + rng() * 0.25
         });
       }
-      if ((exporting || (!state.inspect && state.showRoofDeck && !state.xray)) && m.roofPlan) {
+      if ((exporting || (!view.inspect && view.showRoofDeck && !view.xray)) && m.roofPlan) {
         const y = m.roofPlan.y + 0.07;
         for (let i = 0; i < 4 && i < m.roofPlan.garden.length; i++) {
           const q = m.roofPlan.garden[i],
@@ -3597,7 +4081,7 @@ function buildMesh(m, exporting = false) {
     }
   }
 
-  return { solid, lines, glass, groups, H: cut ? state.inspect * floorH : ride.height, extent };
+  return { solid, lines, glass, groups, H: cut ? view.inspect * floorH : ride.height, extent };
 }
 // Occupancy simulation: conceptual navigation graph derived from actual circulation sectors.
 // Navigation and display are separate from area / geometry generation.
@@ -4228,15 +4712,13 @@ function routeAgent(a, target, sim) {
   a.path = path.flatMap((e) => {
     const start = from;
     from = e.to;
-    return e.path
-      .slice(1)
-      .map((p) => ({
-        p,
-        speed: e.kind === 'lift' ? 1.5 : a.speed,
-        kind: e.kind,
-        from: start,
-        to: e.to
-      }));
+    return e.path.slice(1).map((p) => ({
+      p,
+      speed: e.kind === 'lift' ? 1.5 : a.speed,
+      kind: e.kind,
+      from: start,
+      to: e.to
+    }));
   });
   a.path.unshift({
     p: [...sim.graph.nodes[a.node].p],
@@ -4976,11 +5458,13 @@ function initSoftware() {
 }
 function drawSoftware() {
   if (!software || !softwareMesh) return;
-  const m = softwareMesh,
-    { canvas: c, ctx } = software,
-    dpr = Math.min(2, window.devicePixelRatio || 1),
-    w = Math.max(1, Math.round(canvas.clientWidth * dpr)),
-    h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+  paintSoftware(softwareMesh, software, camera, canvas);
+}
+
+function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1),
+    w = Math.max(1, Math.round(viewport.clientWidth * dpr)),
+    h = Math.max(1, Math.round(viewport.clientHeight * dpr));
   if (c.width !== w || c.height !== h) {
     c.width = w;
     c.height = h;
@@ -5206,6 +5690,258 @@ function animateSwingFrame(now) {
   } else simLast = now;
   requestAnimationFrame(animateSwingFrame);
 }
+// Editing adds hit targets to the view, separate from the architectural model and exports.
+let programEditing = false;
+function massingView() {
+  return programEditing
+    ? {
+        ...state,
+        programEditing,
+        showRooms: true,
+        showModules: true,
+        showFacade: false,
+        showRoofDeck: false,
+        roof: false
+      }
+    : state;
+}
+
+function syncProgrammingHint(model) {
+  const missing =
+    Object.keys(state.roomPrograms).length +
+    Object.keys(state.modulePrograms).length -
+    model.rooms.filter((room) => Object.hasOwn(state.roomPrograms, room.editKey)).length -
+    model.slots.filter((slot) => slot.editKey).length;
+  $('programEditHint').textContent =
+    'Click a room, module, or green dock to assign its program.' +
+    (missing > 0 ? ' ' + missing + ' saved edits have no matching location in this layout.' : '');
+}
+
+function pickMassingLocation(clientX, clientY) {
+  const mesh = softwareMesh || gpu?.mesh;
+  if (!mesh) return null;
+  const bounds = canvas.getBoundingClientRect();
+  const aspect = bounds.width / bounds.height;
+  const half =
+    Math.max(
+      mesh.extent * 1.23,
+      (mesh.extent * 1.23) / aspect,
+      camera.el > 1.4 ? 0 : mesh.H * 0.68
+    ) * camera.zoom;
+  const back = [
+    Math.cos(camera.el) * Math.cos(camera.az),
+    Math.sin(camera.el),
+    Math.cos(camera.el) * Math.sin(camera.az)
+  ];
+  const right = unit(cross([0, 1, 0], back)),
+    up = unit(cross(back, right));
+  const x = ((2 * (clientX - bounds.left)) / bounds.width - 1) * half * aspect;
+  const y = (1 - (2 * (clientY - bounds.top)) / bounds.height) * half + camera.pan;
+  const origin = back.map((value, i) => value * 500 + right[i] * x + up[i] * y);
+  origin[1] += mesh.H * 0.47;
+  const direction = back.map((value) => -value);
+  let nearest = Infinity,
+    selection = null;
+  const vertex = (offset) => mesh.solid.slice(offset, offset + 3);
+  // Intersect the same room and dock geometry that was drawn, choosing the frontmost hit.
+  for (const [i, group] of mesh.groups.entries()) {
+    if (!group.pick) continue;
+    const end = mesh.groups[i + 1]?.solid ?? mesh.solid.length;
+    for (let offset = group.solid; offset < end; offset += 30) {
+      const a = vertex(offset),
+        b = sub(vertex(offset + 10), a),
+        c = sub(vertex(offset + 20), a);
+      const h = cross(direction, c),
+        determinant = dot(b, h);
+      if (Math.abs(determinant) < 1e-8) continue;
+      const s = sub(origin, a),
+        u = dot(s, h) / determinant;
+      if (u < 0 || u > 1) continue;
+      const q = cross(s, b),
+        v = dot(direction, q) / determinant;
+      if (v < 0 || u + v > 1) continue;
+      const distance = dot(c, q) / determinant;
+      if (distance >= 0 && distance < nearest) {
+        nearest = distance;
+        selection = group.pick;
+      }
+    }
+  }
+  return selection;
+}
+
+// Test the edit on the full layout before changing the visible model, occupancy or saved settings.
+function applyProgramEdit(selection, program) {
+  const before = model;
+  const original = state;
+  const { room, slot } = selection;
+  const adding = slot?.p === EMPTY;
+  if (!Number.isInteger(program) || !PROGRAMS[program]) return 'Select a valid program.';
+  if (slot?.blocked) return 'This dock is reserved for another building feature.';
+  if (room?.id === program || slot?.p === program) return '';
+  state = {
+    ...state,
+    roomPrograms: { ...state.roomPrograms },
+    modulePrograms: { ...state.modulePrograms }
+  };
+  let key;
+  if (room) {
+    key = room.editKey;
+    state.roomPrograms[key] = program;
+  } else {
+    key = slot.editKey || [before.slotN, slot.f, slot.j].join(':');
+    const prior = state.modulePrograms[key];
+    state.modulePrograms[key] = { program, from: prior ? prior.from : adding ? null : slot.p };
+    if (adding) state.modules = Math.min(300, Math.max(state.modules, before.count + 1));
+  }
+
+  let error = '';
+  let candidate;
+  try {
+    candidate = derive();
+    const updatedRoom = room && candidate.rooms.find((entry) => entry.editKey === key);
+    const updatedSlot = slot && candidate.slots.find((entry) => entry.editKey === key);
+    if (adding && candidate.count <= before.count) {
+      error = 'No additional module fits within the current area cap and dock reservations.';
+    } else if (room ? updatedRoom?.id !== program : updatedSlot?.p !== program) {
+      error = 'The selected location is unavailable in the recalculated layout.';
+    } else if (
+      before.rooms.some(
+        (room) =>
+          original.roomPrograms[room.editKey] !== undefined &&
+          !candidate.rooms.some((next) => next.editKey === room.editKey)
+      ) ||
+      before.slots.some(
+        (slot) => slot.editKey && !candidate.slots.some((next) => next.editKey === slot.editKey)
+      )
+    ) {
+      error = 'This change would displace a room or module you already edited.';
+    } else if (candidate.total > state.areaCap + 1e-5) {
+      error = 'This edit would exceed the enclosed area cap.';
+    } else if (
+      candidate.repelConflicts > before.repelConflicts ||
+      (updatedSlot && candidate.conflictingSlots.has(updatedSlot.i)) ||
+      (updatedRoom &&
+        candidate.rooms.some(
+          (other) => programsRepel(program, other.id) && roomsAreNeighbors(updatedRoom, other)
+        ))
+    ) {
+      error = 'That placement conflicts with a same-floor Repel relationship.';
+    } else if (candidate.lobby.area) {
+      const graph = buildNavigation(candidate);
+      const node = updatedSlot
+        ? graph.nodes.find((node) => node.slot === updatedSlot.i)
+        : graph.nodes.find(
+            (node) =>
+              node.f === updatedRoom.f &&
+              node.program === program &&
+              node.cell?.start === updatedRoom.start
+          );
+      if (!node || graph.entry == null || !shortestPath(graph, graph.entry, node.id, 'human'))
+        error = 'The edited space needs a reachable route from the entrance.';
+    }
+  } catch (e) {
+    error = 'The solver could not fit this edit into the current layout.';
+  }
+  if (error) state = original;
+  else update();
+  return error;
+}
+
+function initProgrammingEditor() {
+  const toggle = $('editProgramming');
+  const dialog = $('programDialog');
+  const locations = $('programLocation');
+  const programs = $('programChoice');
+  const feedback = $('programFeedback');
+  let options = [];
+  let pointerStart = null;
+  PROGRAMS.forEach((program, id) => programs.add(new Option(program.name, id)));
+
+  function showSelection() {
+    const { room, slot } = options[Number(locations.value)];
+    const id = room?.id ?? slot.p;
+    programs.value = PROGRAMS[id] ? String(id) : '0';
+    $('applyProgram').textContent = slot?.p === EMPTY ? 'Add module' : 'Apply program';
+    feedback.textContent = '';
+  }
+
+  function openEditor(selected = null) {
+    if (pending) update();
+    const choices = [
+      ...model.rooms
+        .filter((room) => !state.inspect || room.f < state.inspect)
+        .map((room) => ({ room })),
+      ...model.slots
+        .filter((slot) => !slot.blocked && (!state.inspect || slot.f < state.inspect))
+        .map((slot) => ({ slot }))
+    ];
+    if (!choices.length) return;
+    options = choices;
+    locations.replaceChildren(
+      ...choices.map(({ room, slot }, index) => {
+        const program = P[room?.id ?? slot.p]?.name;
+        const label = room
+          ? 'L' + (room.f + 1) + ' · Room ' + (model.rooms.indexOf(room) + 1) + ' · ' + program
+          : 'L' +
+            (slot.f + 1) +
+            ' · Dock ' +
+            (slot.j + 1) +
+            ' · ' +
+            (program || 'Available for a module');
+        return new Option(label, index);
+      })
+    );
+    const index = choices.findIndex((entry) =>
+      selected?.room
+        ? selected.room.editKey === entry.room?.editKey
+        : selected?.slot?.i === entry.slot?.i
+    );
+    locations.value = String(Math.max(0, index));
+    showSelection();
+    dialog.showModal();
+  }
+
+  toggle.onclick = () => {
+    programEditing = !programEditing;
+    toggle.setAttribute('aria-pressed', String(programEditing));
+    $('chooseProgramLocation').hidden = !programEditing;
+    $('programEditHint').hidden = !programEditing;
+    $('orbitHint').hidden = programEditing;
+    if (programEditing) syncProgrammingHint(model);
+    canvas.classList.toggle('program-picking', programEditing);
+    refreshView();
+  };
+  $('chooseProgramLocation').onclick = () => openEditor();
+  locations.onchange = showSelection;
+  $('cancelProgram').onclick = () => dialog.close();
+  $('programForm').onsubmit = (event) => {
+    event.preventDefault();
+    const error = applyProgramEdit(options[Number(locations.value)], Number(programs.value));
+    if (error) feedback.textContent = error;
+    else dialog.close();
+  };
+  canvas.addEventListener('pointerdown', (event) => {
+    if (programEditing && event.isPrimary && event.button === 0)
+      pointerStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  });
+  canvas.addEventListener('pointerup', (event) => {
+    const start = pointerStart;
+    pointerStart = null;
+    if (
+      !programEditing ||
+      !start ||
+      start.id !== event.pointerId ||
+      Math.hypot(start.x - event.clientX, start.y - event.clientY) > 5
+    )
+      return;
+    const selected = pickMassingLocation(event.clientX, event.clientY);
+    if (selected) openEditor(selected);
+  });
+  canvas.addEventListener('pointercancel', () => {
+    pointerStart = null;
+  });
+}
 // Replace model meshes and retain occupants for view-only changes that reuse the same derived model.
 function upload(m) {
   if (
@@ -5217,14 +5953,14 @@ function upload(m) {
     simLast = 0;
   }
   if (software) {
-    softwareMesh = buildMesh(m);
+    softwareMesh = buildMesh(m, false, massingView());
     prepareSwingMesh(softwareMesh);
     refreshPopulation();
     drawSoftware();
     return;
   }
   if (!gl || !gpu) return;
-  const mesh = buildMesh(m);
+  const mesh = buildMesh(m, false, massingView());
   prepareSwingMesh(mesh);
   gpu.mesh = mesh;
   for (const k of ['solid', 'lines', 'glass']) {
@@ -5417,6 +6153,7 @@ function update() {
   for (const [id, key] of Object.entries(viewKeys))
     $(id).setAttribute('aria-pressed', String(state[key]));
   model = derive();
+  if (programEditing) syncProgrammingHint(model);
   renderTrials();
   const m = model;
   const c = m.feature.climbing,
@@ -5835,6 +6572,30 @@ function applySaved(data) {
           v = s.relations[k];
         if (['attract', 'neutral', 'repel'].includes(v)) d.relations[k] = v;
       }
+  if (s.roomPrograms && typeof s.roomPrograms === 'object')
+    for (const [key, program] of Object.entries(s.roomPrograms).slice(0, 300)) {
+      if (
+        /^\d+:\d+:\d+:\d+\.\d{5}:\d+\.\d{5}$/.test(key) &&
+        Number.isInteger(program) &&
+        PROGRAMS[program]
+      )
+        d.roomPrograms[key] = program;
+    }
+  if (s.modulePrograms && typeof s.modulePrograms === 'object')
+    for (const [key, edit] of Object.entries(s.modulePrograms).slice(0, 300)) {
+      const [columns, floor, dock] = key.split(':').map(Number);
+      if (
+        /^[1-9]\d*:\d+:\d+$/.test(key) &&
+        columns <= 200 &&
+        floor < 10 &&
+        dock < columns &&
+        edit &&
+        Number.isInteger(edit.program) &&
+        PROGRAMS[edit.program] &&
+        (edit.from === null || (Number.isInteger(edit.from) && PROGRAMS[edit.from]))
+      )
+        d.modulePrograms[key] = { program: edit.program, from: edit.from };
+    }
   if (Array.isArray(s.cluster) && s.cluster.length === 5) d.cluster = s.cluster.map(Boolean);
   if (s.encounterWeights && typeof s.encounterWeights === 'object')
     for (const k of Object.keys(d.encounterWeights))
@@ -6275,6 +7036,7 @@ $('simRestart').onclick = () => {
     draw();
   }
 };
+initProgrammingEditor();
 initGL();
 restoreSaved();
 initCrossUI();
@@ -6327,19 +7089,260 @@ requestAnimationFrame(animateSwingFrame);
   );
 })();
 
+// Work on a detached massing snapshot. Changing massing never mutates the material study.
 (function () {
-  const phase = $('materialsPhase'),
-    toggle = $('openMaterials');
+  const phase = $('materialsPhase');
+  const toggle = $('openMaterials');
   const layout = document.querySelector('body>.layout');
-  let massingScroll = 0;
+  const materialCanvas = $('materialsCanvas');
+  const viewport = { canvas: materialCanvas, ctx: materialCanvas.getContext('2d') };
+  const storageKey = 'poly-nation-material-study-v1';
+  const scope = $('materialScope');
+  const target = $('materialTarget');
+  const studyCamera = { az: -0.84, el: 0.57, zoom: 0.95, pan: 0 };
+  let study = null,
+    mesh = null,
+    massingScroll = 0,
+    drag = null,
+    frame = 0;
+
+  function saveStudy() {
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify(study, (_, value) =>
+          value instanceof Set ? { materialSnapshotSet: [...value] } : value
+        )
+      );
+    } catch {
+      $('materialStatus').textContent = 'This study could not be saved in browser storage.';
+    }
+  }
+  function restoreStudy() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(storageKey), (_, value) =>
+        value?.materialSnapshotSet ? new Set(value.materialSnapshotSet) : value
+      );
+      if (stored?.model?.slots && stored.view && stored.assignments) study = stored;
+    } catch {
+      $('materialStatus').textContent = 'The saved material study could not be loaded.';
+    }
+  }
+
+  function captureMassing() {
+    if (pending) update();
+    study ??= { assignments: {}, programColors: false, structureView: false, notes: '' };
+    study.model = structuredClone(model);
+    study.view = {
+      floors: state.floors,
+      seed: state.seed,
+      inspect: 0,
+      xray: false,
+      grid: state.grid,
+      showRooms: true,
+      showModules: true,
+      supports: true,
+      showRoofDeck: true,
+      showFacade: true,
+      roof: true
+    };
+    const currentSlots = new Set(
+      study.model.slots
+        .filter((slot) => slot.p !== EMPTY)
+        .map((slot) => 'module:' + materialSlotKey(study.model, slot))
+    );
+    for (const key of Object.keys(study.assignments)) {
+      if (key.startsWith('module:') && !currentSlots.has(key)) delete study.assignments[key];
+    }
+    saveStudy();
+  }
+
+  function present() {
+    if (!phase.hidden && mesh && viewport.ctx) paintSoftware(mesh, viewport, studyCamera);
+  }
+  function redraw() {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      present();
+    });
+  }
+  function rebuild() {
+    const view = { ...study.view, showRooms: !study.structureView || study.programColors };
+    mesh = buildMesh(study.model, false, view, study);
+    redraw();
+  }
+  new ResizeObserver(redraw).observe(materialCanvas);
+
+  const option = (label, value) => new Option(label, value);
+
+  function currentKey() {
+    return $('materialTargetField').hidden ? scope.value : scope.value + ':' + target.value;
+  }
+  function syncAssignment() {
+    const key = currentKey();
+    const assignment = study.assignments[key] || {};
+    for (const [field, id] of [
+      ['structure', 'materialStructure'],
+      ['facade', 'materialFacade']
+    ])
+      $(id).value = assignment[field] || '';
+    const family = scope.value.startsWith('core') ? 'core' : 'module';
+    const slot =
+      scope.value === 'module'
+        ? study.model.slots.find(
+            (candidate) => materialSlotKey(study.model, candidate) === target.value
+          )
+        : null;
+    const program = slot?.p ?? (scope.value.endsWith('Program') ? Number(target.value) : null);
+    const effective = materialValues(
+      study.assignments,
+      family,
+      program,
+      slot ? target.value : null
+    );
+    $('materialEffective').textContent =
+      scope.value === 'building'
+        ? 'Whole-building choices apply wherever a more specific assignment is inherited.'
+        : [
+            STRUCTURAL_SYSTEMS[effective.structure].name,
+            EXTERIOR_FINISHES[effective.facade].name
+          ].join(' · ');
+    for (const id of ['materialStructure', 'materialFacade'])
+      $(id).disabled = !$('materialTargetField').hidden && !target.value;
+  }
+  function syncTargets() {
+    const previous = target.value;
+    const individual = scope.value === 'module';
+    const byProgram = scope.value.endsWith('Program');
+    let choices = [];
+    if (individual) {
+      choices = study.model.slots
+        .filter((slot) => slot.p !== EMPTY)
+        .map((slot) =>
+          option(
+            'L' + (slot.f + 1) + ' · Dock ' + (slot.j + 1) + ' · ' + P[slot.p].name,
+            materialSlotKey(study.model, slot)
+          )
+        );
+    } else if (byProgram) {
+      choices = PROGRAMS.map((entry, id) => option(entry.name, String(id)));
+    }
+    target.replaceChildren(...(choices.length ? choices : [option('No installed modules', '')]));
+    if (choices.some((entry) => entry.value === previous)) target.value = previous;
+    $('materialTargetField').hidden = !(individual || byProgram);
+    $('materialTargetLabel').textContent = individual ? 'Module' : 'Program';
+    syncAssignment();
+  }
+  function syncStudy() {
+    $('materialSnapshot').textContent =
+      'Massing snapshot · Seed ' +
+      study.view.seed +
+      ' · ' +
+      study.view.floors +
+      (study.view.floors === 1 ? ' floor' : ' floors') +
+      ' · ' +
+      study.model.count +
+      ' modules';
+    $('materialProgramColors').checked = study.programColors;
+    $('materialStructureView').checked = study.structureView;
+    $('materialNotes').value = study.notes;
+    syncTargets();
+    rebuild();
+  }
+
+  for (const [field, id] of [
+    ['structure', 'materialStructure'],
+    ['facade', 'materialFacade']
+  ]) {
+    const control = $(id);
+    control.append(option('Inherit', ''));
+    for (const [value, preset] of Object.entries(MATERIAL_CATALOGUES[field]))
+      control.append(option(preset.name, value));
+    control.addEventListener('change', () => {
+      const key = currentKey();
+      const assignment = (study.assignments[key] ||= {});
+      if (control.value) assignment[field] = control.value;
+      else delete assignment[field];
+      if (!Object.keys(assignment).length) delete study.assignments[key];
+      syncAssignment();
+      saveStudy();
+      rebuild();
+    });
+  }
+
+  scope.addEventListener('change', syncTargets);
+  target.addEventListener('change', syncAssignment);
+  for (const [field, id] of [
+    ['programColors', 'materialProgramColors'],
+    ['structureView', 'materialStructureView']
+  ]) {
+    $(id).addEventListener('change', () => {
+      study[field] = $(id).checked;
+      saveStudy();
+      rebuild();
+    });
+  }
+  $('materialNotes').addEventListener('input', () => {
+    study.notes = $('materialNotes').value;
+    saveStudy();
+  });
+  $('updateMaterials').addEventListener('click', () => {
+    captureMassing();
+    syncStudy();
+    $('materialStatus').textContent =
+      'Updated from massing. Matching material assignments were kept.';
+  });
+  $('materialAxo').onclick = () => {
+    studyCamera.az = -0.84;
+    studyCamera.el = 0.57;
+    redraw();
+  };
+  $('materialPlan').onclick = () => {
+    studyCamera.az = -Math.PI / 2;
+    studyCamera.el = 1.569;
+    redraw();
+  };
+  $('materialFit').onclick = () => {
+    studyCamera.zoom = 0.95;
+    redraw();
+  };
+  materialCanvas.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    materialCanvas.setPointerCapture(drag.id);
+  });
+  materialCanvas.addEventListener('pointermove', (event) => {
+    if (drag?.id !== event.pointerId) return;
+    studyCamera.az += (event.clientX - drag.x) * 0.008;
+    studyCamera.el = clamp(studyCamera.el + (event.clientY - drag.y) * 0.008, 0.06, 1.569);
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    redraw();
+  });
+  materialCanvas.addEventListener('lostpointercapture', () => {
+    drag = null;
+  });
+  materialCanvas.addEventListener(
+    'wheel',
+    (event) => {
+      event.preventDefault();
+      studyCamera.zoom = clamp(studyCamera.zoom * Math.exp(event.deltaY * 0.001), 0.2, 3);
+      redraw();
+    },
+    { passive: false }
+  );
+
   function showMaterials() {
     massingScroll = window.scrollY;
+    if (!study) restoreStudy();
+    if (!study) captureMassing();
     phase.hidden = false;
     document.body.classList.add('materials-open');
     layout.setAttribute('aria-hidden', 'true');
     toggle.setAttribute('aria-expanded', 'true');
     toggle.textContent = 'Back to massing';
-    phase.scrollTop = 0;
+    syncStudy();
     window.scrollTo(0, 0);
     $('materialsTitle').focus({ preventScroll: true });
   }
@@ -6354,6 +7357,5 @@ requestAnimationFrame(animateSwingFrame);
     requestAnimationFrame(draw);
   }
   toggle.addEventListener('click', () => (phase.hidden ? showMaterials() : showMassing()));
-  $('materialsBack').addEventListener('click', showMassing);
 })();
 </script></body></html>
