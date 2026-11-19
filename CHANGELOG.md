@@ -4,6 +4,7 @@
 - Improved clustering for any selected program, including Firehall, with better core room alignment and a stronger preference for vertical module stacks.
 - Repel now prioritizes separating same-floor room and module neighbors while allowing vertical neighbors. The topology panel reports any same-floor conflicts left by packing.
 - Added a Materials phase placeholder with space for a future design rationale.
+- Reformatted and documented the active JavaScript for easier maintenance.
 
 ## Topology controls
 - Renamed Relationship strength to Clustering strength. The slider adjusts grouping and alignment for the selected programs. Attract, Neutral and Repel keep their own weights in the core, at module docks and in visitor routing.
