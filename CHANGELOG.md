@@ -4,6 +4,9 @@
 - Removed the location dropdown. Select a room, module, or available dock on the model to open its program editor.
 - Applying an optimized layout automatically runs a fast trial and adds the result to the trial log.
 
+## Massing controls and navigation
+- Promoted Materials in the header and moved New variation and Reset design beside Edit programming on the model.
+
 ## Layout optimization and trial comparisons
 - Added **Optimize layout** to the trial drawer. It compares alternate module placements under the current program areas, manual assignments, and topology rules, then offers a preview before applying a better-scoring result.
 - Put changed settings first in trial comparisons and highlight the new values. Layout and encounter changes follow.
