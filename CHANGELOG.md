@@ -1,5 +1,9 @@
 # Changelog
 
+## Topology Designer
+- Selected programs now cluster at 0% strength, with the slider adding emphasis.
+- Widened the relationship diagram within the existing height.
+
 ## Topology and Materials
 - Improved clustering for any selected program, including Firehall, with better core room alignment and a stronger preference for vertical module stacks.
 - Repel now prioritizes separating same-floor room and module neighbors while allowing vertical neighbors. The topology panel reports any same-floor conflicts left by packing.

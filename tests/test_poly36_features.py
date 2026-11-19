@@ -71,7 +71,8 @@ with sync_playwright() as p:
  attract, neutral, repel = (topology[mode] for mode in ('attract', 'neutral', 'repel'))
  assert attract['pairedDocks'] > neutral['pairedDocks'] > repel['pairedDocks']
  assert attract['hubs'] > 0 and neutral['hubs'] == repel['hubs'] == 0
- assert attract == topology['clusterAtZero'] == topology['sliderWithoutSelection']
+ assert attract == topology['sliderWithoutSelection']
+ assert topology['clusterAtZero']['alignedDocks'] > attract['alignedDocks']
  assert topology['clustered']['alignedDocks'] > attract['alignedDocks']
  assert topology['clustered']['pairedDocks'] > topology['clusteredRepel']['pairedDocks']
  for layout in topology.values():
@@ -98,6 +99,7 @@ with sync_playwright() as p:
    function measure(seed, clusterEnabled) {
      state = defaults();
      state.seed = seed;
+     state.affinity = 0;
      state.cluster[id] = clusterEnabled;
      const layout = derive();
      const rooms = layout.rooms.filter(room => room.id === id);
