@@ -1,5 +1,8 @@
 # Changelog
 
+## Programming preview
+- Highlighted editable rooms, modules, and docks on hover with the location and program shown before selection.
+
 ## Materials rendering and identity
 - Added visible material names to the palettes and used depth-tested Materials rendering to clean up overlapping surfaces.
 - Added a Poly Nation wordmark and an SVG mark based on the radial plan.

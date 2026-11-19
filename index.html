@@ -156,6 +156,19 @@
 }
 
 .viewport canvas.program-picking { cursor: crosshair; }
+.program-hover-label {
+ position: absolute;
+ z-index: 4;
+ pointer-events: none;
+ max-width: calc(100% - 12px);
+ padding: 4px 7px;
+ border: 1px solid #f5c34e;
+ border-radius: 4px;
+ background: #2c463b;
+ color: #fff9e8;
+ font-size: 11px;
+ line-height: 1.25;
+}
 .program-dialog {
  width: min(420px, calc(100vw - 32px));
  border: 1px solid var(--line);
@@ -427,7 +440,7 @@
   <h1><span class="app-brand-name">Poly Nation</span> <span class="app-brand-caption">Cross Pollination Laboratory</span></h1>
  </div><div class="header-actions"><button id="openRationale" type="button" aria-controls="designRationale" aria-expanded="false">Design rationale</button><button id="openMaterials" type="button" aria-controls="materialsPhase" aria-expanded="false">Materials</button><button class="primary" id="shuffle" title="Generate a new layout with the same settings">New variation</button><button id="reset" title="Restore every setting to its default">Reset design</button><details class="file-menu"><summary>Files &amp; export</summary><div class="file-menu-content"><button id="import">Load JSON</button><input accept=".json,application/json" hidden="" id="importFile" type="file"/><button id="export">Save JSON</button><div class="menu-label">3D geometry</div><button id="export3DM">Export 3DM</button><button id="exportRhinoScript" title="Offline alternative: run this generated Python script inside Rhino">Rhino script</button></div></details><span aria-live="polite" id="exportStatus" role="status"></span><span class="credit" id="saveStatus" style="align-self:center"></span></div></header>
 <div class="layout"><aside id="design-panel"><div class="topology-persistent" id="program-panel-0"><div class="section"><h2>Topology Designer <button class="mobile-jump" id="returnModelMobile" type="button" style="font-size:11px;min-height:25px;padding:3px 7px">Model ↑</button></h2><p class="hint topology-instructions"><strong>Drag nodes</strong> closer together or farther apart to adjust how strongly programs relate.<br><strong>Click a line</strong> to cycle through Attract, Repel, and Neutral.<br><strong>Click a node</strong> to toggle clustering for that program. Use Clustering strength to tighten the grouping. Selected programs still cluster at 0%.<br>These settings guide the placement of internal rooms and modules.</p><svg aria-label="Draggable program relationship map" class="wheel" id="wheel" viewbox="0 0 400 280"></svg><div class="relationship-key"><span><i style="border-color:#47866a"></i>Attract</span><span><i style="border-color:#999f99;border-top-style:dotted"></i>Neutral</span><span><i style="border-color:#bd665c;border-top-style:dashed"></i>Repel</span></div><div id="affinityField"></div><div aria-live="polite" class="hint relation-status-compact" id="relationStatus">Click a line to cycle its relationship. Clustering strength applies to the programs toggled on.</div><div class="legend" id="legend" style="margin-top:5px"></div><p class="hint cluster-status-compact" id="clusterStatus">Clustering off for all programs.</p><p class="hint" id="repelStatus" role="status" hidden></p><p class="hint" id="firehallStatus" role="status" hidden></p><button class="topology-reset" id="neutralize" style="">Reset relationships to neutral</button><details class="topology-advanced"><summary>Program pairs &amp; advanced settings</summary><details class="pair-controls"><summary>All program pairs</summary><div class="pair-list" id="pairList"></div></details><p class="hint">Room sizes vary by use; levels and radial bands are laid out independently. Core mixing encourages different programs to share boundaries. Modules respond to adjacent rooms on their own level.</p><div class="readout"><span>Adjacency score (lower is better)</span><b id="score"></b></div></details></div></div><div class="design-scroll"><div aria-label="Design and simulation settings" class="panel-tabs" role="tablist"><button aria-controls="design-panel-0" aria-selected="true" data-panel="design-panel-0" id="design-panel-0-tab" role="tab" tabindex="0" type="button">Building</button><button aria-controls="design-panel-1" aria-selected="false" data-panel="design-panel-1" id="design-panel-1-tab" role="tab" tabindex="-1" type="button">Modules</button><button aria-controls="design-panel-2" aria-selected="false" data-panel="design-panel-2" id="design-panel-2-tab" role="tab" tabindex="-1" type="button">Features</button><button aria-controls="cpPaneAllocation" aria-selected="false" data-panel="cpPaneAllocation" id="cpPaneAllocation-tab" role="tab" tabindex="-1" type="button">Allocation</button><button aria-controls="cpPaneVisitors" aria-selected="false" data-panel="cpPaneVisitors" id="cpPaneVisitors-tab" role="tab" tabindex="-1" type="button">Visitors</button><button aria-controls="cpPaneScore" aria-selected="false" data-panel="cpPaneScore" id="cpPaneScore-tab" role="tab" tabindex="-1" type="button">Score</button></div><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; entrance calculations</summary><div class="readout"><span>Entrance / lobby</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><button id="cpTrial" style="width:100%;margin-bottom:8px">Run 5-minute comparison</button><div aria-live="polite" class="hint" id="cpTrialStatus"></div><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details><h2 style="margin-top:14px">Comparison history</h2><div id="cpHistory"></div><button id="cpClear" style="margin-top:6px">Clear comparisons</button><p class="hint">Trials use the same seed, visitor count and scoring weights for fairer comparisons. Design changes restart live scoring. All active humans and animals contribute regardless of visibility. Live rates stabilize with time; use fixed-duration trials to compare designs.</p></div></div></aside>
-<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><div class="view-top"><span class="eyebrow">3D model</span><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button id="editProgramming" type="button" aria-pressed="false">Edit programming</button><button id="chooseProgramLocation" type="button" hidden>Choose location</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span><span id="seedLabel">Seed 606</span></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
+<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><span class="eyebrow">3D model</span><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button id="editProgramming" type="button" aria-pressed="false">Edit programming</button><button id="chooseProgramLocation" type="button" hidden>Choose location</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span><span id="seedLabel">Seed 606</span></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
 <div class="cp-main"><div class="cp-dash-head"><h2>Cross pollination</h2><span class="cp-live-status" id="cpLiveStatus">Starting</span></div><div class="cp-main-value"><b id="cpScore" title="Weighted points per 100 active visitor-minutes">—</b><span>weighted points /<br/>100 visitor-min</span></div></div>
 <div class="cp-dash-stats"><div><span>Encounters</span><b id="cpDashEncounters">0</b></div><div><span>Different rooms</span><b id="cpDashMemory">0</b></div><div><span>Cross-species</span><b id="cpDashSpecies">0</b></div><div><span>Simulated time</span><b id="cpDashTime">0m 0s</b></div></div>
 <div class="cp-dash-trial"><button id="cpQuickTrial" title="Run a separate five-minute trial using the current design and scoring settings" type="button">Run 5-min trial</button><span id="cpDashTrialResult">No trial yet</span><span hidden="" id="cpDashTrialProgress"></span><button id="openScoreDetails" title="Open detailed scoring, weights and comparison history" type="button">Score details</button></div>
@@ -5815,6 +5828,7 @@ function drawSoftware() {
   paintSoftware(softwareMesh, software, camera, canvas);
 }
 
+const PROGRAM_PREVIEW_TINT = [0.99, 0.76, 0.22, 0.82];
 function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c) {
   const dpr = Math.min(2, window.devicePixelRatio || 1),
     w = Math.max(1, Math.round(viewport.clientWidth * dpr)),
@@ -5847,6 +5861,16 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c) {
     return project([a[i], a[i + 1], a[i + 2]]);
   }
   function color(a, i, shade = 1) {
+    const preview = m.programPreview;
+    if (a === m.solid && preview && i >= preview.start && i < preview.end) {
+      const tint = PROGRAM_PREVIEW_TINT;
+      const rgb = tint
+        .slice(0, 3)
+        .map((channel, j) =>
+          Math.round(255 * (a[i + 6 + j] * shade * (1 - tint[3]) + channel * tint[3]))
+        );
+      return 'rgb(' + rgb.join(',') + ')';
+    }
     return `rgba(${Math.round(255 * a[i + 6] * shade)},${Math.round(255 * a[i + 7] * shade)},${Math.round(255 * a[i + 8] * shade)},${a[i + 9]})`;
   }
   const paint = [],
@@ -5920,7 +5944,7 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c) {
 // Set up reusable depth-tested rendering for the massing and Materials canvases.
 function createWebGLRenderer(gl) {
   if (!gl) return null;
-  const v = `attribute vec3 aPosition;attribute vec3 aNormal;attribute vec4 aColor;uniform vec3 uTarget,uRight,uUp,uBack;uniform vec2 uScale;uniform float uDepth;varying vec4 vColor;void main(){vec3 p=aPosition-uTarget;gl_Position=vec4(dot(p,uRight)*uScale.x,dot(p,uUp)*uScale.y,-dot(p,uBack)/uDepth,1.0);float valid=step(.1,length(aNormal));float shade=.74+.26*abs(dot(normalize(aNormal+vec3(.00001)),normalize(vec3(-.4,1.,.65))));vColor=vec4(aColor.rgb*mix(1.,shade,valid),aColor.a);}`;
+  const v = `attribute vec3 aPosition;attribute vec3 aNormal;attribute vec4 aColor;uniform vec3 uTarget,uRight,uUp,uBack;uniform vec2 uScale;uniform float uDepth;uniform vec4 uTint;varying vec4 vColor;void main(){vec3 p=aPosition-uTarget;gl_Position=vec4(dot(p,uRight)*uScale.x,dot(p,uUp)*uScale.y,-dot(p,uBack)/uDepth,1.0);float valid=step(.1,length(aNormal));float shade=.74+.26*abs(dot(normalize(aNormal+vec3(.00001)),normalize(vec3(-.4,1.,.65))));vColor=vec4(mix(aColor.rgb*mix(1.,shade,valid),uTint.rgb,uTint.a),aColor.a);}`;
   const f = `precision mediump float;varying vec4 vColor;void main(){gl_FragColor=vColor;}`;
   function shader(type, src) {
     const s = gl.createShader(type);
@@ -5939,7 +5963,7 @@ function createWebGLRenderer(gl) {
     const at = {};
     for (const name of ['aPosition', 'aNormal', 'aColor']) at[name] = gl.getAttribLocation(p, name);
     const u = {};
-    for (const name of ['uTarget', 'uRight', 'uUp', 'uBack', 'uScale', 'uDepth'])
+    for (const name of ['uTarget', 'uRight', 'uUp', 'uBack', 'uScale', 'uDepth', 'uTint'])
       u[name] = gl.getUniformLocation(p, name);
     const renderer = {
       p,
@@ -6085,9 +6109,46 @@ function syncProgrammingHint(model) {
     (missing > 0 ? ' ' + missing + ' saved edits have no matching location in this layout.' : '');
 }
 
+// Bounds skip unrelated mesh groups before testing triangles on each pointer move.
+function prepareProgramTargets(mesh) {
+  mesh.programTargets = [];
+  for (const [i, group] of mesh.groups.entries()) {
+    const start = group.solid,
+      end = mesh.groups[i + 1]?.solid ?? mesh.solid.length;
+    if (start === end || group.layer === 'Reference') continue;
+    const min = [Infinity, Infinity, Infinity],
+      max = [-Infinity, -Infinity, -Infinity];
+    for (let offset = start; offset < end; offset += 10)
+      for (let axis = 0; axis < 3; axis++) {
+        min[axis] = Math.min(min[axis], mesh.solid[offset + axis]);
+        max[axis] = Math.max(max[axis], mesh.solid[offset + axis]);
+      }
+    mesh.programTargets.push({ start, end, min, max, pick: group.pick });
+  }
+}
+
+function hitProgramBounds(origin, direction, target, nearest) {
+  let enter = 0,
+    exit = nearest;
+  for (let axis = 0; axis < 3; axis++) {
+    const start = origin[axis],
+      step = direction[axis];
+    if (Math.abs(step) < 1e-9) {
+      if (start < target.min[axis] || start > target.max[axis]) return false;
+      continue;
+    }
+    const a = (target.min[axis] - start) / step,
+      b = (target.max[axis] - start) / step;
+    enter = Math.max(enter, Math.min(a, b));
+    exit = Math.min(exit, Math.max(a, b));
+    if (enter > exit) return false;
+  }
+  return true;
+}
+
 function pickMassingLocation(clientX, clientY) {
   const mesh = softwareMesh || gpu?.mesh;
-  if (!mesh) return null;
+  if (!mesh?.programTargets) return null;
   const bounds = canvas.getBoundingClientRect();
   const aspect = bounds.width / bounds.height;
   const half =
@@ -6111,11 +6172,10 @@ function pickMassingLocation(clientX, clientY) {
   let nearest = Infinity,
     selection = null;
   const vertex = (offset) => mesh.solid.slice(offset, offset + 3);
-  // Intersect the same room and dock geometry that was drawn, choosing the frontmost hit.
-  for (const [i, group] of mesh.groups.entries()) {
-    if (!group.pick) continue;
-    const end = mesh.groups[i + 1]?.solid ?? mesh.solid.length;
-    for (let offset = group.solid; offset < end; offset += 30) {
+  // Intersect the rendered surfaces so an opaque object can occlude an editable one.
+  for (const target of mesh.programTargets) {
+    if (!hitProgramBounds(origin, direction, target, nearest)) continue;
+    for (let offset = target.start; offset < target.end; offset += 30) {
       const a = vertex(offset),
         b = sub(vertex(offset + 10), a),
         c = sub(vertex(offset + 20), a);
@@ -6131,7 +6191,7 @@ function pickMassingLocation(clientX, clientY) {
       const distance = dot(c, q) / determinant;
       if (distance >= 0 && distance < nearest) {
         nearest = distance;
-        selection = group.pick;
+        selection = target.pick ? target : null;
       }
     }
   }
@@ -6218,15 +6278,68 @@ function applyProgramEdit(selection, program) {
   return error;
 }
 
+function programLocationLabel({ room, slot }) {
+  const program = P[room?.id ?? slot.p]?.name;
+  const level = 'L' + ((room?.f ?? slot.f) + 1);
+  if (room) return level + ' · Room ' + (model.rooms.indexOf(room) + 1) + ' · ' + program;
+  return level + ' · Dock ' + (slot.j + 1) + ' · ' + (program || 'Available for a module');
+}
+
 function initProgrammingEditor() {
   const toggle = $('editProgramming');
   const dialog = $('programDialog');
   const locations = $('programLocation');
   const programs = $('programChoice');
   const feedback = $('programFeedback');
+  const label = $('programHoverLabel');
+  let hoverFrame = 0;
+  let hoverPoint = null;
   let options = [];
   let pointerStart = null;
   PROGRAMS.forEach((program, id) => programs.add(new Option(program.name, id)));
+
+  function clearHover() {
+    hoverPoint = null;
+    label.hidden = true;
+    const mesh = softwareMesh || gpu?.mesh;
+    if (mesh?.programPreview) {
+      mesh.programPreview = null;
+      draw();
+    }
+  }
+
+  function scheduleHover(event) {
+    if (!programEditing || event.pointerType === 'touch' || event.buttons || dialog.open) {
+      clearHover();
+      return;
+    }
+    hoverPoint = [event.clientX, event.clientY];
+    if (hoverFrame) return;
+    hoverFrame = requestAnimationFrame(() => {
+      hoverFrame = 0;
+      if (!hoverPoint || !programEditing || dialog.open) return;
+      const hit = pickMassingLocation(...hoverPoint);
+      if (!hit) {
+        clearHover();
+        return;
+      }
+      const mesh = softwareMesh || gpu?.mesh;
+      if (mesh.programPreview !== hit) {
+        mesh.programPreview = hit;
+        draw();
+      }
+      const bounds = canvas.getBoundingClientRect();
+      label.textContent = programLocationLabel(hit.pick);
+      label.hidden = false;
+      const [x, y] = hoverPoint;
+      label.style.left =
+        Math.max(6, Math.min(x - bounds.left + 12, bounds.width - label.offsetWidth - 6)) + 'px';
+      label.style.top =
+        (y - bounds.top + label.offsetHeight + 16 < bounds.height
+          ? y - bounds.top + 13
+          : Math.max(6, y - bounds.top - label.offsetHeight - 10)) + 'px';
+    });
+  }
 
   function showSelection() {
     const { room, slot } = options[Number(locations.value)];
@@ -6237,6 +6350,7 @@ function initProgrammingEditor() {
   }
 
   function openEditor(selected = null) {
+    clearHover();
     if (pending) update();
     const choices = [
       ...model.rooms
@@ -6249,18 +6363,7 @@ function initProgrammingEditor() {
     if (!choices.length) return;
     options = choices;
     locations.replaceChildren(
-      ...choices.map(({ room, slot }, index) => {
-        const program = P[room?.id ?? slot.p]?.name;
-        const label = room
-          ? 'L' + (room.f + 1) + ' · Room ' + (model.rooms.indexOf(room) + 1) + ' · ' + program
-          : 'L' +
-            (slot.f + 1) +
-            ' · Dock ' +
-            (slot.j + 1) +
-            ' · ' +
-            (program || 'Available for a module');
-        return new Option(label, index);
-      })
+      ...choices.map((entry, index) => new Option(programLocationLabel(entry), index))
     );
     const index = choices.findIndex((entry) =>
       selected?.room
@@ -6273,6 +6376,7 @@ function initProgrammingEditor() {
   }
 
   toggle.onclick = () => {
+    clearHover();
     programEditing = !programEditing;
     toggle.setAttribute('aria-pressed', String(programEditing));
     $('chooseProgramLocation').hidden = !programEditing;
@@ -6291,7 +6395,11 @@ function initProgrammingEditor() {
     if (error) feedback.textContent = error;
     else dialog.close();
   };
+  canvas.addEventListener('pointermove', scheduleHover);
+  canvas.addEventListener('wheel', scheduleHover, { passive: true });
+  canvas.addEventListener('pointerleave', clearHover);
   canvas.addEventListener('pointerdown', (event) => {
+    clearHover();
     if (programEditing && event.isPrimary && event.button === 0)
       pointerStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
   });
@@ -6306,9 +6414,10 @@ function initProgrammingEditor() {
     )
       return;
     const selected = pickMassingLocation(event.clientX, event.clientY);
-    if (selected) openEditor(selected);
+    if (selected) openEditor(selected.pick);
   });
   canvas.addEventListener('pointercancel', () => {
+    clearHover();
     pointerStart = null;
   });
 }
@@ -6322,15 +6431,17 @@ function upload(m) {
     occupancy = makeOccupancy(m);
     simLast = 0;
   }
+  $('programHoverLabel').hidden = true;
+  const mesh = buildMesh(m, false, massingView());
+  if (programEditing) prepareProgramTargets(mesh);
   if (software) {
-    softwareMesh = buildMesh(m, false, massingView());
+    softwareMesh = mesh;
     prepareSwingMesh(softwareMesh);
     refreshPopulation();
     drawSoftware();
     return;
   }
   if (!gl || !gpu) return;
-  const mesh = buildMesh(m, false, massingView());
   prepareSwingMesh(mesh);
   uploadWebGLMesh(gl, gpu, mesh);
   refreshPopulation();
@@ -6377,8 +6488,9 @@ function paintWebGL(canvas, gl, gpu, camera) {
   gl.uniform3fv(u.uBack, back);
   gl.uniform2f(u.uScale, 1 / (half * aspect), 1 / half);
   gl.uniform1f(u.uDepth, 500);
-  function batch(k, mode) {
-    if (!gpu.lengths[k]) return;
+  gl.uniform4f(u.uTint, 0, 0, 0, 0);
+  function batch(k, mode, offset = 0, count = gpu.lengths[k]) {
+    if (!count) return;
     gl.bindBuffer(gl.ARRAY_BUFFER, gpu.buffers[k]);
     for (const [key, size, offset] of [
       ['aPosition', 3, 0],
@@ -6388,11 +6500,20 @@ function paintWebGL(canvas, gl, gpu, camera) {
       gl.enableVertexAttribArray(gpu.at[key]);
       gl.vertexAttribPointer(gpu.at[key], size, gl.FLOAT, false, 40, offset);
     }
-    gl.drawArrays(mode, 0, gpu.lengths[k]);
+    gl.drawArrays(mode, offset, count);
   }
   gl.enable(gl.POLYGON_OFFSET_FILL);
   gl.polygonOffset(1, 1);
-  batch('solid', gl.TRIANGLES);
+  const preview = gpu.mesh.programPreview;
+  if (preview) {
+    const start = preview.start / 10,
+      end = preview.end / 10;
+    batch('solid', gl.TRIANGLES, 0, start);
+    gl.uniform4fv(u.uTint, PROGRAM_PREVIEW_TINT);
+    batch('solid', gl.TRIANGLES, start, end - start);
+    gl.uniform4f(u.uTint, 0, 0, 0, 0);
+    batch('solid', gl.TRIANGLES, end, gpu.lengths.solid - end);
+  } else batch('solid', gl.TRIANGLES);
   batch('agent_solid', gl.TRIANGLES);
   gl.disable(gl.POLYGON_OFFSET_FILL);
   batch('lines', gl.LINES);

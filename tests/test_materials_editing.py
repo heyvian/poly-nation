@@ -135,8 +135,23 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
    return [box.left+box.width/2+dot(point,right)*box.height/(2*half),
            box.top+box.height/2-(dot(point,up)-camera.pan)*box.height/(2*half)];
     }""")
+    saved_state = page.evaluate('JSON.stringify(state)')
+    page.mouse.move(x,y)
+    hover_label = page.locator('#programHoverLabel')
+    expect(hover_label).to_be_visible()
+    hovered_dock = hover_label.inner_text()
+    assert 'Dock' in hovered_dock
+    assert page.evaluate('Boolean(softwareMesh.programPreview?.pick.slot)')
+    page.mouse.move(6, 6)
+    expect(hover_label).to_be_hidden()
+    assert page.evaluate('!softwareMesh.programPreview')
+    assert page.evaluate('JSON.stringify(state)') == saved_state
+    page.mouse.move(x,y)
+    expect(hover_label).to_have_text(hovered_dock)
     page.mouse.click(x,y)
+    expect(hover_label).to_be_hidden()
     expect(page.locator('#programDialog')).to_be_visible()
+    expect(page.locator('#programLocation option:checked')).to_have_text(hovered_dock)
     expect(page.locator('#applyProgram')).to_have_text('Apply program')
     assert 'Dock' in page.locator('#programLocation option:checked').inner_text()
     previous=int(page.locator('#programChoice').input_value())
