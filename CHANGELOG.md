@@ -1,5 +1,11 @@
 # Changelog
 
+## Trial log and Massing controls
+- Moved fast trials into a collapsible right-hand drawer shared with Area Schedule. The baseline records the design and scoring inputs, and later runs show changes from the preceding result with a model thumbnail per run.
+- Flagged comparable trial scores as minor or major increases or decreases.
+- Removed duplicate relationship controls, the solver cost, and the clustered-program list from Topology Designer. Moved programming edits to the lower-right of the model and removed the viewport badge and seed label.
+- Renamed the live encounter counter to Different prior rooms and explained which encounters it counts.
+
 ## Massing settings
 - Made the settings rail roomier and increased tab, label, and input sizes. The Topology Designer can collapse to give the settings more vertical space.
 

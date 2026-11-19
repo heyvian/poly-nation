@@ -8,6 +8,9 @@ with sync_playwright() as p:
  page.set_content(src.read_text(),wait_until='domcontentloaded');page.wait_for_function('model && occupancy');page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
  quick_trial = page.locator('#cpQuickTrial')
  quick_result = page.locator('#cpDashTrialResult')
+ drawer = page.locator('#trialDrawer')
+ page.locator('#focusSchedule').click()
+ expect(page.locator('#areaSchedulePanel')).to_be_visible()
  expect(quick_result).to_have_text('5 simulated minutes')
  # Committing a number field as the trial button receives focus queues the layout for the next frame.
  started = page.evaluate('''() => {
@@ -19,6 +22,8 @@ with sync_playwright() as p:
    return $('cpDashTrialResult').textContent;
  }''')
  assert started == 'Simulating 5 min · 0%'
+ expect(drawer).to_be_visible()
+ expect(page.locator('#areaSchedulePanel')).to_be_hidden()
  page.wait_for_function('cpHistory.length === 1 && !cpTrialActive')
  assert page.evaluate('cpHistory[0].settings.floors') == 5
  result = page.evaluate('''() => {
@@ -35,17 +40,41 @@ with sync_playwright() as p:
  assert result['actual'] == result['expected'] and result['encounters'] == result['expectedEncounters'], result
  assert result['liveTime'] == 0, result
  expect(quick_result).to_have_text(f"Last trial · {result['actual']:.1f}")
- page.locator('#openScoreDetails').click()
+ entries = drawer.locator('.trial-entry')
+ expect(entries.first).to_contain_text('Baseline')
+ expect(entries.first).to_contain_text('Clustering strength')
+ expect(entries.first.locator('dt').filter(has_text='Enclosed area cap')).to_have_count(1)
+ assert entries.first.locator('img').evaluate('(image) => image.complete && image.naturalWidth === 384')
+ page.locator('#collapseTrial').click()
+ expect(drawer).to_be_hidden()
+ page.locator('#openTrialLog').click()
+ expect(drawer).to_be_visible()
  detail_trial = page.locator('#cpTrial')
  detail_trial.click()
  page.wait_for_function('cpHistory.length === 2 && !cpTrialActive')
  assert page.evaluate('cpHistory[0].rate === cpHistory[1].rate && occupancy.clock === 0')
+ expect(entries.first).to_contain_text('No recorded changes.')
  page.evaluate('$("cpTrial").click(); $("cpQuickTrial").click()')
  expect(detail_trial).to_have_text('Run fast trial')
  expect(quick_result).to_have_text('Trial cancelled.')
  assert page.evaluate('!cpTrialActive && cpHistory.length === 2')
+ page.locator('#shuffle').click()
+ quick_trial.evaluate('(button) => button.click()')
+ page.wait_for_function('cpHistory.length === 3 && !cpTrialActive')
+ expect(entries.first).to_contain_text('Variation seed')
+ expect(entries.first).to_contain_text('606 → 607')
+ expect(entries.first).to_contain_text('Trial settings changed')
+ expect(entries.first.locator('dt').filter(has_text='Enclosed area cap')).to_have_count(0)
+ flags = page.evaluate('''() => {
+   const baseline = {...cpHistory[1], rate: 100};
+   return [110, 105, 95, 90].map(rate =>
+     renderTrialEntry({...baseline, rate}, baseline, 0).querySelector('.trial-score-change').textContent
+   );
+ }''')
+ assert flags == ['Major increase', 'Minor increase', 'Minor decrease', 'Major decrease'], flags
  page.locator('#cpClear').click()
- page.evaluate('state.floors=defaults().floors;update()')
+ page.locator('#collapseTrial').click()
+ page.evaluate('state.floors=defaults().floors;state.seed=defaults().seed;update()')
  print('both trial controls, pending design edits, five simulated minutes, and cancellation passed',flush=True)
 
  pose = page.evaluate('''() => {

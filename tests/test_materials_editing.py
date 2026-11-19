@@ -106,7 +106,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     assert page.evaluate('state.seed')==start['seed']
     page.locator('#openMaterials').click()
     page.locator('#shuffle').click()
-    expect(page.locator('#seedLabel')).to_have_text('Seed 607')
+    page.wait_for_function('state.seed === 607 && !pending')
     page.locator('#openMaterials').click()
     expect(page.locator('#materialSnapshot')).to_contain_text('Seed 606')
     page.locator('#updateMaterials').click()

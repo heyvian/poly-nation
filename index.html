@@ -15,7 +15,7 @@
 :root{--bg:#f3f4f0;--paper:#fffefa;--ink:#25322e;--muted:#68736d;--line:#dfe3db;--accent:#355d4c}body{font-size:13px;background:var(--bg)}button{font-weight:550;min-height:30px}button.primary{background:var(--accent);border-color:var(--accent);color:white}button.primary:hover{background:#244637}button:disabled{opacity:.6;cursor:wait}button:focus-visible,summary:focus-visible,select:focus-visible{outline:2px solid #527b67;outline-offset:2px}.app-header{padding:11px 20px;gap:18px;min-height:72px;position:relative;z-index:20}.app-header h1{font-size:23px;line-height:1.15}.app-header p{font-size:11px}.header-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.header-actions #saveStatus{font-size:11px;color:var(--muted);padding-left:5px}.file-menu{position:relative}.file-menu summary{cursor:pointer;list-style:none;font-weight:600;background:var(--paper);border:1px solid var(--line);padding:7px 10px;border-radius:5px;white-space:nowrap}.file-menu summary::-webkit-details-marker{display:none}.file-menu summary::after{content:' ▾';font-size:10px;color:var(--muted)}.file-menu-content{position:absolute;right:0;top:calc(100% + 6px);min-width:190px;padding:7px;display:grid;gap:4px;background:var(--paper);border:1px solid var(--line);box-shadow:0 10px 28px #26322f22;border-radius:7px;z-index:90}.file-menu-content button{text-align:left}.menu-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:7px 8px 2px}#exportStatus:empty{display:none}#exportStatus{max-width:220px}.layout{grid-template-columns:260px minmax(0,1fr) 304px;gap:1px;min-height:0;align-items:stretch}.layout aside,.layout .right{padding:0;gap:0;min-height:0;overflow:auto;scrollbar-width:thin;background:var(--paper)}.panel-tabs{display:flex;gap:4px;padding:9px;position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);z-index:3}.panel-tabs button{flex:1;padding:7px 4px;font-size:12px;border-color:transparent;background:transparent;color:var(--muted)}.panel-tabs button[aria-selected=true]{background:#e2ebe3;color:#315543;border-color:#c6d7ca}.tab-panel{padding:15px 14px 25px;min-width:0}.tab-panel[hidden]{display:none}.section{padding-bottom:18px;margin-bottom:18px}.section:last-child{margin-bottom:0}.section h2{font-size:15px;letter-spacing:-.2px;margin-bottom:12px}.hint{font-size:11.5px;line-height:1.48}.readout{font-size:11.5px;align-items:baseline}.readout b{text-align:right;white-space:nowrap}.field{margin:14px 0}.field label{font-size:12px;line-height:1.25}.field output,.num-edit{font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}.num-edit{width:76px;text-align:right;border:1px solid var(--line);background:#f8f9f5;border-radius:4px;padding:3px 4px;font-size:11px;flex-shrink:0}.field input[type=range]{margin-top:9px;accent-color:var(--accent);cursor:ew-resize}.field input:disabled{opacity:.46;cursor:not-allowed}.calc-details{margin:12px 0 6px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#f8f9f5}.calc-details summary{font-size:11.5px;cursor:pointer;color:#4f6357;font-weight:600}.calc-details[open] summary{margin-bottom:7px}.calc-details .readout{padding:4px 0}.status{line-height:1.4}.relationship-key{gap:9px}.wheel{max-height:290px;margin:auto}.program-row{margin:14px 0 18px}.program-row .split{font-size:11px}.program-row .hint{padding:6px 7px;background:#f4f5f0;border-radius:4px}.center{min-width:0;position:relative;top:auto;height:auto;max-height:none;overflow:hidden;display:flex;flex-direction:column}.model-stage{display:flex;flex-direction:column;background:var(--paper);flex-shrink:0;min-width:0}.center .viewport{flex:0 0 auto;height:clamp(300px,53vh,740px);min-height:0;background:linear-gradient(#eef1ec,#e4e8df)}.view-top{top:10px;left:10px;right:10px}.view-top .eyebrow{font-size:10px}.view-top button{min-height:30px}.view-bottom{font-size:10px;gap:12px}.model-tools{display:flex;flex-direction:column;align-items:stretch;padding:7px 10px;gap:5px}.tool-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center}.tool-caption{min-width:49px;font-size:10px!important}.model-tools button{min-height:28px;white-space:nowrap;padding:4px 9px;font-size:11px}.model-tools button[aria-pressed=false]{background:#fafaf7;color:#666f68;border-color:#d8ddd5}.model-tools button[aria-pressed=true]{background:#dce9e1;border-color:#94afa0;color:#284d3b}.level-picker{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);white-space:nowrap}.level-picker select{font-weight:600}.metric{padding:10px 11px}.metric b{font-size:clamp(15px,1.5vw,22px)}.metric span{font-size:10px;line-height:1.2}.budget-summary{padding:9px 12px 10px;background:var(--paper);border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}.budget-track{height:6px;border-radius:5px;background:#e3e7de;flex:1;overflow:hidden}.budget-track>div{height:100%;background:#739784;border-radius:5px}.budget-text{font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}.schedule{padding:12px 14px;min-height:0;overflow:auto;flex:1 1 auto;scrollbar-width:thin}.schedule-head{flex-wrap:wrap;align-items:baseline;gap:4px 9px}.schedule-head h2{font-size:14px;margin:0}.schedule-head #areaDelta{display:none}.table-unit{margin-left:auto;font-size:10px;color:var(--muted)}.schedule .area-bar{margin-top:10px;margin-bottom:9px;height:8px}.table-wrap{overflow-x:auto}.schedule table{font-size:11.5px}.schedule th{font-size:10px;white-space:nowrap}.schedule td{padding:7px 4px}.schedule-notes{margin-bottom:0}.model-stage .metric:last-child{border-right:0}.model-tools .secondary-tools{padding-top:1px}.model-tools .secondary-tools #viewSwing{margin-left:4px}
 @media(min-width:1150px){body{height:100dvh;overflow:hidden;display:flex;flex-direction:column}.app-header{flex:0 0 auto}.layout{flex:1;min-height:0;height:auto}.layout aside,.layout .right{height:100%;min-height:0}.center{height:100%;min-height:0;max-height:none;overflow:hidden}.center .viewport{height:clamp(240px,calc(100dvh - 360px),680px)}.schedule{min-height:0;overflow:auto}.layout{grid-template-columns:clamp(235px,18vw,285px) minmax(0,1fr) clamp(260px,21vw,325px)}}
 @media(min-width:760px) and (max-width:1149px){.layout{grid-template-columns:minmax(0,1fr) minmax(260px,320px);align-items:start}.center{grid-column:1;grid-row:1/3;position:sticky;top:0;height:100dvh;max-height:100dvh}.layout aside{grid-column:2;grid-row:1}.layout .right{grid-column:2;grid-row:2}.center .viewport{height:clamp(230px,calc(100dvh - 340px),570px)}.layout aside,.layout .right{min-height:0}.model-tools .level-picker{margin-left:0}.header-actions{justify-content:flex-start}}
-@media(max-width:759px){.app-header{padding:12px;flex-direction:column;align-items:flex-start;gap:9px}.header-actions{justify-content:flex-start}.layout{display:grid;grid-template-columns:minmax(0,1fr);min-height:0}.center{display:contents}.model-stage{grid-row:1;position:sticky;top:0;z-index:5;box-shadow:0 4px 10px #25322e13}.center .viewport{height:clamp(190px,36dvh,320px);min-height:0}.layout aside{grid-row:2;min-height:0}.layout .right{grid-row:3;min-height:0}.schedule{grid-row:4;min-height:0}.panel-tabs{position:relative}.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.metric{padding:6px 5px;border-bottom:0;text-align:center}.metric b{font-size:14px;letter-spacing:-.3px}.metric span{font-size:9px}.budget-summary{padding:5px 9px}.budget-text{font-size:10px}.model-tools{padding:5px 7px;gap:4px}.model-tools button{padding:3px 6px;min-height:25px;font-size:10px}.tool-caption{min-width:40px;font-size:9px!important}.level-picker{margin-left:0}.view-bottom{display:none}.tab-panel{padding:14px 17px 18px}.wheel{max-width:300px}.file-menu-content{left:0;right:auto}.view-top .eyebrow{display:none}.view-top{justify-content:flex-end}.section{margin-bottom:14px}}
+@media(max-width:759px){.app-header{padding:12px;flex-direction:column;align-items:flex-start;gap:9px}.header-actions{justify-content:flex-start}.layout{display:grid;grid-template-columns:minmax(0,1fr);min-height:0}.center{display:contents}.model-stage{grid-row:1;position:sticky;top:0;z-index:5;box-shadow:0 4px 10px #25322e13}.center .viewport{height:clamp(190px,36dvh,320px);min-height:0}.layout aside{grid-row:2;min-height:0}.layout .right{grid-row:3;min-height:0}.schedule{grid-row:4;min-height:0}.panel-tabs{position:relative}.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.metric{padding:6px 5px;border-bottom:0;text-align:center}.metric b{font-size:14px;letter-spacing:-.3px}.metric span{font-size:9px}.budget-summary{padding:5px 9px}.budget-text{font-size:10px}.model-tools{padding:5px 7px;gap:4px}.model-tools button{padding:3px 6px;min-height:25px;font-size:10px}.tool-caption{min-width:40px;font-size:9px!important}.level-picker{margin-left:0}.view-bottom{display:none}.tab-panel{padding:14px 17px 18px}.wheel{max-width:300px}.file-menu-content{left:0;right:auto}.section{margin-bottom:14px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 .field label{display:grid;grid-template-columns:minmax(0,1fr) auto auto;column-gap:4px}.field label output[hidden]{display:none}.field-unit{font-size:10px;color:var(--muted);white-space:nowrap}.field label .num-edit{width:66px}.field label:not(:has(.field-unit)){grid-template-columns:minmax(0,1fr) auto}.file-menu-content input[hidden]{display:none}
 #focusSchedule{font-size:11px;min-height:24px;padding:3px 7px;white-space:nowrap}#focusSchedule[aria-pressed=true]{background:#e2ebe3;border-color:#94afa0;color:#315543}.budget-summary{gap:8px}.budget-text{font-size:10.5px}.schedule-head{position:sticky;top:-12px;background:var(--paper);z-index:2;padding:6px 0}.schedule-head .table-unit{font-size:10px}.schedule .table-wrap{padding-bottom:4px}.tab-panel>.section>.readout{margin:3px 0}.tab-panel>.section>.readout+.calc-details{margin-top:9px}button[aria-pressed=true]:focus-visible{outline-offset:2px}.header-actions #saveStatus{max-width:200px;line-height:1.25}.tab-panel>.section>.status{font-size:11px}
@@ -23,11 +23,11 @@
 @media(min-width:760px) and (max-width:1149px){.center.schedule-expanded .viewport{height:clamp(150px,26dvh,300px)}}
 @media(max-width:759px){.center .viewport{height:clamp(170px,29dvh,250px)}.budget-summary{flex-wrap:wrap;gap:5px}.budget-text{font-size:10px}.budget-track{min-width:42px}#focusSchedule{font-size:10px;min-height:23px}.center.schedule-expanded .viewport{height:125px}.schedule-head{position:static}.metric span{font-size:9px}.header-actions #saveStatus{max-width:none}.model-stage{max-height:68dvh;overflow:auto}.model-tools .level-picker{font-size:10px}.model-tools select{padding:3px!important}}
 
-.topology-persistent{padding:13px 12px 10px;border-bottom:1px solid var(--line);background:var(--paper)}.topology-persistent .section{margin:0;padding:0;border:0}.topology-persistent .wheel{max-height:230px;max-width:230px;margin:auto}.topology-persistent .hint{font-size:10.5px}.topology-persistent #clusterStatus{font-weight:600;color:var(--accent)}.topology-persistent #legend{font-size:10px}.topology-persistent .relationship-key{justify-content:center;gap:9px}.topology-persistent #neutralize{font-size:11px}.topology-persistent .field{margin:7px 0}.app-header h1{font-size:clamp(18px,2vw,24px)}#wheel .node[data-clustered=true] circle.cluster-ring{stroke:#28483b;stroke-width:2.8;stroke-dasharray:4 2;fill:none} @media(min-width:1150px) and (min-height:850px){.topology-persistent .wheel{max-height:208px;max-width:208px}}
+.topology-persistent{padding:13px 12px 10px;border-bottom:1px solid var(--line);background:var(--paper)}.topology-persistent .section{margin:0;padding:0;border:0}.topology-persistent .wheel{max-height:230px;max-width:230px;margin:auto}.topology-persistent .hint{font-size:10.5px}.topology-persistent #legend{font-size:10px}.topology-persistent .relationship-key{justify-content:center;gap:9px}.topology-persistent .field{margin:7px 0}.app-header h1{font-size:clamp(18px,2vw,24px)}#wheel .node[data-clustered=true] circle.cluster-ring{stroke:#28483b;stroke-width:2.8;stroke-dasharray:4 2;fill:none} @media(min-width:1150px) and (min-height:850px){.topology-persistent .wheel{max-height:208px;max-width:208px}}
 
-.topology-persistent{padding:10px 12px 8px;flex:none;max-height:48%;overflow:auto;scrollbar-width:thin}.topology-persistent h2{margin-bottom:3px}.topology-persistent .wheel{max-height:180px;max-width:180px;margin:6px auto}.topology-persistent .relationship-key{margin:5px 0}.topology-persistent .hint{margin:4px 0;line-height:1.3}.topology-persistent .legend{gap:3px 8px}.topology-persistent .relation-status-compact{display:none}.topology-advanced{font-size:11px;color:var(--muted);margin-top:6px}.topology-advanced summary{cursor:pointer;font-weight:600;color:var(--accent)}.topology-advanced[open]{padding-bottom:3px}.design-scroll{flex:1;min-height:0;overflow:auto;scrollbar-width:thin}.design-scroll .panel-tabs{position:sticky;top:0}.layout aside#design-panel{display:flex;flex-direction:column;overflow:hidden}.app-header h1{font-weight:650}.topology-persistent .cluster-status-compact{margin:5px 0} @media(min-width:1150px) and (max-height:800px){.topology-persistent .wheel{max-height:130px;max-width:130px}.topology-persistent{max-height:47%}} @media(min-width:760px) and (max-width:1149px){.topology-persistent{max-height:none}.design-scroll{overflow:visible}.layout aside#design-panel{overflow:visible}} @media(max-width:759px){.topology-persistent{max-height:none;overflow:visible}.design-scroll{overflow:visible}.layout aside#design-panel{overflow:visible}.design-scroll .panel-tabs{position:relative}}
+.topology-persistent{padding:10px 12px 8px;flex:none;max-height:48%;overflow:auto;scrollbar-width:thin}.topology-persistent h2{margin-bottom:3px}.topology-persistent .wheel{max-height:180px;max-width:180px;margin:6px auto}.topology-persistent .relationship-key{margin:5px 0}.topology-persistent .hint{margin:4px 0;line-height:1.3}.topology-persistent .legend{gap:3px 8px}.topology-persistent .relation-status-compact{display:none}.topology-advanced{font-size:11px;color:var(--muted);margin-top:6px}.topology-advanced summary{cursor:pointer;font-weight:600;color:var(--accent)}.topology-advanced[open]{padding-bottom:3px}.design-scroll{flex:1;min-height:0;overflow:auto;scrollbar-width:thin}.design-scroll .panel-tabs{position:sticky;top:0}.layout aside#design-panel{display:flex;flex-direction:column;overflow:hidden}.app-header h1{font-weight:650} @media(min-width:1150px) and (max-height:800px){.topology-persistent .wheel{max-height:130px;max-width:130px}.topology-persistent{max-height:47%}} @media(min-width:760px) and (max-width:1149px){.topology-persistent{max-height:none}.design-scroll{overflow:visible}.layout aside#design-panel{overflow:visible}} @media(max-width:759px){.topology-persistent{max-height:none;overflow:visible}.design-scroll{overflow:visible}.layout aside#design-panel{overflow:visible}.design-scroll .panel-tabs{position:relative}}
 .cp-hero{display:flex;flex-direction:column;background:#edf3ed;border:1px solid #cbd9cd;border-radius:7px;padding:12px;margin:8px 0 10px}.cp-hero b{font-size:32px;letter-spacing:-1px;color:#315b47;font-variant-numeric:tabular-nums;line-height:1.1}.cp-hero span{font-size:11px;color:#5c7364;margin-top:5px}.cp-row{display:grid;grid-template-columns:1fr 44px;gap:4px;align-items:center;font-size:11px;margin:6px 0}.cp-track{grid-column:1/-1;height:4px;background:#e1e6de;border-radius:3px;overflow:hidden}.cp-track i{display:block;height:100%;background:#7c9c86}.cp-trial{padding:8px 0;border-top:1px solid var(--line);font-size:11px}.cp-trial b{font-size:17px;color:#315b47}.cp-trial small{display:block;color:var(--muted)}#cpWeights label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:11px}#cpWeights input{width:64px;padding:3px;border:1px solid var(--line);border-radius:4px;background:var(--paper)}#cpBreakdown{margin:10px 0}details>summary{cursor:pointer;font-size:11px;font-weight:600;color:var(--accent)}
-.cp-persistent{padding:12px 12px 0;flex:none;background:var(--paper);border-bottom:1px solid var(--line)}.cp-tabs{display:flex;gap:3px;margin-bottom:8px}.cp-tabs button{flex:1;font-size:11px;padding:6px 3px;border:0;background:transparent}.cp-tabs button[aria-selected=true]{background:#e2ebe3;color:#315543;font-weight:650}.cp-scroll{overflow:auto;min-height:0;flex:1;scrollbar-width:thin}.layout .right#program-panel{overflow:hidden;display:flex;flex-direction:column}.cp-scroll [hidden],#cpNoEntry[hidden]{display:none!important}.cp-scroll .section{border-bottom:0}.cp-scroll #cpPaneScore>details{margin:10px 0}#cpTrial{font-weight:600;background:#e2ebe3;color:#315543}#cpTrialStatus{min-height:14px;margin-bottom:6px}.cp-scroll #cpHistory:empty:before{content:'Run a comparison to record a baseline.';color:var(--muted);font-size:11px}@media(max-width:1149px){.layout .right#program-panel{overflow:visible}.cp-scroll{overflow:visible}}
+.cp-persistent{padding:12px 12px 0;flex:none;background:var(--paper);border-bottom:1px solid var(--line)}.cp-tabs{display:flex;gap:3px;margin-bottom:8px}.cp-tabs button{flex:1;font-size:11px;padding:6px 3px;border:0;background:transparent}.cp-tabs button[aria-selected=true]{background:#e2ebe3;color:#315543;font-weight:650}.cp-scroll{overflow:auto;min-height:0;flex:1;scrollbar-width:thin}.layout .right#program-panel{overflow:hidden;display:flex;flex-direction:column}.cp-scroll [hidden],#cpNoEntry[hidden]{display:none!important}.cp-scroll .section{border-bottom:0}.cp-scroll #cpPaneScore>details{margin:10px 0}#cpTrial{font-weight:600;background:#e2ebe3;color:#315543}#cpTrialStatus{min-height:14px;margin-bottom:6px}.cp-scroll @media(max-width:1149px){.layout .right#program-panel{overflow:visible}.cp-scroll{overflow:visible}}
 
 /* V3.4: keep the principal research metric next to the model. */
 .cp-dashboard{display:grid;grid-template-columns:minmax(145px,1.2fr) minmax(190px,1.55fr) minmax(112px,.8fr);align-items:center;gap:12px;padding:10px 14px;background:#f0f4ef;border-bottom:1px solid #cbd8ce;flex:none;color:#294638;min-width:0}
@@ -52,8 +52,8 @@
 .topology-persistent .wheel{width:clamp(152px,24vh,228px);max-height:none;max-width:100%;margin:8px auto 4px;background:#f5f6f0;border-radius:6px}
 .topology-persistent .hint{font-size:11px;line-height:1.36;margin:4px 0}.topology-persistent .relationship-key{justify-content:center;gap:14px;margin:6px 0 8px}
 .topology-persistent #affinityField .field{margin:5px 0 9px}.topology-persistent #affinityField label{font-size:12px;font-weight:650}.topology-persistent #affinityField input[type=range]{margin-top:7px}
-.topology-persistent #legend{font-size:10px;gap:4px 9px}.topology-persistent #clusterStatus{font-size:10.5px;font-weight:550}.topology-reset{padding:3px 7px;width:auto;min-height:23px;font-size:10px;margin:5px 0 0}
-.topology-advanced{margin-top:6px}.topology-advanced summary{font-weight:550}
+.topology-persistent #legend{font-size:10px;gap:4px 9px}
+
 .design-scroll{min-height:0;overflow:auto;flex:1;scrollbar-width:thin;scroll-padding-block:8px}
 .panel-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:8px 10px;position:sticky;top:0;z-index:3;background:var(--paper);flex:none;border-bottom:1px solid var(--line)}
 .panel-tabs button{font-size:13px;min-height:34px;padding:5px 4px;border:1px solid var(--line);border-radius:4px;color:var(--muted);background:#f7f8f3;font-weight:550}.panel-tabs button[aria-selected=true]{background:#dfe9df;border-color:#a9bdac;color:#314e43;font-weight:650}
@@ -65,7 +65,7 @@
 .tab-panel .check{min-height:27px}
 .tab-panel .check input{width:16px;height:16px}
 .tab-panel button{min-height:32px}
-#cpPaneScore>details{margin:11px 0}#cpHistory:empty:before{content:'Run a comparison to record a baseline.';color:var(--muted);font-size:11px}#cpNoEntry[hidden]{display:none!important}
+#cpPaneScore>details{margin:11px 0}#cpNoEntry[hidden]{display:none!important}
 .center{grid-column:2;grid-row:1;display:flex;flex-direction:column;position:relative;top:auto;min-width:0;height:auto;max-height:none;overflow:auto;scrollbar-width:thin}
 .model-stage{position:relative;top:auto;max-height:none;overflow:visible;box-shadow:none;display:flex;flex-direction:column;background:var(--paper);flex:none;min-width:0}
 .center .viewport,.center.schedule-expanded .viewport{height:clamp(290px,calc(100dvh - 220px),1050px);min-height:0;flex:none}
@@ -76,10 +76,10 @@
 @media(min-width:900px) and (max-height:760px){.topology-persistent .wheel{width:clamp(136px,23vh,177px)}.topology-persistent .hint{font-size:10px}.topology-persistent .relationship-key{margin:4px 0}.cp-dashboard{padding:8px 12px}.center .viewport{height:clamp(265px,calc(100dvh - 224px),1050px)}}
 @media(min-width:900px) and (max-height:600px){.layout aside#design-panel{overflow:auto}.design-scroll{overflow:visible;flex:none}}
 @media(min-width:900px) and (max-width:1100px){.layout{grid-template-columns:280px minmax(0,1fr)}.cp-dashboard{grid-template-columns:minmax(145px,1.1fr) minmax(160px,1.2fr) minmax(95px,.7fr);gap:7px;padding:8px 10px}.cp-dash-stats{padding-left:8px;gap:4px 6px}.cp-dash-stats span{font-size:10px}.cp-main-value span{font-size:9px}.model-tools .level-picker{margin-left:0}}
-@media(max-width:899px){body{height:auto;display:block;overflow:auto}.app-header{padding:12px 14px;min-height:0;align-items:flex-start;flex-direction:column;gap:9px}.header-actions{justify-content:flex-start}.layout{display:flex;flex-direction:column;gap:1px;min-height:0}.center{display:contents}.model-stage{order:0;width:100%;position:static;max-height:none;overflow:visible}.layout aside#design-panel{order:1;width:100%;height:auto;overflow:visible}.schedule{order:2;width:100%}.topology-heading{padding-inline:18px}.topology-controls{padding-inline:18px}.topology-persistent .wheel{width:min(250px,75vw);max-width:100%;max-height:none}.topology-persistent #affinityField{max-width:440px;margin:0 auto}.design-scroll{overflow:visible}.panel-tabs{position:sticky;top:0}.tab-panel{padding:16px 18px}.center .viewport,.center.schedule-expanded .viewport{height:clamp(320px,52dvh,560px)}.cp-dashboard{grid-template-columns:minmax(140px,1fr) minmax(145px,1fr);padding:9px 12px;gap:8px 10px}.cp-dash-trial{grid-column:1/-1;flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px}.cp-dash-trial #openScoreDetails{margin-left:auto}.cp-dash-stats span{font-size:10px}.cp-dash-stats b{font-size:14px}.cp-main-value b{font-size:32px}.model-tools{padding:7px 9px}.metric{padding:8px 5px}.metric b{font-size:15px}.metric span{font-size:9px}.mobile-jump{display:inline-block}.view-top .eyebrow{display:none}.view-top{justify-content:flex-end}.view-bottom{display:none}.file-menu-content{left:0;right:auto}}
+@media(max-width:899px){body{height:auto;display:block;overflow:auto}.app-header{padding:12px 14px;min-height:0;align-items:flex-start;flex-direction:column;gap:9px}.header-actions{justify-content:flex-start}.layout{display:flex;flex-direction:column;gap:1px;min-height:0}.center{display:contents}.model-stage{order:0;width:100%;position:static;max-height:none;overflow:visible}.layout aside#design-panel{order:1;width:100%;height:auto;overflow:visible}.schedule{order:2;width:100%}.topology-heading{padding-inline:18px}.topology-controls{padding-inline:18px}.topology-persistent .wheel{width:min(250px,75vw);max-width:100%;max-height:none}.topology-persistent #affinityField{max-width:440px;margin:0 auto}.design-scroll{overflow:visible}.panel-tabs{position:sticky;top:0}.tab-panel{padding:16px 18px}.center .viewport,.center.schedule-expanded .viewport{height:clamp(320px,52dvh,560px)}.cp-dashboard{grid-template-columns:minmax(140px,1fr) minmax(145px,1fr);padding:9px 12px;gap:8px 10px}.cp-dash-trial{grid-column:1/-1;flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px}.cp-dash-trial #openScoreDetails{margin-left:auto}.cp-dash-stats span{font-size:10px}.cp-dash-stats b{font-size:14px}.cp-main-value b{font-size:32px}.model-tools{padding:7px 9px}.metric{padding:8px 5px}.metric b{font-size:15px}.metric span{font-size:9px}.mobile-jump{display:inline-block}.view-bottom{display:none}.file-menu-content{left:0;right:auto}}
 @media(max-width:350px){.cp-dashboard{grid-template-columns:1fr}.cp-dash-stats{grid-template-columns:repeat(2,minmax(0,1fr));border:0;padding:0}.cp-dash-trial #openScoreDetails{margin-left:0}.metric b{font-size:13px}}
 
-.topology-persistent .topology-advanced summary{padding:3px 0}.topology-persistent .topology-advanced>summary{font-size:11px}
+
 
 /* Keep the topology header and settings tabs reachable while their controls scroll. */
 @media (min-width: 900px) and (min-height: 601px) {
@@ -108,10 +108,65 @@
 @media (max-width: 899px) {
  .topology-persistent .wheel { height: min(250px, 75vw); max-width: 400px; }
  .topology-heading button, .panel-tabs button { min-height: 38px; }
+ .view-top .eyebrow { display: none; }
+ .view-top { justify-content: flex-end; }
  .tab-panel .field label .num-edit, #cpWeights input { font-size: 16px; min-height: 32px; }
 }
 
-#areaSchedulePanel[hidden] { display: none; }
+.center > .schedule[hidden] { display: none; }
+.cp-dash-links { display: flex; flex-wrap: wrap; gap: 4px; }
+.cp-dash-trial .cp-dash-links button {
+ flex: 1 0 auto;
+ margin: 0;
+ padding: 2px 5px;
+ min-height: 22px;
+ border-color: var(--line);
+ background: transparent;
+}
+.cp-dash-trial .cp-dash-links button:hover,
+#openTrialLog[aria-expanded="true"] { background: #e1e9de; }
+.schedule.trial-drawer { padding: 0 14px 16px; }
+.trial-drawer-head {
+ position: sticky;
+ top: 0;
+ z-index: 1;
+ padding: 13px 0 9px;
+ background: var(--paper);
+ border-bottom: 1px solid var(--line);
+}
+.trial-drawer .schedule-head { align-items: center; }
+.trial-drawer .schedule-head h2 { font-size: 15px; margin: 0; }
+.trial-actions { display: flex; align-items: center; gap: 9px; margin-top: 8px; }
+#cpTrialStatus { margin: 0; color: var(--muted); font-size: 11px; }
+#cpHistory { display: grid; gap: 10px; margin: 10px 0; }
+#cpHistory:empty::before { content: 'Run a trial to record a baseline.'; }
+.trial-entry { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.trial-entry-head { padding: 9px; display: flex; align-items: center; gap: 10px; background: #f3f6f0; }
+.trial-thumbnail { width: 37%; max-width: 144px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 3px; }
+.trial-entry h3 { margin: 0 0 2px; font-size: 12px; }
+.trial-rate { font-size: 21px; color: var(--accent); line-height: 1; }
+.trial-entry small { display: block; color: var(--muted); }
+.trial-score-change {
+ display: inline-block;
+ margin-top: 4px;
+ border-radius: 4px;
+ padding: 1px 5px;
+ font-size: 11px;
+ font-weight: 650;
+}
+.trial-score-change[data-direction="increase"] { background: #dcebdd; color: #285742; }
+.trial-score-change[data-direction="decrease"] { background: #f3e0d6; color: #793e28; }
+.trial-changes { padding: 9px; border-top: 1px solid var(--line); }
+.trial-changes summary { font-size: 12px; }
+.trial-changes h4 { margin: 11px 0 3px; font-size: 11px; }
+.trial-changes dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 7px; font-size: 11px; }
+.trial-changes dt { color: var(--muted); }
+.trial-changes dd { margin: 0; overflow-wrap: anywhere; }
+.program-actions { position: absolute; right: 12px; bottom: 10px; justify-content: flex-end; }
+.program-actions button { background: #fcfcf6ed; font-size: 11px; }
+.program-actions [aria-pressed="true"] { background: #e1ecdf; border-color: #a0b9a3; }
+.model-stage .view-top { justify-content: flex-end; }
+.model-stage .view-bottom { right: 235px; }
 
 /* Keep the dashboard and controls visible. The canvas takes the remaining height. */
 @media (min-width: 900px) {
@@ -153,7 +208,7 @@
 }
 
 @media (min-width: 1150px) {
- .center:has(#areaSchedulePanel:not([hidden])) {
+ .center:has(> .schedule:not([hidden])) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(360px, 29vw, 490px);
   grid-template-rows: minmax(0, 1fr);
@@ -161,10 +216,10 @@
 }
 
 @media (min-width: 1150px) and (max-width: 1279px) {
- .center:has(#areaSchedulePanel:not([hidden])) .cp-dashboard {
+ .center:has(> .schedule:not([hidden])) .cp-dashboard {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
  }
- .center:has(#areaSchedulePanel:not([hidden])) .cp-dash-trial {
+ .center:has(> .schedule:not([hidden])) .cp-dash-trial {
   grid-column: 1 / -1;
   flex-direction: row;
   align-items: center;
@@ -463,14 +518,32 @@
 <button id="toggleTopology" type="button" aria-controls="topologyControls" aria-expanded="true" aria-label="Collapse Topology Designer">Collapse</button>
 </div>
 <div class="topology-controls" id="topologyControls">
-<p class="hint topology-instructions"><strong>Drag nodes</strong> closer or farther apart to weigh relationships. <strong>Click lines</strong> to set Attract, Repel or Neutral. <strong>Click nodes</strong> to toggle clustering. This guides room and module placement.</p><svg aria-label="Draggable program relationship map" class="wheel" id="wheel" viewbox="0 0 400 280"></svg><div class="relationship-key"><span><i style="border-color:#47866a"></i>Attract</span><span><i style="border-color:#999f99;border-top-style:dotted"></i>Neutral</span><span><i style="border-color:#bd665c;border-top-style:dashed"></i>Repel</span></div><div id="affinityField"></div><div aria-live="polite" class="hint relation-status-compact" id="relationStatus">Click a line to cycle its relationship. Clustering strength applies to the programs toggled on.</div><div class="legend" id="legend" style="margin-top:5px"></div><p class="hint cluster-status-compact" id="clusterStatus">Clustering off for all programs.</p><p class="hint" id="repelStatus" role="status" hidden></p><p class="hint" id="firehallStatus" role="status" hidden></p><button class="topology-reset" id="neutralize" style="">Reset relationships to neutral</button><details class="topology-advanced"><summary>Program pairs &amp; advanced settings</summary><p class="hint">Selected programs cluster at 0%. Higher clustering strength groups them more tightly.</p><details class="pair-controls"><summary>All program pairs</summary><div class="pair-list" id="pairList"></div></details><p class="hint">Room sizes vary by use; levels and radial bands are laid out independently. Core mixing encourages different programs to share boundaries. Modules respond to adjacent rooms on their own level.</p><div class="readout"><span>Adjacency score (lower is better)</span><b id="score"></b></div></details></div></div>
+<p class="hint topology-instructions"><strong>Drag nodes</strong> closer or farther apart to weigh relationships. <strong>Click lines</strong> to set Attract, Repel or Neutral. <strong>Click nodes</strong> to toggle clustering. This guides room and module placement.</p><svg aria-label="Draggable program relationship map" class="wheel" id="wheel" viewbox="0 0 400 280"></svg><div class="relationship-key"><span><i style="border-color:#47866a"></i>Attract</span><span><i style="border-color:#999f99;border-top-style:dotted"></i>Neutral</span><span><i style="border-color:#bd665c;border-top-style:dashed"></i>Repel</span></div><div id="affinityField"></div><div aria-live="polite" class="hint relation-status-compact" id="relationStatus">Click a line to cycle its relationship. Clustering strength applies to the programs toggled on.</div><div class="legend" id="legend" style="margin-top:5px"></div><p class="hint" id="repelStatus" role="status" hidden></p><p class="hint" id="firehallStatus" role="status" hidden></p></div></div>
 <div aria-label="Design and simulation settings" class="panel-tabs" role="tablist"><button aria-controls="design-panel-0" aria-selected="true" data-panel="design-panel-0" id="design-panel-0-tab" role="tab" tabindex="0" type="button">Building</button><button aria-controls="design-panel-1" aria-selected="false" data-panel="design-panel-1" id="design-panel-1-tab" role="tab" tabindex="-1" type="button">Modules</button><button aria-controls="design-panel-2" aria-selected="false" data-panel="design-panel-2" id="design-panel-2-tab" role="tab" tabindex="-1" type="button">Features</button><button aria-controls="cpPaneAllocation" aria-selected="false" data-panel="cpPaneAllocation" id="cpPaneAllocation-tab" role="tab" tabindex="-1" type="button">Allocation</button><button aria-controls="cpPaneVisitors" aria-selected="false" data-panel="cpPaneVisitors" id="cpPaneVisitors-tab" role="tab" tabindex="-1" type="button">Visitors</button><button aria-controls="cpPaneScore" aria-selected="false" data-panel="cpPaneScore" id="cpPaneScore-tab" role="tab" tabindex="-1" type="button">Score</button></div>
-<div class="design-scroll" id="designSettings"><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; entrance calculations</summary><div class="readout"><span>Entrance / lobby</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><button id="cpTrial" style="width:100%;margin-bottom:8px" type="button">Run fast trial</button><div class="hint" id="cpTrialStatus" role="status">Runs 5 simulated minutes at full speed.</div><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details><h2 style="margin-top:14px">Comparison history</h2><div id="cpHistory"></div><button id="cpClear" style="margin-top:6px">Clear comparisons</button><p class="hint">Trials use the same seed, visitor count and scoring weights for fairer comparisons. Design changes restart live scoring. All active humans and animals contribute regardless of visibility. Live rates stabilize with time; use fixed-duration trials to compare designs.</p></div></div></aside>
-<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><span class="eyebrow">3D model</span><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button id="editProgramming" type="button" aria-pressed="false">Edit programming</button><button id="chooseProgramLocation" type="button" hidden>Choose location</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span><span id="seedLabel">Seed 606</span></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
+<div class="design-scroll" id="designSettings"><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; entrance calculations</summary><div class="readout"><span>Entrance / lobby</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details></div></div></aside>
+<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span></div>
+<div class="actions program-actions"><button id="editProgramming" type="button" aria-pressed="false">Edit programming</button><button id="chooseProgramLocation" type="button" hidden>Choose location</button></div><div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
 <div class="cp-main"><div class="cp-dash-head"><h2>Cross pollination</h2><span class="cp-live-status" id="cpLiveStatus">Starting</span></div><div class="cp-main-value"><b id="cpScore" title="Weighted points per 100 active visitor-minutes">—</b><span>weighted points /<br/>100 visitor-min</span></div></div>
-<div class="cp-dash-stats"><div><span>Encounters</span><b id="cpDashEncounters">0</b></div><div><span>Different rooms</span><b id="cpDashMemory">0</b></div><div><span>Cross-species</span><b id="cpDashSpecies">0</b></div><div><span>Simulated time</span><b id="cpDashTime">0m 0s</b></div></div>
-<div class="cp-dash-trial"><button id="cpQuickTrial" title="Simulate five minutes in a separate trial" type="button">Run fast trial</button><span id="cpDashTrialResult" role="status">5 simulated minutes</span><button id="openScoreDetails" title="Open detailed scoring, weights and comparison history" type="button">Score details</button></div>
-</section><div aria-label="Model visibility" class="model-tools"><div class="tool-row"><span class="tool-caption">Inspect</span><button id="viewXray" title="Flatten room massing and hide roof and facade for inspection">X-ray</button><button id="viewRooms">Rooms</button><button id="viewModules">Modules</button><button id="viewFacade" title="Show or hide the solid exterior wall">Façade</button><button id="viewRoof" title="Hide or show public rooftop deck and structures (all-level view)">Roof</button><label class="level-picker" for="inspect" style="">Visible levels <select id="inspect" style="font:inherit;padding:5px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink)"></select></label></div><div class="tool-row secondary-tools"><span class="tool-caption">Activity</span><button id="viewPeople" title="Show or hide people">People</button><button id="viewAnimals" title="Show or hide animals">Animals</button><button id="viewSim" title="Pause or resume the human and non-human movement simulation">Simulation</button><button id="viewSwing" title="Toggle idle ride animation when simulation is paused. When visitors are simulated, the ride follows their clock.">Swings</button></div></div><div class="metrics"><div class="metric"><b id="totalArea">—</b><span>Enclosed floor area (m²)</span></div><div class="metric"><b id="coreArea">—</b><span>Core + rooftop m²</span></div><div class="metric"><b id="moduleArea">—</b><span>Primary modular m²</span></div><div class="metric"><b id="totalModules">—</b><span>Primary modules</span></div></div><div class="budget-summary"><div aria-label="Enclosed area budget" aria-valuemax="20000" aria-valuemin="0" aria-valuenow="0" class="budget-track" id="budgetTrack" role="progressbar"><div id="budgetFill"></div></div><div aria-live="polite" class="budget-text" id="budgetText"></div><button id="focusSchedule" aria-controls="areaSchedulePanel" aria-expanded="false" title="Go to the full area schedule" type="button">Area details</button></div></div><section class="schedule" id="areaSchedulePanel" aria-labelledby="areaScheduleTitle" tabindex="-1" hidden><div class="schedule-head"><h2 id="areaScheduleTitle">Area schedule</h2><span class="hint" id="areaDelta"></span><span class="table-unit">m² unless noted</span><button id="collapseSchedule" type="button" aria-controls="areaSchedulePanel">Collapse</button></div><div class="area-bar" id="areaBar"></div><div class="table-wrap"><table><thead><tr><th>Program</th><th>Base goal</th><th>Core area</th><th>Pods</th><th>Total area</th><th>Δ vs base</th></tr></thead><tbody id="schedule"></tbody></table></div><div class="readout"><span>Primary area (excluding retail)</span><b id="primaryArea"></b></div><div class="readout"><span>Core rooms / zones</span><b id="roomCount"></b></div><details class="calc-details schedule-notes"><summary>How the area budget works</summary><p class="hint">The selected cap includes the core, greenhouse, all enclosed pods and rooftop enclosures. Retail, entrance, corridors, lifts, shared lobbies, and enclosed roof structures count toward the cap. Circulation reduces the remaining core room allocations; installed pods retain their 81 m² area. Open balconies and gardens are tracked separately. Manual geometry may leave unused budget or program deficits. * Retail slots are not primary modules. Conceptual GFA, not code-verified.</p></details></section></main>
+<div class="cp-dash-stats"><div><span>Encounters</span><b id="cpDashEncounters">0</b></div><div><span title="Encounters where both agents last left different rooms or modules">Different prior rooms</span><b id="cpDashMemory">0</b></div><div><span>Cross-species</span><b id="cpDashSpecies">0</b></div><div><span>Simulated time</span><b id="cpDashTime">0m 0s</b></div></div>
+<div class="cp-dash-trial"><button id="cpQuickTrial" aria-controls="trialDrawer" title="Simulate five minutes in a separate trial" type="button">Run fast trial</button><span id="cpDashTrialResult" role="status">5 simulated minutes</span><div class="cp-dash-links">
+<button id="openScoreDetails" title="Open live scoring and weights" type="button">Score details</button>
+<button id="openTrialLog" aria-controls="trialDrawer" aria-expanded="false" type="button">Trial log</button>
+</div></div>
+</section><div aria-label="Model visibility" class="model-tools"><div class="tool-row"><span class="tool-caption">Inspect</span><button id="viewXray" title="Flatten room massing and hide roof and facade for inspection">X-ray</button><button id="viewRooms">Rooms</button><button id="viewModules">Modules</button><button id="viewFacade" title="Show or hide the solid exterior wall">Façade</button><button id="viewRoof" title="Hide or show public rooftop deck and structures (all-level view)">Roof</button><label class="level-picker" for="inspect" style="">Visible levels <select id="inspect" style="font:inherit;padding:5px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink)"></select></label></div><div class="tool-row secondary-tools"><span class="tool-caption">Activity</span><button id="viewPeople" title="Show or hide people">People</button><button id="viewAnimals" title="Show or hide animals">Animals</button><button id="viewSim" title="Pause or resume the human and non-human movement simulation">Simulation</button><button id="viewSwing" title="Toggle idle ride animation when simulation is paused. When visitors are simulated, the ride follows their clock.">Swings</button></div></div><div class="metrics"><div class="metric"><b id="totalArea">—</b><span>Enclosed floor area (m²)</span></div><div class="metric"><b id="coreArea">—</b><span>Core + rooftop m²</span></div><div class="metric"><b id="moduleArea">—</b><span>Primary modular m²</span></div><div class="metric"><b id="totalModules">—</b><span>Primary modules</span></div></div><div class="budget-summary"><div aria-label="Enclosed area budget" aria-valuemax="20000" aria-valuemin="0" aria-valuenow="0" class="budget-track" id="budgetTrack" role="progressbar"><div id="budgetFill"></div></div><div aria-live="polite" class="budget-text" id="budgetText"></div><button id="focusSchedule" aria-controls="areaSchedulePanel" aria-expanded="false" title="Go to the full area schedule" type="button">Area details</button></div></div><section class="schedule" id="areaSchedulePanel" aria-labelledby="areaScheduleTitle" tabindex="-1" hidden><div class="schedule-head"><h2 id="areaScheduleTitle">Area schedule</h2><span class="hint" id="areaDelta"></span><span class="table-unit">m² unless noted</span><button id="collapseSchedule" type="button" aria-controls="areaSchedulePanel">Collapse</button></div><div class="area-bar" id="areaBar"></div><div class="table-wrap"><table><thead><tr><th>Program</th><th>Base goal</th><th>Core area</th><th>Pods</th><th>Total area</th><th>Δ vs base</th></tr></thead><tbody id="schedule"></tbody></table></div><div class="readout"><span>Primary area (excluding retail)</span><b id="primaryArea"></b></div><div class="readout"><span>Core rooms / zones</span><b id="roomCount"></b></div><details class="calc-details schedule-notes"><summary>How the area budget works</summary><p class="hint">The selected cap includes the core, greenhouse, all enclosed pods and rooftop enclosures. Retail, entrance, corridors, lifts, shared lobbies, and enclosed roof structures count toward the cap. Circulation reduces the remaining core room allocations; installed pods retain their 81 m² area. Open balconies and gardens are tracked separately. Manual geometry may leave unused budget or program deficits. * Retail slots are not primary modules. Conceptual GFA, not code-verified.</p></details></section><section class="schedule trial-drawer" id="trialDrawer" aria-labelledby="trialDrawerTitle" tabindex="-1" hidden>
+ <div class="trial-drawer-head">
+  <div class="schedule-head">
+   <h2 id="trialDrawerTitle">Cross-pollination trials</h2>
+   <button id="collapseTrial" type="button" aria-controls="trialDrawer">Collapse</button>
+  </div>
+  <div class="trial-actions">
+   <button id="cpTrial" type="button">Run fast trial</button>
+   <span id="cpTrialStatus" role="status">5 simulated minutes</span>
+  </div>
+ </div>
+ <div id="cpHistory"></div>
+ <button id="cpClear" type="button" hidden>Clear comparisons</button>
+</section>
+</main>
 </div>
 <dialog class="program-dialog" id="programDialog" aria-labelledby="programDialogTitle">
  <form id="programForm">
@@ -939,11 +1012,11 @@ function relationMode(i, j) {
 function programsRepel(i, j) {
   return i !== j && relationMode(i, j) === 'repel';
 }
-function relationMagnitude(i, j) {
+function relationMagnitude(i, j, points = state.points) {
   return Math.max(
     0.05,
     1 -
-      Math.hypot(state.points[i][0] - state.points[j][0], state.points[i][1] - state.points[j][1]) /
+      Math.hypot(points[i][0] - points[j][0], points[i][1] - points[j][1]) /
         1.72
   );
 }
@@ -2627,7 +2700,6 @@ function px(p) {
 function wheelRender() {
   let html =
     '<ellipse cx="200" cy="140" rx="167" ry="111" fill="none" stroke="#d0d7cf" stroke-dasharray="3 5"/><ellipse cx="200" cy="140" rx="97" ry="64" fill="none" stroke="#e0e4dc"/><path d="M33 140H367M200 29V251" stroke="#e0e4dc"/><circle cx="200" cy="140" r="2" fill="#9ca99c"/>';
-  let pairs = '';
   for (let i = 0; i < 5; i++)
     for (let j = i + 1; j < 5; j++) {
       const a = px(state.points[i]),
@@ -2639,7 +2711,6 @@ function wheelRender() {
         label = PROGRAMS[i].name + ' / ' + PROGRAMS[j].name + ': ' + style.name;
       const points = `x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"`;
       html += `<g class="relationship" data-pair="${k}" tabindex="0" role="button" aria-label="${label}. Click to cycle"><title>${label}</title><line class="edge-visible" ${points} stroke="${style.color}" stroke-width="${1.4 + mag * 2}" stroke-dasharray="${style.dash}" opacity="${0.6 + mag * 0.4}" pointer-events="none"/><line ${points} stroke="transparent" stroke-width="13" pointer-events="stroke"/></g>`;
-      pairs += `<button data-pair="${k}" aria-label="${label}. Click to cycle"><span>${PROGRAMS[i].short} ↔ ${PROGRAMS[j].short}</span><b style="color:${style.color}">${style.name}</b></button>`;
     }
   for (let i = 0; i < 5; i++) {
     const [x, y] = px(state.points[i]),
@@ -2647,13 +2718,8 @@ function wheelRender() {
     html += `<g class="node" data-i="${i}" tabindex="0" role="button" aria-label="${p.name}: clustering ${state.cluster[i] ? 'on' : 'off'}. Enter to toggle, arrows to move" data-clustered="${state.cluster[i]}" aria-pressed="${state.cluster[i]}" transform="translate(${x} ${y})"><circle class="cluster-ring" r="22" fill="none" stroke="none"/><circle r="18" fill="${p.color}" stroke="#fff" stroke-width="2.5"/><text text-anchor="middle" dy="4" font-size="10" font-weight="700" fill="#26322f" pointer-events="none">${p.short}</text><title>${p.name}</title></g>`;
   }
   wheel.innerHTML = html;
-  $('pairList').innerHTML = pairs;
-  const c = PROGRAMS.filter((p, i) => state.cluster[i]).map((p) => p.name);
-  $('clusterStatus').textContent = c.length
-    ? 'Clustered: ' + c.join(', ')
-    : 'Clustering off for all programs.';
 }
-function cyclePair(key, container) {
+function cyclePair(key) {
   const [i, j] = key.split('-').map(Number);
   if (!(i >= 0 && j < 5 && i < j)) return;
   const mode = relationMode(i, j),
@@ -2662,29 +2728,19 @@ function cyclePair(key, container) {
   wheelRender();
   $('relationStatus').textContent =
     PROGRAMS[i].name + ' ↔ ' + PROGRAMS[j].name + ': ' + MODES[next].name;
-  container?.querySelector('[data-pair="' + key + '"]')?.focus({ preventScroll: true });
+  wheel.querySelector('[data-pair="' + key + '"]')?.focus({ preventScroll: true });
   scheduleUpdate();
 }
-$('neutralize').onclick = () => {
-  state.relations = {};
-  wheelRender();
-  $('relationStatus').textContent = 'All program relationships set to neutral.';
-  scheduleUpdate();
-};
 wheel.addEventListener('click', (e) => {
   const g = e.target.closest('[data-pair]');
-  if (g) cyclePair(g.dataset.pair, wheel);
+  if (g) cyclePair(g.dataset.pair);
 });
 wheel.addEventListener('keydown', (e) => {
   const g = e.target.closest('[data-pair]');
   if (g && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
-    cyclePair(g.dataset.pair, wheel);
+    cyclePair(g.dataset.pair);
   }
-});
-$('pairList').addEventListener('click', (e) => {
-  const g = e.target.closest('[data-pair]');
-  if (g) cyclePair(g.dataset.pair, $('pairList'));
 });
 function movePoint(i, x, y) {
   let len = Math.hypot(x, y);
@@ -5428,6 +5484,12 @@ const CP_LABELS = {
   ride: 'Ride experience',
   corridor: 'Passing / circulation'
 };
+const CP_BONUSES = {
+  memoryBonus: 'Different-room multiplier',
+  programBonus: 'Different-program multiplier',
+  funBonus: 'Recent fun multiplier',
+  speciesBonus: 'Cross-species multiplier'
+};
 function newCrossScore() {
   return {
     points: 0,
@@ -5661,34 +5723,289 @@ function refreshTrialDashboard() {
   $('cpQuickTrial').textContent = label;
   $('cpTrial').textContent = label;
   $('cpDashTrialResult').textContent = status || result || '5 simulated minutes';
-  $('cpTrialStatus').textContent = status || result || 'Runs 5 simulated minutes at full speed.';
+  $('cpTrialStatus').textContent = status || '5 simulated minutes';
 }
+// Capture realized dimensions and program allocations alongside the inputs used for the trial.
+function trialLayout(model, trial) {
+  const { lobby, circulation, roofPlan, feature } = model;
+  return {
+    enclosed: model.total,
+    footprint: Math.PI * model.R ** 2,
+    width: model.width,
+    lobby: lobby.area,
+    entry: trial.graph.entry != null,
+    corridors: circulation.corridorArea,
+    plaza: model.plaza.area,
+    roof: roofPlan.publicArea,
+    slide: feature.slide?.run ?? 0,
+    climb: feature.climbing?.height ?? 0,
+    conflicts: model.repelConflicts,
+    coreAreas: model.core.slice(),
+    moduleCounts: model.counts.slice(),
+    vacancyCounts: model.vacancyCounts.slice()
+  };
+}
+
+// Render the whole model with consistent framing and camera angle for each trial.
+function captureTrialThumbnail(model) {
+  try {
+    const image = document.createElement('canvas');
+    const renderer = createSoftwareRenderer(image);
+    if (!renderer) return null;
+    const view = {
+      ...state,
+      inspect: 0,
+      xray: false,
+      grid: false,
+      showRooms: true,
+      showModules: true,
+      showFacade: true,
+      showRoofDeck: true,
+      roof: true
+    };
+    const mesh = buildMesh(model, false, view);
+    const viewCamera = { az: -0.84, el: 0.57, zoom: 0.86, pan: -12 };
+    paintSoftware(mesh, renderer, viewCamera, { clientWidth: 384, clientHeight: 216 }, 1);
+    return image.toDataURL('image/webp', 0.82);
+  } catch (error) {
+    console.warn('Trial thumbnail unavailable', error);
+    return null;
+  }
+}
+
+function trialValue(value, unit = '', digits = 1) {
+  if (!Number.isFinite(value)) return null;
+  return value.toLocaleString('en-CA', { maximumFractionDigits: digits }) + unit;
+}
+
+// Read historical inputs from the record, including older records that only contain settings.
+function trialLogSections(record) {
+  const settings = record.settings ?? {};
+  const layout = record.layout ?? {};
+  const area = (value) => trialValue(value, ' m²', 0);
+  const metres = (value) => trialValue(value, ' m');
+  const percent = (value) => trialValue(value, '%');
+  const mode =
+    typeof settings.autoCore === 'boolean' ? (settings.autoCore ? 'Auto' : 'Manual') : null;
+  const sections = {
+    Encounters: {
+      'Total encounters': trialValue(record.encounters),
+      'Different previous rooms': trialValue(record.cross),
+      'Different previous programs': trialValue(record.programEncounters),
+      'Human / non-human': trialValue(record.species),
+      'Different agent kinds': trialValue(record.kindEncounters),
+      'Recent play': trialValue(record.funEncounters),
+      'Active visitor-minutes': trialValue(record.visitorMinutes)
+    },
+    'Trial setup': {
+      'Variation seed': trialValue(record.seed),
+      'Human visitor setting': trialValue(record.visitors),
+      'Trial duration': '5 simulated minutes'
+    },
+    Massing: {
+      Floors: trialValue(settings.floors),
+      'Core sizing': mode,
+      'Enclosed area cap': area(settings.areaCap),
+      'Enclosed area used': area(layout.enclosed),
+      'Outer footprint': area(
+        layout.footprint ?? (settings.autoCore === false ? settings.footprint : null)
+      ),
+      'Preferred ring width': metres(settings.ringWidth),
+      'Actual ring width': metres(layout.width),
+      'Core and greenhouse area': area(record.core),
+      'Core rooms': trialValue(record.rooms),
+      'Minimum room area setting': area(settings.minRoomArea),
+      'Modules requested': trialValue(settings.modules),
+      'Modules installed': trialValue(record.modules)
+    },
+    'Circulation and play': {
+      'Entrance area setting': area(settings.lobby),
+      'Entrance area built': area(layout.lobby),
+      'Usable visitor entrance':
+        typeof layout.entry === 'boolean' ? (layout.entry ? 'Yes' : 'No') : null,
+      'Preferred corridor width': metres(settings.corridorWidth),
+      'Corridor area': area(layout.corridors),
+      'Shared lobbies': trialValue(record.hubs),
+      'Exterior plaza': area(layout.plaza),
+      'Public roof': area(layout.roof),
+      'Slide length setting': percent(settings.slideLength),
+      'Slide built': layout.slide === 0 ? 'Off' : metres(layout.slide),
+      'Climbing width': settings.climbWidth === 0 ? 'Off' : metres(settings.climbWidth),
+      'Climbing height': metres(layout.climb)
+    },
+    'Program allocation': {},
+    'Vacant docks': {},
+    'Program relationships': {
+      'Clustering strength': percent(settings.affinity),
+      'Clustered programs': Array.isArray(settings.cluster)
+        ? PROGRAMS.filter((_, i) => settings.cluster[i])
+            .map((program) => program.name)
+            .join(', ') || 'None'
+        : null,
+      'Core program mixing': percent(settings.mix),
+      'Same-floor Repel conflicts': trialValue(layout.conflicts)
+    },
+    'Programming edits': {},
+    'Scoring weights': Object.fromEntries(
+      Object.entries(CP_LABELS).map(([key, label]) => [
+        label,
+        trialValue(settings.encounterWeights?.[key], '', 2)
+      ])
+    )
+  };
+  for (const [index, program] of PROGRAMS.entries()) {
+    const allocation = sections['Program allocation'];
+    allocation[program.name + ' · core preference'] = percent(settings.split?.[index]);
+    allocation[program.name + ' · built core'] = area(layout.coreAreas?.[index]);
+    allocation[program.name + ' · installed modules'] = trialValue(layout.moduleCounts?.[index]);
+  }
+  VACANCY.forEach((use, i) => {
+    sections['Vacant docks'][use.name + ' · preference'] = percent(settings.vacancy?.[i]);
+    sections['Vacant docks'][use.name + ' · slots'] = trialValue(layout.vacancyCounts?.[i]);
+  });
+  if (settings.relations) {
+    for (const [i, program] of PROGRAMS.entries())
+      for (let j = i + 1; j < PROGRAMS.length; j++) {
+        const savedMode = settings.relations[relationKey(i, j)];
+        const relationship =
+          typeof savedMode === 'string' && Object.hasOwn(MODES, savedMode) ? savedMode : 'neutral';
+        const points = settings.points;
+        const positioned = [points?.[i], points?.[j]].every(
+          (point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite)
+        );
+        const weight =
+          relationship !== 'neutral' && positioned
+            ? ' · ' + percent(100 * relationMagnitude(i, j, points))
+            : '';
+        sections['Program relationships'][program.short + ' / ' + PROGRAMS[j].short] =
+          MODES[relationship].name + weight;
+      }
+  }
+  for (const [key, program] of Object.entries(settings.roomPrograms ?? {})) {
+    const [, floor, band, angle] = key.split(':').map(Number);
+    if (Number.isFinite(angle) && PROGRAMS[program])
+      sections['Programming edits'][
+        `Room L${floor + 1}, band ${band + 1}, ${Math.round((angle * 180) / Math.PI)}°`
+      ] = PROGRAMS[program].name;
+  }
+  for (const [key, edit] of Object.entries(settings.modulePrograms ?? {})) {
+    const [, floor, dock] = key.split(':').map(Number);
+    if (Number.isFinite(dock) && PROGRAMS[edit?.program])
+      sections['Programming edits'][`Dock ${dock + 1}, L${floor + 1}`] =
+        (edit.from === null ? 'Added ' : '') + PROGRAMS[edit.program].name;
+  }
+  for (const [key, label] of Object.entries(CP_BONUSES))
+    sections['Scoring weights'][label] = trialValue(settings[key], '×', 2);
+  return sections;
+}
+
+function trialElement(tag, text = '', className = '') {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+
+function trialThumbnailSource(data) {
+  // Only display bounded, self-contained raster images from saved logs.
+  return typeof data === 'string' &&
+    data.length <= 150000 &&
+    /^data:image\/(?:webp|png);base64,[a-z0-9+/=]+$/i.test(data)
+    ? data
+    : '';
+}
+
+// Flag practical score changes only between trials with matching simulation and scoring inputs.
+function appendTrialScoreChange(result, record, previous) {
+  if (record.signature !== previous.signature) {
+    result.append(trialElement('small', 'Trial settings changed'));
+    return;
+  }
+  const delta = Number(record.rate.toFixed(1)) - Number(previous.rate.toFixed(1));
+  if (!delta) {
+    result.append(trialElement('small', 'No score change'));
+    return;
+  }
+  const major = Math.abs(record.rate - previous.rate) >= Math.max(5, previous.rate * 0.1);
+  const direction = delta > 0 ? 'increase' : 'decrease';
+  const label = trialElement('span', (major ? 'Major ' : 'Minor ') + direction, 'trial-score-change');
+  label.dataset.direction = direction;
+  label.title = 'Major means at least 10% and 5 points versus the previous trial.';
+  const signedDelta = (delta > 0 ? '+' : '−') + Math.abs(delta).toFixed(1);
+  result.append(label, trialElement('small', signedDelta + ' pts vs previous'));
+}
+
+// Compare with the immediately preceding entry. Score deltas require matching trial settings.
+function renderTrialEntry(record, previous, index) {
+  const card = trialElement('article', '', 'trial-entry');
+  const header = trialElement('div', '', 'trial-entry-head');
+  const thumbnail = trialThumbnailSource(record.thumbnail);
+  if (thumbnail) {
+    const image = trialElement('img', '', 'trial-thumbnail');
+    image.src = thumbnail;
+    image.alt = 'Massing model at the time of this trial';
+    header.append(image);
+  }
+  const result = trialElement('div');
+  const number = Number.isSafeInteger(record.number) ? record.number : cpHistory.length - index;
+  result.append(trialElement('h3', `Trial ${number}${previous ? '' : ' · Baseline'}`));
+  result.append(trialElement('strong', record.rate.toFixed(1), 'trial-rate'));
+  result.append(trialElement('small', 'pts / 100 visitor-min'));
+  if (previous) appendTrialScoreChange(result, record, previous);
+  header.append(result);
+  card.append(header);
+  const details = trialElement('details', '', 'trial-changes');
+  details.open = index === 0;
+  details.append(trialElement('summary', previous ? 'What changed' : 'Baseline details'));
+  const current = trialLogSections(record);
+  const prior = previous ? trialLogSections(previous) : null;
+  let rowCount = 0;
+  for (const [section, fields] of Object.entries(current)) {
+    const list = trialElement('dl');
+    const edits = section === 'Programming edits';
+    const keys =
+      edits && prior
+        ? new Set([...Object.keys(fields), ...Object.keys(prior[section])])
+        : Object.keys(fields);
+    for (const key of keys) {
+      const value = fields[key] ?? (edits ? 'None' : null);
+      const before = prior?.[section][key] ?? (edits ? 'None' : null);
+      if (value == null || (prior && (before == null || before === value))) continue;
+      list.append(
+        trialElement('dt', key),
+        trialElement('dd', prior ? before + ' → ' + value : value)
+      );
+      rowCount++;
+    }
+    if (list.children.length) details.append(trialElement('h4', section), list);
+  }
+  if (!rowCount) details.append(trialElement('p', 'No recorded changes.', 'hint'));
+  card.append(details);
+  return card;
+}
+
 function renderTrials() {
   refreshTrialDashboard();
-  $('cpHistory').innerHTML = cpHistory
-    .map((t, i) => {
-      const prev = cpHistory.slice(i + 1).find((x) => x.signature === t.signature),
-        delta = prev
-          ? ' · ' +
-            (t.rate - prev.rate >= 0 ? '+' : '') +
-            (t.rate - prev.rate).toFixed(1) +
-            ' vs prior'
-          : '';
-      return `<div class="cp-trial"><b>${t.rate.toFixed(1)}</b> pts / 100 visitor-min${delta}<small>${t.rooms} rooms · ${t.modules} pods · ${t.hubs} hubs · ${t.settings?.climbWidth ?? 0} m climbing · ${t.core.toLocaleString()} m² core</small><small>${t.encounters} encounters · ${t.cross} different-room · ${t.species} human/non-human</small><small>Seed ${t.seed} · ${t.visitors} humans ${t.signature === cpSignature() ? '· same trial settings' : '· different trial settings'}</small></div>`;
-    })
-    .join('');
+  const entries = cpHistory.map((record, index) =>
+    renderTrialEntry(record, cpHistory[index + 1], index)
+  );
+  $('cpHistory').replaceChildren(...entries);
+  $('cpClear').hidden = !entries.length;
 }
 // Bind the live dashboard and the independent five-minute trial controls.
 function initCrossUI() {
   const root = $('cpWeights'),
     rows = Object.entries(CP_LABELS)
       .map(([key, label]) => ({ key, label, min: 0, max: 10, step: 0.25, weight: true }))
-      .concat([
-        { key: 'memoryBonus', label: 'Different-room multiplier', min: 1, max: 3, step: 0.1 },
-        { key: 'programBonus', label: 'Different-program multiplier', min: 1, max: 3, step: 0.1 },
-        { key: 'funBonus', label: 'Recent fun multiplier', min: 1, max: 3, step: 0.1 },
-        { key: 'speciesBonus', label: 'Cross-species multiplier', min: 1, max: 3, step: 0.1 }
-      ]);
+      .concat(
+        Object.entries(CP_BONUSES).map(([key, label]) => ({
+          key,
+          label,
+          min: 1,
+          max: 3,
+          step: 0.1
+        }))
+      );
   root.innerHTML = '';
   for (const r of rows) {
     const label = document.createElement('label');
@@ -5717,7 +6034,7 @@ function initCrossUI() {
         refreshPopulation();
         draw();
       }
-      renderTrials();
+      refreshTrialDashboard();
       queueSave();
     };
   }
@@ -5728,6 +6045,7 @@ $('cpClear').onclick = () => {
   cpHistory = [];
   cpTrialNotice = '';
   renderTrials();
+  queueSave();
 };
 
 function finishTrial(notice = '') {
@@ -5738,6 +6056,7 @@ function finishTrial(notice = '') {
 
 // Advance a separate occupancy as fast as the browser can compute it, yielding between batches.
 async function toggleTrial() {
+  if ($('trialDrawer').hidden) openMassingDrawer($('trialDrawer'));
   if (cpTrialActive) {
     finishTrial('Trial cancelled.');
     return;
@@ -5768,7 +6087,9 @@ async function toggleTrial() {
       refreshTrialDashboard();
     }
     const score = trial.score;
+    const previousNumber = cpHistory[0]?.number;
     cpHistory.unshift({
+      number: (Number.isSafeInteger(previousNumber) ? previousNumber : cpHistory.length) + 1,
       rate: crossRate(trial),
       rooms: trialModel.rooms.length,
       modules: trialModel.count,
@@ -5777,14 +6098,22 @@ async function toggleTrial() {
       encounters: score.encounters,
       cross: score.memory,
       species: score.species,
+      programEncounters: score.programs,
+      kindEncounters: score.crossSpecies,
+      funEncounters: score.fun,
+      visitorMinutes: score.personSeconds / 60,
       signature,
       seed: state.seed,
       visitors: state.visitorCount,
       settings: JSON.parse(JSON.stringify(state)),
+      layout: trialLayout(trialModel, trial),
+      thumbnail: captureTrialThumbnail(trialModel),
       breakdown: score.by
     });
     cpHistory = cpHistory.slice(0, 8);
+    $('trialDrawer').scrollTop = 0;
     finishTrial();
+    queueSave();
   } catch (error) {
     console.error('Cross-pollination trial failed', error);
     finishTrial('Trial failed. Try again.');
@@ -5884,9 +6213,8 @@ function drawSoftware() {
 }
 
 const PROGRAM_PREVIEW_TINT = [0.99, 0.76, 0.22, 0.82];
-function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c) {
-  const dpr = Math.min(2, window.devicePixelRatio || 1),
-    w = Math.max(1, Math.round(viewport.clientWidth * dpr)),
+function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.min(2, window.devicePixelRatio || 1)) {
+  const w = Math.max(1, Math.round(viewport.clientWidth * dpr)),
     h = Math.max(1, Math.round(viewport.clientHeight * dpr));
   if (c.width !== w || c.height !== h) {
     c.width = w;
@@ -6699,7 +7027,7 @@ function update() {
     $(id).setAttribute('aria-pressed', String(state[key]));
   model = derive();
   if (programEditing) syncProgrammingHint(model);
-  renderTrials();
+  refreshTrialDashboard();
   const m = model;
   const c = m.feature.climbing,
     s = m.feature.slide;
@@ -6826,8 +7154,6 @@ function update() {
   ).join('');
   $('areaDelta').textContent =
     fmt(Math.max(0, state.areaCap - m.total)) + ' m² remaining of ' + fmt(state.areaCap) + ' m²';
-  $('seedLabel').textContent = 'Seed ' + state.seed;
-  $('score').textContent = m.score.toFixed(3);
   const firehallStatus = $('firehallStatus');
   firehallStatus.hidden = !m.firehallUnplaced && !m.firehallOmitted.size;
   firehallStatus.textContent = m.firehallUnplaced
@@ -7044,7 +7370,8 @@ const STORAGE_KEY = 'poly-nation-massing-lab-v2.5';
 let saveTimer;
 function saveNow() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, camera }));
+    const crossPollination = { comparisons: cpHistory };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, camera, crossPollination }));
     $('saveStatus').textContent = 'Saved locally';
   } catch (e) {
     $('saveStatus').textContent = 'Local save unavailable — use JSON';
@@ -7161,6 +7488,18 @@ function applySaved(data) {
     zoom: clamp(Number.isFinite(c.zoom) ? c.zoom : 1, 0.06, 3),
     pan: clamp(Number.isFinite(c.pan) ? c.pan : 0, -180, 180)
   };
+  const comparisons = data.crossPollination?.comparisons;
+  cpHistory = Array.isArray(comparisons)
+    ? comparisons.filter(isTrialRecord).slice(0, 8).map((trial) => ({
+        ...trial,
+        thumbnail: trialThumbnailSource(trial.thumbnail)
+      }))
+    : [];
+  cpTrialNotice = '';
+}
+function isTrialRecord(trial) {
+  const fields = ['rate', 'rooms', 'modules', 'hubs', 'core', 'encounters', 'cross', 'species', 'seed', 'visitors'];
+  return trial && typeof trial.signature === 'string' && fields.every((key) => Number.isFinite(trial[key]));
 }
 function restoreSaved() {
   try {
@@ -7177,28 +7516,6 @@ $('importFile').onchange = async () => {
   try {
     const data = JSON.parse(await f.text());
     applySaved(data);
-    cpHistory = Array.isArray(data.crossPollination?.comparisons)
-      ? data.crossPollination.comparisons
-          .filter(
-            (t) =>
-              t &&
-              [
-                t.rate,
-                t.rooms,
-                t.modules,
-                t.hubs,
-                t.core,
-                t.encounters,
-                t.cross,
-                t.species,
-                t.seed,
-                t.visitors
-              ].every(Number.isFinite) &&
-              typeof t.signature === 'string'
-          )
-          .slice(0, 8)
-      : [];
-    cpTrialNotice = '';
     initCrossUI();
     wheelRender();
     update();
@@ -7549,18 +7866,26 @@ function goToModel() {
 }
 const areaSchedule = $('areaSchedulePanel');
 const areaDetails = $('focusSchedule');
-areaDetails.onclick = () => {
-  areaSchedule.hidden = false;
-  areaDetails.setAttribute('aria-expanded', 'true');
-  areaSchedule.scrollIntoView({ block: 'start' });
-  areaSchedule.focus({ preventScroll: true });
-};
-$('collapseSchedule').onclick = () => {
-  areaSchedule.hidden = true;
-  areaDetails.setAttribute('aria-expanded', 'false');
+const trialDrawer = $('trialDrawer');
+const trialLogButton = $('openTrialLog');
+// Both tools use the same right-hand space. Closing the trial log leaves an active run going.
+function openMassingDrawer(drawer, trigger) {
+  areaSchedule.hidden = drawer !== areaSchedule;
+  trialDrawer.hidden = drawer !== trialDrawer;
+  areaDetails.setAttribute('aria-expanded', String(!areaSchedule.hidden));
+  trialLogButton.setAttribute('aria-expanded', String(!trialDrawer.hidden));
+  if (drawer) {
+    if (innerWidth < 900) drawer.scrollIntoView({ block: 'start' });
+    drawer.focus({ preventScroll: true });
+    return;
+  }
   goToModel();
-  areaDetails.focus();
-};
+  trigger.focus();
+}
+areaDetails.onclick = () => openMassingDrawer(areaSchedule);
+trialLogButton.onclick = () => openMassingDrawer(trialDrawer);
+$('collapseSchedule').onclick = () => openMassingDrawer(null, areaDetails);
+$('collapseTrial').onclick = () => openMassingDrawer(null, trialLogButton);
 $('returnModelMobile').onclick = goToModel;
 const topologyToggle = $('toggleTopology');
 const topologyControls = $('topologyControls');
