@@ -1,5 +1,9 @@
 # Changelog
 
+## Scale-aware drawing pens
+- Added an optional adjustment for pen weights at the current drawing scale. Fixed printed widths remain the default. Preview, SVG and print all use the effective widths shown in the line-weight panel.
+- Put paper and pen colour pickers on one row. Replaced the footer’s paper-size label with a metric scale bar alongside the drawing ratio and added a ring-inspired north arrow to plans and axonometrics.
+
 ## Illustrator export and jury diagrams
 - Reorganized exported SVGs into named top-level groups and added an optional Illustrator script to promote them to native layers. Hybrid shading is exported as editable vector fills.
 - Made the pencil overlay more visible, added geometry-based construction lines and introduced subtle pressure variation within each pen layer.

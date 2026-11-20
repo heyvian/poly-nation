@@ -639,6 +639,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 }
 .drawing-view-field { display: grid; gap: 4px; }
 .drawing-pen-settings { display: grid; gap: 7px; }
+.drawing-colours { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 12px; align-items: end; }
 /* Keep each pen's slider, millimetre field and ink swatch together in the narrow drawing rail. */
 .drawing-pen-row { display: grid; grid-template-columns: minmax(0, 1fr) 51px 32px; align-items: center; gap: 4px 6px; margin: 8px 0; }
 .drawing-pen-row span { grid-column: 1/-1; }
@@ -1349,8 +1350,10 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
    <label class="drawing-view-field">Drawing style
     <select id="drawingPenStyle"><option value="standard">Standard line drawing</option><option value="sketch">Pen over pencil</option></select>
    </label>
-   <label class="drawing-view-field">Paper colour <input id="drawingPaperColor" type="color"></label>
-   <label class="drawing-view-field">Set all pen colours <input id="drawingInkColor" type="color"></label>
+   <div class="drawing-colours">
+    <label class="drawing-view-field">Paper colour <input id="drawingPaperColor" type="color"></label>
+    <label class="drawing-view-field">Set all pen colours <input id="drawingInkColor" type="color"></label>
+   </div>
    <label class="drawing-view-field">Weight assignment
     <select id="drawingPenMode">
      <option value="distance">Camera distance</option>
@@ -1361,6 +1364,8 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
    <label class="drawing-view-field">Number of weights
     <select id="drawingPenCount"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
    </label>
+   <label class="check"><input id="drawingAdaptWeights" type="checkbox" aria-describedby="drawingPenScaleNote"> Adapt weights to scale</label>
+   <p class="hint" id="drawingPenScaleNote">Widths stay fixed on paper at every scale.</p>
    <div id="drawingPenWidths"></div>
    <div id="drawingPenComponents" hidden></div>
    <p class="hint">Weights are in printed millimetres. Section cuts use the heaviest weight.</p>
@@ -11847,6 +11852,23 @@ const DRAWING_PEN_PRESETS = [
   [0.7, 0.5, 0.35, 0.25, 0.18]
 ];
 const DRAWING_PEN_LIMITS = { min: 0.05, max: 2, step: 0.01 };
+const DRAWING_PEN_REFERENCE_SCALE = 250;
+
+function drawingPenScale(pens, denominator) {
+  // Preserve more of the stroke width than a direct geometric scale would. The bounds keep
+  // overview ink legible and prevent large-scale crops from acquiring disproportionately heavy ink.
+  return pens.adaptToScale
+    ? clamp((DRAWING_PEN_REFERENCE_SCALE / denominator) ** 0.25, 0.45, 1.35)
+    : 1;
+}
+
+function printedDrawingPenWidths(pens, denominator) {
+  if (!pens.adaptToScale) return pens.widths;
+  const factor = drawingPenScale(pens, denominator);
+  return pens.widths.map((width) =>
+    Number(clamp(width * factor, DRAWING_PEN_LIMITS.min, DRAWING_PEN_LIMITS.max).toFixed(2))
+  );
+}
 
 function drawingPens(saved = {}) {
   // Older sheet settings have no pen set. Validate each saved value independently.
@@ -11857,6 +11879,7 @@ function drawingPens(saved = {}) {
   return {
     mode: ['distance', 'component', 'profile'].includes(saved?.mode) ? saved.mode : 'distance',
     style: saved?.style === 'sketch' ? 'sketch' : 'standard',
+    adaptToScale: saved?.adaptToScale === true,
     paper: paintHex(saved?.paper) || '#ffffff',
     colors: DRAWING_PEN_PRESETS[count].map((_, i) => paintHex(saved?.colors?.[i]) || '#43534c'),
     widths: DRAWING_PEN_PRESETS[count].map((width, i) =>
@@ -12264,7 +12287,7 @@ const openDrawingWorkspace = (() => {
     footer = document.createElementNS(svgNS, 'g'),
     footerRule = document.createElementNS(svgNS, 'line'),
     footerTitle = document.createElementNS(svgNS, 'text'),
-    footerScale = document.createElementNS(svgNS, 'text'),
+    footerScale = document.createElementNS(svgNS, 'g'),
     pageStyle = document.createElement('style'),
     paperSizes = { letter: [8.5, 11], tabloid: [11, 17] },
     compassPoints = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
@@ -12283,7 +12306,6 @@ const openDrawingWorkspace = (() => {
   footer.setAttribute('font-family', 'system-ui, sans-serif');
   footer.setAttribute('font-size', '11');
   footerRule.setAttribute('stroke', '#8ba095');
-  footerScale.setAttribute('text-anchor', 'end');
   footer.append(footerRule, footerTitle, footerScale);
   clip.id = 'drawingSheetClip';
   clip.append(clipRect);
@@ -12493,8 +12515,85 @@ const openDrawingWorkspace = (() => {
   function sheetInk(paper) {
     return dot(rgb(paper), [0.21, 0.72, 0.07]) < 0.45 ? '#ebeee8' : '#243c30';
   }
+
+  function drawingNorthArrow({ right, up }, x, y, ink) {
+    // The model's north is +Z. Project it onto the sheet so the arrow follows orbit and cut views.
+    const projected = Math.hypot(right[2], up[2]),
+      northX = right[2] / projected,
+      northY = -up[2] / projected,
+      angle = (Math.atan2(northX, -northY) * 180) / Math.PI;
+    const arrow = svgElement('g', { 'aria-label': 'North arrow', 'data-north-arrow': '' });
+    const ring = svgElement('g', { transform: `translate(${x} ${y}) rotate(${angle})` });
+    // A narrow ring and three dock tabs echo the massing. The fourth tab points north.
+    ring.append(
+      svgElement('circle', { r: 6, fill: 'none', stroke: ink, 'stroke-width': 0.85 }),
+      svgElement('path', {
+        d: 'M-8 0h2 M6 0h2 M0 6v2',
+        fill: 'none',
+        stroke: ink,
+        'stroke-width': 0.85
+      }),
+      svgElement('path', { d: 'M0 -13l3.2 8.5L0 -6.5l-3.2 2Z', fill: ink })
+    );
+    const north = svgElement('text', {
+      x: x + northX * 18,
+      y: y + northY * 18 + 2.7,
+      'text-anchor': 'middle',
+      'font-size': 8,
+      'font-weight': 650
+    });
+    north.textContent = 'N';
+    arrow.append(ring, north);
+    return arrow;
+  }
+
+  function drawScaleIndicator(indicator, denominator, end, baseline, ink, mapBasis) {
+    // Pick a readable ground distance on the 1–2–5 series and keep the bar under 26 mm on paper.
+    const capacity = (denominator * 26) / 1000,
+      magnitude = 10 ** Math.floor(Math.log10(capacity)),
+      metres = [5, 2, 1].map((step) => step * magnitude).find((length) => length <= capacity),
+      barLength = (metres * 1000 * DRAWING_PIXELS_PER_INCH) / (denominator * 25.4),
+      right = end - 53,
+      left = right - barLength,
+      y = baseline - 1;
+    const bar = svgElement('line', {
+      x1: left,
+      x2: right,
+      y1: y,
+      y2: y,
+      stroke: ink,
+      'data-scale-metres': metres
+    });
+    const ticks = svgElement('path', {
+      d: `M${left} ${y - 2}v4 M${right} ${y - 2}v4`,
+      stroke: ink,
+      fill: 'none'
+    });
+    const startLabel = svgElement('text', { x: left, y: y - 5, 'font-size': 8 });
+    startLabel.textContent = '0';
+    const endLabel = svgElement('text', {
+      x: right,
+      y: y - 5,
+      'font-size': 8,
+      'text-anchor': 'end'
+    });
+    endLabel.textContent = `${metres} m`;
+    const ratio = svgElement('text', {
+      x: end,
+      y: baseline,
+      'text-anchor': 'end',
+      'data-scale-ratio': denominator
+    });
+    ratio.textContent = `1:${denominator}`;
+    indicator.replaceChildren(bar, ticks, startLabel, endLabel, ratio);
+    if (mapBasis) indicator.prepend(drawingNorthArrow(mapBasis, end - 178, baseline - 4, ink));
+  }
+
   function renderPens(target, frame, identified = false) {
-    const { pens, ink, texture, pencil, pencilEcho, construction, section, heaviest } = frame;
+    const { pens, ink, texture, pencil, pencilEcho, construction, section, heaviest, denominator } =
+      frame;
+    const widths = printedDrawingPenWidths(pens, denominator),
+      guideScale = drawingPenScale(pens, denominator);
     const colorLayer = markSvgLayer(svgElement('g', {}), 'Colour wash');
     if (frame.wash)
       colorLayer.append(
@@ -12515,7 +12614,7 @@ const openDrawingWorkspace = (() => {
     }
     const graphite = sheetInk(pens.paper) === '#ebeee8' ? '#cfc4b9' : '#6d655d';
     if (construction) {
-      const axes = path(construction, 0.16, graphite);
+      const axes = path(construction, 0.16 * guideScale, graphite);
       axes.setAttribute('opacity', '0.50');
       axes.setAttribute('stroke-dasharray', '12 4 2 4');
       layout.append(axes);
@@ -12525,7 +12624,7 @@ const openDrawingWorkspace = (() => {
       [pencil, 0.19, 0.73]
     ]) {
       if (!d) continue;
-      const strokes = path(d, width, graphite);
+      const strokes = path(d, width * guideScale, graphite);
       strokes.setAttribute('opacity', opacity);
       guide.append(strokes);
     }
@@ -12533,15 +12632,15 @@ const openDrawingWorkspace = (() => {
     const firstInk = ink.findIndex((pressure) => pressure.some(Boolean));
     const order = pens.widths.map((_, i) => i).sort((a, b) => pens.widths[a] - pens.widths[b]);
     for (const i of order) {
-      const width = pens.widths[i],
+      const width = widths[i],
         stroke = pens.colors[i];
       if (texture[i]) textureLayer.append(path(texture[i], width, stroke));
       const layer = markSvgLayer(
         svgElement('g', { 'data-weight-mm': width }),
         `Pen ${i + 1} · ${width.toFixed(2)} mm`
       );
-      // Pressure varies very slightly within a pen layer. Keep the requested nominal width
-      // for most sketch marks, for all standard linework, and for the section cuts.
+      // Pressure varies slightly within a pen layer. Standard linework and section cuts use
+      // the full printed width reported on the sheet, as do most sketch marks.
       const named = ink[i].findIndex(Boolean);
       for (const [pressure, multiplier] of [
         [1, 0.94],
@@ -12565,7 +12664,7 @@ const openDrawingWorkspace = (() => {
 
   // Each view uses the same physical drawing units. The tile bounds crop its own wash and strokes.
   function floorView(frame, label, x = 0, y = 0, print = false) {
-    const { width, height, margin, drawingHeight } = frame;
+    const { width, height, margin, drawingHeight, denominator } = frame;
     const tile = svgElement('svg', { x, y, width, height, viewBox: `0 0 ${width} ${height}` });
     const area = svgElement('svg', {
       x: margin,
@@ -12576,16 +12675,27 @@ const openDrawingWorkspace = (() => {
       overflow: 'hidden'
     });
     renderPens(area, frame);
+    const ink = sheetInk(frame.pens.paper),
+      baseline = height - (print ? margin : Math.min(12, margin));
     const name = svgElement('text', {
       x: margin,
-      y: height - Math.min(12, margin),
-      fill: sheetInk(frame.pens.paper),
+      y: baseline,
+      fill: ink,
       'font-family': 'system-ui, sans-serif',
       'font-size': 11
     });
-    name.textContent = label + ' · 1:' + frame.denominator;
+    name.textContent = print ? label : `${label} · 1:${denominator}`;
     if (print) tile.append(svgElement('rect', { width, height, fill: frame.pens.paper }));
     tile.append(area, name);
+    if (print) {
+      const indicator = svgElement('g', {
+        fill: ink,
+        'font-family': 'system-ui, sans-serif',
+        'font-size': 11
+      });
+      drawScaleIndicator(indicator, denominator, width - margin, baseline, ink, frame.basis);
+      tile.append(indicator);
+    }
     return tile;
   }
 
@@ -12725,16 +12835,18 @@ const openDrawingWorkspace = (() => {
       if (allPlans()) sheetArtwork.replaceChildren();
       else renderPens(sheetArtwork, rendered, true);
       footerRule.setAttribute('x1', margin);
-      footer.setAttribute('fill', sheetInk(settings.pens.paper));
+      const sheetText = sheetInk(settings.pens.paper);
+      footer.setAttribute('fill', sheetText);
       footerRule.setAttribute('x2', width - margin);
       footerRule.setAttribute('y1', ruleY);
       footerRule.setAttribute('y2', ruleY);
       footerTitle.setAttribute('x', margin);
       footerTitle.setAttribute('y', textY);
       footerTitle.textContent = 'Poly Nation · ' + viewLabel;
-      footerScale.setAttribute('x', width - margin);
-      footerScale.setAttribute('y', textY);
-      footerScale.textContent = `1:${denominator} · ${settings.paper === 'letter' ? 'Letter' : 'Tabloid'}`;
+      // Elevations and upright sections have an edge-on plan. Their footer only needs the scale.
+      const mapBasis = Math.abs(camera.el) > 0.01 ? orbitBasis(camera) : null;
+      drawScaleIndicator(footerScale, denominator, width - margin, textY, sheetText, mapBasis);
+      syncPenScaleNote(denominator);
       exportButton.disabled = printButton.disabled = !rendered.populated;
       $('printFloorSet').disabled = printingFloorSet;
       resizePaperPreview();
@@ -12791,6 +12903,14 @@ const openDrawingWorkspace = (() => {
     $('placeDrawingPlane').setAttribute('aria-pressed', 'false');
     sheet.dataset.placing = 'false';
   }
+  function syncPenScaleNote(denominator) {
+    const pens = settings.pens;
+    const widths = printedDrawingPenWidths(pens, denominator).map((width) => width.toFixed(2));
+    $('drawingPenScaleNote').textContent = pens.adaptToScale
+      ? `Your settings apply at 1:${DRAWING_PEN_REFERENCE_SCALE}. At 1:${denominator} the pens print at ${widths.join(' / ')} mm.`
+      : 'Widths stay fixed on paper at every scale.';
+  }
+
   // Rebuild the paired controls only when the pen set or assignment scheme changes.
   function syncPenControls() {
     const pens = settings.pens;
@@ -12799,6 +12919,7 @@ const openDrawingWorkspace = (() => {
     $('drawingPaperColor').value = pens.paper;
     $('drawingInkColor').value = pens.colors[0];
     $('drawingPenCount').value = pens.widths.length;
+    $('drawingAdaptWeights').checked = pens.adaptToScale;
     const components = $('drawingPenComponents');
     components.hidden = pens.mode !== 'component';
     components.replaceChildren(
@@ -12870,12 +12991,13 @@ const openDrawingWorkspace = (() => {
     queueDrawing();
   };
   $('drawingPenCount').onchange = (event) => {
-    const { mode, style, paper, colors } = settings.pens;
+    const { mode, style, paper, colors, adaptToScale } = settings.pens;
     settings.pens = drawingPens({
       mode,
       style,
       paper,
       colors,
+      adaptToScale,
       widths: DRAWING_PEN_PRESETS[Number(event.target.value)]
     });
     syncPenControls();
@@ -12883,6 +13005,10 @@ const openDrawingWorkspace = (() => {
   };
   $('drawingPenStyle').onchange = (event) => {
     settings.pens.style = event.target.value;
+    queueDrawing();
+  };
+  $('drawingAdaptWeights').onchange = (event) => {
+    settings.pens.adaptToScale = event.target.checked;
     queueDrawing();
   };
   $('drawingPaperColor').onchange = (event) => {
@@ -13188,7 +13314,7 @@ const openDrawingWorkspace = (() => {
     const title = svgElement('title', {}),
       defs = svgElement('defs', {}),
       layers = new Map();
-    title.textContent = footerTitle.textContent + ' · ' + footerScale.textContent;
+    title.textContent = `${footerTitle.textContent} · 1:${rendered.denominator}`;
     root.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:inkscape', layerNS);
     root.append(title, defs, paperLayer.cloneNode(true));
 

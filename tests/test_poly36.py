@@ -118,9 +118,12 @@ with sync_playwright() as p:
  drawing_export = page.locator('#exportDrawing')
  expect(drawing_export).to_be_enabled()
  before_compass = page.locator('#drawingLinework').get_attribute('d')
+ north = page.locator('#drawingSheet [data-north-arrow] > g')
+ before_north = north.get_attribute('transform')
  page.get_by_role('button', name='View from northeast').click()
  expect(drawing_export).to_be_enabled()
  assert page.locator('#drawingLinework').get_attribute('d') != before_compass
+ assert north.get_attribute('transform') != before_north
  page.locator('#drawingRendering').select_option('combined')
  expect(drawing_export).to_be_enabled()
  assert page.locator('#drawingSheet image').get_attribute('href').startswith('data:image/png')
@@ -139,9 +142,32 @@ with sync_playwright() as p:
  assert len({path.get('stroke-width') for path in next(group for label, group in layers.items() if label.startswith('Pen ')).findall('.//{*}path')}) > 1
  page.locator('#drawingPenStyle').select_option('standard')
  page.locator('#drawingRendering').select_option('linework')
+ # Compare the width in physical page units at two scales, then check the adaptive SVG.
+ scale = page.locator('#drawingScale')
+ adapt = page.locator('#drawingAdaptWeights')
+ heaviest = page.locator('#drawingSheet [data-layer^="Pen 1 ·"]')
+ expect(adapt).not_to_be_checked()
+ for denominator in ['50', '2000']:
+  scale.select_option(denominator)
+  expect(page.locator('#drawingSheet [data-scale-ratio]')).to_have_text(f'1:{denominator}')
+  expect(heaviest).to_have_attribute('data-weight-mm', '0.5')
+ adapt.check()
+ expect(heaviest).to_have_attribute('data-weight-mm', '0.3')
+ expect(drawing_export).to_be_enabled()
+ with page.expect_download() as adaptive_svg:
+  drawing_export.click()
+ adaptive_drawing = ET.parse(adaptive_svg.value.path()).getroot()
+ pen_group = next(group for group in adaptive_drawing if group.get('data-layer') == 'Pen 1 · 0.30 mm')
+ assert all(abs(float(path.get('stroke-width')) * 25.4 / 88 - 0.3) < 1e-8 for path in pen_group.findall('.//{*}path'))
+ scale.select_option('50')
+ expect(heaviest).to_have_attribute('data-weight-mm', '0.68')
+ scale.select_option('250')
+ expect(heaviest).to_have_attribute('data-weight-mm', '0.5')
+ adapt.uncheck()
  page.locator('#drawingView').select_option('elevation')
  page.get_by_role('button', name='View from northeast').click()
  expect(page.locator('#drawingOrbit')).to_have_value('45')
+ expect(north).to_have_count(0)
  page.locator('#groundDrawing').click()
  expect(drawing_export).to_be_enabled()
  page.locator('#drawingScale').select_option('250')
@@ -185,7 +211,11 @@ with sync_playwright() as p:
   drawing_export.click()
  drawing_svg = ET.parse(saved_drawing.value.path()).getroot()
  assert drawing_svg.attrib['width'] == '11in' and drawing_svg.attrib['height'] == '17in'
- assert '1:1000 · Tabloid' in ''.join(drawing_svg.itertext())
+ assert drawing_svg.find('.//{*}text[@data-scale-ratio="1000"]').text == '1:1000'
+ assert 'Tabloid' not in ''.join(drawing_svg.itertext())
+ bar = drawing_svg.find('.//{*}line[@data-scale-metres="20"]')
+ assert abs((float(bar.get('x2')) - float(bar.get('x1'))) * 25.4 / 88 - 20) < 1e-8
+ assert drawing_svg.find('.//{*}g[@data-north-arrow]/{*}text').text == 'N'
  # A vector editor must be able to control the drawing layers independently.
  drawing_layers = {group.get('data-layer') for group in drawing_svg if group.get('data-layer')}
  assert {'Paper', 'Title and scale'} <= drawing_layers
