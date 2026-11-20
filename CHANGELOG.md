@@ -1,5 +1,9 @@
 # Changelog
 
+## Allocation search
+- Added **Optimize allocation** to compare built core-to-module ratios while preserving the total area of each program.
+- Renamed the comparison button **Run Pollination Trial**.
+
 ## Programming and layout trials
 - Removed the location dropdown. Select a room, module, or available dock on the model to open its program editor.
 - Applying an optimized layout automatically runs a fast trial and adds the result to the trial log.

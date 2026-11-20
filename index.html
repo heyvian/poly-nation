@@ -164,6 +164,14 @@
  border-radius: 3px;
 }
 .trial-optimization p { margin: 6px 0; font-size: 12px; }
+.trial-optimization dl:not([hidden]) {
+ display: grid;
+ grid-template-columns: max-content 1fr;
+ gap: 4px 8px;
+ margin: 7px 0 10px;
+ font-size: 11px;
+}
+.trial-optimization dd { margin: 0; }
 #cpApplyLayout { background: #dcebdd; color: #285742; }
 #cpHistory { display: grid; gap: 10px; margin: 10px 0; }
 #cpHistory:empty::before { content: 'Run a trial to record a baseline.'; }
@@ -598,7 +606,7 @@
 <div id="error"></div></div><section aria-label="Live cross-pollination dashboard" class="cp-dashboard">
 <div class="cp-main"><div class="cp-dash-head"><h2>Cross pollination</h2><span class="cp-live-status" id="cpLiveStatus">Starting</span></div><div class="cp-main-value"><b id="cpScore" title="Weighted points per 100 active visitor-minutes">—</b><span>weighted points /<br/>100 visitor-min</span></div></div>
 <div class="cp-dash-stats"><div><span>Encounters</span><b id="cpDashEncounters">0</b></div><div><span title="Encounters where both agents last left different rooms or modules">Different prior rooms</span><b id="cpDashMemory">0</b></div><div><span>Cross-species</span><b id="cpDashSpecies">0</b></div><div><span>Simulated time</span><b id="cpDashTime">0m 0s</b></div></div>
-<div class="cp-dash-trial"><button id="cpQuickTrial" aria-controls="trialDrawer" title="Simulate five minutes in a separate trial" type="button">Run fast trial</button><span id="cpDashTrialResult" role="status">5 simulated minutes</span><div class="cp-dash-links">
+<div class="cp-dash-trial"><button id="cpQuickTrial" aria-controls="trialDrawer" title="Simulate five minutes in a separate trial" type="button">Run Pollination Trial</button><span id="cpDashTrialResult" role="status">5 simulated minutes</span><div class="cp-dash-links">
 <button id="openScoreDetails" title="Open live scoring and weights" type="button">Score details</button>
 <button id="openTrialLog" aria-controls="trialDrawer" aria-expanded="false" type="button">Trial log</button>
 </div></div>
@@ -609,8 +617,9 @@
    <button id="collapseTrial" type="button" aria-controls="trialDrawer">Collapse</button>
   </div>
   <div class="trial-actions">
-   <button id="cpTrial" type="button">Run fast trial</button>
+   <button id="cpTrial" type="button">Run Pollination Trial</button>
    <button id="cpOptimize" aria-controls="cpOptimizationResult" title="Compare module placements with program areas and topology fixed" type="button">Optimize layout</button>
+   <button id="cpOptimizeAllocation" aria-controls="cpOptimizationResult" title="Compare core and module ratios while preserving each program’s area" type="button">Optimize allocation</button>
    <span id="cpTrialStatus" role="status">5 simulated minutes</span>
   </div>
   <p id="cpOptimizeStatus" class="hint" role="status" hidden></p>
@@ -619,6 +628,7 @@
   <h3 id="cpOptimizationTitle">Suggested module layout</h3>
   <img id="cpOptimizationThumbnail" alt="Suggested module layout" width="384" height="216" hidden>
   <p id="cpOptimizationScores"></p>
+  <dl id="cpOptimizationRatios" hidden></dl>
   <button id="cpApplyLayout" type="button">Apply layout</button>
  </section>
  <div id="cpHistory"></div>
@@ -852,6 +862,7 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
     affinity: 70,
     seed: 606,
     dockVariant: 0,
+    allocationMoves: [],
     split: PROGRAMS.map((p) => p.split),
     points: PROGRAMS.map((p) => p.pos.slice()),
     roof: true,
@@ -1052,6 +1063,7 @@ PROGRAMS.forEach((p, i) => {
   $('programFields').append(d);
   $('split' + i).addEventListener('input', () => {
     state.split[i] = Number($('split' + i).value);
+    state.allocationMoves = [];
     scheduleUpdate();
   });
 });
@@ -2412,7 +2424,7 @@ function derive(dockVariant = state.dockVariant) {
     primary = ringArea + court + count * MODULE.area + roofPlan.serviceArea,
     total = primary + retail + roofPlan.retailArea;
   const plaza = designPlaza(R, lobby, slots, feature.climbing);
-  return {
+  const layout = {
     R,
     r,
     width,
@@ -2453,6 +2465,125 @@ function derive(dockVariant = state.dockVariant) {
     plaza,
     roofPlan
   };
+  return state.allocationMoves.length
+    ? applyAllocationMoves(layout, state.allocationMoves, dockVariant) ?? layout
+    : layout;
+}
+
+// Move an existing partition only where both rooms retain the same corridor frontage.
+function exchangeableRooms(left, right) {
+  return Boolean(
+    left &&
+      right &&
+      PROGRAMS[left.id] &&
+      PROGRAMS[right.id] &&
+      left.id !== right.id &&
+      left.f === right.f &&
+      left.band === right.band &&
+      left.r === right.r &&
+      left.R === right.R &&
+      Math.abs(left.end - right.start) < 1e-7 &&
+      !left.facadeFacing &&
+      !right.facadeFacing &&
+      !Object.hasOwn(state.roomPrograms, left.editKey) &&
+      !Object.hasOwn(state.roomPrograms, right.editKey)
+  );
+}
+
+function moveAllocationBoundary(layout, move, counts, roomsByKey) {
+  const left = roomsByKey.get(move.left);
+  const right = roomsByKey.get(move.right);
+  if (
+    !exchangeableRooms(left, right) ||
+    left.id !== move.leftProgram ||
+    right.id !== move.rightProgram
+  )
+    return false;
+
+  // Every extra 81 m² module replaces exactly 81 m² of the same program in the core.
+  const area = move.count * MODULE.area;
+  if (left.area - area < state.minRoomArea - 1e-7 || right.area + area < state.minRoomArea - 1e-7)
+    return false;
+
+  const doors = [left, right].map((room) =>
+    layout.circulation.doors.find(
+      (door) =>
+        door.kind === 'corridor' &&
+        door.f === room.f &&
+        door.program === room.id &&
+        door.r === room.R &&
+        Math.abs(door.angle - (room.start + room.end) / 2) < 1e-7
+    )
+  );
+  left.end -= area / ((left.R ** 2 - left.r ** 2) / 2);
+  right.start = left.end;
+  left.area -= area;
+  right.area += area;
+  for (const [i, room] of [left, right].entries()) {
+    if (!doors[i]) continue;
+    doors[i].angle = (room.start + room.end) / 2;
+    doors[i].width = Math.min(1.2, (room.end - room.start) * room.R * 0.68);
+  }
+
+  counts[left.id] += move.count;
+  counts[right.id] -= move.count;
+  layout.core[left.id] -= area;
+  layout.core[right.id] += area;
+  layout.ring[left.id] -= area;
+  layout.ring[right.id] += area;
+  return true;
+}
+
+// Reuse the normal dock solver with the revised inventory. The original shell, reservations and
+// enclosed area stay in place, and the result is reproducible from a saved sequence of exchanges.
+function applyAllocationMoves(original, moves, dockVariant) {
+  const layout = structuredClone(original);
+  const counts = layout.counts.slice();
+  const roomsByKey = new Map(layout.rooms.map((room) => [room.editKey, room]));
+  for (const move of moves) {
+    if (!moveAllocationBoundary(layout, move, counts, roomsByKey)) return null;
+  }
+
+  const activeSlots = layout.slots.filter((slot) => !slot.blocked);
+  const pins = new Map();
+  const pinnedCounts = counts.map(() => 0);
+  for (const [i, slot] of activeSlots.entries()) {
+    if (slot.editKey) {
+      pins.set(i, slot.p);
+      pinnedCounts[slot.p]++;
+    }
+    slot.anchor = roomAt(layout.layers[slot.f][layout.bandN - 1], slot.angle);
+  }
+  if (counts.some((count, i) => count < pinnedCounts[i])) return null;
+  if (repellingRoomContacts(layout.rooms)) return null;
+  const { placement, score, conflicts, conflictingSlots, firehall } = place(
+    activeSlots,
+    layout.slotN,
+    counts,
+    layout.rooms,
+    pins,
+    (state.seed + dockVariant) >>> 0
+  );
+  if (conflicts || firehall.unplaced || firehall.omitted.size) return null;
+
+  const installed = counts.map(() => 0);
+  for (const [i, slot] of activeSlots.entries()) {
+    slot.p = placement[i];
+    slot.use = null;
+    if (slot.p !== EMPTY) installed[slot.p]++;
+  }
+  if (installed.some((count, i) => count !== counts[i])) return null;
+
+  layout.counts = installed;
+  layout.score = score;
+  layout.conflictingSlots = conflictingSlots;
+  layout.repelConflicts = conflicts;
+  layout.firehallUnplaced = firehall.unplaced;
+  layout.firehallOmitted = firehall.omitted;
+  layout.vacancyCounts = assignVacancies(activeSlots, layout.vacancyCounts[3]);
+  layout.plaza = designPlaza(layout.R, layout.lobby, layout.slots, layout.feature.climbing);
+  layout.allocationApplied = (original.allocationApplied ?? 0) + moves.length;
+  return layout;
 }
 
 // Entrance forecourt: the existing approach widens only beyond the outermost docking tips.
@@ -5776,6 +5907,10 @@ function renderCrossScore() {
     .join('');
 }
 const CP_TRIAL_SECONDS = 5 * 60;
+const CP_OPTIMIZATION_BUTTONS = {
+  layout: ['cpOptimize', 'Optimize layout'],
+  allocation: ['cpOptimizeAllocation', 'Optimize allocation']
+};
 let cpHistory = [],
   cpTrialActive = null,
   cpTrialNotice = '',
@@ -5795,7 +5930,7 @@ function cpSignature() {
 }
 function refreshTrialDashboard() {
   const t = cpHistory[0],
-    label = cpTrialActive ? 'Cancel trial' : 'Run fast trial',
+    label = cpTrialActive ? 'Cancel trial' : 'Run Pollination Trial',
     status = cpTrialActive
       ? 'Simulating 5 min · ' + Math.floor((cpTrialActive.clock / CP_TRIAL_SECONDS) * 100) + '%'
       : cpTrialNotice,
@@ -5807,14 +5942,17 @@ function refreshTrialDashboard() {
   $('cpQuickTrial').textContent = label;
   $('cpTrial').textContent = label;
   $('cpQuickTrial').disabled = $('cpTrial').disabled = Boolean(cpOptimization);
-  $('cpOptimize').disabled = Boolean(cpTrialActive);
-  $('cpOptimize').textContent = cpOptimization ? 'Cancel search' : 'Optimize layout';
+  for (const [mode, [id, title]] of Object.entries(CP_OPTIMIZATION_BUTTONS)) {
+    const running = cpOptimization?.mode === mode;
+    $(id).disabled = Boolean(cpTrialActive || (cpOptimization && !running));
+    $(id).textContent = running ? 'Cancel search' : title;
+  }
   $('cpDashTrialResult').textContent = status || result || '5 simulated minutes';
   $('cpTrialStatus').textContent = status || '5 simulated minutes';
   if (cpOptimizationChoice && !isCurrentLayoutSearch(cpOptimizationChoice)) {
     cpOptimizationChoice = null;
     $('cpOptimizationResult').hidden = true;
-    setOptimizationStatus('Settings changed. Run Optimize layout again to compare.');
+    setOptimizationStatus('Settings changed. Run a new search to compare.');
   }
 }
 // Capture realized dimensions and program allocations alongside the inputs used for the trial.
@@ -5901,7 +6039,9 @@ function trialLogSections(record) {
       'Slide length setting': percent(settings.slideLength),
       'Climbing width': settings.climbWidth === 0 ? 'Off' : metres(settings.climbWidth)
     },
-    'Program allocation': {},
+    'Program allocation': {
+      'Core / module exchanges': trialValue(settings.allocationMoves?.length ?? 0)
+    },
     'Vacant docks': {},
     'Program relationships': {
       'Clustering strength': percent(settings.affinity),
@@ -6267,6 +6407,64 @@ $('cpQuickTrial').onclick = toggleTrial;
 $('cpTrial').onclick = toggleTrial;
 
 const CP_LAYOUT_ALTERNATIVES = 8;
+const ALLOCATION_EXCHANGE_LIMIT = 3;
+
+function programBuiltArea(layout, program) {
+  return layout.core[program] + layout.counts[program] * MODULE.area;
+}
+
+function preservesProgramAreas(candidate, original) {
+  return (
+    Math.abs(candidate.total - original.total) <= 0.01 &&
+    PROGRAMS.every(
+      (_, i) => Math.abs(programBuiltArea(candidate, i) - programBuiltArea(original, i)) <= 0.01
+    )
+  );
+}
+
+function allocationProposals(original) {
+  const moves = [];
+  for (const floor of original.layers)
+    for (const band of floor)
+      for (let i = 1; i < band.length; i++) {
+        const left = band[i - 1];
+        const right = band[i];
+        if (!exchangeableRooms(left, right)) continue;
+        for (const [donor, receiver, direction] of [
+          [left, right, 1],
+          [right, left, -1]
+        ]) {
+          const limit = Math.min(
+            ALLOCATION_EXCHANGE_LIMIT,
+            original.counts[receiver.id],
+            Math.floor((donor.area - state.minRoomArea + 1e-7) / MODULE.area)
+          );
+          for (let modules = 1; modules <= limit; modules++) {
+            const counts = original.counts.slice();
+            counts[donor.id] += modules;
+            counts[receiver.id] -= modules;
+            moves.push({
+              key: counts.join(','),
+              move: {
+                left: left.editKey,
+                right: right.editKey,
+                leftProgram: left.id,
+                rightProgram: right.id,
+                count: modules * direction
+              }
+            });
+          }
+        }
+      }
+  // Visit the first candidate for each distinct allocation before trying alternate walls.
+  const first = new Map();
+  const alternatives = [];
+  for (const proposal of moves) {
+    if (first.has(proposal.key)) alternatives.push(proposal);
+    else first.set(proposal.key, proposal);
+  }
+  return [...first.values(), ...alternatives];
+}
 
 // A candidate changes only the module solver's random stream. Rooms, quotas and topology stay fixed.
 function eligibleModuleLayout(candidate, original) {
@@ -6314,7 +6512,12 @@ async function meanLayoutRate(layout, seeds, isCurrent) {
 }
 
 function showLayoutSuggestion(search, best, currentRate, seedCount) {
+  const allocation = search.mode === 'allocation';
+  const title = allocation ? 'Suggested allocation' : 'Suggested module layout';
+  $('cpOptimizationTitle').textContent = title;
+  $('cpApplyLayout').textContent = allocation ? 'Apply allocation' : 'Apply layout';
   const image = $('cpOptimizationThumbnail');
+  image.alt = title;
   const thumbnail = trialThumbnailSource(captureTrialThumbnail(best.layout));
   if (thumbnail) image.src = thumbnail;
   image.hidden = !thumbnail;
@@ -6325,12 +6528,26 @@ function showLayoutSuggestion(search, best, currentRate, seedCount) {
     ' pts / 100 visitor-min · average of ' +
     seedCount +
     ' matched trials';
-  cpOptimizationChoice = { ...search, variant: best.variant };
+  const ratios = $('cpOptimizationRatios');
+  ratios.replaceChildren();
+  ratios.hidden = !allocation;
+  if (allocation) {
+    const split = (layout, i) => ((100 * layout.core[i]) / programBuiltArea(layout, i)).toFixed(1);
+    for (const [i, program] of PROGRAMS.entries()) {
+      if (search.original.counts[i] === best.layout.counts[i]) continue;
+      ratios.append(
+        trialElement('dt', program.name),
+        trialElement('dd', split(search.original, i) + '% → ' + split(best.layout, i) + '% core')
+      );
+    }
+  }
+  cpOptimizationChoice = { ...search, variant: best.variant, move: best.move };
   $('cpOptimizationResult').hidden = false;
 }
 
-async function optimizeModuleLayout() {
+async function optimizeDesign(mode) {
   if (cpOptimization) {
+    if (cpOptimization.mode !== mode) return;
     finishLayoutSearch('Layout search cancelled.');
     return;
   }
@@ -6349,13 +6566,18 @@ async function optimizeModuleLayout() {
       return;
     }
     const original = model;
-    search = { original, signature: cpSignature() };
+    search = { original, signature: cpSignature(), mode };
     const isCurrent = () => cpOptimization === search && isCurrentLayoutSearch(search);
     const seeds = [state.seed, (state.seed ^ 0x9e3779b9) >>> 0, (state.seed ^ 0x85ebca6b) >>> 0];
-    const firstVariant = state.dockVariant;
+    const proposals =
+      mode === 'allocation'
+        ? allocationProposals(original)
+        : Array.from({ length: CP_LAYOUT_ALTERNATIVES }, (_, i) => ({
+            variant: (state.dockVariant + i + 1) >>> 0
+          }));
     cpOptimization = search;
     $('trialDrawer').scrollTop = 0;
-    setOptimizationStatus('Scoring your current module layout…');
+    setOptimizationStatus('Scoring your current design…');
     refreshTrialDashboard();
     const currentRate = await meanLayoutRate(original, seeds, isCurrent);
     if (!isCurrent()) return;
@@ -6363,51 +6585,71 @@ async function optimizeModuleLayout() {
       message = 'The model needs a usable entrance to compare visitor encounters.';
       return;
     }
-    const arrangementKey = (layout) => layout.slots.map((slot) => slot.p).join(',');
-    const seen = new Set([arrangementKey(original)]);
+    const candidateKey = (layout) =>
+      mode === 'allocation'
+        ? layout.counts.join(',')
+        : layout.slots.map((slot) => slot.p).join(',');
+    const seen = new Set([candidateKey(original)]);
     let best = null;
     let checked = 0;
-    for (let i = 1; i <= CP_LAYOUT_ALTERNATIVES; i++) {
-      setOptimizationStatus('Checking arrangement ' + i + ' of ' + CP_LAYOUT_ALTERNATIVES + '…');
+    let attempts = 0;
+    for (const proposal of proposals) {
+      if (checked >= CP_LAYOUT_ALTERNATIVES || attempts >= 4 * CP_LAYOUT_ALTERNATIVES) break;
+      if (proposal.key && seen.has(proposal.key)) continue;
+      attempts++;
+      setOptimizationStatus(
+        'Looking for eligible ' + (mode === 'allocation' ? 'allocations…' : 'placements…')
+      );
       await new Promise((resolve) => setTimeout(resolve, 0));
       if (!isCurrent()) return;
-      const variant = (firstVariant + i) >>> 0;
-      const layout = derive(variant);
-      if (!eligibleModuleLayout(layout, original)) continue;
-      const key = arrangementKey(layout);
+      const layout = proposal.move
+        ? applyAllocationMoves(original, [proposal.move], state.dockVariant)
+        : derive(proposal.variant);
+      const eligible = proposal.move
+        ? layout && preservesProgramAreas(layout, original)
+        : eligibleModuleLayout(layout, original);
+      if (!eligible) continue;
+      const key = candidateKey(layout);
       if (seen.has(key)) continue;
       seen.add(key);
+      setOptimizationStatus(
+        'Scoring ' + (mode === 'allocation' ? 'allocation ' : 'placement ') + (checked + 1) + '…'
+      );
       const rate = await meanLayoutRate(layout, seeds, isCurrent);
       if (!isCurrent()) return;
       if (rate == null) continue;
       checked++;
-      if (!best || rate > best.rate) best = { layout, rate, variant };
+      if (!best || rate > best.rate) best = { ...proposal, layout, rate };
     }
     if (!best) {
-      message = 'No alternate placement met the area and topology constraints.';
+      message = 'No alternative met the area and topology constraints.';
     } else if (Number(best.rate.toFixed(1)) <= Number(currentRate.toFixed(1))) {
       message = 'Your layout matched or beat the ' + checked + ' eligible alternatives.';
     } else {
       showLayoutSuggestion(search, best, currentRate, seeds.length);
-      message = 'Found a higher-scoring layout among ' + checked + ' eligible alternatives.';
+      message = 'Found an improvement among ' + checked + ' eligible alternatives.';
     }
   } catch (error) {
-    console.error('Module layout search failed', error);
+    console.error('Design search failed', error);
     message = 'Layout search failed. Try again.';
   } finally {
     if (!search || cpOptimization === search) finishLayoutSearch(message);
   }
 }
 
-$('cpOptimize').onclick = optimizeModuleLayout;
+for (const [mode, [id]] of Object.entries(CP_OPTIMIZATION_BUTTONS))
+  $(id).onclick = () => optimizeDesign(mode);
 $('cpApplyLayout').onclick = () => {
   const choice = cpOptimizationChoice;
   if (!choice || cpTrialActive || cpOptimization || !isCurrentLayoutSearch(choice)) return;
   cpOptimizationChoice = null;
   $('cpOptimizationResult').hidden = true;
-  state.dockVariant = choice.variant;
+  if (choice.move) state.allocationMoves = [...state.allocationMoves, choice.move];
+  else state.dockVariant = choice.variant;
   update();
-  setOptimizationStatus('Suggested module layout applied.');
+  setOptimizationStatus(
+    choice.move ? 'Suggested allocation applied.' : 'Suggested module layout applied.'
+  );
   toggleTrial();
 };
 
@@ -7302,6 +7544,10 @@ function update() {
   for (const [id, key] of Object.entries(viewKeys))
     $(id).setAttribute('aria-pressed', String(state[key]));
   model = derive();
+  if (state.allocationMoves.length && !model.allocationApplied) {
+    state.allocationMoves = [];
+    setOptimizationStatus('The updated design cleared the saved allocation exchanges.');
+  }
   if (programEditing) syncProgrammingHint(model);
   refreshTrialDashboard();
   const m = model;
@@ -7516,6 +7762,7 @@ function scheduleUpdate() {
 $('shuffle').onclick = () => {
   state.seed = (state.seed + 1) >>> 0;
   state.dockVariant = 0;
+  state.allocationMoves = [];
   scheduleUpdate();
 };
 $('reset').onclick = () => {
@@ -7753,6 +8000,26 @@ function applySaved(data) {
         d.modulePrograms[key] = { program: edit.program, from: edit.from };
     }
   if (Array.isArray(s.cluster) && s.cluster.length === 5) d.cluster = s.cluster.map(Boolean);
+  if (Array.isArray(s.allocationMoves)) {
+    const roomKey = /^\d+:\d+:\d+:\d+\.\d{5}:\d+\.\d{5}$/;
+    d.allocationMoves = s.allocationMoves
+      .slice(0, 300)
+      .filter(
+        (move) =>
+          move &&
+          typeof move.left === 'string' &&
+          typeof move.right === 'string' &&
+          roomKey.test(move.left) &&
+          roomKey.test(move.right) &&
+          Number.isInteger(move.leftProgram) &&
+          PROGRAMS[move.leftProgram] &&
+          Number.isInteger(move.rightProgram) &&
+          PROGRAMS[move.rightProgram] &&
+          Number.isInteger(move.count) &&
+          move.count !== 0 &&
+          Math.abs(move.count) <= ALLOCATION_EXCHANGE_LIMIT
+      );
+  }
   if (s.encounterWeights && typeof s.encounterWeights === 'object')
     for (const k of Object.keys(d.encounterWeights))
       if (Number.isFinite(s.encounterWeights[k]))
@@ -7769,13 +8036,17 @@ function applySaved(data) {
   };
   const comparisons = data.crossPollination?.comparisons;
   cpHistory = Array.isArray(comparisons)
-    ? comparisons.filter(isTrialRecord).slice(0, 8).map((trial) => ({
-        ...trial,
-        thumbnail: trialThumbnailSource(trial.thumbnail)
-      }))
+    ? comparisons
+        .filter(isTrialRecord)
+        .slice(0, 8)
+        .map((trial) => ({
+          ...trial,
+          thumbnail: trialThumbnailSource(trial.thumbnail)
+        }))
     : [];
   cpTrialNotice = '';
 }
+
 function isTrialRecord(trial) {
   const fields = ['rate', 'rooms', 'modules', 'hubs', 'core', 'encounters', 'cross', 'species', 'seed', 'visitors'];
   return trial && typeof trial.signature === 'string' && fields.every((key) => Number.isFinite(trial[key]));

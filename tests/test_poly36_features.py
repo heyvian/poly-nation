@@ -9,6 +9,7 @@ with sync_playwright() as p:
  quick_trial = page.locator('#cpQuickTrial')
  quick_result = page.locator('#cpDashTrialResult')
  drawer = page.locator('#trialDrawer')
+ expect(quick_trial).to_have_text('Run Pollination Trial')
  page.locator('#focusSchedule').click()
  expect(page.locator('#areaSchedulePanel')).to_be_visible()
  expect(quick_result).to_have_text('5 simulated minutes')
@@ -55,7 +56,7 @@ with sync_playwright() as p:
  assert page.evaluate('cpHistory[0].rate === cpHistory[1].rate && occupancy.clock === 0')
  expect(entries.first).to_contain_text('No recorded changes.')
  page.evaluate('$("cpTrial").click(); $("cpQuickTrial").click()')
- expect(detail_trial).to_have_text('Run fast trial')
+ expect(detail_trial).to_have_text('Run Pollination Trial')
  expect(quick_result).to_have_text('Trial cancelled.')
  assert page.evaluate('!cpTrialActive && cpHistory.length === 2')
  page.locator('#shuffle').click()
@@ -101,9 +102,26 @@ with sync_playwright() as p:
  assert page.evaluate('cpHistory[0].settings.dockVariant === state.dockVariant')
  expect(entries.first.locator('.trial-diff-settings')).to_contain_text('Module arrangement')
  expect(entries.first.locator('.trial-thumbnail')).to_be_visible()
- page.locator('#collapseTrial').click()
  page.evaluate('state.dockVariant=0;update()')
  print('applying the optimization kept program areas and ran a fast trial',flush=True)
+
+ page.evaluate('window.beforeAllocation = model')
+ page.get_by_role('button', name='Optimize allocation').click()
+ expect(suggestion.get_by_role('heading')).to_have_text('Suggested allocation',timeout=30000)
+ expect(page.locator('#cpOptimizationRatios dd')).to_have_count(2)
+ assert page.evaluate('model===window.beforeAllocation && state.allocationMoves.length===0')
+ suggestion.get_by_role('button', name='Apply allocation').click()
+ page.wait_for_function('cpHistory.length === 3 && !cpTrialActive')
+ assert page.evaluate('''() =>
+   preservesProgramAreas(model, window.beforeAllocation) &&
+   model.count === window.beforeAllocation.count &&
+   model.counts.some((n, i) => n !== window.beforeAllocation.counts[i]) &&
+   cpHistory[0].settings.allocationMoves.length === 1
+ ''')
+ expect(entries.first.locator('.trial-diff-settings')).to_contain_text('Core / module exchanges')
+ page.locator('#collapseTrial').click()
+ page.evaluate('state.allocationMoves=[];update()')
+ print('allocation search changed core-to-module ratios while keeping built areas',flush=True)
 
  pose = page.evaluate('''() => {
    const ride = model.feature.ride;
