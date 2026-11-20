@@ -1,6 +1,34 @@
 from pathlib import Path
 import os, shutil
 from playwright.sync_api import sync_playwright
+
+def check_fit(page):
+ for button in ['axo', 'plan', 'side']:
+  page.locator('#' + button).click()
+  angles = page.evaluate('[camera.az, camera.el]')
+  page.locator('#fit').click()
+  size = page.evaluate("""() => {
+    const {width, height} = canvas.getBoundingClientRect();
+    const basis = orbitBasis(camera);
+    const {half} = modelProjection(softwareMesh, camera, width / height);
+    const {minX, maxX, minY, maxY} = projectedModelBounds(softwareMesh, basis);
+    const scale = height / (2 * half);
+    return [
+      width / 2 + (minX - camera.panX) * scale,
+      height / 2 - (maxY - camera.pan) * scale,
+      width / 2 + (maxX - camera.panX) * scale,
+      height / 2 - (minY - camera.pan) * scale,
+      width,
+      height
+    ];
+  }""")
+  left, top, right, bottom, width, height = size
+  assert 0 < left < right < width and 0 < top < bottom < height, size
+  assert max((right-left)/width, (bottom-top)/height) > 0.58, size
+  assert page.evaluate('[camera.az, camera.el]') == angles
+ page.locator('#axo').click()
+ page.locator('#fit').click()
+
 root=Path(__file__).resolve().parents[1]; src=root/'index.html'; out=root/'tests'/'output'; out.mkdir(exist_ok=True)
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium') or None,args=['--no-sandbox','--disable-dev-shm-usage','--disable-webgl'])
@@ -62,6 +90,7 @@ with sync_playwright() as p:
  page.locator('#shuffle').click();page.wait_for_function(f'state.seed!=={baseline["seed"]} && pending===0')
  page.wait_for_timeout(200)
  assert page.evaluate('model.total<=state.areaCap+1e-5')
+ check_fit(page)
  page.screenshot(path=str(out/'model-preview.png'))
  print('desktop navigation, imagery, unchanged model + state, variation passed',flush=True)
  mobile=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=1,is_mobile=True,has_touch=True)
@@ -82,6 +111,7 @@ with sync_playwright() as p:
  mobile.get_by_label('Atrium bridges', exact=True).select_option('aligned')
  mobile.wait_for_function('!pending && model.circulation.bridges.length === 3')
  assert mobile.evaluate('state.inspect === 0 && document.documentElement.scrollWidth <= innerWidth+1')
+ check_fit(mobile)
  print('mobile width and navigation passed; errors',errors,flush=True)
  assert not errors
  browser.close()

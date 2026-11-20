@@ -640,7 +640,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  <span id="bridgeInfo" class="bridge-status" role="status" hidden></span>
 </div>
 <label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; lobby calculations</summary><div class="readout"><span>Lobby atriums</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details></div></div></aside>
-<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span></div>
+<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Frame the visible model">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span></div>
 <div class="actions model-actions" role="group" aria-label="Massing design actions">
  <button id="shuffle" type="button" title="Generate a new layout with the same settings">New variation</button>
  <button id="editProgramming" type="button" aria-pressed="false">Edit programming</button>
@@ -814,7 +814,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
     <div class="actions">
      <button id="materialAxo" type="button">3D</button>
      <button id="materialPlan" type="button">Plan</button>
-     <button id="materialFit" type="button">Fit</button>
+     <button id="materialFit" type="button" title="Frame the visible model">Fit</button>
      <button id="saveMaterialSnapshot" type="button" title="Download a PNG with the model and all six assembly cards">Snapshot</button>
     </div>
    </div>
@@ -1848,14 +1848,22 @@ function swingMastRadius(radius) {
   return Math.min(2.2, radius * 0.64 * 0.37);
 }
 
+const SWING_SEAT_WIDTH = 0.85;
+const SWING_SEAT_DEPTH = 0.52;
+
 function designRideAndSlide(layout, R, r, slotN, lobby) {
   const floorH = 4.2,
-    platformRadius = Math.min(8.2, r * 0.64),
-    towerRadius = swingMastRadius(r);
+    towerRadius = swingMastRadius(r),
+    originalPlatform = Math.min(8.2, r * 0.64),
+    boardingRadius = Math.max(towerRadius + 0.18, originalPlatform - 0.55),
+    seatOuterEdge = Math.hypot(boardingRadius + SWING_SEAT_WIDTH / 2, SWING_SEAT_DEPTH / 2),
+    // Leave room for the stair in a small atrium without expanding the chair orbit.
+    platformRadius = Math.min(seatOuterEdge + 1, Math.max(originalPlatform, r - 0.9));
   const flightRadius = 12,
     speedKmh = 40;
   const ride = {
     towerRadius,
+    boardingRadius,
     platformRadius,
     glassInnerRadius: platformRadius,
     height: 117,
@@ -3325,6 +3333,82 @@ const sub = (a, b) => a.map((v, i) => v - b[i]),
     let l = Math.hypot(...a) || 1;
     return a.map((v) => v / l);
   };
+
+function orbitBasis({ az, el }) {
+  const back = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)];
+  const right = unit(cross([0, 1, 0], back));
+  return { back, right, up: unit(cross(back, right)) };
+}
+
+function baseViewHalf(mesh, camera, aspect) {
+  const extent = mesh.extent * 1.23;
+  return Math.max(extent, extent / aspect, camera.el > 1.4 ? 0 : mesh.H * 0.68);
+}
+
+// Keep both renderers and the editing ray in the same camera coordinate system.
+function modelProjection(mesh, camera, aspect) {
+  const basis = orbitBasis(camera),
+    { right, up } = basis,
+    target = [0, mesh.H * 0.47, 0].map(
+      (coordinate, axis) => coordinate + right[axis] * (camera.panX ?? 0) + up[axis] * camera.pan
+    );
+  return { ...basis, target, half: baseViewHalf(mesh, camera, aspect) * camera.zoom };
+}
+
+// Measure geometry in screen axes so a low cutaway and a tall elevation can each use
+// the available canvas. The ground plane and grid precede the architectural groups.
+function projectedModelBounds(mesh, { right, up }) {
+  const firstGroup = mesh.groups.find((group) => group.layer !== 'Reference');
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  const originY = mesh.H * 0.47;
+  for (const kind of ['solid', 'glass', 'lines']) {
+    const vertices = mesh[kind];
+    for (let i = firstGroup[kind]; i < vertices.length; i += 10) {
+      const x = vertices[i],
+        y = vertices[i + 1] - originY,
+        z = vertices[i + 2];
+      const across = x * right[0] + y * right[1] + z * right[2];
+      const height = x * up[0] + y * up[1] + z * up[2];
+      minX = Math.min(minX, across);
+      maxX = Math.max(maxX, across);
+      minY = Math.min(minY, height);
+      maxY = Math.max(maxY, height);
+    }
+  }
+  return { minX, maxX, minY, maxY };
+}
+
+function fitModel(mesh, camera, canvas) {
+  if (!mesh) return;
+  const box = canvas.getBoundingClientRect(),
+    { width, height } = box;
+  if (!width || !height) return;
+  const padding = Math.min(28, Math.min(width, height) * 0.075);
+  let top = padding,
+    bottom = padding;
+  // Leave a clear band around the controls and hints overlaid on the canvas.
+  for (const overlay of canvas.parentElement.querySelectorAll(
+    '.view-top, .view-bottom, .model-actions'
+  )) {
+    if (!overlay.getClientRects().length) continue;
+    const bounds = overlay.getBoundingClientRect();
+    if (overlay.classList.contains('view-top')) top = Math.max(top, bounds.bottom - box.top + 6);
+    else bottom = Math.max(bottom, box.bottom - bounds.top + 6);
+  }
+  const { minX, maxX, minY, maxY } = projectedModelBounds(mesh, orbitBasis(camera));
+  const scale = Math.min(
+    (width - padding * 2) / (maxX - minX),
+    (height - top - bottom) / (maxY - minY)
+  );
+  if (!Number.isFinite(scale) || scale <= 0) return;
+  camera.zoom = height / (2 * scale * baseViewHalf(mesh, camera, width / height));
+  camera.panX = (minX + maxX) / 2;
+  camera.pan = (minY + maxY) / 2 + (top - bottom) / (2 * scale);
+}
+
 // Collect interleaved position, normal, and color data plus semantic groups shared by both renderers and export.
 function meshBuilder() {
   const solid = [],
@@ -3660,7 +3744,9 @@ function swingPose(ride, clock) {
     round = Math.floor(raw / T),
     t = mod(raw, T),
     omega = ride.speedKmh / 3.6 / ride.flightRadius,
-    attach = Math.max(ride.towerRadius + 0.18, Math.min(8.2, ride.platformRadius - 0.55)),
+    attach =
+      ride.boardingRadius ??
+      Math.max(ride.towerRadius + 0.18, Math.min(8.2, ride.platformRadius - 0.55)),
     maxTilt = Math.atan((omega * omega * ride.flightRadius) / 9.81),
     length = (ride.flightRadius - attach) / Math.sin(maxTilt),
     bottom = ride.roofLevel + 0.36 + length + 0.35,
@@ -3724,12 +3810,12 @@ function buildSwing(b, ride, pose) {
         ringPoint(pose.rad + offset, a, y + 0.24),
         chainColor
       );
-    box(x, y, z, 0.85, 0.24, 0.52, heading, seatColor);
+    box(x, y, z, SWING_SEAT_WIDTH, 0.24, SWING_SEAT_DEPTH, heading, seatColor);
     box(
       x - 0.2 * Math.cos(heading),
       y + 0.24,
       z - 0.2 * Math.sin(heading),
-      0.85,
+      SWING_SEAT_WIDTH,
       0.48,
       0.1,
       heading,
@@ -4002,6 +4088,14 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     quad(a, b, topB, topA, guardGlass, glass, 0.38);
     line(topA, topB, guardFrame);
   }
+  function curvedGlassGuard(radius, y, start, end) {
+    const panels = Math.ceil((end - start) / 0.07);
+    for (let i = 0; i < panels; i++) {
+      const a = start + ((end - start) * i) / panels,
+        z = start + ((end - start) * (i + 1)) / panels;
+      glassGuard(ringPoint(radius, a, y), ringPoint(radius, z, y));
+    }
+  }
   const floorH = 4.2,
     H = view.floors * floorH;
   const extent = Math.max(m.R + MODULE.depth + 8, m.plaza ? m.plaza.outer + 2 : 0),
@@ -4250,14 +4344,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     if (!visible(floor)) continue;
     const y = floor * floorH + 0.535;
     mark(`Atrium_Edge_Railings_L${floor + 1}`);
-    for (const [a, z] of atriumGuardSpans(m, floor)) {
-      const panels = Math.ceil((z - a) / 0.07);
-      for (let i = 0; i < panels; i++) {
-        const start = a + (z - a) * i / panels,
-          end = a + (z - a) * (i + 1) / panels;
-        glassGuard(ringPoint(rr, start, y), ringPoint(rr, end, y));
-      }
-    }
+    for (const [start, end] of atriumGuardSpans(m, floor)) curvedGlassGuard(rr, y, start, end);
   }
   // Separate room thresholds and paired shared doors: diagrammatic lines, not detailed door openings.
   for (const d of circulation.doors) {
@@ -4905,6 +4992,9 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       const { eaveY, stairHalfAngle, stairs } = pitch,
         start = aBridge - stairHalfAngle,
         end = aBridge + stairHalfAngle;
+      mark('Swing_Boarding_Platform_Railing');
+      for (const [a, z] of openArcs([[aBridge, stairHalfAngle]]))
+        curvedGlassGuard(ride.platformRadius, ride.roofLevel + 0.16, a, z);
       mark('Swing_Boarding_Stairs');
       let lower = eaveY;
       for (const step of stairs) {
@@ -5545,7 +5635,7 @@ function buildNavigation(m) {
       ),
       bridge = node(xyz(m.r, a, yFor(roofLevel)), 'roofLink', { f: roofLevel }),
       boardingHeight = ride.roofLevel + 0.16,
-      swing = node(xyz(ride.platformRadius - 0.45, a, boardingHeight), 'swing', {
+      swing = node(xyz(ride.platformRadius - 0.72, a, boardingHeight), 'swing', {
         f: roofLevel
       });
     connect(near, bridge, [nodes[near].p, xyz(m.r + 0.6, a, yFor(roofLevel)), nodes[bridge].p]);
@@ -7312,26 +7402,17 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.m
   }
   ctx.fillStyle = '#e4e8df';
   ctx.fillRect(0, 0, w, h);
-  const el = camera.el,
-    az = camera.az,
-    back = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)],
-    right = unit(cross([0, 1, 0], back)),
-    up = unit(cross(back, right)),
-    aspect = w / h,
-    half =
-      Math.max(m.extent * 1.23, (m.extent * 1.23) / aspect, camera.el > 1.4 ? 0 : m.H * 0.68) *
-      camera.zoom,
-    scale = h / (half * 2),
-    target = [0, m.H * 0.47, 0];
-  function project(p) {
-    return [
-      w / 2 + (p[0] * right[0] + (p[1] - target[1]) * right[1] + p[2] * right[2]) * scale,
-      h / 2 - (p[0] * up[0] + (p[1] - target[1]) * up[1] + p[2] * up[2] - camera.pan) * scale,
-      p[0] * back[0] + (p[1] - target[1]) * back[1] + p[2] * back[2]
-    ];
-  }
+  const { back, right, up, target, half } = modelProjection(m, camera, w / h),
+    scale = h / (half * 2);
   function point(a, i) {
-    return project([a[i], a[i + 1], a[i + 2]]);
+    const x = a[i] - target[0],
+      y = a[i + 1] - target[1],
+      z = a[i + 2] - target[2];
+    return [
+      w / 2 + (x * right[0] + y * right[1] + z * right[2]) * scale,
+      h / 2 - (x * up[0] + y * up[1] + z * up[2]) * scale,
+      x * back[0] + y * back[1] + z * back[2]
+    ];
   }
   function color(a, i, shade = 1) {
     const preview = m.programPreview;
@@ -7623,24 +7704,11 @@ function pickMassingLocation(clientX, clientY) {
   const mesh = softwareMesh || gpu?.mesh;
   if (!mesh?.programTargets) return null;
   const bounds = canvas.getBoundingClientRect();
-  const aspect = bounds.width / bounds.height;
-  const half =
-    Math.max(
-      mesh.extent * 1.23,
-      (mesh.extent * 1.23) / aspect,
-      camera.el > 1.4 ? 0 : mesh.H * 0.68
-    ) * camera.zoom;
-  const back = [
-    Math.cos(camera.el) * Math.cos(camera.az),
-    Math.sin(camera.el),
-    Math.cos(camera.el) * Math.sin(camera.az)
-  ];
-  const right = unit(cross([0, 1, 0], back)),
-    up = unit(cross(back, right));
+  const aspect = bounds.width / bounds.height,
+    { back, right, up, target, half } = modelProjection(mesh, camera, aspect);
   const x = ((2 * (clientX - bounds.left)) / bounds.width - 1) * half * aspect;
-  const y = (1 - (2 * (clientY - bounds.top)) / bounds.height) * half + camera.pan;
-  const origin = back.map((value, i) => value * 500 + right[i] * x + up[i] * y);
-  origin[1] += mesh.H * 0.47;
+  const y = (1 - (2 * (clientY - bounds.top)) / bounds.height) * half;
+  const origin = back.map((value, i) => target[i] + value * 500 + right[i] * x + up[i] * y);
   const direction = back.map((value) => -value);
   let nearest = Infinity,
     selection = null;
@@ -7933,22 +8001,10 @@ function paintWebGL(
   gl.viewport(0, 0, w, h);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.useProgram(gpu.p);
-  const el = camera.el,
-    az = camera.az,
-    back = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)],
-    right = unit(cross([0, 1, 0], back)),
-    up = unit(cross(back, right)),
-    aspect = w / h,
-    extent = gpu.mesh.extent,
-    half =
-      Math.max(extent * 1.23, (extent * 1.23) / aspect, camera.el > 1.4 ? 0 : gpu.mesh.H * 0.68) *
-      camera.zoom;
+  const aspect = w / h,
+    { back, right, up, target, half } = modelProjection(gpu.mesh, camera, aspect);
   const u = gpu.u;
-  gl.uniform3fv(u.uTarget, [
-    up[0] * camera.pan,
-    gpu.mesh.H * 0.47 + up[1] * camera.pan,
-    up[2] * camera.pan
-  ]);
+  gl.uniform3fv(u.uTarget, target);
   gl.uniform3fv(u.uRight, right);
   gl.uniform3fv(u.uUp, up);
   gl.uniform3fv(u.uBack, back);
@@ -8014,13 +8070,7 @@ canvas.addEventListener('pointermove', (e) => {
     pinch = dist;
   } else if (touches.size === 1 && old[2]) {
     const mesh = softwareMesh || gpu?.mesh,
-      span = mesh
-        ? Math.max(
-            mesh.extent * 1.23,
-            (mesh.extent * 1.23) / (canvas.clientWidth / canvas.clientHeight),
-            mesh.H * 0.8
-          )
-        : 100;
+      span = mesh ? baseViewHalf(mesh, camera, canvas.clientWidth / canvas.clientHeight) : 100;
     camera.pan = clamp(
       camera.pan +
         ((e.clientY - old[1]) * 2 * span * camera.zoom) / Math.max(1, canvas.clientHeight),
@@ -8069,8 +8119,7 @@ $('side').onclick = () => {
   queueSave();
 };
 $('fit').onclick = () => {
-  camera.zoom = 1;
-  camera.pan = 0;
+  fitModel(softwareMesh || gpu?.mesh, camera, canvas);
   draw();
   queueSave();
 };
@@ -8615,7 +8664,8 @@ function applySaved(data) {
     az: Number.isFinite(c.az) ? c.az : -0.84,
     el: clamp(Number.isFinite(c.el) ? c.el : 0.57, 0, Math.PI / 2 - 0.012),
     zoom: clamp(Number.isFinite(c.zoom) ? c.zoom : 1, 0.06, 3),
-    pan: clamp(Number.isFinite(c.pan) ? c.pan : 0, -180, 180)
+    pan: clamp(Number.isFinite(c.pan) ? c.pan : 0, -180, 180),
+    panX: clamp(Number.isFinite(c.panX) ? c.panX : 0, -180, 180)
   };
   const comparisons = data.crossPollination?.comparisons;
   cpHistory = Array.isArray(comparisons)
@@ -9659,18 +9709,26 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     const viewport = { clientWidth: width, clientHeight: height };
     const ctx = capture.getContext('2d');
     if (!ctx || !mesh) throw Error('The material model is unavailable.');
+    const screenAspect = materialCanvas.clientWidth / materialCanvas.clientHeight,
+      outputAspect = width / height,
+      captureCamera = { ...studyCamera };
+    // Carry the framing into the sheet even when its model area has a different aspect ratio.
+    if (Number.isFinite(screenAspect) && screenAspect > 0)
+      captureCamera.zoom *=
+        (baseViewHalf(mesh, studyCamera, screenAspect) * Math.max(1, screenAspect / outputAspect)) /
+        baseViewHalf(mesh, studyCamera, outputAspect);
     if (materialRenderer && !materialGL.isContextLost()) {
       capture.width = width;
       capture.height = height;
       // Copy the WebGL frame immediately, before the browser clears the drawing buffer.
       try {
-        paintWebGL(materialCanvas, materialGL, materialRenderer, studyCamera, viewport, 1);
+        paintWebGL(materialCanvas, materialGL, materialRenderer, captureCamera, viewport, 1);
         ctx.drawImage(materialCanvas, 0, 0);
       } finally {
         present();
       }
     } else {
-      paintSoftware(mesh, { canvas: capture, ctx }, studyCamera, viewport, 1);
+      paintSoftware(mesh, { canvas: capture, ctx }, captureCamera, viewport, 1);
     }
     return capture;
   }
@@ -10134,7 +10192,7 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     redraw();
   };
   $('materialFit').onclick = () => {
-    studyCamera.zoom = 0.95;
+    fitModel(mesh, studyCamera, materialCanvas);
     redraw();
   };
   materialCanvas.addEventListener('pointerdown', (event) => {

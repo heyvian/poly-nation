@@ -12,13 +12,7 @@ def editable_points(page, kind, limit=1):
     return page.evaluate("""({kind, limit}) => {
       const mesh = softwareMesh;
       const box = canvas.getBoundingClientRect();
-      const back = [Math.cos(camera.el) * Math.cos(camera.az), Math.sin(camera.el),
-        Math.cos(camera.el) * Math.sin(camera.az)];
-      const right = unit(cross([0, 1, 0], back));
-      const up = unit(cross(back, right));
-      const extent = mesh.extent * 1.23;
-      const half = Math.max(extent, extent * box.height / box.width,
-        camera.el > 1.4 ? 0 : mesh.H * 0.68) * camera.zoom;
+      const {right, up, target, half} = modelProjection(mesh, camera, box.width / box.height);
       const scale = box.height / (2 * half);
       const points = [];
       for (const {start, end, pick} of mesh.programTargets) {
@@ -29,10 +23,10 @@ def editable_points(page, kind, limit=1):
         for (let i = start; i < end; i += 30) {
           if (mesh.solid[i + 4] < 0.5) continue;
           const point = [0, 1, 2].map(axis =>
-            (mesh.solid[i + axis] + mesh.solid[i + 10 + axis] + mesh.solid[i + 20 + axis]) / 3);
-          point[1] -= mesh.H * 0.47;
+            (mesh.solid[i + axis] + mesh.solid[i + 10 + axis] + mesh.solid[i + 20 + axis]) / 3 -
+              target[axis]);
           const x = box.left + box.width / 2 + dot(point, right) * scale;
-          const y = box.top + box.height / 2 - (dot(point, up) - camera.pan) * scale;
+          const y = box.top + box.height / 2 - dot(point, up) * scale;
           if (document.elementFromPoint(x, y) !== canvas || pickMassingLocation(x, y)?.pick !== pick)
             continue;
           points.push([x, y]);
@@ -128,6 +122,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     expect(page.locator('#materialCostRows tr').first).to_contain_text('Core ring')
     firehall_count = page.locator('#materialCostRows tr').filter(has_text='Marine firehall')
     expect(firehall_count.locator('td').nth(1)).to_have_text(str(start['modules'][2]))
+    page.locator('#materialFit').click()
     with page.expect_download() as download:
         page.locator('#saveMaterialSnapshot').click()
     snapshot = download.value
@@ -302,6 +297,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     mobile.locator('#openMassing').click()
     mobile.locator('#editProgramming').tap()
     mobile.locator('#plan').tap()
+    mobile.locator('#fit').tap()
     [module_point] = editable_points(mobile, 'module')
     mobile.touchscreen.tap(*module_point)
     expect(mobile.locator('#programSelection')).to_contain_text('Dock ')

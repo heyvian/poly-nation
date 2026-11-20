@@ -1,5 +1,9 @@
 # Changelog
 
+## Model framing and swing boarding
+- Fit now centers the visible model and adjusts zoom for the current angle and available space in Massing and Materials.
+- Widened the swing boarding platform to leave 1 m beyond the parked chairs where space allows. Added a glass railing with a clear opening at the stair landing.
+
 ## Atrium and roofline
 - Moved the Atrium bridges selector into Building and kept the selected view while changing the layout.
 - Moved radial and aligned bridges closer to the swing mast with a fixed 0.65 m modeled gap.

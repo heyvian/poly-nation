@@ -196,6 +196,7 @@ with sync_playwright() as p:
      };
    });
    const roof = base.roofPlan;
+   const geometry = exportGeometry(base).objects;
    const upper = roof.pavilions.filter(pavilion => pavilion.upper);
    const retail = roof.pavilions.reduce((sum, p) => sum + p.area + (p.upper?.area ?? 0), 0);
    return {
@@ -211,14 +212,17 @@ with sync_playwright() as p:
      canopy: Math.abs(ride.roofPitch.canopyRidgeY - ride.roofPitch.eaveY - 8.4) < 1e-8 &&
        Math.abs(swinging.p[1] - ride.roofPitch.canopyRidgeY) < 1e-8 &&
        ride.roofPitch.canopyEaveY === base.roofPlan.y &&
-       exportGeometry(base).objects.some(object => object.layer === 'Swing_Boarding_Stairs'),
+       geometry.some(object => object.layer === 'Swing_Boarding_Stairs'),
+     boardingDeck: Math.abs(ride.platformRadius -
+       Math.hypot(ride.boardingRadius + SWING_SEAT_WIDTH / 2, SWING_SEAT_DEPTH / 2) - 1) < 1e-8 &&
+       geometry.some(object => object.layer === 'Swing_Boarding_Platform_Railing_Glazing'),
      roofArea: upper.length > 0 && upper.length < roof.pavilions.length &&
        Math.abs(roof.retailArea - retail) < 1e-8,
      off: base.circulation.bridges.length === 0,
      modes
    };
  }''')
- assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'outside', 'stairs', 'canopy', 'roofArea', 'off']), atrium
+ assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'outside', 'stairs', 'canopy', 'boardingDeck', 'roofArea', 'off']), atrium
  aligned, radial = atrium['modes']
  assert len(set(aligned['headings'])) == 1 and len(radial['headings']) == 3, atrium
  assert abs(radial['headings'][1] - radial['headings'][0] - 2 * 3.141592653589793 / 3) < 1e-8, atrium
