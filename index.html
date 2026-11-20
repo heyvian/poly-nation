@@ -555,30 +555,21 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 @media print{body.dr-open{display:block!important;height:auto!important;overflow:visible!important;background:white!important}body.dr-open .app-header,body.dr-open>.layout,.dr-top,.dr-nav,.dr-footer button{display:none!important}.rationale{overflow:visible!important;background:white!important}.dr-wrap{max-width:none;padding:0}.dr-hero,.dr-pair,.dr-score-method{grid-template-columns:1fr 1fr;gap:15px}.dr-summary,.dr-method-grid{grid-template-columns:repeat(3,1fr)}.dr-hero h2{font-size:35pt}.dr-section-heading h2{font-size:22pt}.dr-section{break-before:page;padding:12px 0;border:0}.dr-hero,.dr-summary,figure,.dr-method-grid,.dr-author-statement,.dr-audit tr{break-inside:avoid}.dr-svg{max-height:260px}.rationale{font-size:10pt;line-height:1.35}.rationale h3{font-size:12pt}.rationale blockquote{font-size:11pt}.dr-audit{min-width:0;font-size:9pt}.dr-audit td,.dr-audit th{padding:7px}.dr-note{font-size:9pt}.dr-table-wrap{overflow:visible}.dr-section-heading p{font-size:11pt}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:13mm}}
 
 
-/* Keep layout choices beside the model on desktop and touch screens. */
-.view-top:has(.bridge-picker) {
- justify-content: space-between;
- align-items: flex-start;
- flex-wrap: wrap-reverse;
- gap: 5px;
-}
 .bridge-picker {
  display: flex;
  align-items: center;
+ justify-content: space-between;
  flex-wrap: wrap;
- gap: 4px 6px;
- padding: 3px 5px 3px 7px;
- background: #fcfcf6ed;
- color: var(--ink);
- border: 1px solid var(--line);
- border-radius: 5px;
- font-size: 11px;
+ gap: 4px 8px;
+ padding-bottom: 10px;
+ margin-bottom: 10px;
+ border-bottom: 1px solid var(--line);
+ font-size: 12px;
  font-weight: 600;
- pointer-events: auto;
 }
 .bridge-picker select {
- max-width: 112px;
- min-height: 24px;
+ min-height: 28px;
+ padding: 3px 6px;
  cursor: pointer;
  font: inherit;
  color: var(--accent);
@@ -588,12 +579,10 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 }
 .bridge-status {
  flex-basis: 100%;
- max-width: 178px;
  color: var(--muted);
  font-weight: 400;
  line-height: 1.3;
 }
-
 
 .dr-atrium { padding-top: 22px; }
 .dr-atrium .dr-section-heading { margin-bottom: 10px; }
@@ -640,8 +629,8 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 <div class="topology-controls" id="topologyControls">
 <p class="hint topology-instructions"><strong>Drag nodes</strong> closer or farther apart to weigh relationships. <strong>Click lines</strong> to set Attract, Repel or Neutral. <strong>Click nodes</strong> to toggle clustering. This guides room and module placement.</p><svg aria-label="Draggable program relationship map" class="wheel" id="wheel" viewbox="0 0 400 280"></svg><div class="relationship-key"><span><i style="border-color:#47866a"></i>Attract</span><span><i style="border-color:#999f99;border-top-style:dotted"></i>Neutral</span><span><i style="border-color:#bd665c;border-top-style:dashed"></i>Repel</span></div><div id="affinityField"></div><div aria-live="polite" class="hint relation-status-compact" id="relationStatus">Click a line to cycle its relationship. Clustering strength applies to the programs toggled on.</div><div class="legend" id="legend" style="margin-top:5px"></div><p class="hint" id="repelStatus" role="status" hidden></p><p class="hint" id="firehallStatus" role="status" hidden></p></div></div>
 <div aria-label="Design and simulation settings" class="panel-tabs" role="tablist"><button aria-controls="design-panel-0" aria-selected="true" data-panel="design-panel-0" id="design-panel-0-tab" role="tab" tabindex="0" type="button">Building</button><button aria-controls="design-panel-1" aria-selected="false" data-panel="design-panel-1" id="design-panel-1-tab" role="tab" tabindex="-1" type="button">Modules</button><button aria-controls="design-panel-2" aria-selected="false" data-panel="design-panel-2" id="design-panel-2-tab" role="tab" tabindex="-1" type="button">Features</button><button aria-controls="cpPaneAllocation" aria-selected="false" data-panel="cpPaneAllocation" id="cpPaneAllocation-tab" role="tab" tabindex="-1" type="button">Allocation</button><button aria-controls="cpPaneVisitors" aria-selected="false" data-panel="cpPaneVisitors" id="cpPaneVisitors-tab" role="tab" tabindex="-1" type="button">Visitors</button><button aria-controls="cpPaneScore" aria-selected="false" data-panel="cpPaneScore" id="cpPaneScore-tab" role="tab" tabindex="-1" type="button">Score</button></div>
-<div class="design-scroll" id="designSettings"><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; lobby calculations</summary><div class="readout"><span>Lobby atriums</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details></div></div></aside>
-<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="bridge-picker">
+<div class="design-scroll" id="designSettings"><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2>
+<div class="bridge-picker">
  <label for="atriumBridges">Atrium bridges</label>
  <select id="atriumBridges" aria-describedby="bridgeInfo">
   <option value="off">Off</option>
@@ -649,7 +638,9 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   <option value="aligned">Vertically aligned</option>
  </select>
  <span id="bridgeInfo" class="bridge-status" role="status" hidden></span>
-</div><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span></div>
+</div>
+<label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; lobby calculations</summary><div class="readout"><span>Lobby atriums</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details></div></div></aside>
+<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span></div>
 <div class="actions model-actions" role="group" aria-label="Massing design actions">
  <button id="shuffle" type="button" title="Generate a new layout with the same settings">New variation</button>
  <button id="editProgramming" type="button" aria-pressed="false">Edit programming</button>
@@ -719,7 +710,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   </div>
   <div>
    <h3>Radial and vertically aligned bridges</h3>
-   <p>Optional upper-floor bridges cut across the atrium and join the outer corridor at both ends. The designer wanted to test whether the shortcuts increase cross-pollination.</p>
+   <p>Optional upper-floor bridges pass close to the mast and join the outer corridor at both ends. Glass railings line the bridges and open atrium edges. The designer wanted to test whether the shortcuts increase cross-pollination.</p>
    <p>Stacking the bridges keeps them in one part of the atrium. Rotating them around it changes which parts of the greenhouse and the opposite side of the ring are visible from each floor.</p>
   </div>
   <div>
@@ -1258,8 +1249,10 @@ function lobbyHoles(lobby, floor) {
 // at either end. Rotating the same chord makes the radial and aligned spans comparable.
 function designAtriumBridges(r, lobby, liftHalf) {
   if (state.atriumBridges === 'off' || state.floors < 2) return [];
+  // Keep the edge close to the mast with a fixed schematic gap at any atrium size.
   const width = Math.min(2.2, r * 0.32),
-    offset = Math.max(r * 0.3, swingMastRadius(r) + width / 2 + 0.65),
+    mastGap = 0.65,
+    offset = swingMastRadius(r) + width / 2 + mastGap,
     halfSpan = Math.acos(offset / r);
   const outerEdge = offset + width / 2;
   if (outerEdge >= r - 0.05) return [];
@@ -3691,35 +3684,32 @@ function swingPose(ride, clock) {
 }
 function buildSwing(b, ride, pose) {
   const { sector, box, line, ringPoint } = b,
-    crownR = pose.attach + 0.28;
+    crownR = pose.attach + 0.28,
+    seatColor = rgb('#be866d'),
+    chainColor = rgb('#856f59');
   sector(ride.towerRadius, crownR, 0, TAU, pose.crown, 0.7, rgb('#e2af61'));
   for (let i = 0; i < 18; i++) {
-    const a = pose.angle + (i * TAU) / 18;
-    for (const offset of [-0.3, 0.3])
+    // Azimuth increases during rotation. The seat faces along that tangent,
+    // with its two suspension chains on the radial sides.
+    const a = pose.angle + (i * TAU) / 18,
+      heading = a + Math.PI / 2,
+      [x, y, z] = ringPoint(pose.rad, a, pose.seatY);
+    for (const offset of [-0.26, 0.26])
       line(
-        ringPoint(pose.attach, a + offset / pose.attach, pose.crown),
-        ringPoint(pose.rad, a + offset / pose.rad, pose.seatY + 0.35),
-        rgb('#856f59')
+        ringPoint(pose.attach + offset, a, pose.crown),
+        ringPoint(pose.rad + offset, a, y + 0.24),
+        chainColor
       );
+    box(x, y, z, 0.85, 0.24, 0.52, heading, seatColor);
     box(
-      pose.rad * Math.cos(a),
-      pose.seatY,
-      pose.rad * Math.sin(a),
-      0.85,
-      0.24,
-      0.52,
-      a,
-      rgb('#be866d')
-    );
-    box(
-      (pose.rad - 0.2) * Math.cos(a),
-      pose.seatY + 0.24,
-      (pose.rad - 0.2) * Math.sin(a),
+      x - 0.2 * Math.cos(heading),
+      y + 0.24,
+      z - 0.2 * Math.sin(heading),
       0.85,
       0.48,
       0.1,
-      a,
-      rgb('#be866d')
+      heading,
+      seatColor
     );
   }
 }
@@ -3953,6 +3943,24 @@ function drawMaterialFacade(b, model, floor, span, y, height, preview) {
   }
 }
 
+// Guard the open slab edges, leaving daylight voids, enclosed rooms and bridge doors clear.
+function atriumGuardSpans(model, floor) {
+  const occupied = [...model.rooms, ...model.circulation.regions.filter((q) => q.kind === 'elevator')]
+    .filter((q) => q.f === floor && q.r <= model.r + 0.001)
+    .map(({ start, end }) => [(start + end) / 2, (end - start) / 2]);
+  const openings = lobbyHoles(model.lobby, floor);
+  const bridge = model.circulation.bridges?.find((q) => q.f === floor);
+  if (bridge) {
+    // Compute both openings from the deck edges where they meet the circular slab.
+    const near = Math.acos((bridge.offset + bridge.width / 2) / model.r),
+      far = Math.acos((bridge.offset - bridge.width / 2) / model.r),
+      center = (near + far) / 2,
+      half = (far - near) / 2 + 0.03 / model.r;
+    for (const side of [-1, 1]) openings.push([bridge.heading + side * center, half]);
+  }
+  return openArcs([...occupied, ...openings]).filter(([a, z]) => (z - a) * model.r > 0.08);
+}
+
 // Translate the derived plan into drawing geometry. Export uses the full model regardless of current cutaway.
 function buildMesh(m, exporting = false, view = state, preview = null) {
   const b = meshBuilder(),
@@ -3960,7 +3968,16 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   const coreStructure = preview && materialValues(preview.assignments, 'core').structure;
   const slab = rgb(coreStructure ? STRUCTURAL_SYSTEMS[coreStructure].color : '#d8dcd4'),
     edge = rgb('#a3aea3'),
-    ground = rgb('#e4e8df');
+    ground = rgb('#e4e8df'),
+    guardGlass = rgb('#c7dbd9'),
+    guardFrame = rgb('#987753');
+  // Bridges and the facing floor edges share the same glass panels and warm handrail.
+  function glassGuard(a, b) {
+    const head = ([x, y, z]) => [x, y + 1.1, z];
+    const topA = head(a), topB = head(b);
+    quad(a, b, topB, topA, guardGlass, glass, 0.38);
+    line(topA, topB, guardFrame);
+  }
   const floorH = 4.2,
     H = view.floors * floorH;
   const extent = Math.max(m.R + MODULE.depth + 8, m.plaza ? m.plaza.outer + 2 : 0),
@@ -4172,8 +4189,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const { heading, width, offset } = bridge,
       top = bridge.f * floorH + 0.535,
       bottom = top - 0.23,
-      deck = rgb('#d9bb87'),
-      rail = rgb('#987753');
+      deck = rgb('#d9bb87');
     const edge = (across, end, y) => {
       // The deck meets the ring along its circular inner edge.
       const along = end * Math.sqrt(rr * rr - across * across);
@@ -4203,17 +4219,20 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         edge(side, start, top),
         deck
       );
-      const handrail = top + 1.1;
-      quad(
-        edge(side, start, top),
-        edge(side, end, top),
-        edge(side, end, handrail),
-        edge(side, start, handrail),
-        rgb('#c7dbd9'),
-        glass,
-        0.38
-      );
-      line(edge(side, start, handrail), edge(side, end, handrail), rail);
+      glassGuard(edge(side, start, top), edge(side, end, top));
+    }
+  }
+  for (let floor = 1; floor < view.floors; floor++) {
+    if (!visible(floor)) continue;
+    const y = floor * floorH + 0.535;
+    mark(`Atrium_Edge_Railings_L${floor + 1}`);
+    for (const [a, z] of atriumGuardSpans(m, floor)) {
+      const panels = Math.ceil((z - a) / 0.07);
+      for (let i = 0; i < panels; i++) {
+        const start = a + (z - a) * i / panels,
+          end = a + (z - a) * (i + 1) / panels;
+        glassGuard(ringPoint(rr, start, y), ringPoint(rr, end, y));
+      }
     }
   }
   // Separate room thresholds and paired shared doors: diagrammatic lines, not detailed door openings.
@@ -6055,7 +6074,7 @@ function advanceRide(s) {
     if (a.rideSeat != null) {
       const theta = pose.angle + (a.rideSeat * TAU) / 18;
       a.p = [pose.rad * Math.cos(theta), pose.seatY + 0.24, pose.rad * Math.sin(theta)];
-      a.angle = theta;
+      a.angle = theta + Math.PI / 2;
       continue;
     }
     if (a.rideQueued) {

@@ -46,7 +46,7 @@ with sync_playwright() as p:
  page.locator('#openMassing').click()
  assert page.locator('.layout').is_visible() and not page.locator('#materialsPhase').is_visible()
  assert page.evaluate('JSON.stringify(state)') == baseline['state']
- bridges = page.get_by_label('Atrium bridges', exact=True)
+ bridges = page.locator('#design-panel-0').get_by_label('Atrium bridges', exact=True)
  assert bridges.is_visible() and bridges.input_value() == 'off'
  view = page.evaluate('JSON.stringify({ inspect: state.inspect, camera })')
  for value, count in [('radial', 3), ('aligned', 3), ('off', 0)]:

@@ -1,7 +1,10 @@
 # Changelog
 
 ## Atrium and roofline
-- Moved the Atrium bridges selector onto the Massing model toolbar and kept the selected view while changing the layout.
+- Moved the Atrium bridges selector into Building and kept the selected view while changing the layout.
+- Moved radial and aligned bridges closer to the swing mast with a fixed 0.65 m modeled gap.
+- Matched the open atrium floor-edge railings to the bridge railings and kept the bridge landings clear.
+- Oriented swing chairs and seated riders in the direction of rotation.
 - Raised the conical glass roof ridge to 8.4 m above the public deck. The boarding ramp passes under the roof through the clerestory opening.
 - Put the opposing lobbies, bridge arrangements, pitched glass roof and two-storey pavilions at the front of the design rationale. Detailed ride mechanics remain in the simulation notes.
 

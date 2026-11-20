@@ -62,7 +62,7 @@ The path bends around the mast, and galleries carry the upper corridor across bo
 
 ### Radial and vertically aligned bridges
 
-Optional upper-floor bridges cut across the atrium and join the outer corridor at both ends. The designer wanted to test whether the shortcuts increase cross-pollination.
+Optional upper-floor bridges pass close to the mast and join the outer corridor at both ends. Glass railings line the bridges and open atrium edges. The designer wanted to test whether the shortcuts increase cross-pollination.
 
 Stacking the bridges keeps them in one part of the atrium. Rotating them around it changes which parts of the greenhouse and the opposite side of the ring are visible from each floor.
 

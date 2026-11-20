@@ -18,5 +18,6 @@ This is the available design trajectory, not a verbatim transcript. The illustra
 - The student added optional upper-floor bridges across the atrium to test shortcut-driven encounters. Radial and vertically aligned arrangements let them compare upper-floor views. The implementation places the bridges off the mast and reserves a passage at each end.
 - The student asked for a conical glass roof and occasional two-storey rooftop programs to vary the roofline. The implementation raises the swing boarding deck, links it to the public roof with a ramp and gives eligible pavilions seeded upper rooms.
 - The student asked for a stronger roof silhouette, about two storeys above the deck. The implementation lifts the glass ridge while keeping the boarding ramp gently sloped beneath it.
+- The student moved the atrium bridges closer to the swing mast. The implementation uses a fixed 0.65 m gap from the mast to the bridge edge in either arrangement.
 
 `archive/` retains available executable prior builds to inspect. `COPILOT.md` contains more granular release engineering history. These versions are not independent design alternatives or code-validated buildings.

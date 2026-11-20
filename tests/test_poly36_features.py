@@ -129,6 +129,14 @@ with sync_playwright() as p:
    const descent = swingPose(ride, 60);
    const unloading = swingPose(ride, 86);
    const nextCruise = swingPose(ride, 136);
+   const parts = [];
+   buildSwing({
+     sector() {}, line() {},
+     box(...args) { parts.push(args); },
+     ringPoint(r, a, y) { return [r * Math.cos(a), y, r * Math.sin(a)]; }
+   }, ride, cruise);
+   const [seat, back] = parts;
+   const heading = seat[6];
    return {
      radius: cruise.rad,
      tiltDegrees: cruise.tilt * 180 / Math.PI,
@@ -139,6 +147,8 @@ with sync_playwright() as p:
      unloadingHeight: unloading.seatY - ride.roofLevel,
      nextCruise: nextCruise.phase,
      nextRound: nextCruise.round - cruise.round,
+     facesForward: Math.abs(heading - cruise.angle - Math.PI / 2) < 1e-8 &&
+       (seat[0] - back[0]) * Math.cos(heading) + (seat[2] - back[2]) * Math.sin(heading) > 0.19,
    };
  }''')
  assert abs(pose['radius'] - 12) < 0.01, pose
@@ -147,6 +157,7 @@ with sync_playwright() as p:
  assert pose['beforeDescent'] == 'At the top' and pose['descent'] == 'Descending', pose
  assert pose['unloading'] == 'Unloading' and abs(pose['unloadingHeight'] - 0.36) < 0.01, pose
  assert pose['nextCruise'] == 'At the top' and pose['nextRound'] == 1, pose
+ assert pose['facesForward'], pose
  print('swing pose and 136-second cycle', pose, flush=True)
  print('defaults',page.evaluate('''()=>({area:model.total,plaza:model.plaza.area,zones:model.plaza.zones.map(x=>x.kind),reachable:occupancy.graph.reachable.size,outdoor:occupancy.graph.outdoor.length,climb:occupancy.graph.nodes.filter(q=>q.kind==='climbBase').map(q=>occupancy.graph.reachable.has(q.id)),swing:occupancy.graph.nodes.filter(q=>q.kind==='swing').map(q=>occupancy.graph.reachable.has(q.id))})'''),flush=True)
  res=page.evaluate('''()=>{const sim=makeOccupancy(model);let maxQueue=0,maxRiders=0,topRiders=0,unloaded=0;for(let i=0;i<420;i++){advanceScored(sim,1);const q=sim.people.filter(a=>a.rideQueued).length,n=sim.people.filter(a=>a.rideSeat!=null).length;maxQueue=Math.max(maxQueue,q);maxRiders=Math.max(maxRiders,n);if(swingPose(model.feature.ride,sim.clock).phase==='At the top')topRiders=Math.max(topRiders,n);unloaded=sim.completedSwings||0;}return {maxQueue,maxRiders,topRiders,unloaded,climbs:sim.completedClimbs,rate:crossRate(sim),encounters:sim.score.encounters,plaza:sim.score.by.plaza.count,fun:sim.fun};}''')
@@ -176,7 +187,12 @@ with sync_playwright() as p:
        network: bridgeNodes.length > 0 && bridgeNodes.every(node => g.reachable.has(node.id)),
        area: bridgeArea > 0 && Math.abs(m.total - areas) < 1e-5 && m.total <= state.areaCap,
        clear: bridges.every(bridge =>
-         bridge.offset - bridge.width / 2 > m.feature.ride.towerRadius)
+         Math.abs(bridge.offset - bridge.width / 2 - m.feature.ride.towerRadius - 0.65) < 1e-8),
+       landings: bridges.every(bridge => bridge.angles.every(angle =>
+         atriumGuardSpans(m, bridge.f).every(([start, end]) =>
+           mod(angle, TAU) < start || mod(angle, TAU) > end))),
+       railings: bridges.some(bridge => atriumGuardSpans(m, bridge.f).length > 0) &&
+         exportGeometry(m).objects.some(object => /^Atrium_Edge_Railings_L[0-9]+_Glazing$/.test(object.layer))
      };
    });
    const roof = base.roofPlan;
@@ -202,7 +218,8 @@ with sync_playwright() as p:
  aligned, radial = atrium['modes']
  assert len(set(aligned['headings'])) == 1 and len(radial['headings']) == 3, atrium
  assert abs(radial['headings'][1] - radial['headings'][0] - 2 * 3.141592653589793 / 3) < 1e-8, atrium
- assert all(mode['network'] and mode['area'] and mode['clear'] for mode in atrium['modes']), atrium
+ assert all(mode['network'] and mode['area'] and mode['clear'] and mode['landings'] and mode['railings']
+            for mode in atrium['modes']), atrium
  print('lobby crossing, upper bridge layouts, conical roof access and pavilion area passed', flush=True)
  slider_label = page.locator('label[for="affinity"]')
  assert slider_label.is_visible() and slider_label.inner_text().startswith('Clustering strength')
