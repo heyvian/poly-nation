@@ -495,6 +495,8 @@
 .material-swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
 .material-palette[hidden] { display: none; }
 .material-palette select { margin: 0 0 6px; font-size: 11px; }
+.paint-samples { display: flex; gap: 4px; margin: 2px 0 7px; }
+.paint-samples span, .paint-samples input { flex: 1; width: 0; min-width: 0; height: 21px; padding: 1px; border: 1px solid #a8b7ad; border-radius: 3px; }
 .material-swatches button {
  display: flex;
  flex-direction: column;
@@ -861,7 +863,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   </div>
   <div>
    <h3>Pitched glass roof and two-storey pavilions</h3>
-   <p>The designer raised the glass roof toward the swing mast. Its inner ring rises up to two storeys above the public deck. Some rooftop pavilions have a set-back second storey, varying the roofline as the layout changes.</p>
+   <p>The designer raised the glass roof toward the swing mast. Its inner ring rises up to two storeys above the public deck. Some rooftop pavilions have a set-back second storey, varying the roofline as the layout changes. The designer described the shops as removable enclosures for year-round use. The study models them as straight-sided prefabricated units on skids, with insulated panels and independent storefronts.</p>
    <p>Stairs above the glazing lead to the boarding platform at the ridge. The platform closes the roof around the mast. Both storeys of the pavilions count toward the enclosed area cap.</p>
   </div>
  </div>
@@ -927,7 +929,8 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
     <option value="coreProgram">Core by program</option>
     <option value="modules">All modules</option>
     <option value="moduleProgram">Modules by program</option>
-    <option value="commercial">Commercial and retail</option>
+    <option value="commercial">Commercial dock modules</option>
+    <option value="roofRetail">Rooftop shops</option>
     <option value="slide">Water slide</option>
     <option value="mast">Swing mast</option>
    </select>
@@ -946,6 +949,21 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
     <select id="facadeFamilies" aria-label="Finish family"></select>
     <div class="material-swatches" id="materialFacade"></div>
     <p class="material-choice" id="facadeChoice" aria-live="polite"></p>
+   </fieldset>
+   <fieldset class="material-palette" id="paintPalette" hidden>
+    <legend>Module paint</legend>
+    <label for="materialPaint">Colour palette</label>
+    <select id="materialPaint">
+     <option value="">Inherit</option><option value="none">No paint</option>
+     <option value="brights">Daycare brights</option><option value="pastels">Playful pastels</option>
+     <option value="coastal">Coastal colours</option><option value="custom">Custom palette</option>
+    </select>
+    <div id="paintSamples" class="paint-samples" aria-label="Paint palette colours"></div>
+    <label for="materialPaintSheen">Sheen</label>
+    <select id="materialPaintSheen">
+     <option value="">Inherit</option><option value="matte">Matte</option>
+     <option value="satin">Satin</option><option value="gloss">Gloss</option>
+    </select>
    </fieldset>
    <button id="returnToAssembly" type="button" hidden>Return to assembly</button>
   </div>
@@ -1130,6 +1148,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
    <label class="check"><input id="buildModules" type="checkbox" checked> Modules (chassis &amp; cladding)</label>
    <label class="check"><input id="buildSlide" type="checkbox" checked> Water slide</label>
    <label class="check"><input id="buildSwings" type="checkbox" checked> Swing ride</label>
+   <label class="check"><input id="buildRoofRetail" type="checkbox" checked> Rooftop shops</label>
   </div>
   <details class="calc-details">
    <summary>Dock and slab estimates</summary>
@@ -3769,7 +3788,7 @@ function meshBuilder() {
     }
   }
 
-  function box(cx, cy, cz, w, h, d, angle, col, outline = false) {
+  function box(cx, cy, cz, w, h, d, angle, col, outline = false, gloss = 0) {
     let t = [-Math.sin(angle), 0, Math.cos(angle)],
       r = [Math.cos(angle), 0, Math.sin(angle)];
     const xyz = (x, y, z) => [cx + x * t[0] + z * r[0], cy + y, cz + x * t[2] + z * r[2]];
@@ -3796,7 +3815,9 @@ function meshBuilder() {
           .slice()
           .reverse()
           .map((i) => v[i]),
-        col
+        col,
+        solid,
+        1 + gloss
       );
     if (outline) {
       const c = col.map((x) => x * 0.76);
@@ -4419,6 +4440,15 @@ const EXTERIOR_FINISHES = {
     joint: 0.36,
     module: true
   },
+  'insulated-panel': {
+    name: 'Insulated metal sandwich panels',
+    short: 'Insulated metal',
+    group: 'Metal',
+    color: '#dae0d7',
+    seam: '#a2b3ab',
+    joint: 1.13,
+    module: true
+  },
   aluminum: {
     name: 'Aluminum standing-seam panels',
     short: 'Aluminum',
@@ -4525,15 +4555,19 @@ function materialValues(assignments, scope, program, slotKey) {
       ])
     );
   const scopes =
-    scope === 'commercial'
-      ? ['building', 'modules', 'commercial']
+    scope === 'roofRetail'
+      ? ['building', 'modules', 'commercial', 'roofRetail']
+      : scope === 'commercial'
+        ? ['building', 'modules', 'commercial']
       : ['building', scope === 'module' ? 'modules' : scope];
   if (program != null) scopes.push(scope + 'Program:' + program);
   if (slotKey) scopes.push('module:' + slotKey);
   const defaults =
     scope === 'core'
       ? { structure: 'concrete', facade: 'concrete' }
-      : { structure: 'steel-frame', facade: 'corrugated' };
+      : scope === 'roofRetail'
+        ? { structure: 'light-steel', facade: 'insulated-panel' }
+        : { structure: 'steel-frame', facade: 'corrugated' };
   // Older studies can contain heavy module presets. Resolve through to the next compatible layer.
   for (const key of scopes) {
     const selection = assignments[key];
@@ -4545,6 +4579,39 @@ function materialValues(assignments, scope, program, slotKey) {
 
 function materialTint(color, factor) {
   return color.map((channel) => clamp(channel * factor, 0, 1));
+}
+
+const MODULE_PAINT_PALETTES = {
+  brights: ['#ef6c66', '#ffd13c', '#39afd2', '#72c76f', '#b07bdf'],
+  pastels: ['#e9a7aa', '#ead686', '#9bcbd2', '#a9c99e', '#b9a8d5'],
+  coastal: ['#4f918e', '#5786a4', '#edbc81', '#dc887b', '#c6d2bc']
+};
+const PAINT_SHEEN = { matte: 0, satin: 0.25, gloss: 0.63 };
+
+function modulePaint(assignments, program) {
+  const daycare = PROGRAMS[program]?.id === 'day';
+  let palette = daycare ? 'brights' : 'none',
+    sheen = daycare ? 'gloss' : 'satin',
+    custom = MODULE_PAINT_PALETTES.brights;
+  for (const key of ['modules', 'moduleProgram:' + program]) {
+    const rule = assignments[key];
+    if (!rule) continue;
+    if (
+      rule.paint === 'none' ||
+      rule.paint === 'custom' ||
+      Object.hasOwn(MODULE_PAINT_PALETTES, rule.paint)
+    )
+      palette = rule.paint;
+    if (Object.hasOwn(PAINT_SHEEN, rule.sheen)) sheen = rule.sheen;
+    if (
+      Array.isArray(rule.paintColors) &&
+      rule.paintColors.length === custom.length &&
+      rule.paintColors.every((color) => /^#[0-9a-f]{6}$/i.test(color))
+    )
+      custom = rule.paintColors;
+  }
+  const colors = palette === 'custom' ? custom : MODULE_PAINT_PALETTES[palette];
+  return { palette, colors, custom, gloss: PAINT_SHEEN[sheen] };
 }
 
 function finishColor(finish, program, preview, variation) {
@@ -4643,10 +4710,27 @@ function drawMaterialModule(b, slot, x, y, z, preview, values) {
         preview.view.seed) >>>
       0;
   const framing = preview.structureView && system.frame !== 'solid';
+  const paint =
+    !preview.structureView && !preview.programColors && slot.p !== EMPTY
+      ? modulePaint(preview.assignments, slot.p)
+      : null;
   const color = preview.structureView
     ? rgb(system.color)
-    : finishColor(finish, slot.p, preview, variation);
-  box(x, y, z, width, framing ? 0.16 : height, depth, angle, color, true);
+    : paint?.colors
+      ? rgb(paint.colors[mod(slot.j + 2 * slot.f + preview.view.seed, paint.colors.length)])
+      : finishColor(finish, slot.p, preview, variation);
+  box(
+    x,
+    y,
+    z,
+    width,
+    framing ? 0.16 : height,
+    depth,
+    angle,
+    color,
+    true,
+    paint?.colors ? paint.gloss : 0
+  );
   if (preview.structureView ? !framing : !preview.finishJoints) return;
   const elevation = framing
     ? (length, locate) => drawStructureBays(system, length, height, locate, line)
@@ -4863,15 +4947,26 @@ function drawModuleLaundry(mesh, model, { slot, neighbor, side, seed }, base) {
 }
 
 // Keep opening extents and program boundaries shared by the preview and the cost takeoff.
-function coreFacadeSpans(model, floor, { base: y, head, soffit } = buildStorey(model, floor)) {
+function coreFacadeSpans(
+  model,
+  floor,
+  { base: y, head, soffit } = buildStorey(model, floor),
+  slidePortals = null
+) {
   const fullHeightHoles = lobbyHoles(model.lobby, floor),
     doorHoles = [];
   for (const slot of model.slots)
     if (slot.f === floor && !slot.blocked)
       doorHoles.push([slot.angle, Math.min(0.45, 1.1 / model.R)]);
-  for (const connection of model.feature.slide?.connections || [])
-    if (connection.floor === floor)
-      fullHeightHoles.push([connection.angle, Math.min(0.35, 1.45 / model.R)]);
+  for (const connection of model.feature.slide?.connections || []) {
+    if (connection.floor !== floor) continue;
+    const portal = slidePortals?.find((entry) => entry.floor === floor);
+    fullHeightHoles.push(
+      portal
+        ? [(portal.start + portal.end) / 2, (portal.end - portal.start) / 2]
+        : [connection.angle, Math.min(0.35, 1.45 / model.R)]
+    );
+  }
   return [
     ...openArcs([...fullHeightHoles, ...doorHoles]).map((span) => ({
       span,
@@ -4955,43 +5050,76 @@ function atriumGuardSpans(model, floor) {
   return openArcs([...occupied, ...openings]).filter(([a, z]) => (z - a) * model.r > 0.08);
 }
 
-// Enclosed rooftop retail uses the same study assignment as commercial dock modules.
-function drawCommercialPavilions(b, p, preview) {
-  const { mark, sector, quad, ringPoint } = b,
-    y = p.y;
-  const values = preview && materialValues(preview.assignments, 'commercial');
-  const selected =
-    values &&
-    rgb(
-      preview.structureView
-        ? STRUCTURAL_SYSTEMS[values.structure].color
-        : EXTERIOR_FINISHES[values.facade].color
-    );
-  for (const [i, q] of p.pavilions.entries()) {
-    const storeys = q.upper ? [q, q.upper] : [q];
-    for (const [floor, { start, end }] of storeys.entries()) {
-      const base = y + 0.05 + floor * 3,
-        a = start + 0.16 * (end - start),
-        d = end - 0.16 * (end - start),
-        rad = q.R + 0.015;
-      mark(floor ? 'Roof_Commercial_Retail_Upper' : 'Roof_Commercial_Retail', `Pavilion ${i + 1}`);
-      sector(
-        q.r,
-        q.R,
-        start,
-        end,
-        base,
-        3,
-        selected ? materialTint(selected, floor ? 1.08 : 1) : rgb(floor ? '#b79ece' : '#ad91c7')
+// Prefabricated shop units stand on skids above the public roof. Each deck keeps its allocated area.
+function drawCommercialPavilions(mesh, roof, preview) {
+  const { mark, box, quad, line } = mesh,
+    { structure, facade } = materialValues(preview?.assignments ?? {}, 'roofRetail'),
+    system = STRUCTURAL_SYSTEMS[structure],
+    finish = EXTERIOR_FINISHES[facade],
+    frame = rgb(system.color),
+    shell = rgb(finish.color),
+    window = rgb('#91afb6'),
+    roofPanel = rgb('#dde1dc');
+  for (const [i, pavilion] of roof.pavilions.entries()) {
+    const angle = (pavilion.start + pavilion.end) / 2,
+      radius = (pavilion.r + pavilion.R) / 2 - Math.min(0.11, (pavilion.R - pavilion.r) * 0.04),
+      cos = Math.cos(angle),
+      sin = Math.sin(angle),
+      baseDepth = (pavilion.R - pavilion.r) * 0.96;
+    function point(across, along, y) {
+      return [(radius + along) * cos - across * sin, y, (radius + along) * sin + across * cos];
+    }
+    function part(across, along, y, width, height, depth, color) {
+      const [x, , z] = point(across, along, y);
+      box(x, y, z, width, height, depth, angle, color, true);
+    }
+    const storeys = pavilion.upper ? [pavilion, pavilion.upper] : [pavilion];
+    for (const [floor, storey] of storeys.entries()) {
+      const y = roof.y + 0.16 + floor * 3,
+        depth = baseDepth * (floor ? 0.87 : 1),
+        width = storey.area / depth,
+        front = depth / 2 + 0.012;
+      mark(
+        floor ? 'Roof_Commercial_Retail_Upper' : 'Roof_Commercial_Retail',
+        'Prefabricated shop ' + (i + 1)
       );
-      for (let j = 0; j < 12; j++)
-        quad(
-          ringPoint(rad, a + ((d - a) * j) / 12, base + 0.37),
-          ringPoint(rad, a + ((d - a) * (j + 1)) / 12, base + 0.37),
-          ringPoint(rad, a + ((d - a) * (j + 1)) / 12, base + 2.4),
-          ringPoint(rad, a + ((d - a) * j) / 12, base + 2.4),
-          rgb('#dfdce3')
-        );
+      for (const across of [-0.33 * width, 0.33 * width])
+        part(across, 0, y - 0.13, 0.19, 0.13, depth, frame);
+      if (preview?.structureView) {
+        for (const y0 of [y, y + 2.67]) part(0, 0, y0, width, 0.16, depth, frame);
+        for (const across of [-width / 2 + 0.08, width / 2 - 0.08])
+          for (const along of [-depth / 2 + 0.08, depth / 2 - 0.08])
+            part(across, along, y + 0.15, 0.16, 2.53, 0.16, frame);
+        continue;
+      }
+      part(0, 0, y, width, 2.72, depth, shell);
+      part(0, 0, y + 2.72, width + 0.16, 0.15, depth + 0.16, roofPanel);
+      const glassWidth = width * 0.76,
+        left = -glassWidth / 2,
+        right = glassWidth / 2,
+        at = (across, h) => point(across, front, y + h);
+      const corners = [at(left, 0.28), at(left, 2.23), at(right, 2.23), at(right, 0.28)];
+      quad(...corners, window);
+      for (let j = 0; j < corners.length; j++)
+        line(corners[j], corners[(j + 1) % corners.length], frame);
+      const doorHalf = Math.min(0.48, glassWidth * 0.2),
+        door = [at(-doorHalf, 0.04), at(-doorHalf, 2.23), at(doorHalf, 2.23), at(doorHalf, 0.04)];
+      // The inner storefront bay is a glazed entry with its own sill and jambs.
+      quad(door[0], at(-doorHalf, 0.28), at(doorHalf, 0.28), door[3], window);
+      for (let j = 0; j < door.length; j++) line(door[j], door[(j + 1) % door.length], frame);
+      if (floor === storeys.length - 1)
+        part(width * 0.26, -depth * 0.28, y + 2.87, 0.68, 0.3, 0.49, frame);
+      if (preview?.finishJoints)
+        for (const side of [-1, 1])
+          drawFinishJoints(
+            finish,
+            depth,
+            2.72,
+            (distance, h) => point(side * (width / 2 + 0.018), distance - depth / 2, y + h),
+            line,
+            shell,
+            i + 19 * floor
+          );
     }
   }
 }
@@ -5140,55 +5268,296 @@ function drawSwingAboveRoof(b, m) {
   buildSwing(b, ride, swingPose(ride, 0));
 }
 
-// Sweep the slide on the massing route. The Build layer can add fabricated section joints.
-function drawWaterSlide(mesh, s, preview, maxY = Infinity, flangeMinRadius = Infinity) {
-  if (!s) return;
-  const { mark, quad, tri } = mesh;
-  mark('Infinite_Rinse_Water_Slide');
-  const p = s.points,
-    c = preview
+const BUILD_SLIDE_SIDES = 36;
+
+// Extend the terminal tube stubs behind the interior face so the wall sleeves meet the route.
+function slideTubeRings(slide, sides, extend = false) {
+  const route = slide.points;
+  const extendEnd = (point, away) => {
+    const direction = unit(sub(point, away));
+    return point.map((value, k) => value + direction[k] * 1.4);
+  };
+  const points = extend
+    ? [extendEnd(route[0], route[1]), ...route, extendEnd(route.at(-1), route.at(-2))]
+    : route;
+  return points.map((point, i) => {
+    const tangent = unit(
+        sub(points[Math.min(points.length - 1, i + 1)], points[Math.max(0, i - 1)])
+      ),
+      side = unit(cross([0, 1, 0], tangent)),
+      up = unit(cross(tangent, side));
+    return Array.from({ length: sides }, (_, j) => {
+      const angle = (j * TAU) / sides;
+      return point.map(
+        (v, k) => v + slide.tubeRadius * (Math.cos(angle) * side[k] + Math.sin(angle) * up[k])
+      );
+    });
+  });
+}
+
+// Sweep the slide on the massing route. Build supplies a rounder tube and molded section joints.
+function drawWaterSlide(
+  mesh,
+  slide,
+  preview,
+  maxY = Infinity,
+  flangeMinRadius = Infinity,
+  tube = null
+) {
+  if (!slide) return;
+  const { mark, quad, tri } = mesh,
+    color = preview
       ? rgb(EXTERIOR_FINISHES[materialValues(preview.assignments, 'slide').facade].color)
       : rgb('#287fa7'),
-    n = 12;
-  let prev = null;
-  const clippedQuad = (vertices) => {
-    if (maxY === Infinity) {
-      quad(...vertices, c);
+    rings = tube ?? slideTubeRings(slide, 12);
+  mark('Infinite_Rinse_Water_Slide');
+  function clippedQuad(vertices) {
+    if (vertices.every((p) => p[1] <= maxY)) {
+      quad(...vertices, color);
       return;
     }
     const out = [];
     for (let j = 0; j < vertices.length; j++) {
       const a = vertices[j],
         b = vertices[(j + 1) % vertices.length],
-        ain = a[1] <= maxY,
-        bin = b[1] <= maxY;
-      if (ain) out.push(a);
-      if (ain !== bin) {
+        insideA = a[1] <= maxY,
+        insideB = b[1] <= maxY;
+      if (insideA) out.push(a);
+      if (insideA !== insideB) {
         const t = (maxY - a[1]) / (b[1] - a[1]);
         out.push(a.map((v, k) => v + t * (b[k] - v)));
       }
     }
-    for (let j = 1; j + 1 < out.length; j++) tri(out[0], out[j], out[j + 1], c);
-  };
-  for (let i = 0; i < p.length; i++) {
-    const a = p[Math.max(0, i - 1)],
-      z = p[Math.min(p.length - 1, i + 1)],
-      tangent = unit(sub(z, a)),
-      side = unit(cross([0, 1, 0], tangent)),
-      up = unit(cross(tangent, side)),
-      ring = [];
-    for (let j = 0; j < n; j++) {
-      const theta = (j * TAU) / n;
-      ring.push(
-        p[i].map((v, k) => v + s.tubeRadius * (Math.cos(theta) * side[k] + Math.sin(theta) * up[k]))
+    for (let j = 1; j + 1 < out.length; j++) tri(out[0], out[j], out[j + 1], color);
+  }
+  for (let i = 1; i < rings.length; i++) {
+    const previous = rings[i - 1],
+      ring = rings[i];
+    for (let j = 0; j < ring.length; j++) {
+      const next = (j + 1) % ring.length;
+      clippedQuad([previous[j], previous[next], ring[next], ring[j]]);
+    }
+  }
+  if (flangeMinRadius < Infinity)
+    drawSlideJoints(mesh, slide.points, slide.tubeRadius, color, maxY, flangeMinRadius);
+}
+
+// Trace the intersection of each tube strip with both curved faces of the wall.
+function buildSlidePortals(model, rings) {
+  const slide = model.feature.slide,
+    outside = model.R,
+    inside = outside - facadeThickness(model),
+    ends = [
+      { floor: slide.startFloor, angle: slide.startAngle },
+      { floor: slide.endFloor, angle: slide.endAngle }
+    ];
+  function contour(radius, angle, end) {
+    const path = end ? rings.slice().reverse() : rings;
+    return path[0].map((_, j) => {
+      for (let i = 1; i < path.length; i++) {
+        const a = path[i - 1][j],
+          b = path[i][j],
+          from = Math.hypot(a[0], a[2]),
+          to = Math.hypot(b[0], b[2]);
+        if (from > radius || to < radius || from === to) continue;
+        const t = (radius - from) / (to - from),
+          p = a.map((value, k) => value + t * (b[k] - value)),
+          bearing = Math.atan2(p[2], p[0]);
+        return [angle + Math.atan2(Math.sin(bearing - angle), Math.cos(bearing - angle)), p[1]];
+      }
+      return null;
+    });
+  }
+  return ends
+    .map(({ floor, angle }, end) => {
+      const outer = contour(outside, angle, end),
+        inner = contour(inside, angle, end);
+      if (outer.includes(null) || inner.includes(null)) return null;
+      const bearings = [...outer, ...inner].map(([a]) => a),
+        pad = 0.16 / outside;
+      return {
+        floor,
+        outer,
+        inner,
+        inside,
+        outside,
+        start: Math.min(...bearings) - pad,
+        end: Math.max(...bearings) + pad
+      };
+    })
+    .filter(Boolean);
+}
+
+// In the unwrapped elevation the flashing fills a rectangle around the true tube outline.
+function drawSlidePortal(mesh, portal, storey, clad) {
+  const { mark, quad, ringPoint } = mesh,
+    { outer, inner, start, end, outside, inside } = portal,
+    gasket = rgb('#414d4c'),
+    collar = rgb('#697975'),
+    flashing = rgb('#a6b1ac');
+  const point = (radius, [angle, y]) => ringPoint(radius, angle, y);
+  mark('Infinite_Rinse_Slide_Wall_Sleeve', 'Level ' + (portal.floor + 1));
+  for (let i = 0; i < outer.length; i++) {
+    const j = (i + 1) % outer.length;
+    quad(
+      point(outside, outer[i]),
+      point(outside, outer[j]),
+      point(inside, inner[j]),
+      point(inside, inner[i]),
+      gasket
+    );
+  }
+  for (const [face, radius, direction] of [
+    [outer, outside, 1],
+    [inner, inside, -1]
+  ]) {
+    const center = [0, 1].map((k) => face.reduce((sum, p) => sum + p[k], 0) / face.length),
+      delta = ([angle, y]) => [(angle - center[0]) * outside, y - center[1]],
+      uv = (x, y) => [center[0] + x / outside, center[1] + y],
+      pad = 0.12,
+      lip = face.map((p) => {
+        const [x, y] = delta(p),
+          size = Math.hypot(x, y);
+        return uv(x * (1 + pad / size), y * (1 + pad / size));
+      });
+    mark('Infinite_Rinse_Slide_Facade_Flange');
+    for (let i = 0; i < face.length; i++) {
+      const j = (i + 1) % face.length;
+      quad(
+        point(radius + direction * 0.024, face[i]),
+        point(radius + direction * 0.024, face[j]),
+        point(radius + direction * 0.036, lip[j]),
+        point(radius + direction * 0.036, lip[i]),
+        collar
       );
     }
-    if (prev)
-      for (let j = 0; j < n; j++)
-        clippedQuad([prev[j], prev[(j + 1) % n], ring[(j + 1) % n], ring[j]]);
-    prev = ring;
+    if (!clad) continue;
+    const low = storey.base,
+      high = storey.soffit,
+      corners = [
+        [start, low],
+        [end, low],
+        [end, high],
+        [start, high]
+      ],
+      local = face.map(delta),
+      bearings = [...face, ...corners]
+        .map((p) => {
+          const [x, y] = delta(p);
+          return Math.atan2(y, x);
+        })
+        .sort((a, b) => a - b);
+    const [left, bottom] = delta([start, low]),
+      [right, top] = delta([end, high]);
+    function ray(angle) {
+      const x = Math.cos(angle),
+        y = Math.sin(angle);
+      const boxDist = Math.min(x < 0 ? left / x : right / x, y < 0 ? bottom / y : top / y);
+      let tubeDist = Infinity;
+      for (let i = 0; i < local.length; i++) {
+        const [u, v] = local[i],
+          [w, z] = local[(i + 1) % local.length],
+          dx = w - u,
+          dy = z - v,
+          determinant = x * dy - y * dx;
+        if (Math.abs(determinant) < 1e-8) continue;
+        const t = (u * dy - v * dx) / determinant,
+          s = (u * y - v * x) / determinant;
+        if (s >= -1e-7 && s <= 1 + 1e-7 && t >= 0) tubeDist = Math.min(tubeDist, t);
+      }
+      return [uv(x * tubeDist, y * tubeDist), uv(x * boxDist, y * boxDist)];
+    }
+    mark('Infinite_Rinse_Slide_Flashing');
+    for (let i = 0; i < bearings.length; i++) {
+      const a = bearings[i],
+        b = i + 1 < bearings.length ? bearings[i + 1] : bearings[0] + TAU,
+        [u, v] = ray(a),
+        [w, z] = ray(b);
+      if (![u, v, w, z].flat().every(Number.isFinite)) continue;
+      quad(point(radius, u), point(radius, w), point(radius, z), point(radius, v), flashing);
+    }
   }
-  if (flangeMinRadius < Infinity) drawSlideJoints(mesh, p, s.tubeRadius, c, maxY, flangeMinRadius);
+}
+
+// Fit each landing assembly inside its Infinite Rinse room and below the tube mouth.
+function drawSlideLandings(mesh, model, rings, floors, slabThickness) {
+  const { mark, box, quad, line } = mesh,
+    slide = model.feature.slide,
+    trim = rgb('#758c87'),
+    tile = rgb('#b8d0cf'),
+    deck = rgb('#d3c7a8');
+  for (const room of slide.connections) {
+    if (room.floor >= floors) continue;
+    const upper = room.floor === slide.startFloor,
+      mouth = upper ? rings[0] : rings.at(-1),
+      center = [0, 1, 2].map((axis) => mouth.reduce((sum, p) => sum + p[axis], 0) / mouth.length),
+      { angle } = room,
+      radial = [Math.cos(angle), 0, Math.sin(angle)],
+      tangent = [-radial[2], 0, radial[0]],
+      { base } = buildStorey(model, room.floor, slabThickness),
+      near = room.roomInner + 0.19,
+      far = room.roomOuter - facadeThickness(model) - 0.21,
+      roomHalf = near * Math.sin(Math.min(1.15, (room.roomEnd - room.roomStart) / 2)) - 0.2,
+      width = Math.min(upper ? 2.8 : 3.55, roomHalf * 1.65);
+    if (width < 0.55 || far - near < 0.8) continue;
+    const across = clamp(dot(center, tangent), -roomHalf + width / 2, roomHalf - width / 2),
+      front = clamp(dot(center, radial) + 0.47, near + 0.75, far),
+      point = (x, y, r) => [
+        r * radial[0] + (x + across) * tangent[0],
+        y,
+        r * radial[2] + (x + across) * tangent[2]
+      ];
+    function part(x, y, r, w, h, d, color) {
+      const [px, , pz] = point(x, y, r);
+      box(px, y, pz, w, h, d, angle, color, true);
+    }
+    if (upper) {
+      const back = Math.max(near + 0.3, front - 1.5),
+        top = Math.max(base + 0.18, Math.min(...mouth.map((p) => p[1])) + 0.035),
+        rise = top - base,
+        stairs = Math.ceil(rise / 0.18),
+        run = Math.min(back - near, stairs * 0.27),
+        step = run / stairs,
+        handrail = top + 0.96;
+      mark('Infinite_Rinse_Slide_Boarding_Platform', 'Level ' + (room.floor + 1));
+      part(0, top - 0.14, (front + back) / 2, width, 0.14, front - back, deck);
+      for (const edge of [-width / 2 + 0.07, width / 2 - 0.07]) {
+        for (const r of [back + 0.06, front - 0.06])
+          part(edge, base, r, 0.065, handrail - base, 0.065, trim);
+        line(point(edge, handrail, back + 0.06), point(edge, handrail, front - 0.06), trim);
+      }
+      for (let i = 0; i < stairs; i++)
+        part(
+          0,
+          base,
+          back - run + (i + 0.5) * step,
+          Math.min(1.35, width),
+          (rise * (i + 1)) / stairs,
+          step,
+          deck
+        );
+    } else {
+      const back = Math.max(near, front - 4.8),
+        length = front - back,
+        mid = (front + back) / 2,
+        lip = 0.13,
+        water = base + 0.26;
+      mark('Infinite_Rinse_Slide_Receiving_Pool', 'Level ' + (room.floor + 1));
+      part(0, base, mid, width, 0.1, length, tile);
+      for (const side of [-1, 1]) {
+        part((side * (width - lip)) / 2, base, mid, lip, 0.43, length, tile);
+        part(0, base, mid + (side * (length - lip)) / 2, width - 2 * lip, 0.43, lip, tile);
+      }
+      const half = width / 2 - lip;
+      quad(
+        point(-half, water, back + lip),
+        point(half, water, back + lip),
+        point(half, water, front - lip),
+        point(-half, water, front - lip),
+        rgb('#539cb6')
+      );
+    }
+  }
 }
 
 // Two molded flange lips meet at each section joint. The galvanized heads run around the rim.
@@ -5222,9 +5591,9 @@ function drawSlideJoints({ mark, quad, tri }, points, radius, color, maxY, minRa
           [-0.075, -0.012],
           [0.012, 0.075]
         ]) {
-          for (let j = 0; j < 12; j++) {
-            const first = (j * TAU) / 12,
-              last = ((j + 1) * TAU) / 12;
+          for (let j = 0; j < BUILD_SLIDE_SIDES; j++) {
+            const first = (j * TAU) / BUILD_SLIDE_SIDES,
+              last = ((j + 1) * TAU) / BUILD_SLIDE_SIDES;
             const edge = (angle, depth) => at(angle, rim, depth);
             quad(
               edge(first, front),
@@ -8446,7 +8815,7 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.m
       x * back[0] + y * back[1] + z * back[2]
     ];
   }
-  function color(a, i, shade = 1) {
+  function color(a, i, shade = 1, highlight = 0) {
     const preview = m.programPreview;
     if (a === m.solid && preview && i >= preview.start && i < preview.end) {
       const tint = PROGRAM_PREVIEW_TINT;
@@ -8457,23 +8826,28 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.m
         );
       return 'rgb(' + rgb.join(',') + ')';
     }
-    return `rgba(${Math.round(255 * a[i + 6] * shade)},${Math.round(255 * a[i + 7] * shade)},${Math.round(255 * a[i + 8] * shade)},${a[i + 9]})`;
+    const channel = (offset) =>
+      Math.round(255 * (a[i + offset] * shade * (1 - highlight) + highlight));
+    return `rgba(${channel(6)},${channel(7)},${channel(8)},${Math.min(1, a[i + 9])})`;
   }
   const paint = [],
-    sun = unit([-0.4, 1, 0.65]);
+    sun = unit([-0.4, 1, 0.65]),
+    reflection = unit(sun.map((value, i) => value + back[i]));
   function tris(a, start = 0) {
     for (let i = start; i < a.length; i += 30) {
       const p = point(a, i),
         q = point(a, i + 10),
         r = point(a, i + 20);
       const normal = [a[i + 3], a[i + 4], a[i + 5]];
-      if (a[i + 9] === 1 && dot(normal, back) < 0.00001) continue;
+      if (a[i + 9] >= 1 && dot(normal, back) < 0.00001) continue;
       const shade = 0.74 + 0.26 * Math.abs(dot(normal, sun));
+      const highlight =
+        a[i + 9] > 1 ? (a[i + 9] - 1) * Math.max(0, dot(normal, reflection)) ** 14 : 0;
       paint.push({
         z: (p[2] + q[2] + r[2]) / 3,
         pts: [p, q, r],
-        fill: color(a, i, shade),
-        alpha: a[i + 9]
+        fill: color(a, i, shade, highlight),
+        alpha: Math.min(1, a[i + 9])
       });
     }
   }
@@ -8530,7 +8904,27 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.m
 // Set up reusable depth-tested rendering for the massing and Materials canvases.
 function createWebGLRenderer(gl) {
   if (!gl) return null;
-  const v = `attribute vec3 aPosition;attribute vec3 aNormal;attribute vec4 aColor;uniform vec3 uTarget,uRight,uUp,uBack;uniform vec2 uScale;uniform float uDepth;uniform vec4 uTint;varying vec4 vColor;void main(){vec3 p=aPosition-uTarget;gl_Position=vec4(dot(p,uRight)*uScale.x,dot(p,uUp)*uScale.y,-dot(p,uBack)/uDepth,1.0);float valid=step(.1,length(aNormal));float shade=.74+.26*abs(dot(normalize(aNormal+vec3(.00001)),normalize(vec3(-.4,1.,.65))));vColor=vec4(mix(aColor.rgb*mix(1.,shade,valid),uTint.rgb,uTint.a),aColor.a);}`;
+  const v = `
+    attribute vec3 aPosition;
+    attribute vec3 aNormal;
+    attribute vec4 aColor;
+    uniform vec3 uTarget,uRight,uUp,uBack;
+    uniform vec2 uScale;
+    uniform float uDepth;
+    uniform vec4 uTint;
+    varying vec4 vColor;
+    void main() {
+      vec3 p = aPosition - uTarget;
+      gl_Position = vec4(dot(p,uRight)*uScale.x, dot(p,uUp)*uScale.y, -dot(p,uBack)/uDepth, 1.0);
+      vec3 n = normalize(aNormal + vec3(.00001));
+      vec3 sun = normalize(vec3(-.4,1.,.65));
+      float shade = .74 + .26 * abs(dot(n, sun));
+      vec3 base = aColor.rgb * mix(1., shade, step(.1, length(aNormal)));
+      // Opaque surfaces can store sheen above 1.0 without changing the vertex format or blend.
+      float gloss = max(0., aColor.a - 1.);
+      float highlight = gloss * pow(max(0., dot(n, normalize(sun + uBack))), 14.);
+      vColor = vec4(mix(mix(base, vec3(1.), highlight), uTint.rgb, uTint.a), min(aColor.a, 1.));
+    }`;
   const f = `precision mediump float;varying vec4 vColor;void main(){gl_FragColor=vColor;}`;
   function shader(type, src) {
     const s = gl.createShader(type);
@@ -10215,6 +10609,7 @@ const CLADDING_STUDY = {
   'thermo-wood': [12, 1.55, 'Light timber slats that can weather unevenly'],
   'cork-panel': [11, 1.5, 'Light panels with a textured surface'],
   corrugated: [8, 1, 'Light skin that can dent'],
+  'insulated-panel': [18, 1.45, 'Insulated enclosure panels with a steel skin'],
   aluminum: [6, 1.5, 'Light skin that can dent'],
   zinc: [9, 1.9, 'Durable skin that can dent'],
   'weathering-steel': [18, 1.6, 'Thin metal cassettes with a developing patina'],
@@ -12291,6 +12686,9 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     floors = levels || model.layers.length,
     cutY = full ? Infinity : buildStorey(model, floors - 1, slabThickness).soffit,
     ride = model.feature.ride,
+    slide = layers.slide && model.feature.slide,
+    slideTube = slide ? slideTubeRings(slide, BUILD_SLIDE_SIDES, true) : null,
+    slidePortals = slideTube ? buildSlidePortals(model, slideTube) : [],
     extent = model.plaza.outer + 2;
   mark('Reference');
   quad(
@@ -12385,9 +12783,13 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       const reserved = lobbyHoles(model.lobby, f);
       for (let j = 0; j < bayCount; j++) {
         const angle = ((j + 0.5) * TAU) / bayCount;
-        const slidePortal = model.feature.slide?.connections.some(
-          (door) => door.floor === f && angDist(door.angle, angle) < 1.6 / model.R
-        );
+        const slidePortal =
+          slidePortals.some(
+            (door) => door.floor === f && mod(angle - door.start, TAU) < door.end - door.start
+          ) ||
+          model.feature.slide?.connections.some(
+            (door) => door.floor === f && angDist(door.angle, angle) < 1.6 / model.R
+          );
         if (reserved.some(([a, half]) => angDist(a, angle) < half + 0.035)) continue;
         // The wide face follows the tangent of the ring at each bay.
         at(inside, angle, base, column * 1.2, clearHeight, column, coreFrame);
@@ -12403,7 +12805,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     }
     if (layers.facade) {
       mark('Assembly_Exterior_Walls_' + (f + 1));
-      for (const wall of coreFacadeSpans(model, f, storey))
+      for (const wall of coreFacadeSpans(model, f, storey, slidePortals))
         drawMaterialFacade(mesh, model, f, wall.span, wall.y, wall.height, preview);
     }
     if (layers.walls) {
@@ -12497,7 +12899,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       }
     }
   }
-  if (full && layers.facade) drawCommercialPavilions(mesh, model.roofPlan, preview);
+  if (full && layers.roofRetail) drawCommercialPavilions(mesh, model.roofPlan, preview);
 
   const exterior = layers.modules ? moduleExteriorDetails(model, preview.view.seed) : null;
   const dockStructure = layers.dockStructure ?? 'side-truss',
@@ -12598,9 +13000,18 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       );
     }
   }
-  const slide = model.feature.slide;
-  if (layers.slide && slide)
-    drawWaterSlide(mesh, slide, preview, cutY, model.R + slide.tubeRadius + 0.22);
+  if (slide) {
+    drawWaterSlide(mesh, slide, preview, cutY, model.R + slide.tubeRadius + 0.22, slideTube);
+    for (const portal of slidePortals)
+      if (portal.floor < floors)
+        drawSlidePortal(
+          mesh,
+          portal,
+          buildStorey(model, portal.floor, slabThickness),
+          layers.facade
+        );
+    drawSlideLandings(mesh, model, slideTube, floors, slabThickness);
+  }
   const H = layers.swings && full ? ride.height : (floors + Number(full)) * floorHeight;
   return { ...mesh, H, extent };
 }
@@ -12613,7 +13024,8 @@ const BUILD_LAYERS = {
   docks: 'buildDocks',
   modules: 'buildModules',
   slide: 'buildSlide',
-  swings: 'buildSwings'
+  swings: 'buildSwings',
+  roofRetail: 'buildRoofRetail'
 };
 function buildViewLayers() {
   return {
@@ -13140,6 +13552,48 @@ const openBuildWorkspace = (() => {
   function currentKey() {
     return $('materialTargetField').hidden ? scope.value : scope.value + ':' + target.value;
   }
+  function changePaint(field, value) {
+    const key = currentKey(),
+      override = (study.assignments[key] ||= {});
+    if (value) override[field] = value;
+    else delete override[field];
+    if (!Object.keys(override).length) delete study.assignments[key];
+    syncAssignment();
+    saveStudy();
+    rebuild();
+  }
+  function syncPaint(assignment, program) {
+    const palette = $('paintPalette');
+    palette.hidden = !['modules', 'moduleProgram'].includes(scope.value);
+    if (palette.hidden) return;
+    const paint = modulePaint(study.assignments, program);
+    $('materialPaint').value = assignment.paint ?? '';
+    $('materialPaintSheen').value = assignment.sheen ?? '';
+    const samples = (paint.colors ?? []).map((color, i) => {
+      if (paint.palette !== 'custom') {
+        const swatch = document.createElement('span');
+        swatch.style.background = color;
+        swatch.title = color;
+        return swatch;
+      }
+      const picker = document.createElement('input');
+      picker.type = 'color';
+      picker.value = color;
+      picker.setAttribute('aria-label', 'Palette colour ' + (i + 1));
+      picker.onchange = () => {
+        const key = currentKey();
+        (study.assignments[key] ||= {}).paint = 'custom';
+        const revised = paint.colors.slice();
+        revised[i] = picker.value;
+        changePaint('paintColors', revised);
+      };
+      return picker;
+    });
+    $('paintSamples').replaceChildren(...samples);
+  }
+  $('materialPaint').onchange = (event) => changePaint('paint', event.target.value);
+  $('materialPaintSheen').onchange = (event) => changePaint('sheen', event.target.value);
+
   const paletteIds = { structure: 'materialStructure', facade: 'materialFacade' };
   function syncAssignment() {
     const assignment = study.assignments[currentKey()] || {};
@@ -13163,6 +13617,7 @@ const openBuildWorkspace = (() => {
           : 'Inherit the core and module defaults';
       $(field + 'Choice').textContent = description;
     }
+    syncPaint(assignment, program);
     syncAssemblyHeaders();
   }
   function syncTargets() {
@@ -13197,7 +13652,7 @@ const openBuildWorkspace = (() => {
 
   // Shared building overrides use the options that apply to both construction families.
   function materialFamily() {
-    if (['slide', 'mast', 'commercial'].includes(scope.value)) return scope.value;
+    if (['slide', 'mast', 'commercial', 'roofRetail'].includes(scope.value)) return scope.value;
     return scope.value.startsWith('core') ? 'core' : 'module';
   }
   function refreshPalette(field, id) {

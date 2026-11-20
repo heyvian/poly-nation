@@ -1,5 +1,10 @@
 # Changelog
 
+## Slide wall joints, rooftop shops and paint
+- Added a 36-sided Build slide with sleeves, flanges and fitted flashing at both façade crossings, plus an upper boarding platform and lower receiving pool.
+- Modeled straight-sided prefabricated rooftop shops on skids and added an independent Materials scope for their structure and exterior finish.
+- Added module paint palettes with editable custom colours and matte, satin and gloss options. Daycare starts with glossy bright colours varied by dock.
+
 ## Build rides and dock refinements
 - Added the swing assembly and a waterslide with bolted section joints to Build and its drawings.
 - Moved cable stays to the top of their own dock storey, removed the deep underfloor systems from the stacked layout, and added 220, 260 and 300 mm slab studies.

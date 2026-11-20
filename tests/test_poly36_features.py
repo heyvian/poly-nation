@@ -76,6 +76,18 @@ with sync_playwright() as p:
  }''')
  assert all(dock_checks.values()), dock_checks
  print('permanent dock frames, folding closures, full-height walls and gravity study passed', flush=True)
+ wet_details = page.evaluate('''() => {
+   const mesh = buildAssemblyMesh(model, { facade: true, slide: true, roofRetail: true }, 0,
+     { assignments: {}, view: state });
+   const count = (name) => mesh.groups.filter(group => group.layer === name).length;
+   const paint = modulePaint({}, PROGRAMS.findIndex(program => program.id === 'day'));
+   return count('Infinite_Rinse_Slide_Wall_Sleeve') === 2 &&
+     count('Infinite_Rinse_Slide_Boarding_Platform') === 1 &&
+     count('Infinite_Rinse_Slide_Receiving_Pool') === 1 &&
+     count('Roof_Commercial_Retail') === model.roofPlan.pavilions.length &&
+     mesh.solid.every(Number.isFinite) && new Set(paint.colors).size === 5 && paint.gloss > 0;
+ }''')
+ assert wet_details
  quick_trial = page.locator('#cpQuickTrial')
  quick_result = page.locator('#cpDashTrialResult')
  drawer = page.locator('#trialDrawer')

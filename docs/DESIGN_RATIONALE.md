@@ -68,7 +68,7 @@ Stacking the bridges keeps them in one part of the atrium. Rotating them around 
 
 ### Pitched glass roof and two-storey pavilions
 
-The designer raised the glass roof toward the swing mast. Its inner ring rises up to two storeys above the public deck. Some rooftop pavilions have a set-back second storey, varying the roofline as the layout changes.
+The designer raised the glass roof toward the swing mast. Its inner ring rises up to two storeys above the public deck. Some rooftop pavilions have a set-back second storey, varying the roofline as the layout changes. The designer described the shops as removable enclosures for year-round use. The study models them as straight-sided prefabricated units on skids, with insulated panels and independent storefronts.
 
 Stairs above the glazing lead to the boarding platform at the ridge. The platform closes the roof around the mast. Both storeys of the pavilions count toward the enclosed area cap.
 
