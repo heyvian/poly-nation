@@ -1,5 +1,10 @@
 # Changelog
 
+## Runout pool, drawing pens and jury rationale
+- Extended the receiving pool along the slide exit and added a slide paint picker, hex field and sheen control.
+- Added one to five physical line weights, distance and component assignments, a pen-over-pencil style and adjustable ink and paper colours. SVG drawings carry separate colour, texture, pencil and pen layers.
+- Reworked the architectural rationale as an ARCH 606 jury deck and added diagrams of the dock closure, structural alternatives and slide landing.
+
 ## Slide wall joints, rooftop shops and paint
 - Added a 36-sided Build slide with sleeves, flanges and fitted flashing at both façade crossings, plus an upper boarding platform and lower receiving pool.
 - Modeled straight-sided prefabricated rooftop shops on skids and added an independent Materials scope for their structure and exterior finish.

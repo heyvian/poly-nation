@@ -1,3 +1,5 @@
+"""Exercise the app's workspaces and export paths with Chromium's software canvas."""
+
 from pathlib import Path
 import os, shutil
 import xml.etree.ElementTree as ET
@@ -67,7 +69,8 @@ with sync_playwright() as p:
  assert page.get_by_role('heading', name='Where programs meet the ring.').is_visible()
  assert page.locator('#dr10 img').evaluate('(im)=>im.complete && im.naturalWidth>0')
  page.get_by_role('link', name='11 Materials').click()
- assert page.get_by_role('heading', name='Compare structure and cladding.').is_visible()
+ assert page.get_by_role('heading', name='Give the frame and the enclosure different lives.').is_visible()
+ assert not page.locator('#dr10').is_visible()
  assert page.locator('#dr11 img').evaluate_all('(images)=>images.length===2 && images.every(image=>image.complete && image.naturalWidth>0)')
  assert page.get_by_role('link', name='12 Record').get_attribute('href') == '#dr12'
  page.locator('.dr-nav a[href="#dr08"]').click();page.wait_for_timeout(200);page.screenshot(path=str(out/'score-rationale.png'))
@@ -81,7 +84,9 @@ with sync_playwright() as p:
  assert page.locator('#openMaterials').get_attribute('aria-current') == 'page'
  page.locator('#openRationale').click()
  assert page.locator('#designRationale').is_visible()
- assert decisions.get_by_text('The designer added this through-route', exact=False).is_visible()
+ assert page.locator('#dr08').is_visible()
+ page.get_by_role('link', name='Atrium and roofline').click()
+ assert decisions.get_by_text('opportunities for indoor and outdoor visitors to meet', exact=False).is_visible()
  page.locator('#drBack').click()
  assert page.locator('#materialsPhase').is_visible()
  page.locator('#openMassing').click()
@@ -160,6 +165,10 @@ with sync_playwright() as p:
  drawing_svg = ET.parse(saved_drawing.value.path()).getroot()
  assert drawing_svg.attrib['width'] == '11in' and drawing_svg.attrib['height'] == '17in'
  assert '1:1000 · Tabloid' in ''.join(drawing_svg.itertext())
+ # A vector editor must be able to control the drawing layers independently.
+ drawing_layers = {group.get('data-layer') for group in drawing_svg.iter() if group.get('data-layer')}
+ assert {'Paper', 'Colour wash', 'Surface texture'} <= drawing_layers
+ assert sum(label.startswith('Pen ') for label in drawing_layers) == 3
  page.locator('#openBuild').click()
  expect(page.locator('#buildCanvas')).to_be_visible()
  check_horizontal_pan(page, 'buildCanvas')

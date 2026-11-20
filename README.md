@@ -17,11 +17,15 @@ Use **Massing → Building → Atrium bridges**, under **Core geometry**, to cho
 
 The **Apply to** palette also offers commercial dock modules, rooftop shops, the water slide, and the swing mast. Choose **Modules by program → Daycare** to set a paint palette and sheen. Daycare starts with bright, glossy colours. The palette varies by dock and supports custom colours. Paint is shown in material views, and the program-colour display shows the program legend colours. The snapshot keeps the six main assembly cards.
 
+Choose **Water slide** under **Apply to** for a colour picker, a hex field and a matte-to-gloss slider. The colour and sheen are saved with the material study and used by Build and material drawings.
+
 **Drawings** creates plan, elevation and axonometric sheets. Add and move horizontal or vertical clipping planes to draw sections. A vertical plane snaps near the midpoint when you drag its slider. Use **Center** to place it exactly on the building axis and **Align view** to look square to the cut. Choose Letter or Tabloid, portrait or landscape, and an architectural scale. **Auto fit** picks the largest listed scale that fits the view on the sheet. Export a physically sized SVG or use **Print / PDF** with actual-size printing.
 
 Use **Source** to draw the massing or the full Build assembly with the current material assignments. Elevation has compass presets and a continuous horizontal orbit. Set a horizontal plane to the project datum or a floor datum. Its offset follows that floor when you change levels. In Plan, **All floor plans** puts the cuts at a shared scale on one sheet. **Print floor set** lays them out one floor per page.
 
 Drag the sheet or use the arrow keys to position a crop at the selected scale. **Fit** centers the sheet and restores automatic scale. **Ground** lines up elevations and axonometrics at a fixed height above the lower drawing margin. The axonometric compass uses the same north as plan. Hybrid sheets overlay linework on program colors, material textures, or both. SVG exports keep vector strokes and embed the optional color layer.
+
+Open **Line weights** to choose one to five auto-filled printed widths. Adjust them in millimetres using the sliders or number fields. Assign them by distance from the camera, by building component, or by outline and detail. Sections use the heaviest pen. Choose standard linework or pen over pencil, a paper colour, and individual pen colours. SVG export names the paper, colour wash, surface-joint texture, pencil guides and each weight as editable groups with Inkscape layer metadata.
 
 **Build** makes a separate schematic assembly from the current massing and material choices. It shows the swing assembly and a rounded, bolted waterslide with sleeves and flashing at both façade crossings. The upper Infinite Rinse room has a boarding platform and the lower one has a receiving pool. Rooftop shops are freestanding prefabricated enclosures with flat roofs, insulated panels and skids. The **Modules** toggle controls chassis, cladding and balconies together. **Facade** controls the finish view when Modules are visible and lets you inspect the core enclosure with the modules hidden. Open balcony and garden decks are removable units on the permanent dock frames. Member sizes and connections are conceptual.
 
@@ -29,7 +33,7 @@ Drag the sheet or use the arrow keys to position a crop at the selected scale. *
 
 Use **Build → Dock structure** to compare tapered side trusses, open-panel side frames, a shallow box floor, same-storey cable stays, roof-hung rods and outer tip columns. Same-storey stays return into the ring beam above the dock. The shallow box floor fits the depth available between stacked modules and illustrates the deflection of a free cantilever of that depth. Brown tip posts flag alignment with a reserved ground bay. The selected dock system and slab thickness are saved locally and appear in drawings that use the Build source.
 
-Use **Design rationale** to open the illustrated design record. Refreshing the same browser tab reopens the active view. Export JSON to carry a saved design to another browser or machine.
+Use **Design rationale** to open the illustrated ARCH 606 jury deck. Navigate with Previous and Next, the topic links, or the left and right arrow keys. Print shows the complete architectural record. Refreshing the same browser tab reopens the active workspace. Export JSON to carry a saved design to another browser or machine.
 
 ## Files
 - `index.html` — active standalone app, vanilla HTML/CSS/JS. WebGL with software Canvas fallback. Native Rhino 3DM uses an optional network CDN; offline Rhino Python script is available. The app itself otherwise requires no build/dependencies.

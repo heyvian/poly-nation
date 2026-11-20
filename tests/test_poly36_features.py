@@ -1,3 +1,5 @@
+"""Check derived assembly details and trial behavior independently of screen layout."""
+
 from pathlib import Path
 import os, shutil
 from playwright.sync_api import expect, sync_playwright
