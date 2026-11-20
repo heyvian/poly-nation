@@ -518,6 +518,8 @@ The case for an empty dock
 
 The entrance, slide and climb reserve parts of the perimeter. Where the slide blocks a dock, an interior room can meet the façade and the circulation can pass behind it. Other open docks can stay available for a future module or support a balcony, garden or retail use.
 
+The designer proposed leaving a permanent frame at every available dock, with a two-leaf closure that folds under the core soffit for a usable dock and folds down to seal an empty one. The same frame carries enclosed modules, public balconies and gardens. The study uses tapered side trusses that return their reactions to the ring, with columns between docking openings and radial beams supporting the core slab. The dimensions and load assumptions are part of the preliminary structural study.
+
 Testing a local change
 
 Reassigning a room or module, or adding a module at an eligible dock, tests a local change to the larger scheme. The model checks the enclosed area cap, dock reservations, same-floor Repel and entrance access before updating shared lobbies and circulation for the revised plan.

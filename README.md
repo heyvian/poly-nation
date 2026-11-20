@@ -23,6 +23,8 @@ Drag the sheet or use the arrow keys to position a crop at the selected scale. *
 
 **Build** makes a separate schematic assembly from the current massing and material choices. The Facade toggle exposes the frame and module connections or shows the assigned finishes. Commercial materials carry over to the roof pavilions and enclosed retail docks. The greenhouse keeps its pitched profile with glazing across the center. Ride geometry and entourage remain in the Massing source. Member sizes and connections are conceptual.
 
+**Dock and slab estimates** in Build compares gravity loads for an enclosed module with a tip balcony, a public balcony, a saturated garden and an empty dock. The same permanent steel side trusses appear in Massing and Build. Empty bays have their doors down. A module or usable outdoor deck gets a threshold and an overhead-folded closure. The slide, entrances and climbing wall retain their reserved clearances. The 220 mm slab thickness assumes radial beams spaced at about 3 m or less around the ring. The estimate uses a fixed-root cantilever and a simply supported slab strip to show the order of magnitude of the forces and deflection.
+
 Use **Design rationale** to open the illustrated design record. Refreshing the same browser tab reopens the active view. Export JSON to carry a saved design to another browser or machine.
 
 ## Files

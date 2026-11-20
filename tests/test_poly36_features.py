@@ -45,6 +45,37 @@ with sync_playwright() as p:
  }''')
  assert all(detail_checks.values()), detail_checks
  print('program balconies, senior laundry, cutaway and exports passed', flush=True)
+ dock_checks = page.evaluate('''() => {
+   const preview = { assignments: {}, view: state };
+   const build = buildAssemblyMesh(model, { walls: true, docks: true, modules: true }, 0, preview);
+   const openBays = model.slots.filter(slot => !slot.blocked);
+   const sealedBays = openBays.filter(slot => slot.p === EMPTY && slot.use === 'empty');
+   const massing = buildMesh(model, true);
+   const { cases, slabSpan, slabMoment } = buildGravityStudy(model, {});
+   const count = (mesh, prefix) => mesh.groups.filter(group => group.layer.startsWith(prefix)).length;
+   const correctWalls = model.layers.every((_, f) => {
+     const start = build.groups.findIndex(group => group.layer === 'Assembly_Room_Partitions_' + (f + 1));
+     const y = build.solid.slice(build.groups[start].solid, build.groups[start + 1].solid)
+       .filter((_, i) => i % 10 === 1);
+     const { base, soffit } = buildStorey(model, f);
+     return Math.abs(Math.min(...y) - base) < 1e-7 && Math.abs(Math.max(...y) - soffit) < 1e-7;
+   });
+   return {
+     fullHeightWalls: correctWalls,
+     allDocks: count(build, 'Assembly_Dock_Connections') === openBays.length &&
+       count(massing, 'Docking_L') === openBays.length,
+     closures: sealedBays.length > 0 && count(build, 'Dock_Closure_Sealed') === sealedBays.length &&
+       count(build, 'Dock_Closure_Folded') === openBays.length - sealedBays.length &&
+       count(massing, 'Dock_Closure_Sealed') === sealedBays.length,
+     openDecks: count(build, 'Assembly_Open_') === openBays.filter(slot =>
+       ['garden', 'balcony'].includes(slot.use)).length,
+     slab: slabSpan > 2 && slabSpan < 3 && slabMoment > 0,
+     gravity: cases.at(-1).rootMoment > cases[1].rootMoment &&
+       cases.every(row => Number.isFinite(row.deflection) && row.deflection > 0),
+   };
+ }''')
+ assert all(dock_checks.values()), dock_checks
+ print('permanent dock frames, folding closures, full-height walls and gravity study passed', flush=True)
  quick_trial = page.locator('#cpQuickTrial')
  quick_result = page.locator('#cpDashTrialResult')
  drawer = page.locator('#trialDrawer')

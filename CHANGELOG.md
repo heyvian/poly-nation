@@ -1,5 +1,11 @@
 # Changelog
 
+## Dock structure and slab study
+- Extended Build partitions to the slab above and kept door openings below their lintels.
+- Replaced the shallow docking rails in Massing and Build with paired tapered steel trusses. Open decks, gardens and empty bays share the frame. Reserved bays stay clear.
+- Added sealed or overhead-folded dock closures and aligned Build's girders, columns and dock ties to the bay grid.
+- Added a conceptual gravity check for dock reactions, tip deflection and the beam-supported concrete slab.
+
 ## Module balconies and laundry
 - Added semicircular balconies at the outer ends of Senior care, Love hotel, upper-floor Marine firehall, and about one fifth of Infinite Rinse modules.
 - Added seeded laundry lines between Senior care modules and adjacent enclosed modules on the same floor. Balcony and laundry geometry appears in the Massing model, material previews, and Massing drawing and geometry exports.
