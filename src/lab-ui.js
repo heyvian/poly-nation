@@ -736,7 +736,9 @@ function paintWebGL(
   gl.uniform3fv(u.uUp, up);
   gl.uniform3fv(u.uBack, back);
   gl.uniform2f(u.uScale, 1 / (half * aspect), 1 / half);
-  gl.uniform1f(u.uDepth, 500);
+  // The district terrain extends well beyond the building-scale depth range.
+  // Leave the smaller range in place for the closer assembly views.
+  gl.uniform1f(u.uDepth, Math.max(500, Math.hypot(gpu.mesh.extent * Math.SQRT2, gpu.mesh.H) + 32));
   gl.uniform4f(u.uTint, 0, 0, 0, 0);
   function batch(k, mode, offset = 0, count = gpu.lengths[k]) {
     if (!count) return;
@@ -775,19 +777,19 @@ function paintWebGL(
   gl.disable(gl.BLEND);
 }
 // Model canvases share pointer gestures and camera presets across workspaces.
-function bindModelCamera({ canvas, getCamera, getMesh, onChange, buttons }) {
+function bindModelCamera({ canvas, getCamera, getMesh, onChange, buttons, panLimit = 180, minimumZoom = 0.06 }) {
   const pointers = new Map();
   const topView = Math.PI / 2;
   const setZoom = (camera, zoom) => {
-    camera.zoom = clamp(zoom, 0.06, 3);
+    camera.zoom = clamp(zoom, minimumZoom, 3);
   };
   function pan(camera, dx, dy) {
     const height = Math.max(1, canvas.clientHeight),
       mesh = getMesh(),
       half = mesh ? baseViewHalf(mesh, camera, canvas.clientWidth / height) : 100,
       metresPerPixel = (2 * half * camera.zoom) / height;
-    camera.panX = clamp((camera.panX ?? 0) - dx * metresPerPixel, -180, 180);
-    camera.pan = clamp(camera.pan + dy * metresPerPixel, -180, 180);
+    camera.panX = clamp((camera.panX ?? 0) - dx * metresPerPixel, -panLimit, panLimit);
+    camera.pan = clamp(camera.pan + dy * metresPerPixel, -panLimit, panLimit);
   }
 
   canvas.addEventListener('pointerdown', (event) => {

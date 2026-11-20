@@ -98,6 +98,9 @@ function drawingGeometry(mesh, model) {
         glazing: kind === 'glass'
       };
       faces.push(face);
+      // DEM triangles occlude geometry and carry color. Their contours and shoreline
+      // strokes are supplied by Site, so the triangulation never becomes drawing ink.
+      if (groups[group].layer.startsWith('Site ')) continue;
       for (const [start, end] of [
         [a, b],
         [b, c],

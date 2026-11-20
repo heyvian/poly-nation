@@ -592,6 +592,8 @@
   <label class="drawing-view-field">Source
    <select id="drawingSource"><option value="massing">Massing with materials</option><option value="build">Build with materials</option></select>
   </label>
+  <label class="check" id="drawingSiteField"><input id="drawingSite" type="checkbox" aria-describedby="drawingSiteNote"> Include West Village site</label>
+  <p class="hint" id="drawingSiteNote">Load live terrain in Site to include it in a drawing.</p>
   <label id="drawingPlanSheetField" class="drawing-view-field" hidden>Plans on sheet
    <select id="drawingPlanSheet"><option value="single">Current plan</option><option value="floors">All floor plans</option></select>
   </label>
@@ -747,47 +749,90 @@
   </div>
  </div>
 </section>
-<section id="sitePhase" class="drawing-workspace" hidden aria-labelledby="siteTitle">
- <aside class="drawing-controls">
-  <h2 id="siteTitle" tabindex="-1">Site</h2>
-  <form id="siteForm">
-   <label class="drawing-view-field">Latitude, longitude
-    <input id="siteCoordinates" required type="text" placeholder="51.0000, -114.0000" autocapitalize="off" spellcheck="false">
+<section id="sitePhase" class="drawing-workspace site-workspace" hidden aria-labelledby="siteTitle">
+ <aside class="drawing-controls site-controls">
+  <h2 id="siteTitle" tabindex="-1">West Village</h2>
+  <p class="hint">Place the building on your studio plan, then load elevation data for the district.</p>
+  <section class="site-control-group" aria-labelledby="sitePlacementTitle">
+   <h3 id="sitePlacementTitle">Building placement</h3>
+   <label class="drawing-view-field">Rotation from north (°)
+    <input id="siteBearing" type="number" min="0" max="359" value="0">
    </label>
-   <label class="drawing-view-field">Terrain extent
-    <select id="siteExtent"><option value="300">300 m square</option><option value="500" selected>500 m square</option><option value="1000">1 km square</option><option value="2200">2.2 km square</option></select>
+   <label class="drawing-view-field">Grade offset (m)
+    <input id="siteGrade" type="number" min="-20" max="20" step="0.1" value="0">
    </label>
-   <label class="check"><input id="siteCanalStudy" type="checkbox"> West Village canal study</label>
-   <button type="submit" class="primary" id="loadSite">Load terrain</button>
-   <button type="button" id="loadWestVillage">Load West Village study</button>
-  </form>
-  <label class="check"><input id="siteContours" type="checkbox" checked> Terrain contour lines</label>
-  <label class="drawing-view-field">Building rotation from north (° clockwise)
-   <input id="siteBearing" type="number" min="0" max="360" value="0">
-  </label>
-  <label class="drawing-view-field">Grade offset from centre (m)
-   <input id="siteGrade" type="number" min="-100" max="100" step="0.1" value="0">
-  </label>
-  <p id="siteStatus" role="status" class="hint">Enter the building-centre coordinates to load the surrounding terrain.</p>
-  <p class="hint">Bare-earth elevations vary in detail by location. The centre sample sets the model datum.</p>
-  <p id="siteNaturalStatus" class="hint" role="status">Mapped natural features load with the terrain.</p>
-  <p id="siteWaterStatus" class="hint" role="status" hidden></p>
-  <div id="siteNaturalLegend" class="legend" hidden>
-   <span><i class="dot" style="background:#78acbd"></i>Water</span>
-   <span><i class="dot" style="background:#8ba77b"></i>Woodland</span>
-   <span><i class="dot" style="background:#4d7750"></i>Mapped tree</span>
-   <span id="siteCanalLegend" hidden><i class="dot" style="background:#4a939e"></i>Proposed canals</span>
-  </div>
-  <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen Terrain Tiles source</a>
-  <p class="hint">Natural features © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></p>
+   <p id="sitePlacementStatus" role="status" class="hint"></p>
+  </section>
+  <section class="site-control-group" aria-labelledby="siteTerrainTitle">
+   <h3 id="siteTerrainTitle">Terrain study</h3>
+   <label class="drawing-view-field">Ground condition
+    <select id="siteCondition">
+     <option value="existing">Existing ground and Bow River</option>
+     <option value="proposed" selected>Proposed canals</option>
+    </select>
+   </label>
+   <label class="drawing-view-field" id="siteDepthField">Canal depth below study water level (m)
+    <input id="siteCanalDepth" type="number" min="0.5" max="8" step="0.1" value="2">
+   </label>
+   <label class="check"><input id="siteShowWater" type="checkbox" checked> Water surfaces</label>
+   <label class="check"><input id="siteContours" type="checkbox" checked> Terrain contour lines</label>
+   <label class="check"><input id="siteVegetation" type="checkbox"> Mapped vegetation</label>
+   <p id="siteStatus" role="status" class="hint">Live elevations are loaded on request.</p>
+   <p id="siteWaterStatus" class="hint"></p>
+  </section>
+  <details class="calc-details site-sources">
+   <summary>Sources and registration</summary>
+   <p id="siteRegistration" class="hint"></p>
+   <p class="hint">The study uses the Bow River outline and canal plan from the supplied sheets. One estimated water level is shared across the study. Canal depth and banks are schematic.</p>
+   <p class="hint"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen Terrain Tiles</a> · <a href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener">Open-Meteo elevation fallback</a></p>
+   <p class="hint">Map alignment and optional vegetation © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></p>
+  </details>
  </aside>
- <div class="drawing-stage">
-  <div class="viewport build-viewport" id="siteViewport">
-   <canvas id="siteCanvas" aria-label="Current building assembly placed on sampled site terrain"></canvas>
-   <div class="view-top"><div class="actions">
-    <button id="siteAxo" type="button">3D</button><button id="sitePlan" type="button">Plan · N ↑</button><button id="siteFit" type="button">Fit</button>
-   </div></div>
-   <div class="view-bottom"><span class="model-mouse-hint">Orbit: left drag · Pan: right drag · Zoom: scroll</span><span class="model-touch-hint">One finger to orbit · Two fingers to pan or zoom</span></div>
+ <div class="drawing-stage site-stage">
+  <div class="site-toolbar">
+   <div class="site-modes" role="group" aria-label="Site view">
+    <button type="button" id="sitePlaceMode" aria-pressed="true">Place on plan</button>
+    <button type="button" id="siteTerrainMode" aria-pressed="false">3D terrain</button>
+   </div>
+   <div class="site-toolbar-actions">
+    <label class="site-plan-select" id="sitePlanField">Source plan
+     <select id="sitePlanSource"><option value="master">Master plan</option><option value="water">Water</option><option value="circulation">Circulation</option></select>
+    </label>
+    <button type="button" class="primary" id="loadSite">Load live terrain</button>
+   </div>
+  </div>
+  <div class="site-plan-panel" id="sitePlanPanel">
+   <div class="site-plan-sheet">
+    <svg id="sitePlacementPlan" tabindex="0" role="img" aria-label="West Village plan with movable building footprint" aria-describedby="sitePlanHelp" xmlns="http://www.w3.org/2000/svg">
+     <image id="sitePlanImage"></image>
+     <path id="sitePlanRiver" fill="#76aebc" fill-opacity="0.68" pointer-events="none"></path>
+     <path id="sitePlanCanals" fill="#53a095" fill-opacity="0.82" pointer-events="none"></path>
+     <rect id="siteStudyLimits" fill="none" stroke="#344b3d" stroke-width="1.5" stroke-dasharray="6 4" pointer-events="none"></rect>
+     <g id="siteFootprint" pointer-events="none">
+      <circle id="siteFootprintExtent" fill="#397358" fill-opacity="0.16" stroke="#397358" stroke-dasharray="3 2"></circle>
+      <circle id="siteFootprintCore" fill="#fbfaf0" fill-opacity="0.72" stroke="#204938" stroke-width="2"></circle>
+      <path id="siteFootprintAxis" fill="none" stroke="#204938" stroke-width="1.6" stroke-linecap="round"></path>
+      <circle r="3.3" fill="#204938" stroke="#fcfbf7" stroke-width="1.3"></circle>
+     </g>
+    </svg>
+   </div>
+   <div class="site-plan-caption">
+    <p id="sitePlanHelp" class="hint">Click inside the dashed boundary to place the building. Arrow keys move it 5 m.</p>
+    <div class="site-plan-key" id="siteWaterKey" aria-label="Waterway colours"><span><i class="dot" style="background:#76aebc"></i>Bow River</span><span id="siteProposedKey"><i class="dot" style="background:#53a095"></i>Proposed canals</span></div>
+    <span id="siteSheetName"></span>
+   </div>
+  </div>
+  <div id="siteTerrainPanel" class="site-terrain-panel" hidden>
+   <div class="site-terrain-empty" id="siteTerrainEmpty">
+    <p>Load live terrain to see the Bow River, ground levels and your building placement in 3D.</p>
+   </div>
+   <div class="viewport build-viewport" id="siteViewport" hidden>
+    <canvas id="siteCanvas" aria-label="West Village terrain and placed building"></canvas>
+    <div class="view-top"><div class="actions">
+     <button id="siteAxo" type="button">3D</button><button id="sitePlan" type="button">Plan · N ↑</button><button id="siteFit" type="button">Fit</button><button id="siteFocus" type="button">Fit building</button>
+    </div></div>
+    <div class="view-bottom"><span class="model-mouse-hint">Orbit: left drag · Pan: right drag · Zoom: scroll</span><span class="model-touch-hint">One finger to orbit · Two fingers to pan or zoom</span></div>
+   </div>
   </div>
  </div>
 </section>
@@ -804,8 +849,10 @@
 <script defer src="src/drawings.js"></script>
 <script defer src="src/build.js"></script>
 <script defer src="assets/data/west-village-water.js"></script>
+<script defer src="src/site-plan.js"></script>
 <script defer src="src/site-maps.js"></script>
 <script defer src="src/site-water.js"></script>
+<script defer src="src/site-terrain.js"></script>
 <script defer src="src/site.js"></script>
 <script defer src="src/materials.js"></script>
 <script defer src="src/workspaces.js"></script>

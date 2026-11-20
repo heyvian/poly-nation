@@ -31,7 +31,6 @@ const EAST_CROSSING = /Mewata|14 Street|14 St\b/i;
 const SITE_MAP_COLOURS = {
   woodland: '#8ba77b',
   wetland: '#a2b990',
-  water: '#78acbd',
   tree: '#4d7750'
 };
 
@@ -46,11 +45,12 @@ function siteMapBounds(location, size) {
     : [bounds(southWest.longitude, 180), bounds(-180, northEast.longitude)];
 }
 
-function siteNaturalQuery(location, size, study) {
+function siteNaturalQuery(location, size, study, includeVegetation) {
   const boxes = siteMapBounds(location, size).map((box) => box.map((n) => n.toFixed(6)).join(','));
-  const features = boxes
-    .map(
-      (b) => `
+  const features = includeVegetation
+    ? boxes
+        .map(
+          (b) => `
     way["natural"~"^(water|wood|wetland|scrub|tree_row)$"](${b});
     way["waterway"~"^(river|stream|riverbank)$"](${b});
     way["landuse"~"^(forest|meadow)$"](${b});
@@ -58,8 +58,9 @@ function siteNaturalQuery(location, size, study) {
     rel["type"="multipolygon"]["landuse"~"^(forest|meadow)$"](${b});
     rel["type"="multipolygon"]["waterway"="riverbank"](${b});
     node["natural"="tree"](${b});`
-    )
-    .join('');
+        )
+        .join('')
+    : '';
   const controls = study
     ? `
     way["waterway"="river"]["name"="Bow River"](${WEST_VILLAGE_BOUNDS});
@@ -68,8 +69,8 @@ function siteNaturalQuery(location, size, study) {
   return `[out:json][timeout:10];(${features}${controls});out geom;`;
 }
 
-async function fetchSiteNaturalFeatures(location, size, study, signal) {
-  const query = siteNaturalQuery(location, size, study);
+async function fetchSiteNaturalFeatures(location, size, study, signal, includeVegetation = true) {
+  const query = siteNaturalQuery(location, size, study, includeVegetation);
   let partial = null;
   for (const endpoint of SITE_OVERPASS) {
     try {
@@ -230,13 +231,13 @@ function siteNaturalOverlay(elements, terrain) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const trees = [],
     shapes = [],
-    names = new Set(),
     half = terrain.size / 2;
   let count = 0;
   for (const element of elements) {
     const tags = element.tags ?? {},
       kind = siteFeatureKind(tags);
-    if (!kind) continue;
+    // Water is defined by the studio plan in both study conditions.
+    if (!kind || kind === 'water' || kind === 'waterLine') continue;
     if (
       element.type === 'node' &&
       kind === 'tree' &&
@@ -249,7 +250,7 @@ function siteNaturalOverlay(elements, terrain) {
       count++;
       continue;
     }
-    const line = kind === 'treeRow' || kind === 'waterLine';
+    const line = kind === 'treeRow';
     const geographic =
       element.type === 'relation'
         ? [...siteMapRings(element.members, 'outer'), ...siteMapRings(element.members, 'inner')]
@@ -277,10 +278,9 @@ function siteNaturalOverlay(elements, terrain) {
     )
       continue;
     shapes.push({ kind, paths, line });
-    if (tags.name && (kind === 'water' || kind === 'waterLine')) names.add(tags.name);
     count++;
   }
-  const order = { woodland: 0, wetland: 1, treeRow: 2, waterLine: 3, water: 4 };
+  const order = { woodland: 0, wetland: 1, treeRow: 2 };
   shapes.sort((a, b) => order[a.kind] - order[b.kind]);
   for (const { kind, paths, line } of shapes) {
     ctx.beginPath();
@@ -294,8 +294,8 @@ function siteNaturalOverlay(elements, terrain) {
       if (!line) ctx.closePath();
     }
     if (line) {
-      ctx.strokeStyle = SITE_MAP_COLOURS[kind === 'treeRow' ? 'woodland' : 'water'];
-      ctx.lineWidth = Math.max(2, (resolution * (kind === 'treeRow' ? 3 : 5)) / terrain.size);
+      ctx.strokeStyle = SITE_MAP_COLOURS.woodland;
+      ctx.lineWidth = Math.max(2, (resolution * 3) / terrain.size);
       ctx.lineJoin = ctx.lineCap = 'round';
       ctx.stroke();
     } else {
@@ -304,7 +304,7 @@ function siteNaturalOverlay(elements, terrain) {
     }
   }
   const raster = shapes.length ? ctx.getImageData(0, 0, resolution, resolution).data : null;
-  return { trees, raster, resolution, count, names: [...names] };
+  return { trees, raster, resolution, count };
 }
 
 function siteLineIntersection(a, b, c, d) {
@@ -319,8 +319,8 @@ function siteLineIntersection(a, b, c, d) {
   return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? [a[0] + t * dx, a[1] + t * dz] : null;
 }
 
-async function alignWestVillageWater(elements, terrain, elevationAt) {
-  const { project, geographic } = siteCoordinates(terrain.location);
+function matchWestVillagePlan(elements) {
+  const { project } = siteCoordinates(WEST_VILLAGE_PLAN.terrainCentre);
   const ways = elements.filter((element) => element.type === 'way'),
     lines = (geometry) => siteGeometryPoints(geometry).map(project),
     river = ways
@@ -359,45 +359,7 @@ async function alignWestVillageWater(elements, terrain, elevationAt) {
   const scale = Math.hypot(a, b);
   // The sheets are 1:5000 (about 1.76 m per PDF point). Reject a mismatched crossing.
   if (scale < 1.25 || scale > 2.3) return null;
-  const transform = (x, y) => [
-    west[0] + a * (x - p[0]) - b * (y - p[1]),
-    west[1] + b * (x - p[0]) + a * (y - p[1])
-  ];
-  const triangles = (entries) =>
-    entries.map(([ax, ay, bx, by, cx, cy]) => [
-      transform(ax, ay),
-      transform(bx, by),
-      transform(cx, cy)
-    ]);
-  function closestOnBow(target) {
-    let best,
-      distance = Infinity;
-    for (const channel of river)
-      for (let i = 1; i < channel.length; i++) {
-        const [x, z] = channel[i - 1],
-          dx = channel[i][0] - x,
-          dz = channel[i][1] - z;
-        const length = dx * dx + dz * dz;
-        if (!length) continue;
-        const t = clamp(((target[0] - x) * dx + (target[1] - z) * dz) / length, 0, 1);
-        const point = [x + dx * t, z + dz * t],
-          separation = Math.hypot(point[0] - target[0], point[1] - target[1]);
-        if (separation < distance) {
-          best = point;
-          distance = separation;
-        }
-      }
-    return best;
-  }
-  const samples = [0.4, 0.45, 0.5, 0.55, 0.6].map((fraction) =>
-    geographic(closestOnBow([west[0] + v[0] * fraction, west[1] + v[1] * fraction]))
-  );
-  const levels = (await Promise.all(samples.map(elevationAt))).sort((a, b) => a - b);
-  const level = levels[2];
-  if (!Number.isFinite(level) || level < -500 || level > 9000) return null;
-  return {
-    level,
-    existing: triangles(WEST_VILLAGE_WATER.river),
-    proposed: triangles(WEST_VILLAGE_WATER.canals)
-  };
+  // The view is north-up. A far-off pair is more likely a service tagging error.
+  if (a >= 0 || Math.abs(b / a) > 0.35) return null;
+  return { a, b, page: p, ground: west, matched: true };
 }

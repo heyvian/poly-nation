@@ -62,6 +62,7 @@ const openDrawingWorkspace = (() => {
       azimuth: 5,
       elevation: 225,
       source: 'massing',
+      showSite: false,
       planSheet: 'single',
       glazing: false,
       selected: null,
@@ -98,6 +99,7 @@ const openDrawingWorkspace = (() => {
             ? 315
             : 225,
         source: saved.source === 'build' ? 'build' : 'massing',
+        showSite: saved.showSite === true,
         planSheet: saved.planSheet === 'floors' ? 'floors' : 'single',
         azimuth:
           Number.isInteger(saved.azimuth) && compassPoints[saved.azimuth] ? saved.azimuth : 5,
@@ -616,7 +618,8 @@ const openDrawingWorkspace = (() => {
         $('drawingDocumentStage').scrollTop = 0;
         return;
       }
-      const mode = settings.source + '/' + settings.mode;
+      const includeSite = settings.showSite && siteWorkspace.hasTerrain,
+        mode = settings.source + '/' + settings.mode + '/' + (includeSite ? siteWorkspace.revision : 'building');
       if (!settings.detail && (!geometry || renderedGeometryMode !== mode)) {
         const view = {
           ...state,
@@ -638,12 +641,10 @@ const openDrawingWorkspace = (() => {
           programColors: settings.mode === 'combined' || settings.mode === 'program',
           finishJoints: settings.mode === 'material' || settings.mode === 'combined'
         };
-        geometry = drawingGeometry(
-          settings.source === 'build'
-            ? buildAssemblyMesh(sourceModel, buildViewLayers(), 0, preview)
-            : buildMesh(sourceModel, false, view, preview),
-          sourceModel
-        );
+        const mesh = settings.source === 'build'
+          ? buildAssemblyMesh(sourceModel, buildViewLayers(), 0, preview)
+          : buildMesh(sourceModel, false, view, preview);
+        geometry = drawingGeometry(includeSite ? siteWorkspace.composeDrawing(mesh) : mesh, sourceModel);
         renderedGeometryMode = mode;
       }
       const camera = settings.detail ? null : viewCamera();
@@ -880,6 +881,14 @@ const openDrawingWorkspace = (() => {
     queueDrawing();
   };
 
+  function syncSiteControl() {
+    const detail = Boolean(settings.detail), loaded = siteWorkspace.hasTerrain;
+    $('drawingSiteField').hidden = detail;
+    $('drawingSite').disabled = detail || !loaded;
+    $('drawingSite').checked = loaded && settings.showSite;
+    $('drawingSiteNote').hidden = detail || loaded;
+  }
+
   function syncSettings() {
     if (!currentPlane()) settings.selected = settings.planes[0]?.id ?? null;
     const plane = currentPlane();
@@ -907,6 +916,7 @@ const openDrawingWorkspace = (() => {
       $(id).disabled = detail;
     $('drawingPlanes').hidden = detail;
     $('drawingSource').value = settings.source;
+    syncSiteControl();
     $('drawingPlanSheet').value = settings.planSheet;
     syncCompass();
     $('drawingRendering').value = settings.mode;
@@ -974,6 +984,15 @@ const openDrawingWorkspace = (() => {
     settings.source = event.target.value;
     queueDrawing();
   };
+  $('drawingSite').onchange = (event) => {
+    settings.showSite = event.target.checked;
+    queueDrawing();
+  };
+  document.addEventListener('west-village-change', () => {
+    if (panel.hidden) return;
+    syncSiteControl();
+    if (settings.showSite) queueDrawing();
+  });
   $('drawingDetail').onchange = (event) => {
     settings.detail = event.target.value;
     stopPlacing();

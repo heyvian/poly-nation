@@ -1,5 +1,10 @@
 # Changelog
 
+## Plan-led West Village study
+- Replaced general GPS placement with a shared building pin on the supplied master, water and circulation sheets.
+- Added an existing/proposed comparison on the district elevation grid, editable canal depth, and independent water and contour visibility. The PDF river and canal geometry can display with live elevations when map services are unavailable.
+- Added a coarser elevation fallback and a Drawings switch for including the placed building and site.
+
 ## Structural fittings and Site fallbacks
 - Added enlarged exterior fitting elevations to the 1:25 connection sheets, with separate SVG layers and service demand from the current dock study. Added the selected fittings to the structural document set.
 - Improved architectural line visibility at small scales by comparing each stroke to the occluding face at the same subpixel position.

@@ -51,13 +51,14 @@ function modelProjection(mesh, camera, aspect) {
 
 // Measure geometry in screen axes so a low cutaway and a tall elevation can each use
 // the available canvas. The ground plane and grid precede the architectural groups.
-function projectedModelBounds(mesh, { right, up }) {
-  const firstGroup = mesh.groups.find((group) => group.layer !== 'Reference');
+function projectedModelBounds(mesh, { right, up }, startsAt = (group) => group.layer !== 'Reference') {
+  const firstGroup = mesh.groups.find(startsAt);
   let minX = Infinity,
     maxX = -Infinity,
     minY = Infinity,
     maxY = -Infinity;
   const originY = mesh.H * 0.47;
+  if (!firstGroup) return { minX, maxX, minY, maxY };
   for (const kind of ['solid', 'glass', 'lines']) {
     const vertices = mesh[kind];
     for (let i = firstGroup[kind]; i < vertices.length; i += 10) {
@@ -75,7 +76,7 @@ function projectedModelBounds(mesh, { right, up }) {
   return { minX, maxX, minY, maxY };
 }
 
-function fitModel(mesh, camera, canvas) {
+function fitModel(mesh, camera, canvas, startsAt) {
   if (!mesh?.groups.some((group) => group.layer !== 'Reference')) return;
   const box = canvas.getBoundingClientRect(),
     { width, height } = box;
@@ -92,7 +93,7 @@ function fitModel(mesh, camera, canvas) {
     if (overlay.classList.contains('view-top')) top = Math.max(top, bounds.bottom - box.top + 6);
     else bottom = Math.max(bottom, box.bottom - bounds.top + 6);
   }
-  const { minX, maxX, minY, maxY } = projectedModelBounds(mesh, orbitBasis(camera));
+  const { minX, maxX, minY, maxY } = projectedModelBounds(mesh, orbitBasis(camera), startsAt);
   const scale = Math.min(
     (width - padding * 2) / (maxX - minX),
     (height - top - bottom) / (maxY - minY)

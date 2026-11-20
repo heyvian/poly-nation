@@ -71,7 +71,7 @@ requestAnimationFrame(animateSwingFrame);
     }
     if (workspace === 'site') {
       if (pending) update();
-      openSiteWorkspace(model, materialWorkspace.assignments());
+      siteWorkspace.open(model, materialWorkspace.assignments());
     }
     if (workspace === 'massing') requestAnimationFrame(draw);
     window.scrollTo(0, pageScroll[workspace]);

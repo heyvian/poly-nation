@@ -1,4 +1,4 @@
-"""Verify overhead cameras and West Village alignment with deterministic map responses."""
+"""Exercise the PDF-led West Village study, terrain providers and overhead cameras."""
 
 import os
 import shutil
@@ -6,6 +6,7 @@ import struct
 import xml.etree.ElementTree as ET
 import zlib
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -92,28 +93,35 @@ with serve_lab(root) as url, sync_playwright() as p:
                                or shutil.which('chromium') or None,
                                args=['--no-sandbox', '--disable-webgl'])
     page = browser.new_page(viewport={'width': 1366, 'height': 768})
-    errors = []
-    requests = []
+    errors, tile_requests, elevation_requests = [], [], []
     tile = terrarium_tile(1040)
     page.on('pageerror', lambda error: errors.append(str(error)))
-    page.route('https://s3.amazonaws.com/elevation-tiles-prod/**',
-               lambda route: route.fulfill(body=tile, content_type='image/png'))
-    page.route('https://overpass-api.de/api/interpreter?*', lambda route: route.fulfill(status=503))
-
-    def mapped_features(route):
-        requests.append(route.request.url)
-        route.fulfill(json={'elements': features})
-
+    tiles = 'https://s3.amazonaws.com/elevation-tiles-prod/**'
+    overpass = 'https://overpass-api.de/api/interpreter?*'
     mirror = 'https://overpass.private.coffee/api/interpreter?*'
     official = 'https://api.openstreetmap.org/api/0.6/map?*'
-    page.route(mirror, mapped_features)
+    fallback = 'https://api.open-meteo.com/v1/elevation?*'
+
+    def primary_terrain(route):
+        tile_requests.append(route.request.url)
+        route.fulfill(body=tile, content_type='image/png')
+
+    page.route(tiles, primary_terrain)
+    for endpoint in [overpass, mirror, official]:
+        page.route(endpoint, lambda route: route.abort())
     page.goto(url + '/')
     page.evaluate('''() => {
       state.simRunning = state.animateSwing = false;
       const paint = paintSoftware;
       paintSoftware = (...args) => {
         window.projectedPlan = {...args[2]};
+        window.paintedGroups = args[0].groups.map(group => group.layer);
         return paint(...args);
+      };
+      const drawModel = renderDrawing;
+      renderDrawing = (...args) => {
+        window.drawingIncludesTerrain = args[0].points.some(([x, , z]) => Math.hypot(x, z) > 800);
+        return drawModel(...args);
       };
     }''')
     verify_plan(page, '#plan')
@@ -121,69 +129,127 @@ with serve_lab(root) as url, sync_playwright() as p:
     verify_plan(page, '#materialPlan')
     page.locator('#openBuild').click()
     verify_plan(page, '#buildPlan')
+    page.locator('#openDrawings').click()
+    expect(page.locator('#drawingSite')).to_be_disabled()
     page.locator('#openSite').click()
-    verify_plan(page, '#sitePlan')
+    svg = page.locator('#sitePlacementPlan')
+    footprint = page.locator('#siteFootprint')
+    expect(svg).to_be_visible()
+    expect(footprint).to_have_attribute('data-water', 'false')
 
-    page.locator('#loadWestVillage').click()
-    expect(page.locator('#siteStatus')).to_contain_text('Centre 1040.0 m elevation')
-    expect(page.locator('#siteNaturalStatus')).to_have_text('4 mapped natural features. Bow River.')
-    expect(page.locator('#siteWaterStatus')).to_contain_text('share a 1040.0 m study plane', timeout=15000)
-    expect(page.locator('#siteCanalLegend')).to_be_visible()
-    expect(page.locator('#loadSite')).to_be_enabled()
-    assert len(requests) == 1, requests
-    assert page.evaluate('''async (elements) => {
-      const terrain = {location: {latitude: 51.049, longitude: -114.103},
-        size: 2200, count: 2, datum: 1042, elevations: [1044, 1044, 1044, 1044]};
-      const water = await alignWestVillageWater(elements, terrain, async () => 1040);
-      const natural = siteNaturalOverlay(elements, terrain);
-      const mesh = siteAssemblyMesh({...meshBuilder(), H: 0, extent: 0}, terrain, 0, 0, natural, water);
-      const groups = mesh.groups;
-      const volumes = groups.filter(group => group.layer.endsWith('shared study water plane'));
-      const sharedPlane = volumes.length === 2 && volumes.every(group => {
-        const end = groups[groups.indexOf(group) + 1].solid;
-        return end > group.solid &&
-          mesh.solid.slice(group.solid, end).filter((_, i) => i % 10 === 1).every(y => y === -2);
-      });
-      const cut = terrainOutsideSiteWater([[0,2,0], [6,2,0], [0,2,6]], siteWaterStudy(terrain,
-        {level: 1040, existing: [], proposed: [[[0,0], [6,0], [0,6]]]}, 1).index[0]);
-      // The entire land triangle is water: any remaining fragments must have zero area.
-      const area = cut.reduce((sum, polygon) => sum + Math.abs(polygon.reduce((twice, p, i) => {
-        const q = polygon[(i+1)%polygon.length];
-        return twice + p[0]*q[2] - q[0]*p[2];
-      }, 0)), 0);
-      return sharedPlane && area < 1e-6 &&
-        mesh.groups.some(group => group.layer === 'OpenStreetMap mapped trees');
-    }''', features)
-    verify_plan(page, '#sitePlan')
+    def pick(x, y):
+        point = svg.evaluate('(node, [x, y]) => {const p = new DOMPoint(x, y).matrixTransform(node.getScreenCTM()); return [p.x, p.y]}',
+                             [x, y])
+        page.mouse.click(*point)
 
+    start = footprint.get_attribute('transform')
+    pick(140, 120)
+    expect(page.locator('#sitePlacementStatus')).to_contain_text('inside the dashed')
+    expect(footprint).to_have_attribute('transform', start)
+    pick(740, 423)
+    pin = footprint.get_attribute('transform')
+    assert pin != start
+    svg.press('ArrowRight')
+    pin = footprint.get_attribute('transform')
+    for sheet in ['water', 'circulation', 'master']:
+        page.locator('#sitePlanSource').select_option(sheet)
+        expect(page.locator('#sitePlanImage')).to_have_attribute('href', f'assets/site/{sheet}.webp')
+        expect(footprint).to_have_attribute('transform', pin)
+    page.locator('#siteTerrainMode').click()
+    expect(page.locator('#siteTerrainEmpty')).to_be_visible()
+    assert not tile_requests, 'Terrain was requested before the placement step'
+
+    # No vector map service is required to show the river and excavations in the supplied plans.
+    page.locator('#loadSite').click()
+    expect(page.locator('#siteStatus')).to_contain_text('Mapzen Terrain Tiles', timeout=20000)
+    expect(page.locator('#sitePlacementStatus')).to_contain_text('Ground at pin 1040.0 m')
+    expect(page.locator('#siteWaterStatus')).to_contain_text('Bow River study level 1040.0 m')
+    expect(page.locator('#siteWaterStatus')).to_contain_text('Approximate plan registration')
+    expect(page.locator('#siteTerrainEmpty')).to_be_hidden()
+    expect(page.locator('#siteCanvas')).to_be_visible()
+    verify_plan(page, '#sitePlan')
+    page.locator('#siteFocus').click()
+    assert page.evaluate('window.projectedPlan.zoom < 0.15')
+    page.locator('#siteCondition').select_option('existing')
+    page.wait_for_function("window.paintedGroups.includes('Site Bow River water') && !window.paintedGroups.includes('Site canal bed')")
+    page.locator('#siteCondition').select_option('proposed')
+    page.wait_for_function("window.paintedGroups.includes('Site canal bed') && window.paintedGroups.includes('Site canal water')")
+    page.locator('#siteShowWater').uncheck()
+    page.wait_for_function("window.paintedGroups.includes('Site canal bed') && !window.paintedGroups.includes('Site canal water')")
+    page.locator('#siteShowWater').check()
     page.locator('#siteContours').uncheck()
-    assert len(requests) == 1, 'Contours caused another map request'
+    page.locator('#siteCanalDepth').fill('3')
+    page.locator('#siteCanalDepth').press('Tab')
     assert page.evaluate('''() => {
-      const terrain = {size: 80, count: 2, datum: 1040, elevations: [1040, 1048, 1040, 1048]};
-      const building = {...meshBuilder(), H: 0, extent: 0};
-      const withLines = siteAssemblyMesh(building, terrain, 0, 0);
-      const withoutLines = siteAssemblyMesh(building, terrain, 0, 0, null, null, false);
-      return withLines.lines.length > 0 && !withoutLines.lines.length &&
-        withLines.solid.join() === withoutLines.solid.join();
+      const terrain = {size: 2800, count: 2, datum: 1040, elevations: [1040,1048,1040,1048]};
+      const structure = meshBuilder();
+      structure.mark('Core_test');
+      structure.box(0,0,0,4,10,4,0,rgb('#447763'));
+      const building = {...structure, H: 10, extent: 4};
+      const water = {level: 1041, existing: [],
+        proposed: [[[0,0], [20,0], [0,20]]]};
+      const settings = {water, showWater: false, showContours: false, canalDepth: 3, position: [2, 3]};
+      const changed = siteAssemblyMesh(building, terrain, settings);
+      const outlines = siteAssemblyMesh(building, terrain, {...settings, showContours: true});
+      const floor = changed.groups.findIndex(group => group.layer === 'Site canal bed');
+      const bay = changed.groups.find(group => group.layer === 'Core_test');
+      const span = changed.solid.slice(changed.groups[floor].solid, changed.groups[floor + 1].solid);
+      const asDrawing = siteAssemblyMesh(building, terrain, {...settings, relativeToBuilding: true});
+      const origin = asDrawing.groups.find(group => group.layer === 'Core_test').solid;
+      return span.filter((_, i) => i % 10 === 1).every(y => y === -2) &&
+        outlines.lines.length > changed.lines.length && outlines.solid.join() === changed.solid.join() &&
+        changed.solid[bay.solid + 1] > asDrawing.solid[origin + 1];
     }''')
 
+    page.locator('#openDrawings').click()
+    include_site = page.locator('#drawingSite')
+    expect(include_site).to_be_enabled()
+    include_site.check()
+    page.wait_for_function('window.drawingIncludesTerrain')
+    expect(page.locator('#exportDrawing')).to_be_enabled()
+    include_site.uncheck()
+    page.wait_for_function('window.drawingIncludesTerrain === false')
+    page.locator('#openSite').click()
     page.reload()
     expect(page.locator('#sitePhase')).to_be_visible()
     expect(page.locator('#siteContours')).not_to_be_checked()
-    expect(page.locator('#siteWaterStatus')).to_contain_text('share a 1040.0 m study plane', timeout=15000)
-    page.route(mirror, lambda route: route.abort())
+    expect(page.locator('#siteCanalDepth')).to_have_value('3')
+    expect(page.locator('#siteStatus')).to_contain_text('cached elevations')
+    page.locator('#sitePlaceMode').click()
+    expect(footprint).to_have_attribute('transform', pin)
+
+    # Try the standards-based OSM XML lookup and the independent elevation fallback.
     page.route(official, lambda route: route.fulfill(body=osm_xml(features), content_type='application/xml'))
+    page.route(tiles, lambda route: route.abort())
+
+    def fallback_terrain(route):
+        latitudes = parse_qs(urlsplit(route.request.url).query)['latitude'][0].split(',')
+        elevation_requests.append(len(latitudes))
+        route.fulfill(json={'elevation': [1042] * len(latitudes)})
+
+    page.route(fallback, fallback_terrain)
     page.locator('#loadSite').click()
-    expect(page.locator('#siteNaturalStatus')).to_have_text('4 mapped natural features. Bow River.')
-    expect(page.locator('#siteWaterStatus')).to_contain_text('share a 1040.0 m study plane', timeout=15000)
-    page.route(official, lambda route: route.abort())
+    expect(page.locator('#siteStatus')).to_contain_text('Open-Meteo (coarser fallback)', timeout=20000)
+    expect(page.locator('#siteWaterStatus')).to_contain_text('Bow River study level 1042.0 m')
+    expect(page.locator('#siteWaterStatus')).to_contain_text('Matched at two Bow River crossings')
+    assert elevation_requests == [100, 100, 89], elevation_requests
+    page.locator('#siteVegetation').check()
+    expect(page.locator('#siteWaterStatus')).to_contain_text('Mapped vegetation is shown.')
+    page.locator('#siteVegetation').uncheck()
+    page.route(fallback, lambda route: route.abort())
     page.locator('#loadSite').click()
-    expect(page.locator('#siteNaturalStatus')).to_have_text('OpenStreetMap is unavailable. The elevation terrain is ready.')
-    expect(page.locator('#siteCanalLegend')).to_be_hidden()
-    expect(page.locator('#siteStatus')).to_contain_text('Centre 1040.0 m elevation')
+    expect(page.locator('#siteStatus')).to_contain_text('previous elevation surface is still shown')
+    expect(page.locator('#siteCanvas')).to_be_visible()
+    page.locator('#sitePlaceMode').click()
+    expect(footprint).to_have_attribute('transform', pin)
+    mobile = browser.new_page(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
+    mobile.goto(url + '/')
+    mobile.locator('#openSite').click()
+    expect(mobile.locator('#sitePlacementPlan')).to_be_visible()
+    assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
     page.goto(url + '/Design_Rationale.html')
     expect(page.locator('.dr-slide:visible')).to_have_count(1)
     page.locator('#drNext').press('ArrowRight')
     expect(page.locator('#drSite')).to_be_visible()
     assert not errors, errors
-    print('Overhead plans, Overpass and OSM XML fallback, canal grade, contour preference and rationale passed.')
+    print('PDF placement, district bounds, terrain and map fallbacks, canal excavation, drawing toggle and overhead views passed.')

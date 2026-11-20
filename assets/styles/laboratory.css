@@ -634,8 +634,6 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  background: var(--paper);
 }
 .drawing-view-field { display: grid; gap: 4px; }
-#siteForm { display: grid; gap: 10px; margin-bottom: 14px; }
-#siteCoordinates { min-width: 0; padding: 6px 7px; font: inherit; border: 1px solid #bfcbbf; border-radius: 4px; }
 .drawing-pen-settings { display: grid; gap: 7px; }
 .drawing-colours { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 12px; align-items: end; }
 /* Keep each pen's slider, millimetre field and ink swatch together in the narrow drawing rail. */
@@ -783,4 +781,39 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  .dr-slide-controls { display: none !important; }
  .dr-slide-deck .dr-slide { display: block !important; }
  .dr-slide-deck .dr-hero { display: grid !important; }
+}
+
+/* The studio plan is the placement surface. Keep its sheet and the terrain on the same stage. */
+.site-controls { gap: 10px; }
+.site-controls h2, .site-controls .hint { margin: 0; }
+.site-control-group { display: grid; gap: 9px; margin: 3px 0; padding-top: 11px; border-top: 1px solid var(--line); }
+.site-control-group h3 { margin: 0; }
+.site-control-group .check { margin: 0; }
+.site-control-group .hint:empty { display: none; }
+.site-control-group input, .site-control-group select { min-width: 0; }
+.site-sources .hint { margin: 7px 0; }
+.site-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.site-toolbar-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.site-modes { display: flex; gap: 5px; }
+.site-modes [aria-pressed=true] { color: white; background: #254838; border-color: #254838; }
+.site-plan-select { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+.site-plan-select select { font: inherit; color: var(--ink); padding: 5px 7px; }
+.site-plan-panel, .site-terrain-panel { display: flex; flex-direction: column; min-height: 0; flex: 1; gap: 8px; }
+.site-plan-panel[hidden], .site-terrain-panel[hidden], .site-plan-select[hidden], .site-terrain-empty[hidden], #siteViewport[hidden] { display: none; }
+.site-plan-sheet { display: grid; place-items: center; flex: 1; min-height: 0; padding: 10px; background: #f5f6ef; border: 1px solid #cbd4c9; border-radius: 6px; }
+#sitePlacementPlan { width: 100%; height: 100%; display: block; cursor: crosshair; }
+#sitePlacementPlan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#siteFootprint[data-water=true] circle { stroke: #ac692f; }
+.site-plan-caption { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+.site-plan-caption span { text-align: right; }
+.site-plan-key { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; }
+.site-plan-key span { white-space: nowrap; }
+.site-plan-key[hidden], .site-plan-key [hidden] { display: none; }
+.site-terrain-empty { display: grid; flex: 1; min-height: 240px; place-items: center; padding: 30px; text-align: center; color: #4f6959; background: #f5f6ef; border: 1px solid #cbd4c9; border-radius: 6px; }
+@media (max-width: 899px) {
+ .site-plan-sheet { min-height: clamp(260px, 54vw, 500px); }
+}
+@media (max-width: 650px) {
+ .site-stage { order: -1; }
+ .site-plan-caption { flex-wrap: wrap; }
 }

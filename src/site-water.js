@@ -46,14 +46,14 @@ function siteWaterStudy(terrain, aligned, cells) {
           q = original[(i + 1) % 3],
           id = [key(p), key(q)].sort().join('|');
         if (outlines.has(id)) outlines.delete(id);
-        else outlines.set(id, [p, q]);
+        else outlines.set(id, { p, q, kind });
       }
     }
   }
   const banks = [];
-  for (const [p, q] of outlines.values()) {
+  for (const { p, q, kind } of outlines.values()) {
     const line = clipDrawingLine([p[0], level, p[1]], [q[0], level, q[1]], square);
-    if (line) banks.push(line);
+    if (line) banks.push({ line, kind });
   }
   return { level, faces, banks, index };
 }
@@ -79,30 +79,52 @@ function terrainOutsideSiteWater(triangle, waterPlanes) {
   return land;
 }
 
-function addSiteWater(mesh, terrain, study) {
+function addSiteWater(mesh, terrain, study, { showWater, canalDepth }) {
   if (!study?.faces.length) return;
-  for (const [kind, name, color] of [
-    ['existing', 'Bow River · shared study water plane', '#7cb2c4'],
-    ['proposed', 'Proposed canals · shared study water plane', '#4a939e']
-  ]) {
+  const proposedBed = ([x, level, z]) => [
+      x,
+      Math.min(level - canalDepth, siteTerrainHeight(terrain, x, z)),
+      z
+    ],
+    atGround = ([x, , z]) => [x, siteTerrainHeight(terrain, x, z), z];
+  function faces(kind, name, color, project) {
+    const fill = rgb(color);
     mesh.mark(name);
-    for (const face of study.faces) {
-      if (face.kind !== kind) continue;
-      const p = face.polygon;
-      for (let i = 1; i + 1 < p.length; i++) mesh.tri(p[0], p[i], p[i + 1], rgb(color));
+    for (const { kind: faceKind, polygon } of study.faces) {
+      if (faceKind !== kind) continue;
+      const p = project ? polygon.map(project) : polygon;
+      for (let i = 1; i + 1 < p.length; i++) mesh.tri(p[0], p[i], p[i + 1], fill);
     }
   }
-  mesh.mark('Study banks');
-  const clay = rgb('#9d9d81');
-  for (const [a, b] of study.banks) {
-    // Short vertical facets close the gap between sampled terrain and the study plane.
-    // The model leaves flood extent and bank slopes undefined.
+  if (study.faces.some(({ kind }) => kind === 'proposed'))
+    faces('proposed', 'Site canal bed', '#a59b7c', proposedBed);
+  if (showWater) {
+    faces('existing', 'Site Bow River water', '#7cb2c4');
+    if (study.faces.some(({ kind }) => kind === 'proposed'))
+      faces('proposed', 'Site canal water', '#4a939e');
+  }
+  mesh.mark('Site water banks');
+  const clay = rgb('#9d9d81'),
+    edge = rgb('#60877d');
+  for (const {
+    line: [a, b],
+    kind
+  } of study.banks) {
+    // The excavation follows the PDF edge. Short vertical faces join the unmodified
+    // ground to the conceptual canal bed, independently of water visibility.
     const steps = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[2] - a[2]) / 6));
     for (let i = 0; i < steps; i++) {
       const p = drawingMix(a, b, i / steps),
         q = drawingMix(a, b, (i + 1) / steps);
-      const up = ([x, y, z]) => [x, Math.max(y, siteTerrainHeight(terrain, x, z)), z];
-      mesh.quad(p, q, up(q), up(p), clay);
+      const low = kind === 'proposed' ? proposedBed : (point) => point,
+        up =
+          kind === 'proposed'
+            ? atGround
+            : ([x, level, z]) => [x, Math.max(level, siteTerrainHeight(terrain, x, z)), z];
+      const topP = up(p),
+        topQ = up(q);
+      mesh.quad(low(p), low(q), topQ, topP, clay);
+      mesh.line([topP[0], topP[1] + 0.02, topP[2]], [topQ[0], topQ[1] + 0.02, topQ[2]], edge);
     }
   }
 }
