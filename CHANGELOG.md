@@ -1,5 +1,9 @@
 # Changelog
 
+## Drawing outlines and Illustrator import
+- Added independent overall silhouette and key component outline emphasis. Both work with distance-based line weights and export to named SVG layers.
+- Updated the Illustrator import script to identify artwork using the SVG's layer list and temporary text markers that it removes after import.
+
 ## Scale-aware drawing pens
 - Added an optional adjustment for pen weights at the current drawing scale. Fixed printed widths remain the default. Preview, SVG and print all use the effective widths shown in the line-weight panel.
 - Put paper and pen colour pickers on one row. Replaced the footer’s paper-size label with a metric scale bar alongside the drawing ratio and added a ring-inspired north arrow to plans and axonometrics.

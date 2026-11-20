@@ -1361,6 +1361,9 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
      <option value="profile">Outlines and detail</option>
     </select>
    </label>
+   <label class="check"><input id="drawingSilhouette" type="checkbox" aria-describedby="drawingOutlineNote"> Overall silhouette</label>
+   <label class="check"><input id="drawingComponentOutlines" type="checkbox" aria-describedby="drawingOutlineNote"> Key component outlines</label>
+   <p class="hint" id="drawingOutlineNote">Use the heaviest pen on the project perimeter or on visible edges of the core, modules and rides.</p>
    <label class="drawing-view-field">Number of weights
     <select id="drawingPenCount"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
    </label>
@@ -1402,7 +1405,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   <details class="drawing-export-help">
    <summary>Illustrator layers</summary>
    <p class="hint">For native layers, run the script in Illustrator using File → Scripts → Other Script, then select your exported SVG.</p>
-   <a href="tools/Poly-Nation-SVG-to-Layers.jsx" download>Download Illustrator layer script</a>
+   <a href="tools/Poly-Nation-SVG-to-Layers.jsx?v=2" download>Download Illustrator layer script</a>
   </details>
  </aside>
  <div class="drawing-stage">
@@ -11596,6 +11599,26 @@ function drawingComponent(layer) {
   return 'site';
 }
 
+function drawingOutlineBody({ layer, name }) {
+  // Separate pods by storey and dock. Keep a pod's balcony and skin in the same body.
+  if (/^(Modules|Module_Balconies|Assembly_Open)_/.test(layer))
+    return `Module ${layer.match(/_L(\d+)(?:_|$)/)[1]}/${name}`;
+  if (/^Assembly_Module_(Skin|Chassis)$/.test(layer)) return `Module ${name}`;
+  if (/^Infinite_Rinse_(Water_Slide|Slide_(Wall_Sleeve|Flang|Flashing|Bolt))/.test(layer))
+    return 'Slide';
+  if (/^Swing_(Tower|Crown|Boarding_Platform)/.test(layer)) return 'Swing tower';
+  if (/^Climbing_L\d+_Wall$/.test(layer)) return 'Climbing wall';
+  if (/^Roof_Commercial_Retail/.test(layer)) return name;
+  if (/^(Atrium_(Glass|Roof_Ridge)|Assembly_Greenhouse)/.test(layer)) return 'Atrium roof';
+  if (
+    /^(Core_|Facade_|Roof_Public_Deck|Assembly_(Foundation|Floor_|Roof_Deck|Exterior_Walls|Room_Partitions|Ring_Beams|Columns|Roof_Framing))/.test(
+      layer
+    )
+  )
+    return 'Core';
+  return '';
+}
+
 // Weld drawing vertices so silhouettes and creases can be found across adjacent faces.
 function drawingGeometry(mesh, model) {
   const groups = mesh.groups,
@@ -11606,6 +11629,13 @@ function drawingGeometry(mesh, model) {
     edges = new Map(),
     lines = [],
     indices = new Map();
+  const bodies = new Map();
+  const bodyIds = groups.map((group) => {
+    const body = drawingOutlineBody(group);
+    if (!body) return 0;
+    if (!bodies.has(body)) bodies.set(body, bodies.size + 1);
+    return bodies.get(body);
+  });
   function vertex(data, at) {
     const point = data.slice(at, at + 3);
     const key = point.map((x) => Math.round(x * 10000)).join(',');
@@ -11616,27 +11646,29 @@ function drawingGeometry(mesh, model) {
     return indices.get(key);
   }
   if (first < 0) return { points, faces, edges: [], lines };
-  function componentAt(kind) {
+  function groupAt(kind) {
     // The mesh stores layer boundaries as offsets into vertex buffers, one range per kind.
     let index = first;
     return (offset) => {
       while (groups[index + 1]?.[kind] <= offset) index++;
-      return parts[index];
+      return index;
     };
   }
   for (const kind of ['solid', 'glass']) {
     const data = mesh[kind];
-    const part = componentAt(kind);
+    const groupAtOffset = groupAt(kind);
     for (let i = groups[first][kind]; i < data.length; i += 30) {
       const a = vertex(data, i),
         b = vertex(data, i + 10),
         c = vertex(data, i + 20);
       if (a === b || b === c || c === a) continue;
+      const group = groupAtOffset(i);
       const face = {
         vertices: [a, b, c],
         normal: data.slice(i + 3, i + 6),
         color: data.slice(i + 6, i + 9),
-        component: part(i),
+        component: parts[group],
+        body: bodyIds[group],
         glazing: kind === 'glass'
       };
       faces.push(face);
@@ -11651,11 +11683,12 @@ function drawingGeometry(mesh, model) {
       }
     }
   }
-  const part = componentAt('lines');
+  const groupAtLine = groupAt('lines');
   for (let i = groups[first].lines; i < mesh.lines.length; i += 20) {
     const a = vertex(mesh.lines, i),
       b = vertex(mesh.lines, i + 10);
-    if (a !== b) lines.push({ a, b, component: part(i), texture: mesh.textureStrokes?.has(i) });
+    if (a !== b)
+      lines.push({ a, b, component: parts[groupAtLine(i)], texture: mesh.textureStrokes?.has(i) });
   }
   return { points, faces, edges: [...edges.values()], lines, model };
 }
@@ -11694,7 +11727,7 @@ function clipDrawingLine(start, end, planes) {
 }
 
 // The depth buffer hides linework behind the geometry while the strokes remain vector paths.
-function rasterDrawingFace(depth, width, height, a, b, c, pixels, color) {
+function rasterDrawingFace(depth, width, height, a, b, c, pixels, color, outline, body) {
   const bx = b[0] - a[0],
     by = b[1] - a[1],
     cx = c[0] - a[0],
@@ -11716,6 +11749,12 @@ function rasterDrawingFace(depth, width, height, a, b, c, pixels, color) {
       if (u < 0 || v < 0 || u + v > 1) continue;
       const z = a[2] + u * dzB + v * dzC,
         i = y * width + x;
+      // Keep the closest principal body independently. Site furniture and trim still occlude
+      // lines in the main depth buffer but cannot punch little holes in the building silhouette.
+      if (outline && z > outline.depth[i]) {
+        outline.depth[i] = z;
+        outline.owner[i] = body;
+      }
       if (z <= depth[i]) continue;
       depth[i] = z;
       if (pixels) {
@@ -11744,9 +11783,48 @@ function drawingFaceColor(face, sun) {
   return face.color.map((channel) => (0.49 + 0.51 * channel * shade) * 255);
 }
 
-function rasterDrawingPolygon(depth, width, height, polygon, pixels, color) {
+function rasterDrawingPolygon(depth, width, height, polygon, pixels, color, outline, body) {
   for (let i = 1; i + 1 < polygon.length; i++)
-    rasterDrawingFace(depth, width, height, polygon[0], polygon[i], polygon[i + 1], pixels, color);
+    rasterDrawingFace(
+      depth,
+      width,
+      height,
+      polygon[0],
+      polygon[i],
+      polygon[i + 1],
+      pixels,
+      color,
+      outline,
+      body
+    );
+}
+
+function drawingBoundary(owner, width, height, from, to, bodies) {
+  function bodyAt(x, y) {
+    const column = Math.floor(x),
+      row = Math.floor(y);
+    return column >= 0 && column < width && row >= 0 && row < height
+      ? owner[row * width + column]
+      : 0;
+  }
+  const dx = to[0] - from[0],
+    dy = to[1] - from[1],
+    length = Math.hypot(dx, dy),
+    xOffset = (-dy * 1.2) / length,
+    yOffset = (dx * 1.2) / length;
+  let silhouette = 0,
+    component = 0;
+  // Vote along the visible stroke to avoid promoting spurious one-pixel seams near corners.
+  for (const fraction of [0.2, 0.5, 0.8]) {
+    const x = from[0] + dx * fraction,
+      y = from[1] + dy * fraction;
+    const a = bodyAt(x + xOffset, y + yOffset),
+      b = bodyAt(x - xOffset, y - yOffset);
+    if (a === b || (!bodies.includes(a) && !bodies.includes(b))) continue;
+    component++;
+    if (!a || !b) silhouette++;
+  }
+  return silhouette >= 2 ? 'silhouette' : component >= 2 ? 'component' : '';
 }
 
 // Trace only boundaries between visible colours. Shared edges use the same grid, and tracing
@@ -11880,6 +11958,8 @@ function drawingPens(saved = {}) {
     mode: ['distance', 'component', 'profile'].includes(saved?.mode) ? saved.mode : 'distance',
     style: saved?.style === 'sketch' ? 'sketch' : 'standard',
     adaptToScale: saved?.adaptToScale === true,
+    silhouette: saved?.silhouette === true,
+    componentOutlines: saved?.componentOutlines === true,
     paper: paintHex(saved?.paper) || '#ffffff',
     colors: DRAWING_PEN_PRESETS[count].map((_, i) => paintHex(saved?.colors?.[i]) || '#43534c'),
     widths: DRAWING_PEN_PRESETS[count].map((width, i) =>
@@ -11989,6 +12069,13 @@ function renderDrawing(
     paint = hybrid ? new ImageData(width, height) : null,
     sun = unit([-0.4, 1, 0.65]),
     cutLines = [];
+  const outline =
+    pens.silhouette || pens.componentOutlines
+      ? {
+          depth: new Float32Array(width * height).fill(-Infinity),
+          owner: new Uint16Array(width * height)
+        }
+      : null;
   // Transform model-space planes into the same pixel and depth coordinates as the mesh.
   const clips = planes.map(({ normal, offset, flip }) => {
     const sign = flip ? -1 : 1,
@@ -12002,7 +12089,16 @@ function renderDrawing(
     if (polygon.length < 3) continue;
     if (!face.glazing || !seeThrough) {
       const color = paint && drawingFaceColor(face, sun);
-      rasterDrawingPolygon(depth, width, height, polygon, paint?.data, color);
+      rasterDrawingPolygon(
+        depth,
+        width,
+        height,
+        polygon,
+        paint?.data,
+        color,
+        face.body ? outline : null,
+        face.body
+      );
     }
     for (const plane of clips) {
       if (
@@ -12073,11 +12169,23 @@ function renderDrawing(
   }
   // Draw section cuts first in the deduplication set so their heavier weight wins.
   for (const [a, b] of cutLines) strokeVisible(a, b, (command) => section.push(command));
-  function strokeModelEdge(a, b, component, detail, texture = false) {
+  function strokeModelEdge(a, b, component, detail, texture = false, bodies = null) {
     const clipped = clipDrawingLine(projected[a], projected[b], clips);
     if (clipped)
       strokeVisible(clipped[0], clipped[1], (command, from, to) => {
-        marks.push({ command, depth: (from[2] + to[2]) / 2, component, detail, texture, from, to });
+        const boundary = bodies?.length
+          ? drawingBoundary(outline.owner, width, height, from, to, bodies)
+          : '';
+        marks.push({
+          command,
+          depth: (from[2] + to[2]) / 2,
+          component,
+          detail,
+          texture,
+          from,
+          to,
+          boundary
+        });
       });
   }
   for (const { start, end, faces } of geometry.edges) {
@@ -12094,7 +12202,10 @@ function renderDrawing(
     const crease = faces
       .slice(1)
       .some((other) => Math.abs(dot(first.normal, other.normal)) < 0.985);
-    if (silhouette || crease) strokeModelEdge(start, end, first.component, silhouette ? 0 : 0.52);
+    const bodies = outline && faces.map((face) => face.body).filter(Boolean);
+    const joint = pens.componentOutlines && bodies.some((body) => body !== bodies[0]);
+    if (silhouette || crease || joint)
+      strokeModelEdge(start, end, first.component, silhouette ? 0 : 0.52, false, bodies);
   }
   for (const { a, b, component, texture } of geometry.lines)
     strokeModelEdge(a, b, component, 1, texture);
@@ -12106,6 +12217,8 @@ function renderDrawing(
     texture = Array.from({ length: count }, () => []),
     pencil = [],
     pencilEcho = [],
+    silhouetteInk = [],
+    componentInk = [],
     sketch = pens.style === 'sketch';
   let far = Infinity,
     near = -Infinity;
@@ -12132,7 +12245,10 @@ function renderDrawing(
       noise = sketch ? Math.sin(from[0] * 12.9898 + from[1] * 78.233) * 43758.5453 : 0,
       variation = noise - Math.floor(noise),
       pressure = sketch && mark.detail < 1 ? (variation < 0.22 ? 1 : variation > 0.78 ? 2 : 0) : 0;
-    ink[index][pressure].push(mark.command);
+    // Promote each stroke once. When both options apply, the overall silhouette owns the stroke.
+    if (pens.silhouette && mark.boundary === 'silhouette') silhouetteInk.push(mark.command);
+    else if (pens.componentOutlines && mark.boundary) componentInk.push(mark.command);
+    else ink[index][pressure].push(mark.command);
     if (!sketch || mark.detail >= 1 || (mark.detail > 0 && variation > 0.38)) continue;
 
     const dx = to[0] - from[0],
@@ -12174,6 +12290,8 @@ function renderDrawing(
   }
   return {
     ink: ink.map((pressure) => pressure.map((paths) => paths.join(''))),
+    silhouetteInk: silhouetteInk.join(''),
+    componentInk: componentInk.join(''),
     texture: texture.map((paths) => paths.join('')),
     pencil: pencil.join(''),
     pencilEcho: pencilEcho.join(''),
@@ -12659,6 +12777,15 @@ const openDrawingWorkspace = (() => {
       }
       layers.push(layer);
     }
+    for (const [name, strokes] of [
+      ['Component outlines', frame.componentInk],
+      ['Overall silhouette', frame.silhouetteInk]
+    ]) {
+      if (!strokes) continue;
+      const layer = markSvgLayer(svgElement('g', {}), name);
+      layer.append(path(strokes, widths[heaviest], pens.colors[heaviest]));
+      layers.push(layer);
+    }
     target.replaceChildren(...layers);
   }
 
@@ -12920,6 +13047,8 @@ const openDrawingWorkspace = (() => {
     $('drawingInkColor').value = pens.colors[0];
     $('drawingPenCount').value = pens.widths.length;
     $('drawingAdaptWeights').checked = pens.adaptToScale;
+    $('drawingSilhouette').checked = pens.silhouette;
+    $('drawingComponentOutlines').checked = pens.componentOutlines;
     const components = $('drawingPenComponents');
     components.hidden = pens.mode !== 'component';
     components.replaceChildren(
@@ -12991,13 +13120,9 @@ const openDrawingWorkspace = (() => {
     queueDrawing();
   };
   $('drawingPenCount').onchange = (event) => {
-    const { mode, style, paper, colors, adaptToScale } = settings.pens;
     settings.pens = drawingPens({
-      mode,
-      style,
-      paper,
-      colors,
-      adaptToScale,
+      ...settings.pens,
+      components: undefined,
       widths: DRAWING_PEN_PRESETS[Number(event.target.value)]
     });
     syncPenControls();
@@ -13009,6 +13134,14 @@ const openDrawingWorkspace = (() => {
   };
   $('drawingAdaptWeights').onchange = (event) => {
     settings.pens.adaptToScale = event.target.checked;
+    queueDrawing();
+  };
+  $('drawingSilhouette').onchange = (event) => {
+    settings.pens.silhouette = event.target.checked;
+    queueDrawing();
+  };
+  $('drawingComponentOutlines').onchange = (event) => {
+    settings.pens.componentOutlines = event.target.checked;
     queueDrawing();
   };
   $('drawingPaperColor').onchange = (event) => {
@@ -14136,13 +14269,13 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       preview.programColors && PROGRAMS[slot.p] ? PROGRAMS[slot.p].color : system.color
     );
     if (layers.facade) {
-      mark('Assembly_Module_Skin');
+      mark('Assembly_Module_Skin', `${slot.f + 1}/Slot_${slot.j}`);
       const [x, , z] = location((foot + front) / 2, 0, base);
       drawMaterialModule(mesh, slot, x, base, z, preview, values);
       if (exterior?.balconies.has(slot.i)) drawModuleBalcony(mesh, model, slot, base);
       continue;
     }
-    mark('Assembly_Module_Chassis');
+    mark('Assembly_Module_Chassis', `${slot.f + 1}/Slot_${slot.j}`);
     const half = MODULE.width / 2 - 0.13,
       upper = base + MODULE.height;
     at((foot + front) / 2, angle, base, MODULE.width, 0.15, MODULE.depth, chassis);

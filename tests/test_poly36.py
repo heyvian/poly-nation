@@ -124,10 +124,30 @@ with sync_playwright() as p:
  expect(drawing_export).to_be_enabled()
  assert page.locator('#drawingLinework').get_attribute('d') != before_compass
  assert north.get_attribute('transform') != before_north
+ page.get_by_text('Line weights', exact=True).click()
+ silhouette = page.locator('#drawingSilhouette')
+ outlines = page.locator('#drawingComponentOutlines')
+ silhouette_path = page.locator('#drawingSheet [data-layer="Overall silhouette"] path')
+ outline_path = page.locator('#drawingSheet [data-layer="Component outlines"] path')
+ silhouette.check()
+ expect(silhouette_path).to_be_visible()
+ expect(outline_path).to_have_count(0)
+ outlines.check()
+ expect(outline_path).to_be_visible()
+ expect(page.locator('#drawingPenMode')).to_have_value('distance')
+ expect(drawing_export).to_be_enabled()
+ with page.expect_download() as saved_outlines:
+  drawing_export.click()
+ outline_svg = ET.parse(saved_outlines.value.path()).getroot()
+ outline_layers = {group.get('data-layer'): group for group in outline_svg if group.get('data-layer')}
+ assert {'Overall silhouette', 'Component outlines'} <= outline_layers.keys()
+ silhouette.uncheck()
+ expect(silhouette_path).to_have_count(0)
+ expect(outline_path).to_be_visible()
+ outlines.uncheck()
  page.locator('#drawingRendering').select_option('combined')
  expect(drawing_export).to_be_enabled()
  assert page.locator('#drawingSheet image').get_attribute('href').startswith('data:image/png')
- page.get_by_text('Line weights', exact=True).click()
  page.locator('#drawingPenStyle').select_option('sketch')
  expect(drawing_export).to_be_enabled()
  with page.expect_download() as saved_hybrid:
