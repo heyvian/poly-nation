@@ -4,6 +4,7 @@ from pathlib import Path
 import os, shutil
 import xml.etree.ElementTree as ET
 from playwright.sync_api import expect, sync_playwright
+from browser_fixture import serve_lab
 
 def check_horizontal_pan(page, canvas_id):
  canvas = page.locator('#' + canvas_id)
@@ -44,12 +45,12 @@ def check_fit(page):
  page.locator('#axo').click()
  page.locator('#fit').click()
 
-root=Path(__file__).resolve().parents[1]; src=root/'index.html'; out=root/'tests'/'output'; out.mkdir(exist_ok=True)
-with sync_playwright() as p:
+root=Path(__file__).resolve().parents[1]; out=root/'tests'/'output'; out.mkdir(exist_ok=True)
+with serve_lab(root) as url, sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium') or None,args=['--no-sandbox','--disable-dev-shm-usage','--disable-webgl'])
  page=browser.new_page(viewport={'width':1440,'height':900},device_scale_factor=1)
  errors=[];page.on('pageerror',lambda err:errors.append(str(err)))
- page.set_content(src.read_text(),wait_until='domcontentloaded',timeout=30000)
+ page.goto(url + '/',wait_until='domcontentloaded',timeout=30000)
  page.wait_for_function("typeof model !== 'undefined' && model && model.total > 0",timeout=30000)
  page.evaluate("state.animateSwing=false;state.simRunning=false;refreshView();")
  baseline=page.evaluate("({cap:state.areaCap,area:model.total,seed:state.seed,rooms:model.rooms.length,modules:model.count,score:crossRate(occupancy),state:JSON.stringify(state),geometry:exportGeometry(model).objects.length})")
@@ -252,7 +253,17 @@ with sync_playwright() as p:
  expect(dock_structure.locator('option')).to_have_count(6)
  dock_structure.select_option('cable-stayed')
  expect(page.locator('#dockStructureNote')).to_contain_text('top of its own storey')
+ before_heights = page.evaluate('''() => ({
+   ground: buildStorey(model, 0).base, clear: buildStorey(model, 0).soffit - buildStorey(model, 0).base,
+   roof: model.roofPlan.y
+ })''')
  page.locator('#buildSlabThickness').select_option('0.3')
+ expect(page.locator('#buildStoreyNote')).to_contain_text('4.28 m floor to floor · 3.98 m typical clear')
+ assert page.evaluate('''({ground, clear, roof}) => {
+   const floor = buildStorey(model, 0);
+   return Math.abs(floor.base - ground) < 1e-8 && Math.abs(floor.soffit - floor.base - clear) < 1e-8 &&
+     Math.abs(model.roofPlan.y - roof - model.layers.length * 0.08) < 1e-8;
+ }''', before_heights)
  expect(page.locator('#buildEstimate')).to_contain_text('300 mm')
  page.get_by_text('Dock and slab estimates', exact=True).click()
  page.locator('#buildWaterDepth').fill('1.5')
@@ -263,6 +274,7 @@ with sync_playwright() as p:
  page.locator('#openDrawings').click()
  page.locator('#drawingSource').select_option('build')
  expect(drawing_export).to_be_enabled()
+ expect(page.locator('#drawingFloor option[value="1"]')).to_have_text('Level 2 · 4.28 m')
  page.locator('#drawingPlaneAxis').select_option('vertical')
  page.locator('#drawingPlaneOffset').fill('5')
  page.locator('#drawingPlaneOffset').press('Tab')
@@ -278,11 +290,11 @@ with sync_playwright() as p:
  expect(page.locator('#documentPages .study-grid svg')).to_have_count(4)
  assert page.locator('#documentPages table tbody tr').count() == page.locator('#schedule tr').count()
  page.locator('#openMassing').click()
- assert page.evaluate('JSON.stringify({state, camera})') == before_drawing
+ assert page.evaluate('JSON.stringify({state: {...state, slabThickness: 0.22}, camera})') == before_drawing
  print('desktop navigation, imagery, unchanged model + state, variation passed',flush=True)
  mobile=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=1,is_mobile=True,has_touch=True)
  mobile.on('pageerror',lambda err:errors.append(str(err)))
- mobile.set_content(src.read_text(),wait_until='domcontentloaded',timeout=30000)
+ mobile.goto(url + '/',wait_until='domcontentloaded',timeout=30000)
  mobile.wait_for_function("typeof model !== 'undefined' && model")
  mobile.evaluate('state.animateSwing=false;state.simRunning=false;refreshView()')
  mobile.locator('#openRationale').click();mobile.wait_for_timeout(100)

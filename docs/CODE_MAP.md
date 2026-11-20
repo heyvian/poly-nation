@@ -1,6 +1,18 @@
 # Code map
 
-Current app is a self-contained page. The authoritative baseline is index.html; search these symbols rather than relying on historic line numbers.
+`index.html` holds the workspace markup and loads the JavaScript in dependency order with deferred scripts. The source lives in `src/`, with no build step. `workspaces.js` starts the app after the model, tools and workspace controls are available. The stylesheets and digitized site plan live under `assets/`.
+
+| Source | Responsibility |
+| --- | --- |
+| `model.js` | Saved design settings, derived geometry, program allocation and topology |
+| `geometry.js`, `lab-ui.js` | Shared mesh and projection, rendering, camera input, Massing controls and geometry export |
+| `simulation.js` | Circulation graph, occupancy, scoring, trials and optimization |
+| `materials-catalog.js`, `materials.js` | Material assignments, estimates, snapshot controls and the Materials canvas |
+| `workspaces.js` | Startup and workspace navigation |
+| `build.js` | Experimental assembly, dock support and slab studies |
+| `drawing-geometry.js`, `drawing-documents.js`, `drawings.js` | Projected geometry, architectural and Illustrator exports, drawing controls |
+| `site-maps.js`, `site-water.js`, `site.js` | Natural features, control-point alignment, terrain cuts, elevation tiles and building placement |
+| `rationale.js`, `rationale-page.js` | Shared deck controls and the standalone page entry point |
 
 - `defaults`, `state`, `PROGRAMS`, `MODULE`, `applySaved`: controls/defaults and backward-compatible persistence. Storage key `poly-nation-massing-lab-v2.5`; current exported JSON schema 17.
 - `derive`, `circulationPlan`, `roomLayout`, `clusterAngle`, `clusterRoomBias`, `place`: annular area sizing, program inventory, room/threshold arrangement and seeded topology. `refineRoomPlacement` prioritizes same-floor separation, then angular concentration and attraction. `place` keeps module counts fixed and rewards stacks for selected programs. `relationMode` defaults to neutral.
@@ -11,9 +23,9 @@ Current app is a self-contained page. The authoritative baseline is index.html; 
 - `update`: design regeneration, readouts, model upload and state save. `applyProgramEdit` validates a trial layout before committing a manual room or dock assignment. `refreshView` should not reset the score on display changes.
 - The Materials workspace uses a detached massing snapshot, its own canvas and camera, and separate browser storage. `materialValues` resolves inherited assignments and `buildMesh` adds the schematic material preview. The embedded design record preserves massing state. Update the embedded `designRationale` view and standalone Design_Rationale.html together when documenting decisions; no runtime external dependencies for rationale.
 - `slideSurface` resolves tube paint and sheen and supplies both 3D renderers through the mesh. `receivingPoolPlan` fits the basin along the terminal tube heading inside the annular room. These details belong to the assembly and drawing study.
-- `buildStorey` fixes finished-floor datums while slab depth changes. `buildGravityStudy` compares dock reactions and the core slab strip. `drawSharedDockSupports` places the roof-hung return below the deck.
+- `floorPitch` adds slab depth while preserving typical clear height. `derive` shares that pitch with the level-dependent model features, and `buildStorey` computes slab and soffit datums from it. `buildGravityStudy` compares dock reactions and the core slab strip. `drawSharedDockSupports` places the roof-hung return below the deck.
 - `drawingGeometry` carries model-layer names into drawing components and identifies surface-joint strokes. `renderDrawing` finds visible strokes, assigns physical pen widths and adds sketch marks. `traceDrawingFills` traces visible colour regions into closed paths. `vectorDrawingSheet` moves the drawing into named root groups with independent crops and keeps each floor-plan tile aligned. The optional Illustrator script promotes the named groups while preserving their stack order.
-- `drawConnectionDetail` draws the local 1:25 concepts in metres. `drawingSetPages` builds the printable schedule and diagram sets from the current model. `sampleSiteTerrain` decodes public elevation tiles and `siteAssemblyMesh` places the Build mesh at the local site datum.
+- `drawConnectionDetail` draws the local 1:25 concepts in metres. `drawingSetPages` builds the printable schedule and diagram sets from the current model. `siteElevationSampler` decodes public elevation tiles and `siteAssemblyMesh` places the Build mesh at the local site datum. `alignWestVillageWater` matches two Bow River crossings to the source sheets. `terrainOutsideSiteWater` cuts the sampled terrain triangles along the digitized waterside edges.
 - `initRationaleSlides` gives each jury topic its own view. Print styles show the full deck. Keep the embedded and standalone deck content synchronized with the Markdown companion.
 
 Exact controls, default paths and export semantics should be verified against source and tested after changes. No major framework migration was performed in the handoff.

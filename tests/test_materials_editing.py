@@ -1,13 +1,11 @@
 """Check that material snapshots and model-pointer edits persist through reload."""
 
-from functools import partial
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import os
 import shutil
 import struct
-from threading import Thread
 from playwright.sync_api import expect, sync_playwright
+from browser_fixture import serve_lab
 
 def editable_points(page, kind, limit=1):
     # Project top faces from the rendered mesh and verify the pointer can reach each target.
@@ -41,14 +39,12 @@ def editable_points(page, kind, limit=1):
 
 
 root = Path(__file__).resolve().parents[1]
-handler = partial(SimpleHTTPRequestHandler, directory=root)
-with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright() as p:
-    Thread(target=server.serve_forever, daemon=True).start()
+with serve_lab(root) as url, sync_playwright() as p:
     b=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium'), args=['--disable-webgl'])
     page=b.new_page(viewport={'width':1280,'height':720})
     errors=[]
     page.on('pageerror', lambda error: errors.append(str(error)))
-    page.goto(f'http://127.0.0.1:{server.server_port}/')
+    page.goto(url + '/')
     page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
     start=page.evaluate('({seed:state.seed,count:model.count,core:model.core.slice(),modules:model.counts.slice()})')
     expect(page.get_by_role('heading', name='Poly Nation Cross Pollination Laboratory')).to_be_visible()
@@ -304,7 +300,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
 
 
     mobile=b.new_page(viewport={'width':390,'height':844}, is_mobile=True, has_touch=True)
-    mobile.goto(f'http://127.0.0.1:{server.server_port}/')
+    mobile.goto(url + '/')
     mobile.locator('#openMaterials').click()
     expect(mobile.locator('#materialAssemblies')).to_be_visible()
     expect(mobile.locator('#assemblyCards .assembly-card')).to_have_count(6)
@@ -323,4 +319,3 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     expect(mobile.locator('#programDialog').get_by_role('combobox')).to_have_count(1)
     mobile.locator('#cancelProgram').tap()
     assert not errors, errors
-    server.shutdown()

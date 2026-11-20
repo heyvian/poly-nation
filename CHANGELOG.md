@@ -1,5 +1,13 @@
 # Changelog
 
+## West Village site study and overhead cameras
+- Added mapped OpenStreetMap waterways, woodland and trees to Site. The West Village preset matches two Bow River crossings to the supplied drawings and cuts the proposed canals into the DEM at a shared river study elevation.
+- Set Plan to a true vertical orthographic projection in the model viewers and plan drawings.
+- Moved application scripts, styles and study data out of the main HTML. Browser suites now exercise the same asset loading as GitHub Pages.
+
+## Slab depth and storey height
+- Keep the ground-floor datum and typical clear height fixed when slab depth changes. The working model raises upper floors and the roof, with the revised datums shared by geometry, navigation, drawing cuts and exports.
+
 ## Connection drawings, terrain and document sets
 - Saved Build visibility and level selections. Added a configurable Infinite Rinse water-load comparison to the core slab estimate.
 - Added three layered 1:25 concept details tied to the selected dock system, including the module bearing and a proposed 500 mm service zone.

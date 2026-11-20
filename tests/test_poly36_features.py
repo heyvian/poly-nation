@@ -3,11 +3,12 @@
 from pathlib import Path
 import os, shutil
 from playwright.sync_api import expect, sync_playwright
-root=Path(__file__).resolve().parents[1]; src=root/'index.html'; out=root/'tests'/'output'; out.mkdir(exist_ok=True)
-with sync_playwright() as p:
+from browser_fixture import serve_lab
+root=Path(__file__).resolve().parents[1]; out=root/'tests'/'output'; out.mkdir(exist_ok=True)
+with serve_lab(root) as url, sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium') or None,args=['--no-sandbox','--disable-dev-shm-usage','--disable-webgl'])
  page=browser.new_page(viewport={'width':1440,'height':900});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.set_content(src.read_text(),wait_until='domcontentloaded');page.wait_for_function('model && occupancy');page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
+ page.goto(url + '/',wait_until='domcontentloaded');page.wait_for_function('model && occupancy');page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
  detail_checks = page.evaluate('''() => {
    const { balconies, laundry } = moduleExteriorDetails(model, state.seed);
    const repeated = moduleExteriorDetails(structuredClone(model), state.seed);
