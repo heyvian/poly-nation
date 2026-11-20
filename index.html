@@ -715,8 +715,8 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   </div>
   <div>
    <h3>Pitched glass roof and two-storey pavilions</h3>
-   <p>The designer raised the glass roof toward the swing mast. Its inner ring rises about two storeys above the public deck. Some rooftop pavilions have a set-back second storey, varying the roofline as the layout changes.</p>
-   <p>The approach to the boarding platform passes under the glass. Both storeys of the pavilions count toward the enclosed area cap.</p>
+   <p>The designer raised the glass roof toward the swing mast. Its inner ring rises up to two storeys above the public deck. Some rooftop pavilions have a set-back second storey, varying the roofline as the layout changes.</p>
+   <p>Stairs above the glazing lead to the boarding platform at the ridge. The platform closes the roof around the mast. Both storeys of the pavilions count toward the enclosed area cap.</p>
   </div>
  </div>
 </article>
@@ -2102,6 +2102,38 @@ function designRoof(R, r, circulation) {
     publicArea: Math.max(0, Math.PI * (R * R - r * r) - liftFootprint - retailFootprint)
   };
 }
+
+// Fit a stair over the cone. Each flight's last tread reaches the roof pitch so the
+// longer intermediate landings stay above the continuous glass below them.
+function designSwingRoof(ride, radius, publicDeckY) {
+  const run = radius - ride.platformRadius,
+    rise = Math.min(8.4, run * 0.56),
+    eaveY = publicDeckY + 0.082,
+    stepCount = Math.ceil(rise / 0.18),
+    flights = Math.ceil(rise / 3.1),
+    stairs = [];
+  for (let flight = 0; flight < flights; flight++) {
+    const start = Math.round((stepCount * flight) / flights),
+      end = Math.round((stepCount * (flight + 1)) / flights),
+      flightRun = (run * (end - start)) / stepCount,
+      landing = flight + 1 < flights ? Math.min(1.2, flightRun * 0.18) : 0,
+      going = (flightRun - landing) / (end - start - Number(landing > 0));
+    let outer = radius - (run * start) / stepCount;
+    for (let step = start; step < end; step++) {
+      const inner = step + 1 === end ? radius - (run * end) / stepCount : outer - going;
+      stairs.push({ r: inner, R: outer, y: eaveY + (rise * (step + 1)) / stepCount });
+      outer = inner;
+    }
+  }
+  return {
+    eaveY,
+    rise,
+    canopyEaveY: publicDeckY,
+    canopyRidgeY: eaveY + rise,
+    stairHalfAngle: Math.min(0.22, 0.95 / ride.platformRadius),
+    stairs
+  };
+}
 // Reconfigure the outer corridor at each slide landing. The original room's angular
 // extent becomes a facade room with an inner bypass and two radial returns. No overlapping floor area.
 function connectSlide(layout, feature, R, slotN) {
@@ -2472,18 +2504,10 @@ function derive(dockVariant = state.dockVariant) {
     }
     circulation = layout.circulation;
     const feature = designRideAndSlide(layout, R, r, slotN, lobby);
-    // The roof rises two storeys above the public deck while boarding stays on a gentle ramp.
-    const ride = feature.ride,
-      eaveY = roofPlan.y + 0.082,
-      rise = Math.min(2.4, (r - ride.platformRadius) / 12);
-    ride.roofLevel = eaveY + rise - 0.16;
-    const rampHalfWidth = Math.min(2.4, circulation.width, ride.platformRadius * 0.85) / 2,
-      rampEnd = Math.sqrt(ride.platformRadius ** 2 - rampHalfWidth ** 2) - 0.06;
-    ride.roofPitch = {
-      eaveY, rise, rampHalfWidth, rampEnd,
-      canopyEaveY: eaveY + 2.65,
-      canopyRidgeY: eaveY + 8.4
-    };
+    // The boarding platform completes the cone's inner edge all the way to the mast.
+    const ride = feature.ride;
+    ride.roofPitch = designSwingRoof(ride, r, roofPlan.y);
+    ride.roofLevel = ride.roofPitch.canopyRidgeY - 0.16;
     connectSlide(layout, feature, R, slotN);
     const actualRing = P.map((p, i) =>
         sum(layout.rooms.filter((q) => q.id === i).map((q) => q.area))
@@ -4661,10 +4685,12 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     for (const radius of [m.r, m.R])
       for (let i = 0; i < 100; i++) {
         const a = (i * TAU) / 100,
-          d = ((i + 1) * TAU) / 100;
+          d = ((i + 1) * TAU) / 100,
+          stairOpening = m.feature.ride.roofPitch?.stairHalfAngle ?? 0;
         if (
           radius === m.r &&
-          angDist((a + d) / 2, m.circulation.bridgeAngle) < 1.65 / Math.max(1, radius) + TAU / 100
+          angDist((a + d) / 2, m.circulation.bridgeAngle) <
+            Math.max(stairOpening, 1.65 / Math.max(1, radius)) + TAU / 100
         )
           continue;
         line(ringPoint(radius, a, y + 1.12), ringPoint(radius, d, y + 1.12), rail);
@@ -4860,12 +4886,36 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         rgb('#9c704d')
       );
     }
+    const pitch = ride.roofPitch;
     mark('Swing_Boarding_Platform');
-    sector(ride.towerRadius, ride.platformRadius, 0, TAU, ride.roofLevel - 0.2, 0.36, platform);
+    // Lap the glass and mast joints so adjacent tessellated rings have a continuous seal.
+    const lap = pitch?.stairs ? 0.06 : 0;
+    sector(
+      ride.towerRadius - lap,
+      ride.platformRadius + lap,
+      0,
+      TAU,
+      ride.roofLevel - 0.2,
+      0.36,
+      platform
+    );
     const bridge = (rr + ride.platformRadius) / 2,
       aBridge = m.circulation.bridgeAngle;
-    if (ride.roofPitch) {
-      const { eaveY, rise, rampHalfWidth: halfWidth, rampEnd } = ride.roofPitch,
+    if (pitch?.stairs) {
+      const { eaveY, stairHalfAngle, stairs } = pitch,
+        start = aBridge - stairHalfAngle,
+        end = aBridge + stairHalfAngle;
+      mark('Swing_Boarding_Stairs');
+      let lower = eaveY;
+      for (const step of stairs) {
+        sector(step.r, step.R, start, end, lower - 0.025, step.y - lower + 0.025, platform);
+        for (const angle of [start, end])
+          glassGuard(ringPoint(step.R, angle, lower), ringPoint(step.r, angle, step.y));
+        lower = step.y;
+      }
+    } else if (pitch) {
+      // Earlier material snapshots can retain their original ramp followed by the glass.
+      const { eaveY, rise, rampHalfWidth: halfWidth, rampEnd } = pitch,
         point = (rad, across, y) => [
           rad * Math.cos(aBridge) - across * Math.sin(aBridge),
           y,
@@ -4909,11 +4959,11 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     buildSwing(b, ride, swingPose(ride, 0));
     if (exporting || (view.roof && !view.xray)) {
       mark('Atrium_Glass_Roof');
-      const pitch = ride.roofPitch,
-        raisedCanopy = pitch?.canopyRidgeY != null,
+      const raisedCanopy = pitch?.canopyRidgeY != null,
         roofc = rgb('#c4dfde'),
         frame = rgb(raisedCanopy ? '#728a81' : '#9aada8'),
         inner = ride.platformRadius,
+        outer = pitch?.stairs ? rr + 0.06 : rr,
         outerY = pitch?.canopyEaveY ?? (pitch ? pitch.eaveY - 0.045 : H + 0.07),
         innerY = pitch?.canopyRidgeY ?? (outerY + (pitch?.rise ?? 0)),
         roofY = (radius) => outerY + (innerY - outerY) * (rr - radius) / (rr - inner),
@@ -4925,19 +4975,19 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           d = ((i + 1) * TAU) / n;
         quad(
           roofPoint(inner, d),
-          roofPoint(rr, d),
-          roofPoint(rr, a),
+          roofPoint(outer, d),
+          roofPoint(outer, a),
           roofPoint(inner, a),
           roofc,
           glass,
           raisedCanopy ? 0.38 : 0.28
         );
-        line(roofPoint(rr, a, 0.01), roofPoint(rr, d, 0.01), frame);
+        line(roofPoint(outer, a, 0.01), roofPoint(outer, d, 0.01), frame);
         line(roofPoint(inner, a, 0.01), roofPoint(inner, d, 0.01), frame);
       }
       for (let i = 0; i < 24; i++) {
         const a = (i * TAU) / 24;
-        line(roofPoint(inner, a, 0.02), roofPoint(rr, a, 0.02), frame);
+        line(roofPoint(inner, a, 0.02), roofPoint(outer, a, 0.02), frame);
       }
       for (const scale of [0.33, 0.66])
         for (let i = 0; i < n; i++)
@@ -4947,8 +4997,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
             frame
           );
       if (raisedCanopy) {
-        mark('Atrium_Roof_Ridge', 'Open ridge around the swing mast');
-        sector(inner, inner + 0.12, 0, TAU, innerY - 0.08, 0.16, frame);
+        mark('Atrium_Roof_Ridge', 'Glazing to boarding platform joint');
+        sector(inner, inner + 0.12, 0, TAU, innerY - 0.08, 0.08, frame);
+      }
+      if (raisedCanopy && !pitch.stairs) {
         // The glazed outer band meets the public deck. Leave a doorway in line with the ramp.
         mark('Atrium_Glass_Clerestory');
         const doorHalf = Math.asin(pitch.rampHalfWidth / rr) + 0.025;
@@ -5497,8 +5549,16 @@ function buildNavigation(m) {
         f: roofLevel
       });
     connect(near, bridge, [nodes[near].p, xyz(m.r + 0.6, a, yFor(roofLevel)), nodes[bridge].p]);
-    const rampEnd = ride.roofPitch?.rampEnd ?? ride.platformRadius - 0.1;
-    connect(bridge, swing, [nodes[bridge].p, xyz(rampEnd, a, boardingHeight), nodes[swing].p]);
+    const stairs = ride.roofPitch?.stairs;
+    const approach = stairs
+      ? stairs.flatMap((step) => [xyz(step.R, a, step.y), xyz(step.r, a, step.y)])
+      : [xyz(ride.roofPitch?.rampEnd ?? ride.platformRadius - 0.1, a, boardingHeight)];
+    connect(
+      bridge,
+      swing,
+      [nodes[bridge].p, ...approach, nodes[swing].p],
+      stairs ? 'stairs' : 'walk'
+    );
     dest.push(swing);
   }
   // Waterslide is a destination / directed experience from its actual landing rooms.
@@ -5711,6 +5771,8 @@ function makeOccupancy(m, seed = state.seed) {
     };
   }
   if (graph.entry != null) {
+    const swing = graph.nodes.find((n) => n.kind === 'swing' && graph.reachable.has(n.id));
+    const swingHasStairs = Boolean(m.feature.ride.roofPitch?.stairs);
     for (let i = 0; i < state.visitorCount; i++) {
       const home =
         i < Math.ceil(state.visitorCount * 0.25)
@@ -5719,11 +5781,14 @@ function makeOccupancy(m, seed = state.seed) {
       const base = graph.nodes.find((n) => n.kind === 'climbBase');
       const visitor = make('human', i, base && i < 2 ? base.id : home);
       if (base && i < 2) visitor.depart = 360;
-      const swing = graph.nodes.find((n) => n.kind === 'swing' && graph.reachable.has(n.id));
-      if (swing && i >= 2 && i < 5) {
-        visitor.node = swing.id;
+      // A visitor who uses a wheelchair starts on a reachable route below the stair.
+      if (swingHasStairs && visitor.wheelchair && visitor.node === swing?.id) {
+        visitor.home = visitor.node = graph.entry;
+        visitor.p = [...graph.nodes[graph.entry].p];
+      }
+      if (swing && i >= 2 && i < 5 && (!swingHasStairs || !visitor.wheelchair)) {
+        visitor.home = visitor.node = swing.id;
         visitor.p = [...swing.p];
-        visitor.home = swing.id;
         visitor.wait = 1 + i;
         visitor.depart = 350;
       }
@@ -5776,7 +5841,7 @@ function makeOccupancy(m, seed = state.seed) {
   };
 }
 // Find a route through circulation. Interior rooms and activity endpoints are destinations, rather than shortcuts.
-function shortestPath(g, start, goal, kind) {
+function shortestPath(g, start, goal, kind, stairsAllowed = true) {
   if (start === goal) return [];
   const n = g.nodes.length,
     d = new Float64Array(n);
@@ -5839,6 +5904,7 @@ function shortestPath(g, start, goal, kind) {
       const v = e.to,
         b = g.nodes[v];
       if (done[v]) continue;
+      if (e.kind === 'stairs' && !stairsAllowed) continue;
       if (kind !== 'human' && ['swing', 'slideStart', 'slideEnd'].includes(b.kind)) continue;
       const w = e.len + (e.kind === 'lift' ? 7 : 0);
       if (cost + w < d[v]) {
@@ -5867,7 +5933,7 @@ function rememberDeparture(a, sim) {
   }
 }
 function routeAgent(a, target, sim) {
-  const path = shortestPath(sim.graph, a.node, target, a.kind);
+  const path = shortestPath(sim.graph, a.node, target, a.kind, !a.wheelchair);
   if (!path || !path.length) return false;
   rememberDeparture(a, sim);
   let from = a.node;

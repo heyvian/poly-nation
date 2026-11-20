@@ -21,3 +21,4 @@ This is the available design trajectory, not a verbatim transcript. The illustra
 - The student moved the atrium bridges closer to the swing mast. The implementation uses a fixed 0.65 m gap from the mast to the bridge edge in either arrangement.
 
 `archive/` retains available executable prior builds to inspect. `COPILOT.md` contains more granular release engineering history. These versions are not independent design alternatives or code-validated buildings.
+- The student placed the swing boarding platform at the roof ridge to close the glass roof around the mast, with stairs above the glazing from the public deck.
