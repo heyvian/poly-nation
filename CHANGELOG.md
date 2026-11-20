@@ -1,5 +1,12 @@
 # Changelog
 
+## Connection drawings, terrain and document sets
+- Saved Build visibility and level selections. Added a configurable Infinite Rinse water-load comparison to the core slab estimate.
+- Added three layered 1:25 concept details tied to the selected dock system, including the module bearing and a proposed 500 mm service zone.
+- Added a Site workspace for decimal coordinates and public elevation tiles, plus printable programme, circulation and structural drawing sets.
+- Increased the contrast among five stable cladding tones on repeated modules to make the variation visible in whole-building views.
+- Moved the roof-hung dock backspan below the public deck to clear rooftop circulation and rooms.
+
 ## Drawing outlines and Illustrator import
 - Added independent overall silhouette and key component outline emphasis. Both work with distance-based line weights and export to named SVG layers.
 - Updated the Illustrator import script to identify artwork using the SVG's layer list and temporary text markers that it removes after import.

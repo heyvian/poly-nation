@@ -212,7 +212,7 @@ The baseline model uses paired tapered side trusses. The designer questioned how
 
 ### The same-storey stay
 
-The designer brought each cable anchor down to the top of its own storey. The shallow angle gives a slimmer side elevation and a larger horizontal reaction. The connection returns into the core through an edge beam and back-tie. Roof hangers transfer the stack to the roof, and tip posts shift support to the plaza edge. These are alternatives for comparison.
+The designer brought each cable anchor down to the top of its own storey. The shallow angle gives a slimmer side elevation and a larger horizontal reaction. The connection returns into the core through an edge beam and back-tie. The roof-hung study returns the upper reaction into a collector below the public deck so the rooftop shops and routes stay clear. The moment joint and inboard tie need design. Tip posts shift support to the plaza edge.
 
 ### A scale check
 
@@ -236,7 +236,7 @@ Steel, lightweight metal and engineered timber assemblies are material-study opt
 
 ### Programme and finish
 
-The designer wanted a recognizably different daycare edge. The material study varies bright glossy paint across those modules. It also tests finish and sheen on the slide. Subtle variation among repeated cladding panels gives the edge character while the dock dimensions and repeated frame hold it together.
+The designer wanted a recognizably different daycare edge. The material study varies bright glossy paint across those modules. It also tests finish and sheen on the slide. Related cladding tones make individual modules legible at building scale. The repeated frame and dock dimensions keep them part of the same system.
 
 ### Compare quantities
 

@@ -83,13 +83,33 @@ with sync_playwright() as p:
      { assignments: {}, view: state });
    const count = (name) => mesh.groups.filter(group => group.layer === name).length;
    const paint = modulePaint({}, PROGRAMS.findIndex(program => program.id === 'day'));
+   const greys = new Set(Array.from({length: 64}, (_, i) => finishColor(EXTERIOR_FINISHES.corrugated, 0, {}, i)[0]));
    return count('Infinite_Rinse_Slide_Wall_Sleeve') === 2 &&
      count('Infinite_Rinse_Slide_Boarding_Platform') === 1 &&
      count('Infinite_Rinse_Slide_Receiving_Pool') === 1 &&
      count('Roof_Commercial_Retail') === model.roofPlan.pavilions.length &&
-     mesh.solid.every(Number.isFinite) && new Set(paint.colors).size === 5 && paint.gloss > 0;
+     mesh.solid.every(Number.isFinite) && new Set(paint.colors).size === 5 && paint.gloss > 0 &&
+     greys.size === 5 && Math.max(...greys) - Math.min(...greys) > 0.2;
  }''')
  assert wet_details
+ roof_clearance = page.evaluate('''() => {
+   const mesh = buildAssemblyMesh(model, { docks: true, dockStructure: 'roof-hung', slabThickness: 0.26 }, 0,
+     { assignments: {}, view: state });
+   const roof = model.roofPlan.y;
+   let collectors = 0;
+   for (const [i, group] of mesh.groups.entries()) {
+     const count = mesh.groups[i+1]?.solid ?? mesh.solid.length;
+     if (group.layer === 'Assembly_Dock_Roof_Backspan') {
+       collectors++;
+       for (let v=group.solid; v<count; v+=10) if (mesh.solid[v+1] >= roof) return false;
+     }
+     if (group.layer !== 'Assembly_Dock_Stack_Supports') continue;
+     for (let v=group.solid; v<count; v+=10)
+       if (mesh.solid[v+1] > roof + 0.03 && Math.hypot(mesh.solid[v],mesh.solid[v+2]) < model.R - 0.03) return false;
+   }
+   return collectors > 0;
+ }''')
+ assert roof_clearance
  quick_trial = page.locator('#cpQuickTrial')
  quick_result = page.locator('#cpDashTrialResult')
  drawer = page.locator('#trialDrawer')
