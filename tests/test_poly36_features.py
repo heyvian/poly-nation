@@ -189,13 +189,16 @@ with sync_playwright() as p:
      outside: graph.edges[rear.id].some(edge => graph.nodes[edge.to].kind === 'plaza'),
      ramp: ride.roofPitch.rise > 0 && graph.reachable.has(swinging.id) &&
        Math.abs(swinging.p[1] - ride.roofPitch.eaveY - ride.roofPitch.rise) < 1e-8,
+     canopy: Math.abs(ride.roofPitch.canopyRidgeY - ride.roofPitch.eaveY - 8.4) < 1e-8 &&
+       ride.roofPitch.canopyEaveY > ride.roofPitch.eaveY &&
+       ride.roofPitch.canopyRidgeY > ride.roofPitch.canopyEaveY,
      roofArea: upper.length > 0 && upper.length < roof.pavilions.length &&
        Math.abs(roof.retailArea - retail) < 1e-8,
      off: base.circulation.bridges.length === 0,
      modes
    };
  }''')
- assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'outside', 'ramp', 'roofArea', 'off']), atrium
+ assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'outside', 'ramp', 'canopy', 'roofArea', 'off']), atrium
  aligned, radial = atrium['modes']
  assert len(set(aligned['headings'])) == 1 and len(radial['headings']) == 3, atrium
  assert abs(radial['headings'][1] - radial['headings'][0] - 2 * 3.141592653589793 / 3) < 1e-8, atrium

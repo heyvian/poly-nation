@@ -1,5 +1,10 @@
 # Changelog
 
+## Atrium and roofline
+- Moved the Atrium bridges selector onto the Massing model toolbar and kept the selected view while changing the layout.
+- Raised the conical glass roof ridge to 8.4 m above the public deck. The boarding ramp passes under the roof through the clerestory opening.
+- Put the opposing lobbies, bridge arrangements, pitched glass roof and two-storey pavilions at the front of the design rationale. Detailed ride mechanics remain in the simulation notes.
+
 ## Material snapshots and circulation
 - Added a PNG snapshot of the current material model with all six assembly cards and their material variants.
 - Added persistent Massing and Materials navigation alongside Design rationale.

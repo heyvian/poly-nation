@@ -50,6 +50,28 @@ Designer-led
 
 means the design requirement or concept is traceable to the student's requests, not that every parameter or line of code was authored by the student. AI proposals and computational assumptions are identified separately. Early prompts are available in retrieved summaries, so early statements are paraphrased rather than presented as verbatim quotations. Later quotations are from the visible conversation.
 
+## Atrium and roofline
+
+**Designer-led**
+
+### Opposing lobby atriums
+
+Two facing ground-floor lobbies connect the public plaza through the Infinite Rinse biofiltration greenhouse. Their axis runs perpendicular to the lift cores. The designer added this through-route to increase cross-traffic and create more opportunities for indoor and outdoor visitors to meet.
+
+The path bends around the mast, and galleries carry the upper corridor across both lobby voids.
+
+### Radial and vertically aligned bridges
+
+Optional upper-floor bridges cut across the atrium and join the outer corridor at both ends. The designer wanted to test whether the shortcuts increase cross-pollination.
+
+Stacking the bridges keeps them in one part of the atrium. Rotating them around it changes which parts of the greenhouse and the opposite side of the ring are visible from each floor.
+
+### Pitched glass roof and two-storey pavilions
+
+The designer raised the glass roof toward the swing mast. Its inner ring rises about two storeys above the public deck. Some rooftop pavilions have a set-back second storey, varying the roofline as the layout changes.
+
+The approach to the boarding platform passes under the glass. Both storeys of the pavilions count toward the enclosed area cap.
+
 01 Framework
 
 02 Allocation
@@ -232,13 +254,6 @@ Where the slide blocks modules, move the internal rooms against the façade and 
 
 Use an opaque exterior façade rather than curtain-wall glazing; remove visually overlapping room/wall geometry.
 
-Opposing lobby atriums
-
-The designer placed two facing lobby atriums on an axis perpendicular to the lift cores. A ground-level path through the Infinite Rinse biofiltration greenhouse links the lobbies and their exterior approaches. The designer made this change to increase cross-traffic and create more opportunities for cross-pollination between indoor programs and the public plaza.
-
-The two lobbies share the existing lobby area allowance. The greenhouse crossing bends around the swing mast, and the climbing wall moves beside the opposite approach. Galleries keep the outer corridor connected across both upper voids.
-
-**Atrium bridges.** The designer added optional shortcuts across the atrium on upper floors to test whether they increase cross-pollination. Stacking the bridges or rotating them around the atrium lets the designer compare views from the higher floors, including sightlines down to the greenhouse. Each bridge passes beside the mast and joins the outer corridor at both ends. The bridges are counted as enclosed circulation. Radial landings shift where needed to clear the lift cores or lobby voids.
 
 AI implementation
 
@@ -264,7 +279,7 @@ Designer-led
 
 Design decisions
 
-Enlarge the exterior entrance floor past the module footprint so it becomes a decorated public plaza, not just a threshold; the entrance lobby is double-height.
+Enlarge the exterior entrance floor past the module footprint so it becomes a public plaza with room to gather.
 
 Make the whole annular roof public, including greenery, walking paths, gardens, gazebos and scattered retail/commercial rooms.
 
@@ -272,7 +287,6 @@ Extend elevator access to the roof and provide overhead service space for both l
 
 Use vacant dock spaces for public uses and the greenhouse as an inhabited setting, not a purely technical void.
 
-**Roofline variation.** The designer pitched the glass greenhouse roof toward the swing mast and varied rooftop pavilion heights to give the roofline more visual diversity. A sloped walk connects the public deck to the raised boarding platform. Some pavilions get a set-back upper room. Both storeys count toward the enclosed area cap, and the ground footprint determines how much public roof remains.
 
 AI implementation
 
@@ -302,7 +316,7 @@ Designer-led
 
 Design decisions
 
-Place a tall Prater-inspired swing ride through the glazed central atrium; animate it at a plausible real-world speed.
+Place a Prater-inspired swing ride through the glazed central atrium.
 
 Run an external water slide from a high concentration of Infinite Rinse space to a lower Infinite Rinse room; route it around the façade, reserve affected module positions and expose the connected rooms.
 
@@ -314,21 +328,15 @@ Make all three features attractive destinations, with recent experiences of fun 
 
 AI implementation
 
-Geometry and motion
+Fit to the building
 
-117 m modeled tower, 40 km/h cruise, 12 m seat radius and ≈8.8 rpm; speed-dependent seat geometry with a complete boarding-to-unloading cycle. Slide route selection, swept geometry and blocked-slot tests are AI-coded. The 19.8 m climb cap was taken from the referenced 65 ft precedent during development. The 5 m slide-to-climb clearance is an AI-selected planning assumption, not a safety-certified requirement; actual belay/fall zones and ride engineering require specialist design.
+The slide connects Infinite Rinse rooms at different heights. Its route is drawn around dock positions and arcs outward where it crosses the climbing wall.
 
 “no the slide generator doesn't have to avoid that strip but it just sticks out further from the facade there to create a safe climbing area”
 
 “Climber avatars will always decend. That's how climbing works.”
 
 Student corrections · V3.3 iteration
-
-Later student refinement · the swing as a timed event
-
-The student specified a queue while the ride is at the top, slowing and vertical hanging chains, descent and loading, acceleration and outward swing, 30 seconds at the top, return and unloading. The student later doubled the top dwell and asked for less outward swing. The AI implemented a 136-second cycle with a smaller seat radius and less chain tilt at cruise. The existing rooftop boarding platform is the bottom of the ride; its capacity and the remaining phase durations are chosen model parameters, not engineered specifications.
-
-136-second model cycle. The 60-second top dwell and sequence were specified by the student; the other durations, rotational approximation, 18 seats and rooftop boarding implementation are AI choices.
 
 07 / HUMAN & NON-HUMAN OCCUPATION
 
@@ -582,15 +590,15 @@ Route bulge and clearance assumption, height conversion, blocked-slot calculatio
 
 V3.6
 
-Presentation-ready design-authorship record; continuous exterior plaza, program-influenced amenities and recreation; full swing ride cycle, queue and 30-second top dwell.
+Continuous exterior plaza, program-influenced amenities and recreation.
 
-Authorship synthesis and diagrams, plaza geometry and route graph, activity distribution, 106-second ride cycle, pendulum approximation and boarding/unloading logic.
+Authorship synthesis and diagrams, plaza geometry, route graph and activity distribution.
 
 After V3.6
 
-Ground-first Firehall, same-floor Repel, local program changes, a longer swing dwell with less outward tilt, and a material study with exploded assemblies.
+Ground-first Firehall, same-floor Repel, local program changes and material studies. Opposing lobby atriums, optional upper bridges and a varied roofline.
 
-Placement and circulation checks, revised swing motion, assembly quantity takeoff and comparative CAD assumptions.
+Placement and circulation checks, assembly quantity takeoff and comparative CAD assumptions.
 
 Suggested presentation statement
 

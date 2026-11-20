@@ -13,8 +13,14 @@ with sync_playwright() as p:
  print('baseline', {k:v for k,v in baseline.items() if k!='state'},flush=True)
  page.locator('#openRationale').click(); page.wait_for_timeout(200)
  assert page.locator('#designRationale').is_visible() and not page.locator('.layout').is_visible()
- assert page.locator('.dr-section').count()==12 and page.locator('.dr-svg').count()>=8
+ assert page.locator('.dr-svg').count()>=8
  assert page.locator('.dr-hero-image img').evaluate('(im)=>im.complete && im.naturalWidth>0')
+ page.get_by_role('link', name='Atrium and roofline').click()
+ decisions = page.locator('#drAtrium')
+ assert decisions.get_by_role('heading', name='Opposing lobby atriums').is_visible()
+ assert decisions.get_by_role('heading', name='Radial and vertically aligned bridges').is_visible()
+ assert decisions.get_by_role('heading', name='Pitched glass roof and two-storey pavilions').is_visible()
+ assert '40 km/h' not in page.locator('#dr06').inner_text()
  page.screenshot(path=str(out/'rationale-preview.png'))
  page.get_by_role('link', name='10 Placement').click()
  assert page.get_by_role('heading', name='Where programs meet the ring.').is_visible()
@@ -34,12 +40,19 @@ with sync_playwright() as p:
  assert page.locator('#openMaterials').get_attribute('aria-current') == 'page'
  page.locator('#openRationale').click()
  assert page.locator('#designRationale').is_visible()
- assert page.locator('#dr04').get_by_text('The designer made this change', exact=False).is_visible()
+ assert decisions.get_by_text('The designer added this through-route', exact=False).is_visible()
  page.locator('#drBack').click()
  assert page.locator('#materialsPhase').is_visible()
  page.locator('#openMassing').click()
  assert page.locator('.layout').is_visible() and not page.locator('#materialsPhase').is_visible()
  assert page.evaluate('JSON.stringify(state)') == baseline['state']
+ bridges = page.get_by_label('Atrium bridges', exact=True)
+ assert bridges.is_visible() and bridges.input_value() == 'off'
+ view = page.evaluate('JSON.stringify({ inspect: state.inspect, camera })')
+ for value, count in [('radial', 3), ('aligned', 3), ('off', 0)]:
+  bridges.select_option(value)
+  page.wait_for_function(f'!pending && model.circulation.bridges.length === {count}')
+  assert page.evaluate('JSON.stringify({ inspect: state.inspect, camera })') == view
  page.evaluate('state.simRunning=true; refreshView()')
  start_clock = page.evaluate('occupancy.clock')
  page.locator('#openMaterials').click()
@@ -65,6 +78,10 @@ with sync_playwright() as p:
  assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth+1')
  mobile.locator('#openMassing').click()
  assert mobile.locator('.layout').is_visible()
+ assert mobile.get_by_label('Atrium bridges', exact=True).is_visible()
+ mobile.get_by_label('Atrium bridges', exact=True).select_option('aligned')
+ mobile.wait_for_function('!pending && model.circulation.bridges.length === 3')
+ assert mobile.evaluate('state.inspect === 0 && document.documentElement.scrollWidth <= innerWidth+1')
  print('mobile width and navigation passed; errors',errors,flush=True)
  assert not errors
  browser.close()
