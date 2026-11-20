@@ -493,6 +493,7 @@
 .material-palette { margin: 4px 0; padding: 0; border: 0; min-width: 0; }
 .material-palette legend { margin: 0 0 4px; font-size: 12px; font-weight: 650; }
 .material-swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.material-palette[hidden] { display: none; }
 .material-palette select { margin: 0 0 6px; font-size: 11px; }
 .material-swatches button {
  display: flex;
@@ -633,7 +634,21 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  gap: 3px;
  margin: 8px 0;
 }
-.drawing-compass[hidden] { display: none; }
+.drawing-compass[hidden], .drawing-controls [hidden], #printFloorSet[hidden] { display: none; }
+.workspace-arrow { color: #718578; font-size: 12px; }
+.drawing-orbit { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; margin: 7px 0 12px; }
+.drawing-orbit input { grid-column: 1/-1; width: 100%; margin: 0; }
+.drawing-plane-offset-tools { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.drawing-plane-offset-tools input { min-width: 0; }
+.drawing-plane-offset-tools button { padding: 3px 6px; font-size: 11px; white-space: nowrap; }
+.drawing-sheet.planset { cursor: default; }
+#floorPrintPages { display: none; }
+@media print {
+ body.drawings-open.printing-floor-set #drawingsPhase { display: none !important; }
+ body.drawings-open.printing-floor-set #floorPrintPages { display: block; }
+ #floorPrintPages > svg { display: block; break-after: page; }
+ #floorPrintPages > svg:last-child { break-after: auto; }
+}
 .drawing-compass button { min-height: 26px; padding: 2px 4px; font-size: 11px; }
 .drawing-compass button[aria-pressed=true] { background: #294e3e; border-color: #294e3e; color: white; }
 .drawing-compass button:nth-child(5) { grid-column: 3; }
@@ -735,9 +750,12 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  </div><div class="header-actions">
 <nav class="workspace-nav" aria-label="Project workspaces">
  <button id="openMassing" type="button" aria-controls="massingPhase" aria-current="page">Massing</button>
+ <span class="workspace-arrow" aria-hidden="true">→</span>
  <button id="openMaterials" type="button" aria-controls="materialsPhase">Materials</button>
- <button id="openDrawings" type="button" aria-controls="drawingsPhase">Drawings</button>
+ <span class="workspace-arrow" aria-hidden="true">→</span>
  <button id="openBuild" type="button" aria-controls="buildPhase">Build</button>
+ <span class="workspace-arrow" aria-hidden="true">→</span>
+ <button id="openDrawings" type="button" aria-controls="drawingsPhase">Drawings</button>
  <button id="openRationale" type="button" aria-controls="designRationale">Design rationale</button>
 </nav>
 <details class="file-menu"><summary>Files &amp; export</summary><div class="file-menu-content"><button id="import">Load JSON</button><input accept=".json,application/json" hidden="" id="importFile" type="file"/><button id="export">Save JSON</button><div class="menu-label">3D geometry</div><button id="export3DM">Export 3DM</button><button id="exportRhinoScript" title="Offline alternative: run this generated Python script inside Rhino">Rhino script</button></div></details><span aria-live="polite" id="exportStatus" role="status"></span><span class="credit" id="saveStatus" style="align-self:center"></span></div></header>
@@ -900,18 +918,21 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
     <option value="coreProgram">Core by program</option>
     <option value="modules">All modules</option>
     <option value="moduleProgram">Modules by program</option>
+    <option value="commercial">Commercial and retail</option>
+    <option value="slide">Water slide</option>
+    <option value="mast">Swing mast</option>
    </select>
    <div class="material-target" id="materialTargetField" hidden>
     <label id="materialTargetLabel" for="materialTarget">Program</label>
     <select id="materialTarget"></select>
    </div>
-   <fieldset class="material-palette">
+   <fieldset class="material-palette" id="structurePalette">
     <legend>Structural system</legend>
     <select id="structureFamilies" aria-label="Structure family"></select>
     <div class="material-swatches" id="materialStructure"></div>
     <p class="material-choice" id="structureChoice" aria-live="polite"></p>
    </fieldset>
-   <fieldset class="material-palette">
+   <fieldset class="material-palette" id="facadePalette">
     <legend>Exterior finish</legend>
     <select id="facadeFamilies" aria-label="Finish family"></select>
     <div class="material-swatches" id="materialFacade"></div>
@@ -996,12 +1017,20 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
    <select id="drawingView">
     <option value="axo">Axonometric</option>
     <option value="plan">Plan</option>
-    <option value="front">Front elevation</option>
-    <option value="side">Side elevation</option>
+    <option value="elevation">Elevation</option>
     <option value="aligned" disabled>Aligned to clipping plane</option>
    </select>
   </label>
-  <div id="drawingCompass" class="drawing-compass" role="group" aria-label="Axonometric compass"></div>
+  <div id="drawingCompass" class="drawing-compass" role="group" aria-label="View compass"></div>
+  <label id="drawingOrbitField" class="drawing-orbit" hidden>Horizontal orbit <output id="drawingOrbitAngle"></output>
+   <input id="drawingOrbit" type="range" min="0" max="359" step="1">
+  </label>
+  <label class="drawing-view-field">Source
+   <select id="drawingSource"><option value="massing">Massing with materials</option><option value="build">Build with materials</option></select>
+  </label>
+  <label id="drawingPlanSheetField" class="drawing-view-field" hidden>Plans on sheet
+   <select id="drawingPlanSheet"><option value="single">Current plan</option><option value="floors">All floor plans</option></select>
+  </label>
   <label class="drawing-view-field">Rendering
    <select id="drawingRendering">
     <option value="linework">Linework</option>
@@ -1021,10 +1050,18 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
    <label id="drawingAngleField" class="drawing-offset" hidden>Angle (°)
     <input type="number" id="drawingPlaneAngle" min="0" max="360" step="1">
    </label>
+   <label class="drawing-view-field" id="drawingFloorField" hidden>Horizontal datum
+    <select id="drawingFloor"><option value="">Project datum</option></select>
+   </label>
    <label class="drawing-offset">Offset (m)
     <input type="number" id="drawingPlaneOffset" step="0.1">
    </label>
-   <input type="range" id="drawingPlaneMove" step="0.1" aria-label="Move clipping plane">
+   <output id="drawingCutElevation" for="drawingFloor drawingPlaneOffset drawingPlaneMove" class="hint" hidden></output>
+   <div class="drawing-plane-offset-tools">
+    <input type="range" id="drawingPlaneMove" step="0.1" aria-label="Move clipping plane">
+    <datalist id="drawingCenterTick"><option value="0" label="Center"></option></datalist>
+    <button type="button" id="centerDrawingPlane" hidden>Center</button>
+   </div>
    <label class="check"><input type="checkbox" id="flipDrawingPlane"> Flip kept side</label>
    <div class="drawing-plane-actions">
     <button type="button" id="placeDrawingPlane" aria-pressed="false">Place on drawing</button>
@@ -1047,6 +1084,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
    <button type="button" id="groundDrawing" title="Align ground 5 mm above the bottom drawing margin">Ground</button>
    <button type="button" class="primary" id="exportDrawing" disabled>Export SVG</button>
    <button type="button" id="printDrawing" disabled>Print / PDF</button>
+   <button type="button" id="printFloorSet" hidden>Print floor set</button>
   </div>
   <p class="hint" id="drawingStatus" role="status">Drag the drawing or use the arrow keys to reposition it.</p>
   <div id="drawingPaperFrame" class="drawing-paper">
@@ -1054,6 +1092,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   </div>
  </div>
 </section>
+<div id="floorPrintPages" aria-hidden="true"></div>
 <section id="buildPhase" class="drawing-workspace" hidden aria-labelledby="buildTitle">
  <aside class="drawing-controls">
   <h2 id="buildTitle" tabindex="-1">Build</h2>
@@ -1064,7 +1103,8 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   <div class="build-options" aria-label="Assembly layers" role="group">
    <label class="check"><input id="buildFrame" type="checkbox" checked> Core framing</label>
    <label class="check"><input id="buildSlabs" type="checkbox" checked> Floor and roof slabs</label>
-   <label class="check"><input id="buildWalls" type="checkbox"> Walls and openings</label>
+   <label class="check"><input id="buildWalls" type="checkbox"> Interior walls</label>
+   <label class="check"><input id="buildFacade" type="checkbox"> Facade</label>
    <label class="check"><input id="buildDocks" type="checkbox" checked> Dock connections</label>
    <label class="check"><input id="buildModules" type="checkbox" checked> Module chassis</label>
   </div>
@@ -4064,6 +4104,22 @@ function buildSwing(b, ride, pose) {
 }
 // Permanent construction and lightweight module families share one comparison library.
 const STRUCTURAL_SYSTEMS = {
+  'mast-painted-steel': {
+    name: 'Painted steel tube',
+    short: 'Steel tube',
+    group: 'Metal',
+    color: '#c78b51',
+    frame: 'solid',
+    feature: true
+  },
+  'mast-steel-truss': {
+    name: 'Braced steel lattice mast',
+    short: 'Steel lattice',
+    group: 'Metal',
+    color: '#657a78',
+    frame: 'brace',
+    feature: true
+  },
   concrete: {
     name: 'Cast-in-place reinforced concrete',
     short: 'Cast concrete',
@@ -4172,6 +4228,27 @@ const STRUCTURAL_SYSTEMS = {
   }
 };
 const EXTERIOR_FINISHES = {
+  'slide-enamel': {
+    name: 'Blue enamel-coated steel',
+    short: 'Blue enamel',
+    group: 'Metal',
+    color: '#287fa7',
+    feature: true
+  },
+  'slide-stainless': {
+    name: 'Brushed stainless steel',
+    short: 'Stainless steel',
+    group: 'Metal',
+    color: '#a8b7b7',
+    feature: true
+  },
+  'slide-composite': {
+    name: 'Warm white fiberglass',
+    short: 'Fiberglass',
+    group: 'Composite',
+    color: '#dfc8a8',
+    feature: true
+  },
   'rammed-earth': {
     name: 'Rammed earth',
     short: 'Rammed earth',
@@ -4381,10 +4458,20 @@ const EXTERIOR_FINISHES = {
   }
 };
 const MATERIAL_CATALOGUES = { structure: STRUCTURAL_SYSTEMS, facade: EXTERIOR_FINISHES };
+const ACCESSORY_MATERIALS = {
+  slide: { facade: ['slide-enamel', 'slide-stainless', 'slide-composite'] },
+  mast: { structure: ['mast-painted-steel', 'mast-steel-truss', 'concrete'] }
+};
 
 function materialCompatible(field, key, family) {
   const catalog = MATERIAL_CATALOGUES[field];
-  return Object.hasOwn(catalog, key) && (family === 'core' || catalog[key].module === true);
+  if (Object.hasOwn(ACCESSORY_MATERIALS, family))
+    return ACCESSORY_MATERIALS[family][field]?.includes(key) ?? false;
+  return (
+    Object.hasOwn(catalog, key) &&
+    !catalog[key].feature &&
+    (family === 'core' || catalog[key].module === true)
+  );
 }
 
 function materialSlotKey(layout, slot) {
@@ -4392,7 +4479,17 @@ function materialSlotKey(layout, slot) {
 }
 
 function materialValues(assignments, scope, program, slotKey) {
-  const scopes = ['building', scope === 'module' ? 'modules' : scope];
+  if (Object.hasOwn(ACCESSORY_MATERIALS, scope))
+    return Object.fromEntries(
+      Object.entries(ACCESSORY_MATERIALS[scope]).map(([field, keys]) => [
+        field,
+        keys.includes(assignments[scope]?.[field]) ? assignments[scope][field] : keys[0]
+      ])
+    );
+  const scopes =
+    scope === 'commercial'
+      ? ['building', 'modules', 'commercial']
+      : ['building', scope === 'module' ? 'modules' : scope];
   if (program != null) scopes.push(scope + 'Program:' + program);
   if (slotKey) scopes.push('module:' + slotKey);
   const defaults =
@@ -4616,6 +4713,87 @@ function atriumGuardSpans(model, floor) {
     for (const side of [-1, 1]) openings.push([bridge.heading + side * center, half]);
   }
   return openArcs([...occupied, ...openings]).filter(([a, z]) => (z - a) * model.r > 0.08);
+}
+
+// Enclosed rooftop retail uses the same study assignment as commercial dock modules.
+function drawCommercialPavilions(b, p, preview) {
+  const { mark, sector, quad, ringPoint } = b,
+    y = p.y;
+  const values = preview && materialValues(preview.assignments, 'commercial');
+  const selected =
+    values &&
+    rgb(
+      preview.structureView
+        ? STRUCTURAL_SYSTEMS[values.structure].color
+        : EXTERIOR_FINISHES[values.facade].color
+    );
+  for (const [i, q] of p.pavilions.entries()) {
+    const storeys = q.upper ? [q, q.upper] : [q];
+    for (const [floor, { start, end }] of storeys.entries()) {
+      const base = y + 0.05 + floor * 3,
+        a = start + 0.16 * (end - start),
+        d = end - 0.16 * (end - start),
+        rad = q.R + 0.015;
+      mark(floor ? 'Roof_Commercial_Retail_Upper' : 'Roof_Commercial_Retail', `Pavilion ${i + 1}`);
+      sector(
+        q.r,
+        q.R,
+        start,
+        end,
+        base,
+        3,
+        selected ? materialTint(selected, floor ? 1.08 : 1) : rgb(floor ? '#b79ece' : '#ad91c7')
+      );
+      for (let j = 0; j < 12; j++)
+        quad(
+          ringPoint(rad, a + ((d - a) * j) / 12, base + 0.37),
+          ringPoint(rad, a + ((d - a) * (j + 1)) / 12, base + 0.37),
+          ringPoint(rad, a + ((d - a) * (j + 1)) / 12, base + 2.4),
+          ringPoint(rad, a + ((d - a) * j) / 12, base + 2.4),
+          rgb('#dfdce3')
+        );
+    }
+  }
+}
+
+// Show the chosen mast structure independently of the rotating crown.
+function drawSwingMast(b, ride, height, preview) {
+  const { mark, sector, box, line, ringPoint } = b;
+  const key = preview
+      ? materialValues(preview.assignments, 'mast').structure
+      : 'mast-painted-steel',
+    color = rgb(STRUCTURAL_SYSTEMS[key].color),
+    radius = ride.towerRadius;
+  mark('Swing_Tower');
+  if (key === 'mast-steel-truss') {
+    const base = Math.min(height, ride.roofLevel + 0.16),
+      posts = 6,
+      radial = radius * 0.87;
+    sector(0, radius, 0, TAU, 0, base, color);
+    if (base >= height) return;
+    const bays = Math.max(1, Math.ceil((height - base) / 3.4));
+    for (let i = 0; i < posts; i++) {
+      const a = (i * TAU) / posts,
+        next = a + TAU / posts;
+      const [x, , z] = ringPoint(radial, a, base);
+      box(x, base, z, 0.15, height - base, 0.15, a, color);
+      for (let bay = 0; bay < bays; bay++) {
+        const low = base + ((height - base) * bay) / bays,
+          high = base + ((height - base) * (bay + 1)) / bays;
+        line(ringPoint(radial, a, low), ringPoint(radial, next, low), color);
+        line(ringPoint(radial, a, low), ringPoint(radial, next, high), color);
+      }
+    }
+    sector(0, radius, 0, TAU, height - 0.15, 0.15, color);
+    return;
+  }
+  sector(0, radius, 0, TAU, 0, height, color);
+  if (key === 'mast-painted-steel') {
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * TAU) / 6;
+      line(ringPoint(radius, angle, 0), ringPoint(radius, angle, height), rgb('#9c704d'));
+    }
+  }
 }
 
 // Translate the derived plan into drawing geometry. Export uses the full model regardless of current cutaway.
@@ -5241,7 +5419,9 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       const values =
         preview &&
         (s.p !== EMPTY || s.use === 'retail') &&
-        materialValues(preview.assignments, 'module', s.p, materialSlotKey(m, s));
+        (s.p === EMPTY
+          ? materialValues(preview.assignments, 'commercial')
+          : materialValues(preview.assignments, 'module', s.p, materialSlotKey(m, s)));
       const frameColor = values ? rgb(STRUCTURAL_SYSTEMS[values.structure].color) : edge;
       if (exporting || view.supports) {
         mark(`Docking_L${s.f + 1}_Frames`, `Frame_${s.j}`);
@@ -5365,28 +5545,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         rgb('#d9dde6')
       );
     }
-    for (const [i, q] of p.pavilions.entries()) {
-      const storeys = q.upper ? [q, q.upper] : [q];
-      for (const [floor, { start, end }] of storeys.entries()) {
-        const base = y + 0.05 + floor * 3,
-          a = start + 0.16 * (end - start),
-          d = end - 0.16 * (end - start),
-          rad = q.R + 0.015;
-        mark(
-          floor ? 'Roof_Commercial_Retail_Upper' : 'Roof_Commercial_Retail',
-          `Pavilion ${i + 1}`
-        );
-        sector(q.r, q.R, start, end, base, 3, rgb(floor ? '#b79ece' : '#ad91c7'));
-        for (let j = 0; j < 12; j++)
-          quad(
-            ringPoint(rad, a + ((d - a) * j) / 12, base + 0.37),
-            ringPoint(rad, a + ((d - a) * (j + 1)) / 12, base + 0.37),
-            ringPoint(rad, a + ((d - a) * (j + 1)) / 12, base + 2.4),
-            ringPoint(rad, a + ((d - a) * j) / 12, base + 2.4),
-            rgb('#dfdce3')
-          );
-      }
-    }
+    drawCommercialPavilions(b, p, preview);
     for (const [i, q] of p.garden.entries()) {
       const a = (q.start + q.end) / 2,
         rad = (q.r + q.R) / 2,
@@ -5523,23 +5682,9 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   }
   // Central swing tower, platform and glass annulus. Open-air deck (not enclosed area).
   const ride = m.feature.ride;
-  if (cut) {
-    mark('Swing_Tower');
-    sector(0, ride.towerRadius, 0, TAU, 0, Math.min(cutY, ride.height), rgb('#c78b51'));
-  }
+  drawSwingMast(b, ride, cut ? Math.min(cutY, ride.height) : ride.height, preview);
   if (exporting || !view.inspect) {
-    mark('Swing_Tower');
-    const mast = rgb('#c78b51'),
-      platform = rgb('#e4d6b7');
-    sector(0, ride.towerRadius, 0, TAU, 0, ride.height, mast);
-    for (let i = 0; i < 6; i++) {
-      const a = (i * TAU) / 6;
-      line(
-        ringPoint(ride.towerRadius, a, 0),
-        ringPoint(ride.towerRadius, a, ride.height),
-        rgb('#9c704d')
-      );
-    }
+    const platform = rgb('#e4d6b7');
     const pitch = ride.roofPitch;
     mark('Swing_Boarding_Platform');
     // Lap the glass and mast joints so adjacent tessellated rings have a continuous seal.
@@ -5684,7 +5829,9 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   if (s) {
     mark('Infinite_Rinse_Water_Slide');
     const p = s.points,
-      c = rgb('#287fa7'),
+      c = preview
+        ? rgb(EXTERIOR_FINISHES[materialValues(preview.assignments, 'slide').facade].color)
+        : rgb('#287fa7'),
       n = 12;
     let prev = null;
     const clippedQuad = (vertices) => {
@@ -10356,8 +10503,10 @@ function rasterDrawingFace(depth, width, height, a, b, c, pixels, color) {
   }
 }
 
-const DRAWING_SCALES = [50, 100, 200, 250, 500, 1000, 2000, 5000];
+const DRAWING_SCALES = [50, 100, 200, 250, 500, 1000, 2000, 2500, 5000];
 const DRAWING_PIXELS_PER_INCH = 88;
+const DRAWING_TILE_MARGIN = 8;
+const DRAWING_TILE_RESERVED_HEIGHT = 35;
 
 // Project the complete model on a physical sheet. Clipping offsets keep a stable frame.
 function renderDrawing(
@@ -10368,13 +10517,14 @@ function renderDrawing(
   scaleChoice,
   seeThrough,
   placement,
-  hybrid
+  hybrid,
+  region = null
 ) {
-  const width = paper.width * DRAWING_PIXELS_PER_INCH,
-    height = paper.height * DRAWING_PIXELS_PER_INCH,
+  const width = region?.width ?? paper.width * DRAWING_PIXELS_PER_INCH,
+    height = region?.height ?? paper.height * DRAWING_PIXELS_PER_INCH,
     pixelsPerMillimetre = DRAWING_PIXELS_PER_INCH / 25.4,
-    margin = 10 * pixelsPerMillimetre,
-    drawingHeight = height - margin * 3.2;
+    margin = region ? DRAWING_TILE_MARGIN : 10 * pixelsPerMillimetre,
+    drawingHeight = height - (region ? DRAWING_TILE_RESERVED_HEIGHT : margin * 3.2);
   const basis = orbitBasis(camera),
     { right, up, back } = basis,
     raw = geometry.points.map((p) => [dot(p, right), -dot(p, up), dot(p, back)]);
@@ -10391,6 +10541,10 @@ function renderDrawing(
     // In an axonometric, anchor the foremost ground edge. Elevations use the zero grade datum.
     if (Math.abs(camera.el) > 0.01 && Math.abs(geometry.points[i][1]) <= 0.25)
       ground = Math.max(ground, y);
+  }
+  if (!raw.length) {
+    left = top = 0;
+    rightEdge = bottom = 1;
   }
   const available = Math.min(
       (width - margin * 2) / (rightEdge - left),
@@ -10574,6 +10728,7 @@ const openDrawingWorkspace = (() => {
     clipRect = document.createElementNS(svgNS, 'rect'),
     drawingArea = document.createElementNS(svgNS, 'g'),
     content = document.createElementNS(svgNS, 'g'),
+    floorTiles = document.createElementNS(svgNS, 'g'),
     wash = document.createElementNS(svgNS, 'image'),
     fine = document.createElementNS(svgNS, 'path'),
     section = document.createElementNS(svgNS, 'path'),
@@ -10594,7 +10749,7 @@ const openDrawingWorkspace = (() => {
       'west',
       'northwest'
     ],
-    viewNames = ['axo', 'plan', 'front', 'side', 'aligned'];
+    viewNames = ['axo', 'plan', 'elevation', 'aligned'];
   for (const [path, width, color] of [
     [fine, 0.75, '#43534c'],
     [section, 1.7, '#162923']
@@ -10616,7 +10771,7 @@ const openDrawingWorkspace = (() => {
   clip.id = 'drawingSheetClip';
   clip.append(clipRect);
   drawingArea.setAttribute('clip-path', 'url(#drawingSheetClip)');
-  content.append(wash, fine, section);
+  content.append(wash, fine, section, floorTiles);
   drawingArea.append(content);
   sheet.append(clip, drawingArea, footer);
   document.head.append(pageStyle);
@@ -10626,6 +10781,9 @@ const openDrawingWorkspace = (() => {
   let settings = {
       view: 'axo',
       azimuth: 5,
+      elevation: 225,
+      source: 'massing',
+      planSheet: 'single',
       glazing: false,
       selected: null,
       planes: [],
@@ -10642,14 +10800,23 @@ const openDrawingWorkspace = (() => {
     renderedGeometryMode = null,
     rendered = null,
     timer = 0,
+    printingFloorSet = false,
     placing = false,
     drag = null;
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey));
-    if (saved && viewNames.includes(saved.view) && Array.isArray(saved.planes)) {
+    if (saved && Array.isArray(saved.planes)) {
+      const previousElevation = ['front', 'side'].includes(saved.view);
       settings = {
         ...settings,
-        view: saved.view,
+        view: previousElevation ? 'elevation' : viewNames.includes(saved.view) ? saved.view : 'axo',
+        elevation: Number.isFinite(saved.elevation)
+          ? mod(saved.elevation, 360)
+          : saved.view === 'side'
+            ? 315
+            : 225,
+        source: saved.source === 'build' ? 'build' : 'massing',
+        planSheet: saved.planSheet === 'floors' ? 'floors' : 'single',
         azimuth:
           Number.isInteger(saved.azimuth) && compassPoints[saved.azimuth] ? saved.azimuth : 5,
         paper: Object.hasOwn(paperSizes, saved.paper) ? saved.paper : 'letter',
@@ -10708,18 +10875,24 @@ const openDrawingWorkspace = (() => {
     const angle = (plane.angle * Math.PI) / 180;
     return [Math.cos(angle), 0, Math.sin(angle)];
   }
+  const floorDatum = (plane) =>
+    plane.axis === 'horizontal' && plane.floor != null ? plane.floor * 4.2 : 0;
+  const planeHeight = (plane) => floorDatum(plane) + plane.offset;
+  const allPlans = () => settings.view === 'plan' && settings.planSheet === 'floors';
   function offsetLimits(plane) {
     const reach = Math.ceil(sourceModel.plaza.outer + 2);
     return plane.axis === 'horizontal'
-      ? [0, Math.ceil(sourceModel.feature.ride.height)]
+      ? [
+          Math.min(0, -floorDatum(plane)),
+          Math.ceil(sourceModel.feature.ride.height) - floorDatum(plane)
+        ]
       : [-reach, reach];
   }
   function viewCamera() {
-    const front = sourceModel.lobby.angle ?? 0,
-      top = Math.PI / 2 - 1e-7;
+    const top = Math.PI / 2 - 1e-7;
     if (settings.view === 'plan') return { az: -Math.PI / 2, el: top };
-    if (settings.view === 'front') return { az: front, el: 0 };
-    if (settings.view === 'side') return { az: front + Math.PI / 2, el: 0 };
+    if (settings.view === 'elevation')
+      return { az: Math.PI / 2 + (settings.elevation * Math.PI) / 180, el: 0 };
     const plane = currentPlane();
     if (settings.view === 'aligned' && plane) {
       if (plane.axis === 'horizontal') return { az: -Math.PI / 2, el: plane.flip ? -top : top };
@@ -10736,19 +10909,153 @@ const openDrawingWorkspace = (() => {
     button.setAttribute('aria-label', 'View from ' + compassNames[index]);
     button.dataset.azimuth = index;
     button.onclick = () => {
-      settings.azimuth = index;
+      if (settings.view === 'elevation') settings.elevation = index * 45;
+      else settings.azimuth = index;
       syncCompass();
       queueDrawing();
     };
     compass.append(button);
   }
   function syncCompass() {
-    compass.hidden = settings.view !== 'axo';
+    const elevation = settings.view === 'elevation';
+    compass.hidden = settings.view !== 'axo' && !elevation;
+    $('drawingOrbitField').hidden = !elevation;
+    $('drawingOrbit').value = settings.elevation;
+    $('drawingOrbitAngle').textContent = settings.elevation + '°';
     for (const button of compass.children)
       button.setAttribute(
         'aria-pressed',
-        String(Number(button.dataset.azimuth) === settings.azimuth)
+        String(
+          Number(button.dataset.azimuth) ===
+            (elevation ? settings.elevation / 45 : settings.azimuth)
+        )
       );
+    $('drawingPlanSheetField').hidden = $('printFloorSet').hidden = settings.view !== 'plan';
+    sheet.classList.toggle('planset', allPlans());
+    $('placeDrawingPlane').disabled = allPlans();
+  }
+
+  function floorPlans() {
+    const selected = currentPlane();
+    const base =
+      selected?.axis === 'horizontal'
+        ? selected
+        : settings.planes.find((plane) => plane.axis === 'horizontal');
+    const cut = base ? (base.floor != null ? base.offset : mod(base.offset, 4.2)) : 1.2;
+    // Each plan has its own height cut. Vertical sections can still crop the full set.
+    const otherPlanes = settings.planes.filter((plane) => plane.axis === 'vertical');
+    return sourceModel.layers.map((_, floor) => ({
+      label:
+        (floor === 0 ? 'Ground floor' : 'Level ' + (floor + 1)) +
+        ' · Cut ' +
+        (floor * 4.2 + cut).toFixed(2) +
+        ' m',
+      planes: drawingClips([...otherPlanes, { axis: 'horizontal', offset: cut, floor }])
+    }));
+  }
+
+  function svgElement(name, attributes) {
+    const element = document.createElementNS(svgNS, name);
+    for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+    return element;
+  }
+
+  // Each view uses the same physical drawing units. The tile bounds crop its own wash and strokes.
+  function floorView(frame, label, x = 0, y = 0) {
+    const { width, height, margin, drawingHeight } = frame;
+    const tile = svgElement('svg', { x, y, width, height, viewBox: `0 0 ${width} ${height}` });
+    const area = svgElement('svg', {
+      x: margin,
+      y: margin,
+      width: width - margin * 2,
+      height: drawingHeight,
+      viewBox: `${margin} ${margin} ${width - margin * 2} ${drawingHeight}`,
+      overflow: 'hidden'
+    });
+    if (frame.wash) area.append(svgElement('image', { width, height, href: frame.wash }));
+    for (const [template, shape] of [
+      [fine, frame.fine],
+      [section, frame.section]
+    ]) {
+      const path = template.cloneNode();
+      path.removeAttribute('id');
+      path.setAttribute('d', shape);
+      area.append(path);
+    }
+    const name = svgElement('text', {
+      x: margin,
+      y: height - Math.min(12, margin),
+      fill: '#243c30',
+      'font-family': 'system-ui, sans-serif',
+      'font-size': 11
+    });
+    name.textContent = label + ' · 1:' + frame.denominator;
+    tile.append(area, name);
+    return tile;
+  }
+
+  function renderFloorSheet(paper, camera) {
+    const width = paper.width * DRAWING_PIXELS_PER_INCH,
+      height = paper.height * DRAWING_PIXELS_PER_INCH,
+      margin = (10 * DRAWING_PIXELS_PER_INCH) / 25.4,
+      drawingHeight = height - margin * 3.2;
+    const plans = floorPlans(),
+      drawingWidth = width - 2 * margin;
+    // Choose the grid that leaves the most room for each circular plan and its label.
+    let columns = 1,
+      bestSize = 0;
+    for (let count = 1; count <= plans.length; count++) {
+      const cellSize = Math.min(
+        drawingWidth / count - 2 * DRAWING_TILE_MARGIN,
+        drawingHeight / Math.ceil(plans.length / count) - DRAWING_TILE_RESERVED_HEIGHT
+      );
+      if (cellSize <= bestSize) continue;
+      bestSize = cellSize;
+      columns = count;
+    }
+    const rows = Math.ceil(plans.length / columns),
+      region = {
+        width: Math.floor(drawingWidth / columns),
+        height: Math.floor(drawingHeight / rows)
+      };
+    let denominator = settings.scale;
+    let cropped = false,
+      populated = false;
+    const tiles = plans.map(({ planes, label }, i) => {
+      const frame = renderDrawing(
+        geometry,
+        camera,
+        planes,
+        paper,
+        denominator,
+        settings.glazing,
+        { x: 0, y: 0, ground: false },
+        settings.mode !== 'linework',
+        region
+      );
+      denominator = String(frame.denominator);
+      cropped ||= frame.cropped;
+      populated ||= Boolean(frame.fine || frame.section);
+      return floorView(
+        frame,
+        label,
+        margin + (i % columns) * region.width,
+        margin + Math.floor(i / columns) * region.height
+      );
+    });
+    floorTiles.replaceChildren(...tiles);
+    return {
+      width,
+      height,
+      margin,
+      drawingHeight,
+      denominator,
+      cropped,
+      populated,
+      fine: '',
+      section: '',
+      wash: ''
+    };
   }
 
   function render() {
@@ -10756,7 +11063,7 @@ const openDrawingWorkspace = (() => {
     if (!sourceModel || panel.hidden) return;
     const paper = paperDimensions();
     try {
-      const mode = settings.mode === 'program' ? 'linework' : settings.mode;
+      const mode = settings.source + '/' + settings.mode;
       if (!geometry || renderedGeometryMode !== mode) {
         const view = {
           ...state,
@@ -10771,39 +11078,41 @@ const openDrawingWorkspace = (() => {
           showRoofDeck: true,
           roof: true
         };
-        const preview =
-          mode === 'linework'
-            ? null
-            : {
-                assignments: sourceAssignments,
-                view,
-                structureView: false,
-                programColors: mode === 'combined',
-                finishJoints: true
-              };
-        geometry = drawingGeometry(buildMesh(sourceModel, false, view, preview));
+        const preview = {
+          assignments: sourceAssignments,
+          view,
+          structureView: false,
+          programColors: settings.mode === 'combined' || settings.mode === 'program',
+          finishJoints: settings.mode === 'material' || settings.mode === 'combined'
+        };
+        geometry = drawingGeometry(
+          settings.source === 'build'
+            ? buildAssemblyMesh(sourceModel, buildViewLayers(), 0, preview)
+            : buildMesh(sourceModel, false, view, preview)
+        );
         renderedGeometryMode = mode;
       }
       const camera = viewCamera();
       $('groundDrawing').disabled = Math.abs(Math.cos(camera.el)) <= 0.01;
-      rendered = renderDrawing(
-        geometry,
-        camera,
-        settings.planes.map((plane) => ({
-          ...plane,
-          normal: normalFor(plane)
-        })),
-        paper,
-        settings.scale,
-        settings.glazing,
-        settings.placement,
-        settings.mode !== 'linework'
-      );
+      if (!allPlans()) floorTiles.replaceChildren();
+      rendered = allPlans()
+        ? renderFloorSheet(paper, camera)
+        : renderDrawing(
+            geometry,
+            camera,
+            drawingClips(settings.planes),
+            paper,
+            settings.scale,
+            settings.glazing,
+            settings.placement,
+            settings.mode !== 'linework'
+          );
       const { width, height, margin, denominator } = rendered,
         ruleY = height - margin * 1.8,
         textY = height - margin,
-        viewLabel =
-          settings.view === 'aligned'
+        viewLabel = allPlans()
+          ? 'Floor plans'
+          : settings.view === 'aligned'
             ? currentPlane()?.axis === 'vertical'
               ? 'Section'
               : 'Plan section'
@@ -10831,7 +11140,12 @@ const openDrawingWorkspace = (() => {
       footerScale.textContent = `1:${denominator} · ${settings.paper === 'letter' ? 'Letter' : 'Tabloid'}`;
       fine.setAttribute('d', rendered.fine);
       section.setAttribute('d', rendered.section);
-      exportButton.disabled = printButton.disabled = !(rendered.fine || rendered.section);
+      exportButton.disabled = printButton.disabled = !(
+        rendered.populated ||
+        rendered.fine ||
+        rendered.section
+      );
+      $('printFloorSet').disabled = printingFloorSet;
       resizePaperPreview();
       showStatus();
     } catch (error) {
@@ -10843,14 +11157,19 @@ const openDrawingWorkspace = (() => {
     status.textContent = placing
       ? 'Click the drawing to place the selected plane.'
       : rendered?.cropped
-        ? 'Drawing extends past the sheet. Drag to choose the part to export.'
+        ? allPlans()
+          ? 'Some plans extend past their panels. Use Fit to scale the set.'
+          : 'Drawing extends past the sheet. Drag to choose the part to export.'
         : exportButton.disabled
           ? 'The planes clip all the visible geometry.'
-          : 'Drag the drawing or use the arrow keys to reposition it.';
+          : allPlans()
+            ? 'Floor plans share a drawing scale.'
+            : 'Drag the drawing or use the arrow keys to reposition it.';
   }
   function queueDrawing() {
     saveDrawing();
     exportButton.disabled = printButton.disabled = true;
+    $('printFloorSet').disabled = true;
     clearTimeout(timer);
     timer = setTimeout(render, 45);
   }
@@ -10865,6 +11184,16 @@ const openDrawingWorkspace = (() => {
       input.max = max;
       input.value = plane.offset;
     }
+    const elevation = $('drawingCutElevation');
+    elevation.hidden = plane.axis !== 'horizontal';
+    elevation.value = `Cut elevation ${planeHeight(plane).toFixed(2)} m`;
+  }
+  function drawingClips(planes) {
+    return planes.map((plane) => ({
+      normal: normalFor(plane),
+      flip: plane.flip,
+      offset: planeHeight(plane)
+    }));
   }
   function stopPlacing() {
     placing = false;
@@ -10876,6 +11205,8 @@ const openDrawingWorkspace = (() => {
     const plane = currentPlane();
     if (!plane && settings.view === 'aligned') settings.view = 'axo';
     $('drawingView').value = settings.view;
+    $('drawingSource').value = settings.source;
+    $('drawingPlanSheet').value = settings.planSheet;
     syncCompass();
     $('drawingRendering').value = settings.mode;
     $('drawingPaper').value = settings.paper;
@@ -10915,6 +11246,13 @@ const openDrawingWorkspace = (() => {
     if (!plane) return;
     $('drawingPlaneAxis').value = plane.axis;
     $('drawingAngleField').hidden = plane.axis !== 'vertical';
+    $('drawingFloorField').hidden = plane.axis !== 'horizontal';
+    $('centerDrawingPlane').hidden = plane.axis !== 'vertical';
+    $('drawingPlaneMove').setAttribute(
+      'list',
+      plane.axis === 'vertical' ? 'drawingCenterTick' : ''
+    );
+    $('drawingFloor').value = plane.floor == null ? '' : String(plane.floor);
     $('drawingPlaneAngle').value = plane.angle;
     $('flipDrawingPlane').checked = plane.flip;
     syncOffset(plane);
@@ -10922,6 +11260,21 @@ const openDrawingWorkspace = (() => {
 
   $('drawingView').onchange = (event) => {
     settings.view = event.target.value;
+    syncCompass();
+    queueDrawing();
+  };
+  $('drawingOrbit').oninput = (event) => {
+    settings.elevation = event.target.valueAsNumber;
+    syncCompass();
+    queueDrawing();
+  };
+  $('drawingSource').onchange = (event) => {
+    settings.source = event.target.value;
+    queueDrawing();
+  };
+  $('drawingPlanSheet').onchange = (event) => {
+    settings.planSheet = event.target.value;
+    stopPlacing();
     syncCompass();
     queueDrawing();
   };
@@ -10959,9 +11312,7 @@ const openDrawingWorkspace = (() => {
   $('addDrawingPlane').onclick = () => {
     const id = Math.max(0, ...settings.planes.map((plane) => plane.id)) + 1,
       horizontal = settings.view === 'plan',
-      angle = Math.round(
-        ((sourceModel.lobby.angle + (settings.view === 'side' ? Math.PI / 2 : 0)) * 180) / Math.PI
-      );
+      angle = Math.round((viewCamera().az * 180) / Math.PI);
     settings.planes.push({
       id,
       axis: horizontal ? 'horizontal' : 'vertical',
@@ -10978,10 +11329,21 @@ const openDrawingWorkspace = (() => {
   $('drawingPlaneAxis').onchange = (event) => {
     const plane = currentPlane();
     plane.axis = event.target.value;
+    plane.floor = null;
     plane.offset = plane.axis === 'horizontal' ? 1.2 : 0;
     syncSettings();
     queueDrawing();
   };
+  $('drawingFloor').onchange = (event) => {
+    const plane = currentPlane(),
+      selected = event.target.value;
+    if (selected === '') plane.offset = planeHeight(plane);
+    else if (plane.floor == null && Math.abs(plane.offset) > 4.2)
+      plane.offset = Math.round(mod(plane.offset, 4.2) * 10) / 10;
+    plane.floor = selected === '' ? null : Number(selected);
+    movePlane(plane.offset);
+  };
+  $('centerDrawingPlane').onclick = () => movePlane(0);
   $('drawingPlaneAngle').onchange = (event) => {
     currentPlane().angle = Number.isFinite(event.target.valueAsNumber)
       ? mod(event.target.valueAsNumber, 360)
@@ -10999,6 +11361,22 @@ const openDrawingWorkspace = (() => {
     queueDrawing();
   }
   $('drawingPlaneMove').oninput = (event) => movePlane(event.target.valueAsNumber);
+  let sliderPointer = false;
+  $('drawingPlaneMove').onpointerdown = () => {
+    sliderPointer = true;
+  };
+  $('drawingPlaneMove').onpointercancel = $('drawingPlaneMove').onkeydown = () => {
+    sliderPointer = false;
+  };
+  $('drawingPlaneMove').onchange = (event) => {
+    const plane = currentPlane();
+    if (sliderPointer && plane.axis === 'vertical') {
+      const reach = +event.target.max - +event.target.min;
+      if (Math.abs(plane.offset) <= clamp((reach * 4) / event.target.clientWidth, 0.25, 2.5))
+        movePlane(0);
+    }
+    sliderPointer = false;
+  };
   $('drawingPlaneOffset').onchange = (event) => movePlane(event.target.valueAsNumber);
   $('flipDrawingPlane').onchange = (event) => {
     currentPlane().flip = event.target.checked;
@@ -11036,13 +11414,13 @@ const openDrawingWorkspace = (() => {
     const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[
       event.key
     ];
-    if (!delta || placing) return;
+    if (!delta || placing || allPlans()) return;
     event.preventDefault();
     const step = event.shiftKey ? 10 : 2;
     moveDrawing(delta[0] * step, delta[1] * step);
   });
   sheet.addEventListener('pointerdown', (event) => {
-    if (placing || timer || !rendered || event.button !== 0) return;
+    if (placing || timer || !rendered || allPlans() || event.button !== 0) return;
     drag = { id: event.pointerId, start: sheetPoint(event), x: 0, y: 0 };
     sheet.focus({ preventScroll: true });
     sheet.setPointerCapture(event.pointerId);
@@ -11085,7 +11463,7 @@ const openDrawingWorkspace = (() => {
       ((point.y - originY) / scale) * dot(normal, basis.up) +
       (Number.isFinite(z) ? z * toward : 0);
     stopPlacing();
-    movePlane(offset);
+    movePlane(offset - floorDatum(currentPlane()));
   });
   exportButton.onclick = () => {
     const { width, height } = paperDimensions();
@@ -11107,18 +11485,78 @@ const openDrawingWorkspace = (() => {
     pageStyle.textContent = `@page { size: ${width}in ${height}in; margin: 0; }`;
     window.print();
   };
+  $('printFloorSet').onclick = async () => {
+    if (!geometry || settings.view !== 'plan') return;
+    const button = $('printFloorSet'),
+      pages = $('floorPrintPages'),
+      paper = paperDimensions(),
+      plans = floorPlans(),
+      model = geometry,
+      camera = viewCamera(),
+      { scale, glazing, mode } = settings;
+    printingFloorSet = button.disabled = true;
+    button.textContent = 'Preparing floor set…';
+    try {
+      const sheets = [];
+      for (const { planes, label } of plans) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const frame = renderDrawing(
+          model,
+          camera,
+          planes,
+          paper,
+          scale,
+          glazing,
+          { x: 0, y: 0, ground: false },
+          mode !== 'linework'
+        );
+        const page = floorView(frame, 'Poly Nation · ' + label);
+        page.setAttribute('width', paper.width + 'in');
+        page.setAttribute('height', paper.height + 'in');
+        sheets.push(page);
+      }
+      if (panel.hidden) return;
+      pages.replaceChildren(...sheets);
+      document.body.classList.add('printing-floor-set');
+      pageStyle.textContent = `@page { size: ${paper.width}in ${paper.height}in; margin: 0; }`;
+      window.print();
+    } catch (error) {
+      console.error('Floor set failed', error);
+      status.textContent = 'The floor set could not be prepared.';
+    } finally {
+      printingFloorSet = false;
+      button.disabled = Boolean(timer);
+      button.textContent = 'Print floor set';
+    }
+  };
   window.addEventListener('afterprint', () => {
     pageStyle.textContent = '';
+    document.body.classList.remove('printing-floor-set');
+    $('floorPrintPages').replaceChildren();
   });
   return (model, assignments) => {
-    const signature = JSON.stringify(assignments);
+    const signature = JSON.stringify([assignments, buildViewLayers()]);
     if (sourceModel !== model || materialSignature !== signature) {
       sourceModel = model;
       sourceAssignments = assignments;
       materialSignature = signature;
       geometry = null;
-      for (const plane of settings.planes)
+      for (const plane of settings.planes) {
+        plane.floor = Number.isInteger(plane.floor)
+          ? clamp(plane.floor, 0, model.layers.length - 1)
+          : null;
         plane.offset = clamp(plane.offset, ...offsetLimits(plane));
+      }
+      $('drawingFloor').replaceChildren(
+        new Option('Project datum', ''),
+        ...model.layers.map(
+          (_, i) =>
+            new Option(
+              (i === 0 ? 'Ground floor' : 'Level ' + (i + 1)) + ' · ' + (i * 4.2).toFixed(1) + ' m',
+              String(i)
+            )
+        )
+      );
     }
     stopPlacing();
     syncSettings();
@@ -11127,7 +11565,7 @@ const openDrawingWorkspace = (() => {
 })();
 
 // Generate a separate assembly view from the same floor, opening and dock geometry.
-function buildAssemblyMesh(model, layers, levels) {
+function buildAssemblyMesh(model, layers, levels, preview) {
   const mesh = meshBuilder(),
     { box, quad, line, sector, ringPoint, mark } = mesh,
     floorHeight = 4.2,
@@ -11136,9 +11574,11 @@ function buildAssemblyMesh(model, layers, levels) {
     outside = model.R - Math.min(0.48, width * 0.16),
     concrete = rgb('#c7c8bd'),
     steel = rgb('#647c79'),
-    chassis = rgb('#5e6e75'),
     fastener = rgb('#af8059'),
     partition = rgb('#e1dacc');
+  const coreValues = materialValues(preview.assignments, 'core'),
+    coreSystem = STRUCTURAL_SYSTEMS[coreValues.structure],
+    coreFrame = rgb(coreSystem.color);
   const full = !levels,
     floors = levels || model.layers.length,
     extent = model.plaza.outer + 2;
@@ -11195,7 +11635,7 @@ function buildAssemblyMesh(model, layers, levels) {
         const beamArcs =
           f === 1 && model.lobby.gallery && radius >= model.lobby.gallery ? [[0, TAU]] : arcs;
         for (const arc of beamArcs)
-          sector(radius - beam / 2, radius + beam / 2, ...arc, y - 0.22, 0.21, steel);
+          sector(radius - beam / 2, radius + beam / 2, ...arc, y - 0.22, 0.21, coreFrame);
       }
       mark('Assembly_Columns_' + (f + 1));
       const reserved = lobbyHoles(model.lobby, f);
@@ -11203,26 +11643,28 @@ function buildAssemblyMesh(model, layers, levels) {
         const angle = model.lobby.angle + ((j + 0.5) * TAU) / bayCount;
         if (reserved.some(([a, half]) => angDist(a, angle) < half + 0.035)) continue;
         for (const radius of [inside, outside])
-          at(radius, angle, y + 0.22, beam, floorHeight - 0.44, beam, steel);
+          at(radius, angle, y + 0.22, beam, floorHeight - 0.44, beam, coreFrame);
         member(
           ringPoint(inside, angle, y - 0.13),
           ringPoint(outside, angle, y - 0.13),
           beam * 0.63,
-          steel
+          coreFrame
         );
+        if (coreSystem.frame === 'brace' && j % 3 === 0)
+          member(
+            ringPoint(inside, angle, y + floorHeight - 0.22),
+            ringPoint(outside, angle, y + 0.22),
+            beam * 0.52,
+            coreFrame
+          );
       }
     }
-    if (layers.walls) {
+    if (layers.facade) {
       mark('Assembly_Exterior_Walls_' + (f + 1));
       for (const wall of coreFacadeSpans(model, f))
-        sector(
-          model.R - facadeThickness(model) * 0.5,
-          model.R,
-          ...wall.span,
-          wall.y,
-          wall.height,
-          partition
-        );
+        drawMaterialFacade(mesh, model, f, wall.span, wall.y, wall.height, preview);
+    }
+    if (layers.walls) {
       mark('Assembly_Room_Partitions_' + (f + 1));
       for (const room of model.rooms) {
         if (room.f !== f || room.R - room.r < 0.16) continue;
@@ -11230,15 +11672,17 @@ function buildAssemblyMesh(model, layers, levels) {
           floor = y + 0.22,
           door = (room.start + room.end) / 2,
           doorway = Math.min(0.6 / room.R, (room.end - room.start) * 0.28);
-        sector(room.r, room.r + wall, room.start, room.end, floor, 2.75, partition);
+        const wallColor =
+          preview.programColors && PROGRAMS[room.id] ? rgb(PROGRAMS[room.id].color) : partition;
+        sector(room.r, room.r + wall, room.start, room.end, floor, 2.75, wallColor);
         if (!room.facadeFacing)
           for (const [a, z] of [
             [room.start, door - doorway],
             [door + doorway, room.end]
           ])
-            sector(room.R - wall, room.R, a, z, floor, 2.75, partition);
+            sector(room.R - wall, room.R, a, z, floor, 2.75, wallColor);
         for (const angle of [room.start, room.end])
-          at((room.R + room.r) / 2, angle, floor, wall, 2.75, room.R - room.r, partition);
+          at((room.R + room.r) / 2, angle, floor, wall, 2.75, room.R - room.r, wallColor);
       }
     }
   }
@@ -11246,6 +11690,54 @@ function buildAssemblyMesh(model, layers, levels) {
     mark('Assembly_Roof_Deck');
     sector(model.r, model.R, 0, TAU, model.roofPlan.y - 0.22, 0.22, concrete);
   }
+  // Retain the greenhouse envelope and its ribs in the building assembly. A glazed cap
+  // spans the inner ring where the massing model has the ride's boarding deck.
+  const pitch = model.feature.ride.roofPitch;
+  if (full && pitch && (layers.frame || layers.facade)) {
+    const inner = model.feature.ride.platformRadius,
+      outer = model.r,
+      low = pitch.canopyEaveY ?? pitch.eaveY - 0.045,
+      high = pitch.canopyRidgeY ?? low + pitch.rise;
+    if (layers.frame) {
+      mark('Assembly_Greenhouse_Frame');
+      for (const [radius, height] of [
+        [inner, high],
+        [outer, low]
+      ])
+        sector(radius - 0.13, radius + 0.13, 0, TAU, height - 0.24, 0.24, coreFrame);
+      for (let i = 0; i < 24; i++) {
+        const angle = (i * TAU) / 24;
+        member(
+          ringPoint(inner, angle, high - 0.13),
+          ringPoint(outer, angle, low - 0.13),
+          0.16,
+          coreFrame
+        );
+      }
+    }
+    if (layers.facade) {
+      mark('Assembly_Greenhouse_Glazing');
+      const tint = rgb('#c4dfde'),
+        cap = [0, high, 0];
+      for (let i = 0; i < 96; i++) {
+        const a = (i * TAU) / 96,
+          d = ((i + 1) * TAU) / 96,
+          innerA = ringPoint(inner, a, high),
+          innerD = ringPoint(inner, d, high);
+        quad(
+          innerD,
+          ringPoint(outer, d, low),
+          ringPoint(outer, a, low),
+          innerA,
+          tint,
+          mesh.glass,
+          0.38
+        );
+        mesh.tri(cap, innerD, innerA, tint, mesh.glass, 0.38);
+      }
+    }
+  }
+  if (full && layers.facade) drawCommercialPavilions(mesh, model.roofPlan, preview);
 
   // Dock plates, paired cantilevers and their tie-back show the relationship to the ring.
   for (const slot of model.slots) {
@@ -11274,23 +11766,38 @@ function buildAssemblyMesh(model, layers, levels) {
         for (const edge of [-0.13, 0.13])
           for (const lift of [0.08, 0.27]) {
             const [a, b, c] = location(model.R + 0.2, offset + edge, y + lift);
-            box(a, b, c, 0.075, 0.055, 0.06, angle, chassis);
+            box(a, b, c, 0.075, 0.055, 0.06, angle, steel);
           }
       }
       member(location(back, -1.83, base - 0.17), location(back, 1.83, base - 0.17), 0.19, steel);
       member(location(foot, -1.83, base - 0.12), location(foot, 1.83, base - 0.12), 0.12, fastener);
     }
-    if (!layers.modules || !occupied) continue;
+    if (!occupied) continue;
+    const values =
+      slot.p === EMPTY
+        ? materialValues(preview.assignments, 'commercial')
+        : materialValues(preview.assignments, 'module', slot.p, materialSlotKey(model, slot));
+    const system = STRUCTURAL_SYSTEMS[values.structure];
+    const chassis = rgb(
+      preview.programColors && PROGRAMS[slot.p] ? PROGRAMS[slot.p].color : system.color
+    );
+    if (layers.facade) {
+      mark('Assembly_Module_Skin');
+      const [x, , z] = location((foot + front) / 2, 0, base);
+      drawMaterialModule(mesh, slot, x, base, z, preview, values);
+      continue;
+    }
+    if (!layers.modules) continue;
     mark('Assembly_Module_Chassis');
     const half = MODULE.width / 2 - 0.13,
       upper = base + MODULE.height;
-    at((foot + front) / 2, angle, base, MODULE.width, 0.15, MODULE.depth, concrete);
+    at((foot + front) / 2, angle, base, MODULE.width, 0.15, MODULE.depth, chassis);
     for (const side of [-half, half]) {
       member(location(foot, side, upper), location(front, side, upper), 0.11, chassis);
       for (let bay = 0; bay <= 3; bay++) {
         const atBay = foot + (MODULE.depth * bay) / 3;
         member(location(atBay, side, base), location(atBay, side, upper), 0.11, chassis);
-        if (bay < 3 && (bay === 0 || bay === 2))
+        if (system.frame !== 'solid' && bay < 3 && (system.frame === 'brace' || bay !== 1))
           member(
             location(atBay, side, base),
             location(atBay + MODULE.depth / 3, side, upper),
@@ -11326,19 +11833,28 @@ function buildAssemblyMesh(model, layers, levels) {
   return { ...mesh, H: (floors + Number(full)) * floorHeight, extent };
 }
 
+const BUILD_LAYERS = {
+  frame: 'buildFrame',
+  slabs: 'buildSlabs',
+  walls: 'buildWalls',
+  facade: 'buildFacade',
+  docks: 'buildDocks',
+  modules: 'buildModules'
+};
+function buildViewLayers() {
+  return Object.fromEntries(
+    Object.entries(BUILD_LAYERS).map(([field, id]) => [field, $(id).checked])
+  );
+}
+
 const openBuildWorkspace = (() => {
   const panel = $('buildPhase'),
     canvas = $('buildCanvas'),
     level = $('buildLevel'),
     view = { az: -0.84, el: 0.57, zoom: 1, pan: 0, panX: 0 };
-  const options = {
-    frame: 'buildFrame',
-    slabs: 'buildSlabs',
-    walls: 'buildWalls',
-    docks: 'buildDocks',
-    modules: 'buildModules'
-  };
   let source = null,
+    assignments = {},
+    signature = '',
     copy = null,
     assembly = null,
     context = null,
@@ -11352,16 +11868,19 @@ const openBuildWorkspace = (() => {
     else if (fallback) paintSoftware(assembly, fallback, view);
   }
   function rebuild(center = false) {
-    const layers = Object.fromEntries(
-      Object.entries(options).map(([key, id]) => [key, $(id).checked])
-    );
-    assembly = buildAssemblyMesh(copy, layers, Number(level.value));
+    assembly = buildAssemblyMesh(copy, buildViewLayers(), Number(level.value), {
+      assignments,
+      view: { seed: state.seed },
+      programColors: false,
+      structureView: false,
+      finishJoints: Boolean(renderer)
+    });
     if (renderer) uploadWebGLMesh(context, renderer, assembly);
     if (center && assembly.groups.length > 1) fitModel(assembly, view, canvas);
     present();
   }
   level.onchange = () => rebuild();
-  for (const id of Object.values(options)) $(id).onchange = () => rebuild();
+  for (const id of Object.values(BUILD_LAYERS)) $(id).onchange = () => rebuild();
   $('buildFit').onclick = () => {
     if (assembly?.groups.length > 1) fitModel(assembly, view, canvas);
     present();
@@ -11403,17 +11922,25 @@ const openBuildWorkspace = (() => {
   );
   new ResizeObserver(present).observe(canvas);
 
-  return (model) => {
+  return (model, materialAssignments) => {
     if (!renderer && !fallback) {
       context = canvas.getContext('webgl', { antialias: true, alpha: false });
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
+    const next = JSON.stringify(materialAssignments);
     if (source === model) {
-      present();
+      if (signature === next) present();
+      else {
+        assignments = materialAssignments;
+        signature = next;
+        rebuild();
+      }
       return;
     }
     source = model;
+    assignments = materialAssignments;
+    signature = next;
     copy = structuredClone(model);
     const selected = Number(level.value);
     level.replaceChildren(
@@ -11834,6 +12361,7 @@ const openBuildWorkspace = (() => {
           'aria-pressed',
           String(button.dataset.material === (assignment[field] || ''))
         );
+      if (!effective[field]) continue;
       const catalog = MATERIAL_CATALOGUES[field];
       const selection = assignment[field];
       let description = 'Inherited · ' + catalog[effective[field]].name;
@@ -11878,6 +12406,7 @@ const openBuildWorkspace = (() => {
 
   // Shared building overrides use the options that apply to both construction families.
   function materialFamily() {
+    if (['slide', 'mast', 'commercial'].includes(scope.value)) return scope.value;
     return scope.value.startsWith('core') ? 'core' : 'module';
   }
   function refreshPalette(field, id) {
@@ -11892,6 +12421,7 @@ const openBuildWorkspace = (() => {
       ...groups.map((group) => option(group, group))
     );
     filters.value = groups.includes(previous) ? previous : '';
+    $(field + 'Palette').hidden = entries.length === 0;
     const shown = entries.filter(([, preset]) => !filters.value || preset.group === filters.value);
     $(id).replaceChildren(
       ...[['', { name: 'Inherit', short: 'Inherit' }], ...shown].map(([value, preset]) => {
@@ -12056,7 +12586,8 @@ const openBuildWorkspace = (() => {
     }
     if (workspace === 'build') {
       if (pending) update();
-      openBuildWorkspace(model);
+      if (!study) restoreStudy();
+      openBuildWorkspace(model, study?.assignments ?? {});
     }
     if (workspace === 'massing') requestAnimationFrame(draw);
     window.scrollTo(0, pageScroll[workspace]);

@@ -1,5 +1,12 @@
 # Changelog
 
+## Material-led build and floor drawings
+- Ordered the navigation from Massing through Materials and Build to Drawings.
+- Added a compass and horizontal orbit for Elevation, floor-relative horizontal cuts, and a center snap for vertical cuts.
+- Added a shared-scale floor-plan sheet and a printable set with one page per floor.
+- Added material choices for commercial enclosures, the water slide, and the swing mast.
+- Carried material assignments into the Build assembly, with a separate facade toggle. Drawings can use the Massing or Build geometry with the same assignments.
+
 ## Drawing composition and assembly studies
 - Added drawing pan, Fit and Ground placement, axonometric compass directions, and hybrid linework with program colors or material textures.
 - Grouped material presets by family, added core options for steel framing with rammed-earth cladding, and restricted module palettes to lightweight assemblies. Added stable variation to repeated module finishes.
