@@ -512,7 +512,7 @@ Rooms can create a sheltered gathering point, and nearby docks give the same pro
 
 Life at the module edge
 
-The designer added small semicircular balconies at the outer ends of Senior care and Love hotel modules, upper-floor Marine firehall modules, and a sample of Infinite Rinse modules. Laundry lines span gaps between some Senior care modules and their immediate neighbors. These open-air details show how residents might use the edge of an otherwise repeated module.
+The designer added small semicircular balconies at the outer ends of Senior care and Love hotel modules, upper-floor Marine firehall modules, and a sample of Infinite Rinse modules. Laundry lines span gaps between some Senior care modules and their immediate neighbors. The semicircular balconies belong to the plug-in modules at their outer ends. Full-bay public balconies and gardens use removable decks that sit on the permanent dock frame. These open-air details show how residents might use the edge of an otherwise repeated module.
 
 The case for an empty dock
 

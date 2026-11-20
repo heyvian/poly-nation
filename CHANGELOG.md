@@ -1,5 +1,10 @@
 # Changelog
 
+## Build rides and dock refinements
+- Added the swing assembly and a waterslide with bolted section joints to Build and its drawings.
+- Moved cable stays to the top of their own dock storey, removed the deep underfloor systems from the stacked layout, and added 220, 260 and 300 mm slab studies.
+- Aligned framing sections to each bay. The Modules toggle controls the chassis, cladding and balcony or garden decks together.
+
 ## Dock structure comparisons
 - Added eight Build dock systems, including underfloor frames, cable stays, roof hangers and tip columns. The selection carries through to Build-source drawings.
 - Added a gravity comparison and flagged underfloor systems that enter grade or an occupied or reserved bay below.
