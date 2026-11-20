@@ -1,5 +1,12 @@
 # Changelog
 
+## Dock structure comparisons
+- Added eight Build dock systems, including underfloor frames, cable stays, roof hangers and tip columns. The selection carries through to Build-source drawings.
+- Added a gravity comparison and flagged underfloor systems that enter grade or an occupied or reserved bay below.
+
+## Shared model controls
+- Matched orbit, two-axis pan, zoom, and the 3D, Plan, Side and Fit shortcuts across Massing, Materials and Build. Touch uses one finger to orbit and two fingers to pan or pinch-zoom.
+
 ## Dock structure and slab study
 - Extended Build partitions to the slab above and kept door openings below their lintels.
 - Replaced the shallow docking rails in Massing and Build with paired tapered steel trusses. Open decks, gardens and empty bays share the frame. Reserved bays stay clear.

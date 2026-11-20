@@ -7,6 +7,8 @@ A student-directed architectural research instrument for the Poly Nation / Infin
 
 Open `index.html`, set the massing, and use the Topology Designer to set relationships between programs. Attract favors nearby rooms and modules and can create shared lobbies. Repel prioritizes separating neighbors on the same floor and allows vertical module neighbors. Clustering strength governs how closely selected programs group, including vertical alignment.
 
+The Massing, Materials and Build models share camera controls. Left-drag to orbit, right-drag to pan in either direction, and scroll to zoom. On a touchscreen, drag with one finger to orbit or use two fingers to pan and pinch-zoom. Use **3D**, **Plan**, **Side** or **Fit** to change the view.
+
 In Massing, turn on **Edit programming**, then select a room, module, or available dock on the model. The editor shows the selected location and lets you assign its program. The solver checks edits against the area cap, reserved docks, same-floor repulsion, and entrance access. Firehall modules fill eligible ground-floor docks first. Each upper floor can have at most as many as the floor directly below. Room edits follow matching room locations. A different variation can make a saved location unavailable.
 
 Use **Massing → Building → Atrium bridges**, under **Core geometry**, to choose **Off**, **Radial**, or **Vertically aligned**. The bridges pass close to the central mast and enter the pollination trial as walkable routes.
@@ -24,6 +26,8 @@ Drag the sheet or use the arrow keys to position a crop at the selected scale. *
 **Build** makes a separate schematic assembly from the current massing and material choices. The Facade toggle exposes the frame and module connections or shows the assigned finishes. Commercial materials carry over to the roof pavilions and enclosed retail docks. The greenhouse keeps its pitched profile with glazing across the center. Ride geometry and entourage remain in the Massing source. Member sizes and connections are conceptual.
 
 **Dock and slab estimates** in Build compares gravity loads for an enclosed module with a tip balcony, a public balcony, a saturated garden and an empty dock. The same permanent steel side trusses appear in Massing and Build. Empty bays have their doors down. A module or usable outdoor deck gets a threshold and an overhead-folded closure. The slide, entrances and climbing wall retain their reserved clearances. The 220 mm slab thickness assumes radial beams spaced at about 3 m or less around the ring. The estimate uses a fixed-root cantilever and a simply supported slab strip to show the order of magnitude of the forces and deflection.
+
+Use **Build → Dock structure** to compare tapered side trusses, open-panel side frames, a shallow box floor, deep box girders, an underfloor space truss, cable stays, roof-hung rods and outer tip columns. Brown marks where an underfloor system enters grade or the bay below, or where a tip post aligns with a reserved ground bay. The estimates compare the same reference gravity loads. The selection is saved locally and appears in drawings that use the Build source.
 
 Use **Design rationale** to open the illustrated design record. Refreshing the same browser tab reopens the active view. Export JSON to carry a saved design to another browser or machine.
 

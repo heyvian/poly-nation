@@ -722,7 +722,11 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 
 
 .build-viewport { flex: 1; height: 0; min-height: 0; border: 1px solid #cbd4c9; border-radius: 6px; }
-.build-viewport canvas { touch-action: none; }
+.model-touch-hint { display: none; }
+@media (pointer: coarse) {
+ .model-mouse-hint { display: none; }
+ .model-touch-hint { display: inline; }
+}
 .build-options { display: grid; gap: 9px; margin-top: 14px; }
 .build-options label { margin: 0; }
 @media (max-width: 899px) { .build-viewport { min-height: min(56vh, 540px); } }
@@ -782,7 +786,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  <span id="bridgeInfo" class="bridge-status" role="status" hidden></span>
 </div>
 <label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; lobby calculations</summary><div class="readout"><span>Lobby atriums</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details></div></div></aside>
-<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Frame the visible model">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span></div>
+<main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Frame the visible model">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint"><span class="model-mouse-hint">Orbit: left drag · Pan: right drag · Zoom: scroll</span><span class="model-touch-hint">One finger to orbit · Two fingers to pan or zoom</span></span></div>
 <div class="actions model-actions" role="group" aria-label="Massing design actions">
  <button id="shuffle" type="button" title="Generate a new layout with the same settings">New variation</button>
  <button id="editProgramming" type="button" aria-pressed="false">Edit programming</button>
@@ -965,11 +969,12 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
     <div class="actions">
      <button id="materialAxo" type="button">3D</button>
      <button id="materialPlan" type="button">Plan</button>
+     <button id="materialSide" type="button">Side</button>
      <button id="materialFit" type="button" title="Frame the visible model">Fit</button>
      <button id="saveMaterialSnapshot" type="button" title="Download a PNG with the model and all six assembly cards">Snapshot</button>
     </div>
    </div>
-   <div class="view-bottom"><span>Drag to orbit · Scroll to zoom</span></div>
+   <div class="view-bottom"><span class="model-mouse-hint">Orbit: left drag · Pan: right drag · Zoom: scroll</span><span class="model-touch-hint">One finger to orbit · Two fingers to pan or zoom</span></div>
   </div>
   <section class="material-board" aria-label="Assembly schedule and analysis">
    <nav class="material-view-switch" aria-label="Material details">
@@ -1105,6 +1110,10 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   <label class="drawing-view-field">Visible levels
    <select id="buildLevel"><option value="0">All levels</option></select>
   </label>
+  <label class="drawing-view-field">Dock structure
+   <select id="buildDockStructure"></select>
+  </label>
+  <p class="hint" id="dockStructureNote" role="status"></p>
   <div class="build-options" aria-label="Assembly layers" role="group">
    <label class="check"><input id="buildFrame" type="checkbox" checked> Core framing</label>
    <label class="check"><input id="buildSlabs" type="checkbox" checked> Floor and roof slabs</label>
@@ -1127,7 +1136,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
     <button type="button" id="buildSide">Side</button>
     <button type="button" id="buildFit">Fit</button>
    </div></div>
-   <div class="view-bottom"><span>Drag to orbit · Scroll to zoom</span></div>
+   <div class="view-bottom"><span class="model-mouse-hint">Orbit: left drag · Pan: right drag · Zoom: scroll</span><span class="model-touch-hint">One finger to orbit · Two fingers to pan or zoom</span></div>
   </div>
  </div>
 </section>
@@ -3650,7 +3659,7 @@ function projectedModelBounds(mesh, { right, up }) {
 }
 
 function fitModel(mesh, camera, canvas) {
-  if (!mesh) return;
+  if (!mesh?.groups.some((group) => group.layer !== 'Reference')) return;
   const box = canvas.getBoundingClientRect(),
     { width, height } = box;
   if (!width || !height) return;
@@ -8837,8 +8846,10 @@ function initProgrammingEditor() {
   canvas.addEventListener('pointerleave', clearHover);
   canvas.addEventListener('pointerdown', (event) => {
     clearHover();
-    if (programEditing && event.isPrimary && event.button === 0)
-      pointerStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    pointerStart =
+      programEditing && event.isPrimary && event.button === 0
+        ? { id: event.pointerId, x: event.clientX, y: event.clientY }
+        : null;
   });
   canvas.addEventListener('pointerup', (event) => {
     const start = pointerStart;
@@ -8961,82 +8972,89 @@ function paintWebGL(
   gl.depthMask(true);
   gl.disable(gl.BLEND);
 }
-// Target-locked orbit, elevation excludes below-grade views, no pan.
-const touches = new Map();
-let pinch = 0;
-canvas.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
-  canvas.setPointerCapture(e.pointerId);
-  touches.set(e.pointerId, [e.clientX, e.clientY, e.button === 2]);
-  if (touches.size === 2) {
-    const [a, b] = touches.values();
-    pinch = Math.hypot(a[0] - b[0], a[1] - b[1]);
+// All three model canvases use the same pointer gestures and view shortcuts.
+function bindModelCamera({ canvas, getCamera, getMesh, onChange, buttons }) {
+  const pointers = new Map();
+  const topView = Math.PI / 2 - 0.012;
+  const setZoom = (camera, zoom) => {
+    camera.zoom = clamp(zoom, 0.06, 3);
+  };
+  function pan(camera, dx, dy) {
+    const height = Math.max(1, canvas.clientHeight),
+      mesh = getMesh(),
+      half = mesh ? baseViewHalf(mesh, camera, canvas.clientWidth / height) : 100,
+      metresPerPixel = (2 * half * camera.zoom) / height;
+    camera.panX = clamp((camera.panX ?? 0) - dx * metresPerPixel, -180, 180);
+    camera.pan = clamp(camera.pan + dy * metresPerPixel, -180, 180);
   }
-});
-canvas.addEventListener('pointermove', (e) => {
-  if (!touches.has(e.pointerId)) return;
-  const old = touches.get(e.pointerId);
-  touches.set(e.pointerId, [e.clientX, e.clientY, old[2]]);
-  if (touches.size === 2) {
-    const [a, b] = touches.values(),
-      dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
-    if (pinch > 0 && dist > 0) camera.zoom = clamp((camera.zoom * pinch) / dist, 0.06, 3);
-    pinch = dist;
-  } else if (touches.size === 1 && old[2]) {
-    const mesh = softwareMesh || gpu?.mesh,
-      span = mesh ? baseViewHalf(mesh, camera, canvas.clientWidth / canvas.clientHeight) : 100;
-    camera.pan = clamp(
-      camera.pan +
-        ((e.clientY - old[1]) * 2 * span * camera.zoom) / Math.max(1, canvas.clientHeight),
-      -180,
-      180
-    );
-  } else if (touches.size === 1) {
-    camera.az += 0.009 * (e.clientX - old[0]);
-    camera.el = clamp(camera.el + 0.008 * (e.clientY - old[1]), 0, Math.PI / 2 - 0.012);
-  }
-  draw();
-  queueSave();
-});
-canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'])
-  canvas.addEventListener(ev, (e) => {
-    touches.delete(e.pointerId);
-    pinch = 0;
+
+  canvas.addEventListener('pointerdown', (event) => {
+    if (pointers.size === 2 || (event.button !== 0 && event.button !== 2)) return;
+    canvas.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, pan: event.button === 2 });
   });
-canvas.addEventListener(
-  'wheel',
-  (e) => {
-    e.preventDefault();
-    camera.zoom = clamp(camera.zoom * Math.exp(e.deltaY * 0.001), 0.06, 3);
+  canvas.addEventListener('pointermove', (event) => {
+    const old = pointers.get(event.pointerId);
+    if (!old) return;
+    const next = { x: event.clientX, y: event.clientY, pan: old.pan },
+      dx = next.x - old.x,
+      dy = next.y - old.y,
+      camera = getCamera();
+    if (pointers.size === 2) {
+      // Each event moves one finger, so the midpoint travels half that distance.
+      const other = [...pointers.entries()].find(([id]) => id !== event.pointerId)[1],
+        before = Math.hypot(old.x - other.x, old.y - other.y),
+        after = Math.hypot(next.x - other.x, next.y - other.y);
+      if (before > 0 && after > 0) setZoom(camera, (camera.zoom * before) / after);
+      pan(camera, dx / 2, dy / 2);
+    } else if (old.pan) pan(camera, dx, dy);
+    else {
+      camera.az += 0.009 * dx;
+      camera.el = clamp(camera.el + 0.008 * dy, 0, topView);
+    }
+    pointers.set(event.pointerId, next);
+    onChange();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
+    canvas.addEventListener(type, (event) => pointers.delete(event.pointerId));
+  canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+  canvas.addEventListener(
+    'wheel',
+    (event) => {
+      event.preventDefault();
+      const camera = getCamera();
+      setZoom(camera, camera.zoom * Math.exp(event.deltaY * 0.001));
+      onChange();
+    },
+    { passive: false }
+  );
+
+  const views = {
+    axo: (camera) => Object.assign(camera, { az: -0.84, el: 0.57 }),
+    plan: (camera) => Object.assign(camera, { az: -Math.PI / 2, el: topView }),
+    side: (camera) => {
+      camera.el = 0;
+    },
+    fit: (camera) => fitModel(getMesh(), camera, canvas)
+  };
+  for (const [view, id] of Object.entries(buttons))
+    $(id).onclick = () => {
+      views[view](getCamera());
+      onChange();
+    };
+}
+
+bindModelCamera({
+  canvas,
+  getCamera: () => camera,
+  getMesh: () => softwareMesh || gpu?.mesh,
+  onChange: () => {
     draw();
     queueSave();
   },
-  { passive: false }
-);
+  buttons: { axo: 'axo', plan: 'plan', side: 'side', fit: 'fit' }
+});
 new ResizeObserver(draw).observe(canvas);
-$('axo').onclick = () => {
-  camera.az = -0.84;
-  camera.el = 0.57;
-  draw();
-  queueSave();
-};
-$('plan').onclick = () => {
-  camera.az = -Math.PI / 2;
-  camera.el = Math.PI / 2 - 0.012;
-  draw();
-  queueSave();
-};
-$('side').onclick = () => {
-  camera.el = 0;
-  draw();
-  queueSave();
-};
-$('fit').onclick = () => {
-  fitModel(softwareMesh || gpu?.mesh, camera, canvas);
-  draw();
-  queueSave();
-};
 function warning(id, msg) {
   const el = $(id);
   el.textContent = msg;
@@ -11777,8 +11795,58 @@ function dockTrussDepth(fraction) {
   return rootDepth + fraction * (tipDepth - rootDepth);
 }
 
+const DOCK_STRUCTURES = {
+  'side-truss': {
+    name: 'Tapered side trusses',
+    note: 'The two trusses gain depth beside the module. Diagonals cross the side window zones.'
+  },
+  'side-portal': {
+    name: 'Side frames with open panels',
+    note: 'Vierendeel frames leave rectangular window zones between posts. Their deeper chords and rigid joints carry panel bending.'
+  },
+  'box-floor': {
+    name: 'Shallow steel box floor',
+    note: 'A 420 mm torsion box keeps the whole side open. The simple gravity estimate shows high deflection over the full cantilever.',
+    depth: 0.42,
+    tip: 0.42
+  },
+  'deep-box': {
+    name: 'Deep underfloor box girders',
+    note: 'Two welded box girders taper under the deck and keep windows clear. Their depth competes with the bay underneath.',
+    depth: 2.35,
+    tip: 0.55
+  },
+  'space-truss': {
+    name: 'Underfloor space truss',
+    note: 'A triangulated frame below the deck carries bending and torsion. The extra depth needs a taller or unoccupied bay underneath.',
+    depth: 2.7,
+    tip: 0.52
+  },
+  'cable-stayed': {
+    name: 'Slim cable stays',
+    note: 'Two slim stays outside the window line run to anchors two storeys higher. The floor pushes back into the core and upper bays need raised anchors.'
+  },
+  'roof-hung': {
+    name: 'Roof-hung rods',
+    note: 'Vertical rods near the module tips keep side walls clear. The overhead frames collect the loads of several floors at the roof.'
+  },
+  columns: {
+    name: 'Outer tip columns',
+    note: 'Exterior posts carry the tips down to grade with the sides open. The posts need foundations and space at the edge of the plaza.'
+  }
+};
+
+function dockUnderfloorConflict(model, slot, depth) {
+  if (slot.f === 0) return depth > buildStorey(model, 0).base;
+  const below = model.slots[slot.i - model.slotN];
+  return (
+    depth > BUILD_SECTION.floorHeight - MODULE.height &&
+    (below.blocked || below.p !== EMPTY || below.use !== 'empty')
+  );
+}
+
 // Compare gravity service loads for the reusable dock. All dimensions are metres and forces kN.
-function buildGravityStudy(model, assignments) {
+function buildGravityStudy(model, assignments, structure = 'side-truss') {
   const { dockGap, rootDepth, chordWidth, chordDepth, chordWall, slabThickness } = BUILD_SECTION,
     span = dockGap + MODULE.depth,
     chordArea = 2 * chordWall * (chordWidth + chordDepth - 2 * chordWall),
@@ -11801,6 +11869,16 @@ function buildGravityStudy(model, assignments) {
         : materialValues(assignments, 'module', slot.p, materialSlotKey(model, slot));
     moduleWeight = Math.max(moduleWeight, moduleDeadLoad(values));
   }
+  function inertiaAt(fraction) {
+    if (structure === 'box-floor') return (3.8 * 0.016 * 0.38 ** 2) / 2;
+    const { depth, tip } = DOCK_STRUCTURES[structure];
+    if (depth) {
+      const sectionDepth = depth + fraction * (tip - depth);
+      if (structure === 'deep-box') return 0.5 * 0.025 * (sectionDepth - 0.05) ** 2;
+      return chordArea * (sectionDepth - 0.18) ** 2;
+    }
+    return chordArea * dockTrussDepth(fraction) ** 2;
+  }
   function reaction(label, distributed, tip = 0) {
     // The frame starts at the face of the core. The module or deck starts beyond the threshold gap.
     function moment(x) {
@@ -11817,7 +11895,7 @@ function buildGravityStudy(model, assignments) {
     for (let i = 0; i < 64; i++) {
       const x = (i + 0.5) * step;
       // Two trusses with two equal chords each give I ≈ A × depth². Integrate for a unit tip load.
-      const inertia = chordArea * dockTrussDepth(x / span) ** 2;
+      const inertia = inertiaAt(x / span);
       deflection += (moment(x) * (span - x) * step) / (steelModulus * inertia);
     }
     const rootMoment = moment(0);
@@ -11844,21 +11922,47 @@ function buildGravityStudy(model, assignments) {
   return { cases, span, moduleWeight, slabSpan, slabMoment };
 }
 
-function showBuildGravityStudy(model, assignments) {
-  const { cases, span, moduleWeight, slabSpan, slabMoment } = buildGravityStudy(model, assignments),
+function showBuildGravityStudy(model, assignments, structure) {
+  const { cases, span, moduleWeight, slabSpan, slabMoment } = buildGravityStudy(
+      model,
+      assignments,
+      structure
+    ),
     { rootDepth, tipDepth, slabThickness, chordWidth, chordDepth, chordWall } = BUILD_SECTION,
     governing = cases.reduce((largest, row) =>
       row.rootMoment > largest.rootMoment ? row : largest
     );
+  const freeCantilever = structure === 'side-truss' || Boolean(DOCK_STRUCTURES[structure].depth);
+  let finding;
+  if (structure === 'side-truss') {
+    finding = `The trusses taper from ${rootDepth.toFixed(2)} m to ${tipDepth.toFixed(2)} m between ${chordDepth * 1000} × ${chordWidth * 1000} × ${chordWall * 1000} mm box chords. The governing load puts about ${(governing.chordForce / 1000).toFixed(2)} MN into each root chord.`;
+  } else if (freeCantilever) {
+    finding = `The ${DOCK_STRUCTURES[structure].depth.toFixed(2)} m underfloor frame gives about ${(governing.deflection * 1000).toFixed(0)} mm of idealized tip deflection in the governing case. Compare this with the ${Math.round((span * 1000) / 360)} mm reference of span / 360.`;
+  } else if (structure === 'side-portal') {
+    finding =
+      'The table shows global gravity demand. Portal joints and chords also bend locally, so tip deflection needs a frame analysis.';
+  } else {
+    const arm = span - 0.6,
+      vertical = governing.rootMoment / arm;
+    if (structure === 'cable-stayed') {
+      const slope = (2 * BUILD_SECTION.floorHeight) / arm;
+      const tension = (vertical / 2) * Math.hypot(1, 1 / slope);
+      finding = `With an ideal pinned root, each of two stays needs about ${(tension / 1000).toFixed(2)} MN in tension. The two stays put about ${(vertical / slope / 1000).toFixed(2)} MN of horizontal thrust into the deck and core.`;
+    } else if (structure === 'roof-hung') {
+      finding = `The ideal tip support carries about ${Math.round(vertical)} kN per loaded deck. If all ${model.layers.length} floors used the governing case at the same dock, the roof pair could collect ${((vertical * model.layers.length) / 1000).toFixed(2)} MN.`;
+    } else {
+      finding = `The ideal outer post pair carries about ${Math.round(vertical)} kN per loaded deck. Its footing takes the combined reaction from the floors above.`;
+    }
+  }
   $('buildEstimate').innerHTML = `
-   <p class="hint">Gravity service-load study per dock. Trusses project ${span.toFixed(2)} m and taper from ${rootDepth.toFixed(2)} m to ${tipDepth.toFixed(2)} m between chords. The estimated enclosed module weighs ${(moduleWeight / 9.81).toFixed(1)} t with fit-out, before occupants and snow. The study uses the heaviest installed assembly or a steel reference module.</p>
+   <p class="hint">Reference gravity loads for an ${span.toFixed(2)} m dock. The estimated enclosed module weighs ${(moduleWeight / 9.81).toFixed(1)} t with fit-out, before occupants and snow. The study uses the heaviest installed assembly or a steel reference module.</p>
    <table class="build-estimate-table">
-    <thead><tr><th scope="col">Case</th><th scope="col">Root kN</th><th scope="col">MN·m</th><th scope="col">Tip mm</th></tr></thead>
-    <tbody>${cases.map(({ label, shear, rootMoment, deflection }) => `<tr><th scope="row">${label}</th><td>${shear.toFixed(0)}</td><td>${(rootMoment / 1000).toFixed(1)}</td><td>${(deflection * 1000).toFixed(0)}</td></tr>`).join('')}</tbody>
+    <thead><tr><th scope="col">Case</th><th scope="col">Load kN</th><th scope="col">MN·m*</th>${freeCantilever ? '<th scope="col">Tip mm</th>' : ''}</tr></thead>
+    <tbody>${cases.map(({ label, shear, rootMoment, deflection }) => `<tr><th scope="row">${label}</th><td>${shear.toFixed(0)}</td><td>${(rootMoment / 1000).toFixed(1)}</td>${freeCantilever ? `<td>${(deflection * 1000).toFixed(0)}</td>` : ''}</tr>`).join('')}</tbody>
    </table>
-   <p class="hint">The governing case puts about ${(governing.chordForce / 1000).toFixed(2)} MN into each root chord. The estimate assumes symmetric loading, a fixed root and ${chordDepth * 1000} × ${chordWidth * 1000} × ${chordWall * 1000} mm steel box chords with E = 200 GPa. Core rotation, web and connection movement add deflection.</p>
+   <p class="hint">* Moment about the core face before crediting tip supports. ${finding} ${freeCantilever ? 'The tip estimate assumes elastic bending and a fixed root. Core rotation, web and connection movement add deflection.' : ''}</p>
    <p class="hint">The ${Math.round(slabThickness * 1000)} mm concrete slab typically spans up to ${slabSpan.toFixed(2)} m between radial beams. The simple-span service moment is ${slabMoment.toFixed(1)} kN·m per metre of slab width.</p>
-   <p class="hint">Assumptions in kPa include 3.0 occupancy and 1.2 snow for enclosed modules, 4.8 occupancy on open decks and 6.0 saturated planter load over six planter footprints. Frame weight is 105 kN per dock. A structural design would check site loads, deflection, vibration, buckling, transfers, attachments and reinforcement.</p>`;
+   <p class="hint">Assumptions in kPa include 3.0 occupancy and 1.2 snow for enclosed modules, 4.8 occupancy on open decks and 6.0 saturated planter load over six planter footprints. The comparison uses 105 kN per dock as a common frame-weight allowance. Detailed design would establish actual member weights and check site loads, vibration, connections and load transfer.</p>`;
 }
 
 function drawAssemblyMember({ quad }, start, end, width, color, depth = width) {
@@ -11880,7 +11984,7 @@ function drawAssemblyMember({ quad }, start, end, width, color, depth = width) {
 }
 
 // The removable module sits between permanent side trusses, clear of the bay below.
-function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false) {
+function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, openPanels = false) {
   const { dockGap, chordWidth, chordDepth } = BUILD_SECTION,
     { box, mark } = mesh,
     span = dockGap + MODULE.depth,
@@ -11898,11 +12002,17 @@ function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false) {
       const fraction = panel / panels;
       return point(side, span * (fraction - 1), top ? dockTrussDepth(fraction) : 0);
     };
-    member(chord(0), chord(panels), chordWidth, steel, chordDepth);
-    member(chord(0, true), chord(panels, true), chordWidth, steel, chordDepth);
+    for (const top of [false, true])
+      member(
+        chord(0, top),
+        chord(panels, top),
+        openPanels ? 0.26 : chordWidth,
+        steel,
+        openPanels ? 0.42 : chordDepth
+      );
     for (let i = 0; i <= panels; i++) {
-      member(chord(i), chord(i, true), 0.15, web);
-      if (i < panels) member(chord(i, true), chord(i + 1), 0.16, web);
+      member(chord(i), chord(i, true), openPanels ? 0.27 : 0.15, web);
+      if (!openPanels && i < panels) member(chord(i, true), chord(i + 1), 0.16, web);
     }
     for (const top of [false, true]) {
       const [x, y, z] = chord(0, top);
@@ -11927,6 +12037,128 @@ function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false) {
       steel,
       0.2
     );
+}
+
+// Study alternatives retain the docking pitch, door and deck height of the baseline.
+function drawAlternativeDock(mesh, model, slot, storey, structure) {
+  const { dockGap } = BUILD_SECTION,
+    { quad, mark, box } = mesh,
+    span = dockGap + MODULE.depth,
+    point = moduleTipPoint(model, slot, storey.base),
+    choice = DOCK_STRUCTURES[structure],
+    conflict = choice.depth && dockUnderfloorConflict(model, slot, choice.depth),
+    steel = rgb(conflict ? '#a2735d' : '#657b76'),
+    cable = rgb('#3b5753'),
+    side = 1.72,
+    member = (a, b, width, color = steel, depth) =>
+      drawAssemblyMember(mesh, a, b, width, color, depth);
+  mark('Assembly_Dock_Connections', 'Slot_' + slot.j);
+  function girder(offset, width, depth, tip) {
+    // Draw the tapered web and top/bottom plates as one beam envelope.
+    const face = (x, down) => [
+      point(x, -span, 0),
+      point(x, 0, 0),
+      point(x, 0, -tip),
+      point(x, -span, -down)
+    ];
+    const a = face(offset - width / 2, depth),
+      b = face(offset + width / 2, depth);
+    quad(a[0], a[1], a[2], a[3], steel);
+    quad(b[3], b[2], b[1], b[0], steel);
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) % 4;
+      quad(a[j], a[i], b[i], b[j], steel);
+    }
+  }
+  if (structure === 'box-floor') {
+    girder(0, 3.8, choice.depth, choice.tip);
+  } else if (structure === 'deep-box') {
+    for (const offset of [-side, side]) girder(offset, 0.5, choice.depth, choice.tip);
+  } else if (structure === 'space-truss') {
+    const bays = 5;
+    const chord = (offset, i, bottom) => {
+      const t = i / bays;
+      const depth = choice.depth + (choice.tip - choice.depth) * t;
+      return point(offset, span * (t - 1), bottom ? -depth + 0.11 : -0.11);
+    };
+    for (const offset of [-side, side]) {
+      for (const bottom of [false, true])
+        member(chord(offset, 0, bottom), chord(offset, bays, bottom), 0.19);
+      for (let i = 0; i < bays; i++) {
+        member(chord(offset, i, false), chord(offset, i + 1, true), 0.14);
+        member(chord(offset, i, true), chord(-offset, i + 1, true), 0.13);
+      }
+      member(chord(offset, 0, false), chord(offset, 0, true), 0.18);
+    }
+  } else {
+    const hangerSide = MODULE.width / 2 + 0.14;
+    for (const offset of [-hangerSide, hangerSide]) {
+      member(point(offset, -span, -0.16), point(offset, 0, -0.16), 0.2, steel, 0.32);
+      if (structure !== 'cable-stayed') continue;
+      const rise = 2 * BUILD_SECTION.floorHeight;
+      member(point(offset, -0.6, -0.12), point(offset, -span, rise - 0.12), 0.08, cable);
+      const [x, y, z] = point(offset, -span, rise - 0.12);
+      box(x, y - 0.24, z, 0.32, 0.48, 0.38, slot.angle, steel);
+      const roofGap = model.roofPlan.y - storey.base;
+      if (rise > roofGap)
+        member(point(offset, -span, roofGap - 0.25), point(offset, -span, rise - 0.12), 0.26);
+      const back = Math.min(3.5, (model.R - model.r) * 0.6);
+      member(point(offset, -span, rise - 0.12), point(offset, -span - back, rise - 0.12), 0.24);
+    }
+  }
+
+  // Transverse bearers deliver the deck load to the two sides of the support.
+  if (structure !== 'box-floor')
+    for (const depth of [-span + dockGap, -span / 2, -0.6])
+      member(point(-2.39, depth, -0.11), point(2.39, depth, -0.11), 0.17, steel, 0.2);
+  if (choice.depth) {
+    const back = Math.min(4, (model.R - model.r) * 0.66);
+    // Carry the fixed-end reaction back from the face into the core framing.
+    for (const offset of [-side, side]) {
+      member(point(offset, -span, -0.16), point(offset, -span - back, -0.16), 0.27);
+      if (choice.depth < 0.7) continue;
+      const low = 0.18 - choice.depth;
+      member(point(offset, -span, low), point(offset, -span - back, low), 0.24);
+      member(point(offset, -span - 0.16, low), point(offset, -span - 0.16, -0.16), 0.28);
+    }
+  }
+}
+
+// One shared pair of posts or hangers carries all active decks in a stacked dock line.
+function drawSharedDockSupports(mesh, model, slots, structure) {
+  const { mark, box } = mesh,
+    roof = model.roofPlan.y,
+    span = BUILD_SECTION.dockGap + MODULE.depth,
+    stacks = new Map();
+  for (const slot of slots) {
+    const pair = stacks.get(slot.j) ?? [slot, slot];
+    pair[1] = slot;
+    stacks.set(slot.j, pair);
+  }
+  for (const [bottom, top] of stacks.values()) {
+    const point = moduleTipPoint(model, bottom, 0),
+      steel = rgb(structure === 'columns' && model.slots[bottom.j].blocked ? '#a2735d' : '#657b76'),
+      member = (a, b, width, depth) => drawAssemblyMember(mesh, a, b, width, steel, depth);
+    mark('Assembly_Dock_Stack_Supports', 'Dock_' + bottom.j);
+    for (const offset of [-2.39, 2.39]) {
+      if (structure === 'columns') {
+        const height = buildStorey(model, top.f).base - 0.13;
+        const [x, , z] = point(offset, -0.6, 0);
+        box(x, 0, z, 0.95, 0.14, 0.95, bottom.angle, steel);
+        member(point(offset, -0.6, 0.14), point(offset, -0.6, height), 0.28);
+        continue;
+      }
+      const bottomDeck = buildStorey(model, bottom.f).base - 0.13,
+        anchor = roof + 0.44,
+        mast = roof + 3.25,
+        back = Math.min(3.8, (model.R - model.r) * 0.66);
+      member(point(offset, -0.6, bottomDeck), point(offset, -0.6, anchor), 0.085);
+      member(point(offset, -span - back, anchor), point(offset, -0.6, anchor), 0.26, 0.38);
+      member(point(offset, -span, mast), point(offset, -0.6, anchor), 0.24);
+      member(point(offset, -span, mast), point(offset, -span - back, anchor), 0.28);
+      member(point(offset, -span, roof), point(offset, -span, mast), 0.31);
+    }
+  }
 }
 
 function drawDockClosure({ box, line, sector, mark, ringPoint }, model, slot, { base, head }) {
@@ -12209,10 +12441,11 @@ function buildAssemblyMesh(model, layers, levels, preview) {
 
   const exterior =
     layers.facade || layers.modules ? moduleExteriorDetails(model, preview.view.seed) : null;
+  const dockStructure = layers.dockStructure ?? 'side-truss',
+    dockSlots = model.slots.filter((slot) => slot.f < floors && !slot.blocked);
 
   // Dock plates, paired cantilevers and their tie-back show the relationship to the ring.
-  for (const slot of model.slots) {
-    if (slot.f >= floors || slot.blocked) continue;
+  for (const slot of dockSlots) {
     const storey = buildStorey(model, slot.f),
       occupied = slot.p !== EMPTY || slot.use === 'retail',
       angle = slot.angle,
@@ -12222,7 +12455,19 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       foot = model.R + dockGap,
       front = foot + MODULE.depth;
     const location = (radius, side, y) => [radius * dx - side * dz, y, radius * dz + side * dx];
-    if (layers.docks) drawDockFrame(mesh, model, slot, storey, 'Assembly_Dock_Connections', true);
+    if (layers.docks) {
+      if (dockStructure === 'side-truss' || dockStructure === 'side-portal')
+        drawDockFrame(
+          mesh,
+          model,
+          slot,
+          storey,
+          'Assembly_Dock_Connections',
+          true,
+          dockStructure === 'side-portal'
+        );
+      else drawAlternativeDock(mesh, model, slot, storey, dockStructure);
+    }
     if (layers.facade || layers.docks) drawDockClosure(mesh, model, slot, storey);
     if (!occupied) {
       if (slot.use !== 'empty' && (layers.facade || layers.modules)) {
@@ -12271,6 +12516,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       member(location(radius, -half, upper), location(radius, half, upper), 0.11, chassis);
     if (exterior?.balconies.has(slot.i)) drawModuleBalcony(mesh, model, slot, base, null, false);
   }
+  if (layers.docks && (dockStructure === 'roof-hung' || dockStructure === 'columns'))
+    drawSharedDockSupports(mesh, model, dockSlots, dockStructure);
 
   // Preserve the modeled spans when the assembly is shown without its finish layers.
   if (layers.slabs) {
@@ -12304,16 +12551,29 @@ const BUILD_LAYERS = {
   modules: 'buildModules'
 };
 function buildViewLayers() {
-  return Object.fromEntries(
-    Object.entries(BUILD_LAYERS).map(([field, id]) => [field, $(id).checked])
-  );
+  return {
+    ...Object.fromEntries(
+      Object.entries(BUILD_LAYERS).map(([field, id]) => [field, $(id).checked])
+    ),
+    dockStructure: $('buildDockStructure').value || 'side-truss'
+  };
 }
 
 const openBuildWorkspace = (() => {
   const panel = $('buildPhase'),
     canvas = $('buildCanvas'),
     level = $('buildLevel'),
+    dockStructure = $('buildDockStructure'),
+    storageKey = 'poly-nation-build-dock-structure',
     view = { az: -0.84, el: 0.57, zoom: 1, pan: 0, panX: 0 };
+  for (const [value, { name }] of Object.entries(DOCK_STRUCTURES))
+    dockStructure.add(new Option(name, value));
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (Object.hasOwn(DOCK_STRUCTURES, saved)) dockStructure.value = saved;
+  } catch {
+    // The selector still works when browser storage is unavailable.
+  }
   let source = null,
     assignments = {},
     signature = '',
@@ -12321,8 +12581,7 @@ const openBuildWorkspace = (() => {
     assembly = null,
     context = null,
     renderer = null,
-    fallback = null,
-    pointer = null;
+    fallback = null;
 
   function present() {
     if (panel.hidden || !assembly) return;
@@ -12330,7 +12589,10 @@ const openBuildWorkspace = (() => {
     else if (fallback) paintSoftware(assembly, fallback, view);
   }
   function rebuild(center = false) {
-    assembly = buildAssemblyMesh(copy, buildViewLayers(), Number(level.value), {
+    const layers = buildViewLayers(),
+      visibleLevels = Number(level.value),
+      choice = DOCK_STRUCTURES[layers.dockStructure];
+    assembly = buildAssemblyMesh(copy, layers, visibleLevels, {
       assignments,
       view: { seed: state.seed },
       programColors: false,
@@ -12339,49 +12601,41 @@ const openBuildWorkspace = (() => {
     });
     if (renderer) uploadWebGLMesh(context, renderer, assembly);
     if (center && assembly.groups.length > 1) fitModel(assembly, view, canvas);
+    let note = choice.note;
+    if (choice.depth) {
+      const conflicts = copy.slots.filter(
+        (slot) =>
+          !slot.blocked &&
+          (!visibleLevels || slot.f < visibleLevels) &&
+          dockUnderfloorConflict(copy, slot, choice.depth)
+      ).length;
+      if (conflicts)
+        note += ` ${conflicts} docks are shown in brown where the frame enters grade or the bay below.`;
+    }
+    if (layers.dockStructure === 'columns')
+      note += ' Brown posts flag alignment with a reserved ground bay.';
+    $('dockStructureNote').textContent = note;
     present();
   }
+  dockStructure.onchange = () => {
+    try {
+      localStorage.setItem(storageKey, dockStructure.value);
+    } catch {
+      // Switching structures can continue without browser storage.
+    }
+    $('buildDocks').checked = true;
+    showBuildGravityStudy(copy, assignments, dockStructure.value);
+    rebuild(true);
+  };
   level.onchange = () => rebuild();
   for (const id of Object.values(BUILD_LAYERS)) $(id).onchange = () => rebuild();
-  $('buildFit').onclick = () => {
-    if (assembly?.groups.length > 1) fitModel(assembly, view, canvas);
-    present();
-  };
-  for (const [id, az, el] of [
-    ['buildAxo', -0.84, 0.57],
-    ['buildPlan', -Math.PI / 2, 1.569],
-    ['buildSide', 0, 0]
-  ])
-    $(id).onclick = () => {
-      Object.assign(view, { az, el });
-      $('buildFit').click();
-    };
-
-  canvas.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
-    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
-    canvas.setPointerCapture(event.pointerId);
+  bindModelCamera({
+    canvas,
+    getCamera: () => view,
+    getMesh: () => assembly,
+    onChange: present,
+    buttons: { axo: 'buildAxo', plan: 'buildPlan', side: 'buildSide', fit: 'buildFit' }
   });
-  canvas.addEventListener('pointermove', (event) => {
-    if (pointer?.id !== event.pointerId) return;
-    view.az += (event.clientX - pointer.x) * 0.008;
-    view.el = clamp(view.el + (event.clientY - pointer.y) * 0.008, 0, 1.569);
-    pointer.x = event.clientX;
-    pointer.y = event.clientY;
-    present();
-  });
-  canvas.addEventListener('lostpointercapture', () => {
-    pointer = null;
-  });
-  canvas.addEventListener(
-    'wheel',
-    (event) => {
-      event.preventDefault();
-      view.zoom = clamp(view.zoom * Math.exp(event.deltaY * 0.001), 0.06, 3);
-      present();
-    },
-    { passive: false }
-  );
   new ResizeObserver(present).observe(canvas);
 
   return (model, materialAssignments) => {
@@ -12396,7 +12650,7 @@ const openBuildWorkspace = (() => {
       else {
         assignments = materialAssignments;
         signature = next;
-        showBuildGravityStudy(copy, assignments);
+        showBuildGravityStudy(copy, assignments, dockStructure.value);
         rebuild();
       }
       return;
@@ -12405,7 +12659,7 @@ const openBuildWorkspace = (() => {
     assignments = materialAssignments;
     signature = next;
     copy = structuredClone(model);
-    showBuildGravityStudy(copy, assignments);
+    showBuildGravityStudy(copy, assignments, dockStructure.value);
     const selected = Number(level.value);
     level.replaceChildren(
       new Option('All levels', '0'),
@@ -12431,7 +12685,6 @@ const openBuildWorkspace = (() => {
   const studyCamera = { az: -0.84, el: 0.57, zoom: 0.95, pan: 0 };
   let study = null,
     mesh = null,
-    drag = null,
     frame = 0;
 
   function saveStudy() {
@@ -12971,45 +13224,13 @@ const openBuildWorkspace = (() => {
       snapshotButton.disabled = false;
     }
   });
-  $('materialAxo').onclick = () => {
-    studyCamera.az = -0.84;
-    studyCamera.el = 0.57;
-    redraw();
-  };
-  $('materialPlan').onclick = () => {
-    studyCamera.az = -Math.PI / 2;
-    studyCamera.el = 1.569;
-    redraw();
-  };
-  $('materialFit').onclick = () => {
-    fitModel(mesh, studyCamera, materialCanvas);
-    redraw();
-  };
-  materialCanvas.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
-    drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
-    materialCanvas.setPointerCapture(drag.id);
+  bindModelCamera({
+    canvas: materialCanvas,
+    getCamera: () => studyCamera,
+    getMesh: () => mesh,
+    onChange: redraw,
+    buttons: { axo: 'materialAxo', plan: 'materialPlan', side: 'materialSide', fit: 'materialFit' }
   });
-  materialCanvas.addEventListener('pointermove', (event) => {
-    if (drag?.id !== event.pointerId) return;
-    studyCamera.az += (event.clientX - drag.x) * 0.008;
-    studyCamera.el = clamp(studyCamera.el + (event.clientY - drag.y) * 0.008, 0.06, 1.569);
-    drag.x = event.clientX;
-    drag.y = event.clientY;
-    redraw();
-  });
-  materialCanvas.addEventListener('lostpointercapture', () => {
-    drag = null;
-  });
-  materialCanvas.addEventListener(
-    'wheel',
-    (event) => {
-      event.preventDefault();
-      studyCamera.zoom = clamp(studyCamera.zoom * Math.exp(event.deltaY * 0.001), 0.2, 3);
-      redraw();
-    },
-    { passive: false }
-  );
 
   // All workspaces share stable navigation. Switching views keeps the model and score in memory.
   const rationale = $('designRationale'),

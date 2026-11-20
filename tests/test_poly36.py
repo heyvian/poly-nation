@@ -3,6 +3,18 @@ import os, shutil
 import xml.etree.ElementTree as ET
 from playwright.sync_api import expect, sync_playwright
 
+def check_horizontal_pan(page, canvas_id):
+ canvas = page.locator('#' + canvas_id)
+ bounds = canvas.bounding_box()
+ x, y = bounds['x'] + bounds['width']/2, bounds['y'] + bounds['height']/2
+ before = canvas.evaluate('(el) => el.toDataURL()')
+ page.mouse.move(x, y)
+ page.mouse.down(button='right')
+ page.mouse.move(x+40, y, steps=3)
+ page.mouse.up(button='right')
+ page.wait_for_function('([id, before]) => document.getElementById(id).toDataURL() !== before',
+                        arg=[canvas_id, before])
+
 def check_fit(page):
  for button in ['axo', 'plan', 'side']:
   page.locator('#' + button).click()
@@ -86,11 +98,13 @@ with sync_playwright() as p:
  start_clock = page.evaluate('occupancy.clock')
  page.locator('#openMaterials').click()
  page.wait_for_function(f'occupancy.clock > {start_clock}')
+ check_horizontal_pan(page, 'materialsCanvas')
  page.locator('#openMassing').click()
  page.evaluate('state.simRunning=false; refreshView()')
  page.locator('#shuffle').click();page.wait_for_function(f'state.seed!=={baseline["seed"]} && pending===0')
  page.wait_for_timeout(200)
  assert page.evaluate('model.total<=state.areaCap+1e-5')
+ check_horizontal_pan(page, 'canvas')
  check_fit(page)
  page.screenshot(path=str(out/'model-preview.png'))
  before_drawing = page.evaluate('JSON.stringify({state, camera})')
@@ -148,10 +162,17 @@ with sync_playwright() as p:
  assert '1:1000 · Tabloid' in ''.join(drawing_svg.itertext())
  page.locator('#openBuild').click()
  expect(page.locator('#buildCanvas')).to_be_visible()
+ check_horizontal_pan(page, 'buildCanvas')
  before_walls = page.locator('#buildCanvas').evaluate('(canvas) => canvas.toDataURL()')
  page.locator('#buildWalls').check()
  assert page.locator('#buildCanvas').evaluate('(canvas) => canvas.toDataURL()') != before_walls
  page.locator('#buildFacade').check()
+ dock_structure = page.locator('#buildDockStructure')
+ expect(dock_structure.locator('option')).to_have_count(8)
+ dock_structure.select_option('deep-box')
+ expect(page.locator('#dockStructureNote')).to_contain_text('where the frame enters grade or the bay below')
+ dock_structure.select_option('cable-stayed')
+ expect(page.locator('#dockStructureNote')).to_contain_text('anchors two storeys higher')
  page.locator('#buildLevel').select_option('1')
  page.locator('#buildFit').click()
  page.locator('#openDrawings').click()
