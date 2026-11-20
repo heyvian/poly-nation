@@ -1,5 +1,11 @@
 # Changelog
 
+## Drawings and atrium details
+- Added a Drawings workspace with orthographic SVG linework and movable horizontal and vertical clipping planes.
+- Added Letter and Tabloid drawing sheets in either orientation, with architectural scales and physical dimensions in SVG and print output.
+- Straightened both lobby approaches and joined them to a circular path around the swing mast.
+- Added a vertically braced truss profile to the moving swing crown.
+
 ## Model framing and swing boarding
 - Fit now centers the visible model and adjusts zoom for the current angle and available space in Massing and Materials.
 - Widened the swing boarding platform to leave 1 m beyond the parked chairs where space allows. Added a glass railing with a clear opening at the stair landing.

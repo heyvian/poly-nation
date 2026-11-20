@@ -131,11 +131,11 @@ with sync_playwright() as p:
    const nextCruise = swingPose(ride, 136);
    const parts = [];
    buildSwing({
-     sector() {}, line() {},
+     sector() {}, line() {}, quad() {},
      box(...args) { parts.push(args); },
      ringPoint(r, a, y) { return [r * Math.cos(a), y, r * Math.sin(a)]; }
    }, ride, cruise);
-   const [seat, back] = parts;
+   const [, seat, back] = parts;
    const heading = seat[6];
    return {
      radius: cruise.rad,
@@ -203,6 +203,8 @@ with sync_playwright() as p:
      opposite: Math.abs(angDist(lobbies[0].angle, lobbies[1].angle) - Math.PI) < 1e-8,
      perpendicular: Math.abs(angDist(lobbies[0].angle, base.circulation.axis) - Math.PI/2) < 1e-8,
      crossing: crossing.some(edge => edge.kind === 'atriumCrossing'),
+     crossingRing: graph.nodes.filter(node =>
+       graph.edges[node.id].filter(edge => edge.kind === 'atriumCrossing').length === 3).length === 2,
      outside: graph.edges[rear.id].some(edge => graph.nodes[edge.to].kind === 'plaza'),
      stairs: shortestPath(graph, graph.entry, swinging.id, 'human').some(edge => edge.kind === 'stairs') &&
        shortestPath(graph, graph.entry, swinging.id, 'human', false) === null &&
@@ -222,7 +224,7 @@ with sync_playwright() as p:
      modes
    };
  }''')
- assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'outside', 'stairs', 'canopy', 'boardingDeck', 'roofArea', 'off']), atrium
+ assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'crossingRing', 'outside', 'stairs', 'canopy', 'boardingDeck', 'roofArea', 'off']), atrium
  aligned, radial = atrium['modes']
  assert len(set(aligned['headings'])) == 1 and len(radial['headings']) == 3, atrium
  assert abs(radial['headings'][1] - radial['headings'][0] - 2 * 3.141592653589793 / 3) < 1e-8, atrium

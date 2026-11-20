@@ -547,8 +547,9 @@
 }
 
 /* V3.6: self-contained presentation page, scoped to avoid altering laboratory UI. */
-#designRationale[hidden],#materialsPhase[hidden],#massingPhase[hidden]{display:none!important}
+#designRationale[hidden],#materialsPhase[hidden],#massingPhase[hidden],#drawingsPhase[hidden]{display:none!important}
 body.materials-open .header-actions > :not(.workspace-nav),
+body.drawings-open .header-actions > :not(.workspace-nav),
 body.dr-open .header-actions > :not(.workspace-nav){display:none}
 .rationale{background:#f7f8f3;overflow:auto;min-height:0;flex:1;color:#293b30;font-size:14px;line-height:1.55}.dr-wrap{max-width:1270px;margin:auto;padding:24px clamp(16px,4vw,56px) 40px}.dr-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 28px;flex-wrap:wrap}.dr-kicker,.dr-section-heading>span{font-size:10px;letter-spacing:1.75px;font-weight:700;color:#66776a;text-transform:uppercase}.dr-hero{display:grid;grid-template-columns:1.04fr 1fr;gap:34px;align-items:center}.dr-hero h2{font-size:clamp(36px,5vw,66px);font-weight:650;letter-spacing:-.055em;line-height:1.01;margin:12px 0 18px}.dr-lead{font-size:17px;color:#53665a;line-height:1.55;max-width:52ch}.dr-credit{border-top:1px solid #cdd6ca;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;padding-top:14px;margin-top:24px;font-size:12px}.dr-credit span{color:#617065}.dr-hero-image{margin:0;background:white;border:1px solid var(--line);border-radius:7px;padding:9px}.dr-hero-image img{width:100%;height:auto;display:block;border-radius:4px}.dr-hero-image figcaption{padding:7px 5px 0}.dr-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#d6ded2;border:1px solid #d6ded2;margin:28px 0 14px;border-radius:6px;overflow:hidden}.dr-summary>div{background:#fffefa;padding:20px}.dr-summary h3{font-size:18px!important;margin:8px 0}.dr-key{font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap;display:inline-block;border-radius:3px;padding:2px 6px;vertical-align:middle;color:#fff}.dr-key.student{background:#426e55}.dr-key.ai{background:#657684}.dr-key.shared{background:#8b7854}.dr-note{font-size:12px;line-height:1.6;color:#657368;border-left:2px solid #9db09a;padding:5px 0 5px 12px;margin:16px 0}.dr-nav{display:flex;flex-wrap:wrap;gap:7px 15px;border-top:1px solid #d5dcd1;border-bottom:1px solid #d5dcd1;padding:13px 0;margin:24px 0 10px}.dr-nav a{font-size:12px;text-decoration:none;color:#37654d;font-weight:600}.dr-nav a:hover{text-decoration:underline}.dr-section{padding:34px 0;border-bottom:1px solid #d2d9ce;scroll-margin-top:16px}.dr-section-heading h2{font-size:clamp(25px,3.5vw,37px);font-weight:650;letter-spacing:-.04em;line-height:1.15;margin:8px 0}.dr-section-heading>p{font-size:15px;color:#647368;margin:0 0 23px}.dr-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}.dr-pair figure,.dr-score-method figure{margin:0;min-width:0}.dr-svg{width:100%;height:auto;display:block;border:1px solid #dce2d8;border-radius:7px;font-family:system-ui,-apple-system,sans-serif}.rationale figcaption{font-size:11.5px;line-height:1.5;color:#708073;margin-top:8px}.rationale h3{font-size:15px;font-weight:700;color:#314738;margin:16px 0 7px}.dr-pair>div h3:first-child,.dr-score-method>div h3:first-child{margin-top:1px}.dr-pair h3 .dr-key{margin-right:5px}.rationale p{margin:7px 0 12px}.rationale ul{margin:6px 0 16px;padding-left:19px}.rationale li{padding:2px 0}.rationale blockquote{margin:19px 0 0;background:#edf1e9;border-left:3px solid #73947b;padding:13px 17px;font-size:15px;font-weight:500;color:#395341}.rationale blockquote cite{display:block;font-size:11px;font-style:normal;color:#6e7e70;font-weight:400;margin-top:7px}.dr-wide-diagram{max-width:850px;margin:20px auto 0}.dr-equation{padding:14px 16px;background:#e9eee5;border:1px solid #d1dacd;border-radius:5px;font-weight:550;margin:18px 0}.dr-equation small{display:block;color:#67786b;font-weight:400;margin-top:6px;font-size:12px}.dr-chart,.dr-score-chart{border:1px solid #dce2d8;background:#fffefa;border-radius:6px;padding:18px}.dr-chart-legend{display:flex;gap:15px;font-size:11px;color:#69766b;margin-bottom:13px}.dr-chart-legend i,.dr-program i:not(.dr-bar i){width:10px;height:10px;display:inline-block;vertical-align:middle;border-radius:2px;margin-right:6px}.dr-program{margin:14px 0}.dr-program>div:first-child{display:flex;justify-content:space-between;gap:8px;font-size:13px}.dr-program small{font-size:11px;color:#758075}.dr-bar{display:flex;height:12px;margin:6px 0 3px;background:#e3e8df;border-radius:2px;overflow:hidden}.dr-bar i{display:block;height:100%}.dr-total{margin-top:19px;border-top:1px solid #cfd8cc;padding-top:11px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}.dr-total strong{font-size:22px;letter-spacing:-.8px}.dr-weight{display:grid;grid-template-columns: minmax(110px,1.2fr) minmax(50px,1fr) 26px;gap:8px;align-items:center;font-size:12px;margin:12px 0}.dr-weight b{text-align:right;font-variant-numeric:tabular-nums}.dr-weight-track{background:#e5e9e1;height:14px;border-radius:2px;overflow:hidden}.dr-weight-track i{display:block;height:100%}.dr-score-method{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:25px 0 15px}.dr-multipliers{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dr-multipliers>div{background:#fffefa;padding:10px;border:1px solid #dce2d8;border-radius:4px}.dr-multipliers b{display:block;font-size:22px;line-height:1.2;color:#426c52}.dr-multipliers span{font-size:11px;color:#617365}.dr-method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.dr-method-grid>div{padding:15px;background:white;border:1px solid #dce2d8;border-radius:5px}.dr-method-grid p{font-size:12px;margin-bottom:0}.dr-text-pair{margin-top:15px}.dr-table-wrap{overflow-x:auto}.dr-audit{width:100%;border-collapse:collapse;background:#fffefa;font-size:13px;line-height:1.5}.dr-audit th,.dr-audit td{border:1px solid #dce2d8;padding:12px;text-align:left;vertical-align:top}.dr-audit th{background:#e5ece1;font-weight:650}.dr-audit td:first-child{width:130px;font-weight:650}.dr-audit td:nth-child(2){width:43%}.dr-author-statement{background:#e7eee4;border:1px solid #cdd9c8;padding:18px 22px;margin:24px 0;border-radius:6px}.dr-author-statement h3{margin:0 0 8px}.dr-author-statement p{font-size:15px;margin:0}.dr-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:25px;font-size:11px;color:#68796c}
 @media(max-width:760px){.dr-hero,.dr-pair,.dr-score-method{grid-template-columns:1fr;gap:18px}.dr-summary,.dr-method-grid{grid-template-columns:1fr}.dr-wrap{padding:18px 16px 30px}.dr-section{padding:25px 0}.dr-hero h2{font-size:40px}.dr-credit{grid-template-columns:1fr}.dr-credit span{margin-bottom:7px}.dr-top{margin-bottom:17px}.dr-audit{min-width:610px}.dr-chart,.dr-score-chart{padding:12px}.dr-summary>div{padding:15px}.dr-weight{grid-template-columns:minmax(105px,1.4fr) 1fr 23px}.dr-footer{flex-direction:column;align-items:flex-start}}
@@ -590,6 +591,97 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 .dr-atrium-decisions h3 { margin-top: 0; }
 .dr-atrium-decisions p + p { margin-top: 8px; }
 @media (max-width: 760px) { .dr-atrium-decisions { grid-template-columns: 1fr; } }
+
+/* An orthographic drawing sheet and its view and section controls. */
+.drawing-workspace {
+ flex: 1;
+ min-height: 0;
+ display: grid;
+ grid-template-columns: minmax(235px, 270px) minmax(0, 1fr);
+ background: #e8ede6;
+}
+.drawing-controls {
+ padding: 16px;
+ min-height: 0;
+ overflow: auto;
+ background: var(--paper);
+ border-right: 1px solid var(--line);
+}
+.drawing-controls h2 { margin: 0 0 13px; font-size: 19px; }
+.drawing-controls h3 { margin: 16px 0 6px; font-size: 14px; }
+.drawing-controls label { font-weight: 550; }
+.drawing-controls select, .drawing-controls input[type=number] {
+ box-sizing: border-box;
+ padding: 6px 7px;
+ font: inherit;
+ color: var(--ink);
+ border: 1px solid #bfcbbf;
+ border-radius: 4px;
+ background: var(--paper);
+}
+.drawing-view-field { display: grid; gap: 4px; }
+.drawing-plane-list { display: grid; gap: 6px; margin: 8px 0; }
+.drawing-plane-row {
+ display: grid;
+ grid-template-columns: minmax(0, 1fr) auto;
+ gap: 5px;
+}
+.drawing-plane-row button:first-child { text-align: left; }
+.drawing-plane-row [aria-pressed=true], #placeDrawingPlane[aria-pressed=true] {
+ background: #e2ebe3;
+ border-color: #91ac9c;
+}
+.drawing-plane-fields {
+ display: grid;
+ gap: 9px;
+ margin-top: 10px;
+ border-top: 1px solid var(--line);
+ padding-top: 10px;
+}
+.drawing-plane-fields[hidden], .drawing-plane-fields label[hidden] { display: none; }
+.drawing-offset { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+.drawing-offset input[type=number] { width: 76px; }
+.drawing-plane-fields input[type=range] { width: 100%; margin: 0; }
+.drawing-plane-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.drawing-plane-actions button { flex: 1; white-space: nowrap; }
+ .drawing-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 12px; gap: 8px; }
+.drawing-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.drawing-toolbar label { display: grid; gap: 3px; font-size: 11px; font-weight: 600; }
+.drawing-toolbar select { min-height: 30px; color: var(--ink); font: inherit; }
+.drawing-toolbar #exportDrawing { margin-left: auto; }
+.drawing-stage .hint { margin: 0; }
+.drawing-paper { display: grid; place-items: center; min-height: 0; flex: 1; }
+.drawing-sheet {
+ display: block;
+ max-width: 100%;
+ background: white;
+ box-shadow: 0 1px 5px #304c3730;
+}
+.drawing-sheet[data-placing=true] { cursor: crosshair; touch-action: none; }
+@media (max-width: 899px) {
+ .drawing-workspace { min-height: 75vh; }
+ .drawing-paper { min-height: 450px; }
+}
+@media print {
+ body.drawings-open { display: block !important; height: auto !important; overflow: visible !important; background: white; }
+ body.drawings-open > .app-header, .drawings-open .drawing-controls,
+ .drawings-open .drawing-toolbar, .drawings-open #drawingStatus { display: none !important; }
+ body.drawings-open .drawing-workspace, body.drawings-open .drawing-stage,
+ body.drawings-open .drawing-paper { display: block; min-height: 0; background: white; padding: 0; }
+ body.drawings-open .drawing-sheet {
+  width: var(--drawing-paper-width) !important;
+  height: var(--drawing-paper-height) !important;
+  max-width: none;
+  box-shadow: none;
+ }
+}
+@media (max-width: 650px) {
+ .workspace-nav { flex-wrap: wrap; }
+ .drawing-workspace { grid-template-columns: 1fr; }
+ .drawing-controls { border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+ .drawing-paper { min-height: 345px; }
+}
+
 </style></head><body>
 <header class="app-header">
  <div class="app-brand">
@@ -617,6 +709,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 <nav class="workspace-nav" aria-label="Project workspaces">
  <button id="openMassing" type="button" aria-controls="massingPhase" aria-current="page">Massing</button>
  <button id="openMaterials" type="button" aria-controls="materialsPhase">Materials</button>
+ <button id="openDrawings" type="button" aria-controls="drawingsPhase">Drawings</button>
  <button id="openRationale" type="button" aria-controls="designRationale">Design rationale</button>
 </nav>
 <details class="file-menu"><summary>Files &amp; export</summary><div class="file-menu-content"><button id="import">Load JSON</button><input accept=".json,application/json" hidden="" id="importFile" type="file"/><button id="export">Save JSON</button><div class="menu-label">3D geometry</div><button id="export3DM">Export 3DM</button><button id="exportRhinoScript" title="Offline alternative: run this generated Python script inside Rhino">Rhino script</button></div></details><span aria-live="polite" id="exportStatus" role="status"></span><span class="credit" id="saveStatus" style="align-self:center"></span></div></header>
@@ -706,7 +799,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
   <div>
    <h3>Opposing lobby atriums</h3>
    <p>Two facing ground-floor lobbies connect the public plaza through the Infinite Rinse biofiltration greenhouse. Their axis runs perpendicular to the lift cores. The designer added this through-route to increase cross-traffic and create more opportunities for indoor and outdoor visitors to meet.</p>
-   <p>The path bends around the mast, and galleries carry the upper corridor across both lobby voids.</p>
+   <p>A straight path from each lobby joins a circular walk around the mast. Galleries carry the upper corridor across both lobby voids.</p>
   </div>
   <div>
    <h3>Radial and vertically aligned bridges</h3>
@@ -863,6 +956,60 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
    <button class="primary" type="submit">Apply assumptions</button>
   </form>
  </dialog>
+</section>
+<section id="drawingsPhase" class="drawing-workspace" hidden aria-labelledby="drawingsTitle">
+ <aside class="drawing-controls">
+  <h2 id="drawingsTitle" tabindex="-1">Drawings</h2>
+  <label class="drawing-view-field">View
+   <select id="drawingView">
+    <option value="axo">Axonometric</option>
+    <option value="plan">Plan</option>
+    <option value="front">Front elevation</option>
+    <option value="side">Side elevation</option>
+    <option value="aligned" disabled>Aligned to clipping plane</option>
+   </select>
+  </label>
+  <label class="check"><input type="checkbox" id="drawingGlazing"> See through glazing</label>
+  <h3>Clipping planes</h3>
+  <button type="button" id="addDrawingPlane">Add plane</button>
+  <div id="drawingPlanes" class="drawing-plane-list"></div>
+  <div id="drawingPlaneFields" class="drawing-plane-fields" hidden>
+   <label class="drawing-view-field">Orientation
+    <select id="drawingPlaneAxis"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select>
+   </label>
+   <label id="drawingAngleField" class="drawing-offset" hidden>Angle (°)
+    <input type="number" id="drawingPlaneAngle" min="0" max="360" step="1">
+   </label>
+   <label class="drawing-offset">Offset (m)
+    <input type="number" id="drawingPlaneOffset" step="0.1">
+   </label>
+   <input type="range" id="drawingPlaneMove" step="0.1" aria-label="Move clipping plane">
+   <label class="check"><input type="checkbox" id="flipDrawingPlane"> Flip kept side</label>
+   <div class="drawing-plane-actions">
+    <button type="button" id="placeDrawingPlane" aria-pressed="false">Place on drawing</button>
+    <button type="button" id="alignDrawingPlane">Align view</button>
+   </div>
+  </div>
+ </aside>
+ <div class="drawing-stage">
+  <div class="drawing-toolbar">
+   <label>Paper size
+    <select id="drawingPaper"><option value="letter">Letter · 8.5 × 11 in</option><option value="tabloid">Tabloid · 11 × 17 in</option></select>
+   </label>
+   <label>Page orientation
+    <select id="drawingOrientation"><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select>
+   </label>
+   <label>Scale
+    <select id="drawingScale"><option value="auto">Auto fit</option></select>
+   </label>
+   <button type="button" class="primary" id="exportDrawing" disabled>Export SVG</button>
+   <button type="button" id="printDrawing" disabled>Print / PDF</button>
+  </div>
+  <p class="hint" id="drawingStatus" role="status">Linework from the current massing.</p>
+  <div id="drawingPaperFrame" class="drawing-paper">
+   <svg id="drawingSheet" class="drawing-sheet" role="img" aria-label="Orthographic line drawing of the current massing" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+ </div>
 </section>
 <script>
 'use strict';
@@ -2838,37 +2985,27 @@ function designGreenhouse(radius, lobby, ride) {
   if (bays.length < 2) return null;
   const axis = bays[0].angle,
     width = Math.min(2.4, radius * 0.42, radius * bays[0].span * 0.8),
-    offset = ride.towerRadius + width / 2 + 0.28;
-  const point = (along, across) => [
-    along * Math.cos(axis) - across * Math.sin(axis),
-    along * Math.sin(axis) + across * Math.cos(axis)
-  ];
-  // The approaches align with the lobby doors. The middle section skirts the swing mast.
-  const points = [
-    [radius, 0],
-    [radius * 0.83, 0],
-    [radius * 0.5, offset],
-    [-radius * 0.5, offset],
-    [-radius * 0.83, 0],
-    [-radius, 0]
-  ].map(([along, across]) => point(along, across));
+    ringRadius = ride.towerRadius + width / 2 + 0.28,
+    point = (distance, angle) => [distance * Math.cos(angle), distance * Math.sin(angle)],
+    approaches = [axis, axis + Math.PI].map((angle) => [
+      point(radius, angle),
+      point(ringRadius, angle)
+    ]);
   const beds = [],
     clearance = 0.45,
     bedWidth = Math.min(3.6, radius / 6),
     plantingRadius = radius - 1.55;
   // Keep the planted beds clear of the crossing, mast and perimeter promenade.
-  for (const [side, start] of [
-    [-1, Math.max(width / 2 + clearance, ride.towerRadius + clearance)],
-    [1, offset + width / 2 + clearance]
-  ]) {
+  const start = ringRadius + width / 2 + clearance;
+  for (const side of [-1, 1]) {
     for (let near = start; near + bedWidth < plantingRadius; near += bedWidth + 0.9) {
       const depth = 2 * Math.sqrt(plantingRadius ** 2 - (near + bedWidth) ** 2);
       if (depth < 1.5) continue;
-      const [x, z] = point(0, side * (near + bedWidth / 2));
+      const [x, z] = point(near + bedWidth / 2, axis + (side * Math.PI) / 2);
       beds.push({ x, z, width: bedWidth, depth });
     }
   }
-  return { axis, points, width, beds };
+  return { axis, approaches, ringRadius, width, beds };
 }
 
 // The lobby approaches stay between docks and open onto the continuous promenade.
@@ -3793,17 +3930,39 @@ function swingPose(ride, clock) {
   return { phase, round, t, crown, rad, attach, seatY, angle, speed: omega * v * rad * 3.6, tilt };
 }
 function buildSwing(b, ride, pose) {
-  const { sector, box, line, ringPoint } = b,
+  const { sector, box, quad, line, ringPoint } = b,
     crownR = pose.attach + 0.28,
     seatColor = rgb('#be866d'),
-    chainColor = rgb('#856f59');
-  sector(ride.towerRadius, crownR, 0, TAU, pose.crown, 0.7, rgb('#e2af61'));
+    chainColor = rgb('#856f59'),
+    frame = rgb('#c98b4b'),
+    rail = rgb('#e2af61'),
+    low = pose.crown + 0.38,
+    high = pose.crown + 2.72;
+  sector(ride.towerRadius, crownR, 0, TAU, pose.crown, 0.38, rail);
+  sector(crownR - 0.19, crownR, 0, TAU, high, 0.16, rail);
+  // Slim diagonal braces give the rotating crown an open vertical truss profile.
+  function brace(a, z) {
+    const direction = unit(sub(z, a)),
+      radial = unit(cross(direction, [0, 1, 0])),
+      across = unit(cross(direction, radial));
+    for (const normal of [radial, across]) {
+      const edge = (point, side) => point.map((n, i) => n + normal[i] * side * 0.055);
+      quad(edge(a, -1), edge(z, -1), edge(z, 1), edge(a, 1), frame);
+    }
+  }
   for (let i = 0; i < 18; i++) {
     // Azimuth increases during rotation. The seat faces along that tangent,
     // with its two suspension chains on the radial sides.
     const a = pose.angle + (i * TAU) / 18,
       heading = a + Math.PI / 2,
       [x, y, z] = ringPoint(pose.rad, a, pose.seatY);
+    const next = a + TAU / 18,
+      [, , supportZ] = ringPoint(crownR - 0.1, a, low);
+    box((crownR - 0.1) * Math.cos(a), low, supportZ, 0.14, high - low, 0.14, a, frame);
+    brace(
+      ringPoint(crownR - 0.1, a, i % 2 ? high : low),
+      ringPoint(crownR - 0.1, next, i % 2 ? low : high)
+    );
     for (const offset of [-0.26, 0.26])
       line(
         ringPoint(pose.attach + offset, a, pose.crown),
@@ -4123,22 +4282,42 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   // Symbolic biofiltration beds and paths, all within the central courtyard.
   const rr = m.r;
   if (m.greenhouse) {
-    const { axis, points, width, beds } = m.greenhouse;
+    const { axis, points, approaches, ringRadius, width, beds } = m.greenhouse;
     beds.forEach(({ x, z, width, depth }, i) =>
       box(x, greenhouseLevel, z, width, 0.26, depth, axis, rgb(i % 2 ? '#8fb8a8' : '#91b6c4'))
     );
     mark('Infinite_Rinse_Perimeter_Walk');
     sector(rr - 1.25, rr, 0, TAU, 0.46, 0.075, rgb('#d6dfce'));
     mark('Infinite_Rinse_Atrium_Crossing');
+    const crossingColor = rgb('#e9d6ae');
     const edge = ([x, z], side) => [
       x - (Math.sin(axis) * side * width) / 2,
-      0.541,
+      0.54,
       z + (Math.cos(axis) * side * width) / 2
     ];
-    for (let i = 1; i < points.length; i++) {
-      const a = points[i - 1],
-        b = points[i];
-      quad(edge(a, -1), edge(b, -1), edge(b, 1), edge(a, 1), rgb('#e9d6ae'));
+    if (ringRadius) {
+      sector(ringRadius - width / 2, ringRadius + width / 2, 0, TAU, 0.46, 0.081, crossingColor);
+      quad(
+        edge(approaches[0][0], -1),
+        edge(approaches[0][1], -1),
+        edge(approaches[0][1], 1),
+        edge(approaches[0][0], 1),
+        crossingColor
+      );
+      quad(
+        edge(approaches[1][1], -1),
+        edge(approaches[1][0], -1),
+        edge(approaches[1][0], 1),
+        edge(approaches[1][1], 1),
+        crossingColor
+      );
+    } else {
+      // Previously saved material studies retain the original crossing geometry.
+      for (let i = 1; i < points.length; i++) {
+        const a = points[i - 1],
+          b = points[i];
+        quad(edge(a, -1), edge(b, -1), edge(b, 1), edge(a, 1), crossingColor);
+      }
     }
   } else {
     // Preserve the original bed layout for saved studies and layouts without lobby atriums.
@@ -5433,24 +5612,30 @@ function buildNavigation(m) {
   let entry = null;
   dest.push(...lobbyNodes.filter((id) => id != null));
 
-  // Use the modeled crossing, including its bend around the mast, for human and dog routes.
-  if (m.greenhouse && lobby != null && oppositeLobby != null) {
-    const points = m.greenhouse.points;
-    let previous = lobby;
+  // Both straight approaches meet at the ring, where agents can pass either side of the mast.
+  if (m.greenhouse?.approaches && lobby != null && oppositeLobby != null) {
+    const { approaches, ringRadius, axis } = m.greenhouse;
     function crossingNode(x, z) {
-      const id = node([x, yFor(0), z], 'greenhouse', { f: 0 });
-      connect(previous, id, null, 'atriumCrossing');
-      previous = id;
+      return node([x, yFor(0), z], 'greenhouse', { f: 0 });
     }
-    crossingNode(...points[0]);
-    for (let i = 1; i < points.length; i++) {
-      const [x, z] = points[i - 1],
-        [endX, endZ] = points[i],
-        steps = Math.ceil(Math.hypot(endX - x, endZ - z) / 3);
-      for (let j = 1; j <= steps; j++)
-        crossingNode(x + ((endX - x) * j) / steps, z + ((endZ - z) * j) / steps);
+    function linkPath(ids) {
+      for (let i = 1; i < ids.length; i++) connect(ids[i - 1], ids[i], null, 'atriumCrossing');
     }
-    connect(previous, oppositeLobby, null, 'atriumCrossing');
+    const junctions = approaches.map(([[x, z], [endX, endZ]], i) => {
+      const steps = Math.max(1, Math.ceil(Math.hypot(endX - x, endZ - z) / 3));
+      const nodes = Array.from({ length: steps + 1 }, (_, j) =>
+        crossingNode(x + ((endX - x) * j) / steps, z + ((endZ - z) * j) / steps)
+      );
+      linkPath([lobbyNodes[i], ...nodes]);
+      return nodes.at(-1);
+    });
+    for (const side of [-1, 1]) {
+      const points = Array.from({ length: 19 }, (_, i) => {
+        const angle = axis + (side * Math.PI * (i + 1)) / 20;
+        return crossingNode(ringRadius * Math.cos(angle), ringRadius * Math.sin(angle));
+      });
+      linkPath([junctions[0], ...points, junctions[1]]);
+    }
   }
   // Open atrium perimeter and the visible greenhouse promenade, kept away from the mast.
   const atriumIds = addCell(
@@ -7603,7 +7788,8 @@ function animateSwingFrame(now) {
   const mesh = software ? softwareMesh : gpu?.mesh;
   const showingModel =
     !document.body.classList.contains('dr-open') &&
-    !document.body.classList.contains('materials-open');
+    !document.body.classList.contains('materials-open') &&
+    !document.body.classList.contains('drawings-open');
   if (mesh && !document.hidden) {
     let changed = false;
     // Keep simulation time running in the auxiliary views without drawing the hidden model.
@@ -9631,6 +9817,680 @@ function estimateMaterialAssemblies(model, assignments, rates) {
   };
 }
 
+// Weld drawing vertices so silhouettes and creases can be found across adjacent faces.
+function drawingGeometry(mesh) {
+  const first = mesh.groups.find((group) => group.layer !== 'Reference'),
+    points = [],
+    faces = [],
+    edges = new Map(),
+    lines = [],
+    indices = new Map();
+  function vertex(data, at) {
+    const point = data.slice(at, at + 3);
+    const key = point.map((x) => Math.round(x * 10000)).join(',');
+    if (!indices.has(key)) {
+      indices.set(key, points.length);
+      points.push(point);
+    }
+    return indices.get(key);
+  }
+  for (const kind of ['solid', 'glass']) {
+    const data = mesh[kind];
+    for (let i = first[kind]; i < data.length; i += 30) {
+      const a = vertex(data, i),
+        b = vertex(data, i + 10),
+        c = vertex(data, i + 20);
+      if (a === b || b === c || c === a) continue;
+      const face = {
+        vertices: [a, b, c],
+        normal: data.slice(i + 3, i + 6),
+        glazing: kind === 'glass'
+      };
+      faces.push(face);
+      for (const [start, end] of [
+        [a, b],
+        [b, c],
+        [c, a]
+      ]) {
+        const key = Math.min(start, end) + ':' + Math.max(start, end);
+        if (!edges.has(key)) edges.set(key, { start, end, faces: [] });
+        edges.get(key).faces.push(face);
+      }
+    }
+  }
+  for (let i = first.lines; i < mesh.lines.length; i += 20) {
+    const a = vertex(mesh.lines, i),
+      b = vertex(mesh.lines, i + 10);
+    if (a !== b) lines.push([a, b]);
+  }
+  return { points, faces, edges: [...edges.values()], lines };
+}
+
+// A plane keeps coordinates with a signed distance of zero or less.
+const drawingDistance = (p, plane) =>
+  p[0] * plane.x + p[1] * plane.y + p[2] * plane.z - plane.level;
+const drawingMix = (a, b, t) =>
+  a.map((coordinate, axis) => coordinate + (b[axis] - coordinate) * t);
+
+function clipDrawingPolygon(polygon, plane) {
+  const clipped = [];
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i],
+      b = polygon[(i + 1) % polygon.length],
+      da = drawingDistance(a, plane),
+      db = drawingDistance(b, plane);
+    if (da <= 1e-7) clipped.push(a);
+    if ((da < -1e-7 && db > 1e-7) || (da > 1e-7 && db < -1e-7))
+      clipped.push(drawingMix(a, b, da / (da - db)));
+  }
+  return clipped;
+}
+
+function clipDrawingLine(start, end, planes) {
+  let a = start,
+    b = end;
+  for (const plane of planes) {
+    const da = drawingDistance(a, plane),
+      db = drawingDistance(b, plane);
+    if (da > 1e-7 && db > 1e-7) return null;
+    if (da > 1e-7) a = drawingMix(a, b, da / (da - db));
+    else if (db > 1e-7) b = drawingMix(a, b, da / (da - db));
+  }
+  return [a, b];
+}
+
+// The depth buffer hides linework behind the geometry while the strokes remain vector paths.
+function rasterDrawingFace(depth, width, height, a, b, c) {
+  const bx = b[0] - a[0],
+    by = b[1] - a[1],
+    cx = c[0] - a[0],
+    cy = c[1] - a[1],
+    denominator = bx * cy - by * cx;
+  if (Math.abs(denominator) < 1e-7) return;
+  const dzB = b[2] - a[2],
+    dzC = c[2] - a[2],
+    left = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]))),
+    right = Math.min(width - 1, Math.ceil(Math.max(a[0], b[0], c[0]))),
+    top = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1]))),
+    bottom = Math.min(height - 1, Math.ceil(Math.max(a[1], b[1], c[1])));
+  for (let y = top; y <= bottom; y++) {
+    const dy = y + 0.5 - a[1];
+    for (let x = left; x <= right; x++) {
+      const dx = x + 0.5 - a[0],
+        u = (dx * cy - dy * cx) / denominator,
+        v = (bx * dy - by * dx) / denominator;
+      if (u < 0 || v < 0 || u + v > 1) continue;
+      const z = a[2] + u * dzB + v * dzC,
+        i = y * width + x;
+      if (z > depth[i]) depth[i] = z;
+    }
+  }
+}
+
+const DRAWING_SCALES = [50, 100, 200, 250, 500, 1000, 2000, 5000];
+const DRAWING_PIXELS_PER_INCH = 88;
+
+// Project the complete model on a physical sheet. Clipping offsets keep a stable frame.
+function renderDrawing(geometry, camera, planes, paper, scaleChoice, seeThrough) {
+  const width = paper.width * DRAWING_PIXELS_PER_INCH,
+    height = paper.height * DRAWING_PIXELS_PER_INCH,
+    pixelsPerMillimetre = DRAWING_PIXELS_PER_INCH / 25.4,
+    margin = 10 * pixelsPerMillimetre,
+    drawingHeight = height - margin * 3.2;
+  const basis = orbitBasis(camera),
+    { right, up, back } = basis,
+    raw = geometry.points.map((p) => [dot(p, right), -dot(p, up), dot(p, back)]);
+  let left = Infinity,
+    top = Infinity,
+    rightEdge = -Infinity,
+    bottom = -Infinity;
+  for (const [x, y] of raw) {
+    left = Math.min(left, x);
+    rightEdge = Math.max(rightEdge, x);
+    top = Math.min(top, y);
+    bottom = Math.max(bottom, y);
+  }
+  const available = Math.min(
+      (width - margin * 2) / (rightEdge - left),
+      drawingHeight / (bottom - top)
+    ),
+    minimumDenominator = (1000 * pixelsPerMillimetre) / available,
+    denominator =
+      scaleChoice === 'auto'
+        ? (DRAWING_SCALES.find((value) => value >= minimumDenominator) ?? DRAWING_SCALES.at(-1))
+        : Number(scaleChoice),
+    scale = (1000 * pixelsPerMillimetre) / denominator,
+    originX = width / 2 - ((left + rightEdge) * scale) / 2,
+    originY = margin + drawingHeight / 2 - ((top + bottom) * scale) / 2,
+    projected = raw.map(([x, y, z]) => [originX + x * scale, originY + y * scale, z]),
+    depth = new Float32Array(width * height).fill(-Infinity),
+    cutLines = [];
+  // Transform model-space planes into the same pixel and depth coordinates as the mesh.
+  const clips = planes.map(({ normal, offset, flip }) => {
+    const sign = flip ? -1 : 1,
+      x = (sign * dot(normal, right)) / scale,
+      y = (-sign * dot(normal, up)) / scale;
+    return { x, y, z: sign * dot(normal, back), level: sign * offset + x * originX + y * originY };
+  });
+  for (const face of geometry.faces) {
+    const triangle = face.vertices.map((index) => projected[index]);
+    let polygon = triangle;
+    for (const plane of clips) {
+      polygon = clipDrawingPolygon(polygon, plane);
+      if (polygon.length < 3) break;
+    }
+    if (polygon.length < 3) continue;
+    if (!face.glazing || !seeThrough)
+      for (let i = 1; i + 1 < polygon.length; i++)
+        rasterDrawingFace(depth, width, height, polygon[0], polygon[i], polygon[i + 1]);
+    for (const plane of clips) {
+      if (
+        !triangle.some((p) => drawingDistance(p, plane) > 1e-7) ||
+        !triangle.some((p) => drawingDistance(p, plane) < -1e-7)
+      )
+        continue;
+      for (let i = 0; i < polygon.length; i++) {
+        const a = polygon[i],
+          b = polygon[(i + 1) % polygon.length];
+        if (
+          Math.abs(drawingDistance(a, plane)) < 1e-6 &&
+          Math.abs(drawingDistance(b, plane)) < 1e-6
+        )
+          cutLines.push([a, b]);
+      }
+    }
+  }
+  const fine = [],
+    section = [],
+    seen = new Set(),
+    tolerance = Math.max(0.035, 0.85 / scale);
+  const coordinate = (p) => p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+  const sheetEdges = [
+    { x: -1, y: 0, z: 0, level: -margin },
+    { x: 1, y: 0, z: 0, level: width - margin },
+    { x: 0, y: -1, z: 0, level: -margin },
+    { x: 0, y: 1, z: 0, level: margin + drawingHeight }
+  ];
+  function strokeVisible(startPoint, endPoint, paths) {
+    const paperLine = clipDrawingLine(startPoint, endPoint, sheetEdges);
+    if (!paperLine) return;
+    const [a, b] = paperLine;
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (length < 0.35) return;
+    const steps = Math.ceil(length);
+    let start = null;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps,
+        x = a[0] + (b[0] - a[0]) * t,
+        y = a[1] + (b[1] - a[1]) * t,
+        z = a[2] + (b[2] - a[2]) * t,
+        column = Math.floor(x),
+        row = Math.floor(y),
+        visible =
+          column >= 0 &&
+          column < width &&
+          row >= 0 &&
+          row < height &&
+          z + tolerance >= depth[row * width + column];
+      if (visible && start == null) start = i;
+      if ((!visible || i === steps) && start != null) {
+        const end = visible ? i : i - 0.5;
+        if (end - start > 0.2) {
+          const from = coordinate(drawingMix(a, b, start / steps)),
+            to = coordinate(drawingMix(a, b, end / steps)),
+            key = from < to ? from + '/' + to : to + '/' + from;
+          if (!seen.has(key)) {
+            paths.push('M' + from + 'L' + to);
+            seen.add(key);
+          }
+        }
+        start = null;
+      }
+    }
+  }
+  // Draw section cuts first in the deduplication set so their heavier weight wins.
+  for (const [a, b] of cutLines) strokeVisible(a, b, section);
+  function strokeModelEdge(a, b) {
+    const clipped = clipDrawingLine(projected[a], projected[b], clips);
+    if (clipped) strokeVisible(clipped[0], clipped[1], fine);
+  }
+  for (const { start, end, faces } of geometry.edges) {
+    const first = faces[0],
+      facing = dot(first.normal, back);
+    const crease = faces.slice(1).some((other) => {
+      const similarity = Math.abs(dot(first.normal, other.normal)),
+        otherFacing = dot(other.normal, back);
+      // Coplanar triangles disappear. Smooth fans show a stroke only at a silhouette.
+      return similarity < 0.985 || (similarity < 0.9999 && facing * otherFacing <= 0);
+    });
+    if (faces.length === 1 || crease) strokeModelEdge(start, end);
+  }
+  for (const [a, b] of geometry.lines) strokeModelEdge(a, b);
+  return {
+    fine: fine.join(''),
+    section: section.join(''),
+    basis,
+    scale,
+    originX,
+    originY,
+    depth,
+    width,
+    height,
+    denominator,
+    margin,
+    cropped: denominator < minimumDenominator - 1e-6
+  };
+}
+
+// Drawing settings belong to the sheet. They never clip the Massing or Materials models.
+const openDrawingWorkspace = (() => {
+  const panel = $('drawingsPhase'),
+    sheet = $('drawingSheet'),
+    paperFrame = $('drawingPaperFrame'),
+    status = $('drawingStatus'),
+    exportButton = $('exportDrawing'),
+    printButton = $('printDrawing'),
+    storageKey = 'poly-nation-drawings-v1',
+    svgNS = 'http://www.w3.org/2000/svg',
+    fine = document.createElementNS(svgNS, 'path'),
+    section = document.createElementNS(svgNS, 'path'),
+    footer = document.createElementNS(svgNS, 'g'),
+    footerRule = document.createElementNS(svgNS, 'line'),
+    footerTitle = document.createElementNS(svgNS, 'text'),
+    footerScale = document.createElementNS(svgNS, 'text'),
+    pageStyle = document.createElement('style'),
+    paperSizes = { letter: [8.5, 11], tabloid: [11, 17] },
+    viewNames = ['axo', 'plan', 'front', 'side', 'aligned'];
+  for (const [path, width, color] of [
+    [fine, 0.75, '#43534c'],
+    [section, 1.7, '#162923']
+  ]) {
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width', String(width));
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+  }
+  fine.id = 'drawingLinework';
+  section.id = 'drawingSections';
+  footer.setAttribute('fill', '#243c30');
+  footer.setAttribute('font-family', 'system-ui, sans-serif');
+  footer.setAttribute('font-size', '11');
+  footerRule.setAttribute('stroke', '#8ba095');
+  footerScale.setAttribute('text-anchor', 'end');
+  footer.append(footerRule, footerTitle, footerScale);
+  sheet.append(fine, section, footer);
+  document.head.append(pageStyle);
+  for (const scale of DRAWING_SCALES)
+    $('drawingScale').add(new Option(`1:${scale}`, String(scale)));
+
+  let settings = {
+      view: 'axo',
+      glazing: false,
+      selected: null,
+      planes: [],
+      paper: 'letter',
+      orientation: 'landscape',
+      scale: 'auto'
+    },
+    sourceModel = null,
+    geometry = null,
+    rendered = null,
+    timer = 0,
+    placing = false;
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey));
+    if (saved && viewNames.includes(saved.view) && Array.isArray(saved.planes)) {
+      settings = {
+        ...settings,
+        view: saved.view,
+        paper: Object.hasOwn(paperSizes, saved.paper) ? saved.paper : 'letter',
+        orientation: saved.orientation === 'portrait' ? 'portrait' : 'landscape',
+        scale: DRAWING_SCALES.includes(Number(saved.scale)) ? saved.scale : 'auto',
+        glazing: saved.glazing === true,
+        selected: saved.selected,
+        planes: saved.planes.filter(
+          (plane) =>
+            plane &&
+            Number.isFinite(plane.id) &&
+            Number.isFinite(plane.offset) &&
+            Number.isFinite(plane.angle) &&
+            ['horizontal', 'vertical'].includes(plane.axis)
+        )
+      };
+    }
+  } catch {
+    // Drawing controls remain available when the browser blocks local storage.
+  }
+
+  const currentPlane = () => settings.planes.find((plane) => plane.id === settings.selected);
+  function paperDimensions() {
+    const [short, long] = paperSizes[settings.paper];
+    return settings.orientation === 'portrait'
+      ? { width: short, height: long }
+      : { width: long, height: short };
+  }
+  function resizePaperPreview() {
+    const { width, height } = paperDimensions(),
+      previewScale = Math.min(paperFrame.clientWidth / width, paperFrame.clientHeight / height);
+    if (previewScale > 0) {
+      sheet.style.width = width * previewScale + 'px';
+      sheet.style.height = height * previewScale + 'px';
+    }
+    sheet.style.setProperty('--drawing-paper-width', width + 'in');
+    sheet.style.setProperty('--drawing-paper-height', height + 'in');
+  }
+  function saveDrawing() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(settings));
+    } catch {
+      // Export is independent of local storage.
+    }
+  }
+  function normalFor(plane) {
+    if (plane.axis === 'horizontal') return [0, 1, 0];
+    const angle = (plane.angle * Math.PI) / 180;
+    return [Math.cos(angle), 0, Math.sin(angle)];
+  }
+  function offsetLimits(plane) {
+    const reach = Math.ceil(sourceModel.plaza.outer + 2);
+    return plane.axis === 'horizontal'
+      ? [0, Math.ceil(sourceModel.feature.ride.height)]
+      : [-reach, reach];
+  }
+  function viewCamera() {
+    const front = sourceModel.lobby.angle ?? 0,
+      top = Math.PI / 2 - 1e-7;
+    if (settings.view === 'plan') return { az: -Math.PI / 2, el: top };
+    if (settings.view === 'front') return { az: front, el: 0 };
+    if (settings.view === 'side') return { az: front + Math.PI / 2, el: 0 };
+    const plane = currentPlane();
+    if (settings.view === 'aligned' && plane) {
+      if (plane.axis === 'horizontal') return { az: -Math.PI / 2, el: plane.flip ? -top : top };
+      return { az: (plane.angle * Math.PI) / 180 + (plane.flip ? Math.PI : 0), el: 0 };
+    }
+    return { az: -0.84, el: 0.57 };
+  }
+
+  function render() {
+    timer = 0;
+    if (!geometry || panel.hidden) return;
+    const paper = paperDimensions();
+    try {
+      rendered = renderDrawing(
+        geometry,
+        viewCamera(),
+        settings.planes.map((plane) => ({
+          ...plane,
+          normal: normalFor(plane)
+        })),
+        paper,
+        settings.scale,
+        settings.glazing
+      );
+      const { width, height, margin, denominator } = rendered,
+        ruleY = height - margin * 1.8,
+        textY = height - margin,
+        viewLabel =
+          settings.view === 'aligned'
+            ? currentPlane()?.axis === 'vertical'
+              ? 'Section'
+              : 'Plan section'
+            : $('drawingView').selectedOptions[0].text;
+      sheet.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      footerRule.setAttribute('x1', margin);
+      footerRule.setAttribute('x2', width - margin);
+      footerRule.setAttribute('y1', ruleY);
+      footerRule.setAttribute('y2', ruleY);
+      footerTitle.setAttribute('x', margin);
+      footerTitle.setAttribute('y', textY);
+      footerTitle.textContent = 'Poly Nation · ' + viewLabel;
+      footerScale.setAttribute('x', width - margin);
+      footerScale.setAttribute('y', textY);
+      footerScale.textContent = `1:${denominator} · ${settings.paper === 'letter' ? 'Letter' : 'Tabloid'}`;
+      fine.setAttribute('d', rendered.fine);
+      section.setAttribute('d', rendered.section);
+      exportButton.disabled = printButton.disabled = !(rendered.fine || rendered.section);
+      resizePaperPreview();
+      showStatus();
+    } catch (error) {
+      console.error('Drawing render failed', error);
+      status.textContent = 'The drawing could not be rendered.';
+    }
+  }
+  function showStatus() {
+    status.textContent = placing
+      ? 'Click the drawing to place the selected plane.'
+      : rendered?.cropped
+        ? `At 1:${rendered.denominator}, the drawing extends past the sheet.`
+        : exportButton.disabled
+          ? 'The planes clip all the visible geometry.'
+          : 'Linework from the current massing.';
+  }
+  function queueDrawing() {
+    saveDrawing();
+    exportButton.disabled = printButton.disabled = true;
+    clearTimeout(timer);
+    timer = setTimeout(render, 45);
+  }
+  new ResizeObserver(() => {
+    if (!panel.hidden) resizePaperPreview();
+  }).observe(paperFrame);
+
+  function syncOffset(plane) {
+    const [min, max] = offsetLimits(plane);
+    for (const input of [$('drawingPlaneOffset'), $('drawingPlaneMove')]) {
+      input.min = min;
+      input.max = max;
+      input.value = plane.offset;
+    }
+  }
+  function stopPlacing() {
+    placing = false;
+    $('placeDrawingPlane').setAttribute('aria-pressed', 'false');
+    sheet.dataset.placing = 'false';
+  }
+  function syncSettings() {
+    if (!currentPlane()) settings.selected = settings.planes[0]?.id ?? null;
+    const plane = currentPlane();
+    if (!plane && settings.view === 'aligned') settings.view = 'axo';
+    $('drawingView').value = settings.view;
+    $('drawingPaper').value = settings.paper;
+    $('drawingOrientation').value = settings.orientation;
+    $('drawingScale').value = settings.scale;
+    $('drawingGlazing').checked = settings.glazing;
+    $('drawingPlaneFields').hidden = !plane;
+    $('drawingPlanes').replaceChildren(
+      ...settings.planes.map((item, index) => {
+        const row = document.createElement('div'),
+          choose = document.createElement('button'),
+          remove = document.createElement('button');
+        row.className = 'drawing-plane-row';
+        choose.type = remove.type = 'button';
+        choose.textContent = `Plane ${index + 1} · ${item.axis === 'horizontal' ? 'Horizontal' : 'Vertical'}`;
+        choose.setAttribute('aria-pressed', String(item.id === settings.selected));
+        choose.onclick = () => {
+          settings.selected = item.id;
+          stopPlacing();
+          syncSettings();
+          $('drawingPlaneAxis').focus();
+          queueDrawing();
+        };
+        remove.textContent = '×';
+        remove.setAttribute('aria-label', 'Remove plane ' + (index + 1));
+        remove.onclick = () => {
+          settings.planes = settings.planes.filter((candidate) => candidate.id !== item.id);
+          stopPlacing();
+          syncSettings();
+          $('addDrawingPlane').focus();
+          queueDrawing();
+        };
+        row.append(choose, remove);
+        return row;
+      })
+    );
+    if (!plane) return;
+    $('drawingPlaneAxis').value = plane.axis;
+    $('drawingAngleField').hidden = plane.axis !== 'vertical';
+    $('drawingPlaneAngle').value = plane.angle;
+    $('flipDrawingPlane').checked = plane.flip;
+    syncOffset(plane);
+  }
+
+  $('drawingView').onchange = (event) => {
+    settings.view = event.target.value;
+    queueDrawing();
+  };
+  $('drawingPaper').onchange = (event) => {
+    settings.paper = event.target.value;
+    queueDrawing();
+  };
+  $('drawingOrientation').onchange = (event) => {
+    settings.orientation = event.target.value;
+    queueDrawing();
+  };
+  $('drawingScale').onchange = (event) => {
+    settings.scale = event.target.value;
+    queueDrawing();
+  };
+  $('drawingGlazing').onchange = (event) => {
+    settings.glazing = event.target.checked;
+    queueDrawing();
+  };
+  $('addDrawingPlane').onclick = () => {
+    const id = Math.max(0, ...settings.planes.map((plane) => plane.id)) + 1,
+      horizontal = settings.view === 'plan',
+      angle = Math.round(
+        ((sourceModel.lobby.angle + (settings.view === 'side' ? Math.PI / 2 : 0)) * 180) / Math.PI
+      );
+    settings.planes.push({
+      id,
+      axis: horizontal ? 'horizontal' : 'vertical',
+      offset: horizontal ? 1.2 : 0,
+      angle: mod(angle, 360),
+      flip: false
+    });
+    settings.selected = id;
+    stopPlacing();
+    syncSettings();
+    $('drawingPlaneAxis').focus();
+    queueDrawing();
+  };
+  $('drawingPlaneAxis').onchange = (event) => {
+    const plane = currentPlane();
+    plane.axis = event.target.value;
+    plane.offset = plane.axis === 'horizontal' ? 1.2 : 0;
+    syncSettings();
+    queueDrawing();
+  };
+  $('drawingPlaneAngle').onchange = (event) => {
+    currentPlane().angle = Number.isFinite(event.target.valueAsNumber)
+      ? mod(event.target.valueAsNumber, 360)
+      : currentPlane().angle;
+    event.target.value = currentPlane().angle;
+    queueDrawing();
+  };
+  function movePlane(value) {
+    const plane = currentPlane();
+    if (Number.isFinite(value)) {
+      const [min, max] = offsetLimits(plane);
+      plane.offset = Math.round(clamp(value, min, max) * 10) / 10;
+    }
+    syncOffset(plane);
+    queueDrawing();
+  }
+  $('drawingPlaneMove').oninput = (event) => movePlane(event.target.valueAsNumber);
+  $('drawingPlaneOffset').onchange = (event) => movePlane(event.target.valueAsNumber);
+  $('flipDrawingPlane').onchange = (event) => {
+    currentPlane().flip = event.target.checked;
+    queueDrawing();
+  };
+  $('alignDrawingPlane').onclick = () => {
+    settings.view = 'aligned';
+    $('drawingView').value = settings.view;
+    queueDrawing();
+  };
+  $('placeDrawingPlane').onclick = () => {
+    placing = !placing;
+    $('placeDrawingPlane').setAttribute('aria-pressed', String(placing));
+    sheet.dataset.placing = String(placing);
+    showStatus();
+  };
+  panel.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && placing) {
+      stopPlacing();
+      showStatus();
+    }
+  });
+  sheet.addEventListener('click', (event) => {
+    if (!placing || !rendered) return;
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(
+      sheet.getScreenCTM().inverse()
+    );
+    const { basis, width, height, depth, scale, originX, originY } = rendered;
+    if (point.x < 0 || point.y < 0 || point.x >= width || point.y >= height) return;
+    const z = depth[Math.floor(point.y) * width + Math.floor(point.x)],
+      normal = normalFor(currentPlane()),
+      toward = dot(normal, basis.back);
+    if (!Number.isFinite(z) && Math.abs(toward) > 0.1) {
+      status.textContent = 'Click a visible surface or enter an offset.';
+      return;
+    }
+    const offset =
+      ((point.x - originX) / scale) * dot(normal, basis.right) -
+      ((point.y - originY) / scale) * dot(normal, basis.up) +
+      (Number.isFinite(z) ? z * toward : 0);
+    stopPlacing();
+    movePlane(offset);
+  });
+  exportButton.onclick = () => {
+    const { width, height } = paperDimensions();
+    const root = sheet.cloneNode(true);
+    root.removeAttribute('class');
+    root.removeAttribute('id');
+    root.removeAttribute('data-placing');
+    root.removeAttribute('style');
+    root.setAttribute('width', width + 'in');
+    root.setAttribute('height', height + 'in');
+    downloadBlob(
+      new XMLSerializer().serializeToString(root),
+      'image/svg+xml',
+      `poly-nation-${state.seed}-${settings.view}-${settings.paper}-1-${rendered.denominator}.svg`
+    );
+  };
+  printButton.onclick = () => {
+    const { width, height } = paperDimensions();
+    pageStyle.textContent = `@page { size: ${width}in ${height}in; margin: 0; }`;
+    window.print();
+  };
+  window.addEventListener('afterprint', () => {
+    pageStyle.textContent = '';
+  });
+  return (model) => {
+    if (sourceModel !== model) {
+      sourceModel = model;
+      geometry = drawingGeometry(
+        buildMesh(model, false, {
+          ...state,
+          inspect: 0,
+          grid: false,
+          xray: false,
+          showRooms: true,
+          showFacade: true,
+          showModules: true,
+          showRoofDeck: true,
+          roof: true
+        })
+      );
+      for (const plane of settings.planes)
+        plane.offset = clamp(plane.offset, ...offsetLimits(plane));
+    }
+    stopPlacing();
+    syncSettings();
+    queueDrawing();
+  };
+})();
+
 // Work on a detached massing snapshot. Changing massing never mutates the material study.
 (function () {
   const phase = $('materialsPhase');
@@ -10221,14 +11081,15 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     { passive: false }
   );
 
-  // All three pages share stable navigation. Switching views keeps the model and score in memory.
+  // All workspaces share stable navigation. Switching views keeps the model and score in memory.
   const rationale = $('designRationale'),
     workspaces = {
       massing: { panel: $('massingPhase'), button: $('openMassing') },
       materials: { panel: phase, button: $('openMaterials'), title: $('materialsTitle') },
+      drawings: { panel: $('drawingsPhase'), button: $('openDrawings'), title: $('drawingsTitle') },
       rationale: { panel: rationale, button: $('openRationale'), title: $('drTitle') }
     },
-    pageScroll = { massing: 0, materials: 0, rationale: 0 };
+    pageScroll = { massing: 0, materials: 0, drawings: 0, rationale: 0 };
   let activeWorkspace = 'massing',
     lastStudyWorkspace = 'massing';
 
@@ -10243,11 +11104,16 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     }
     document.body.classList.toggle('materials-open', workspace === 'materials');
     document.body.classList.toggle('dr-open', workspace === 'rationale');
+    document.body.classList.toggle('drawings-open', workspace === 'drawings');
     activeWorkspace = workspace;
     if (workspace === 'materials') {
       if (!study) restoreStudy();
       if (!study) captureMassing();
       syncStudy();
+    }
+    if (workspace === 'drawings') {
+      if (pending) update();
+      openDrawingWorkspace(model);
     }
     if (workspace === 'massing') requestAnimationFrame(draw);
     window.scrollTo(0, pageScroll[workspace]);

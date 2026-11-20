@@ -1,6 +1,7 @@
 from pathlib import Path
 import os, shutil
-from playwright.sync_api import sync_playwright
+import xml.etree.ElementTree as ET
+from playwright.sync_api import expect, sync_playwright
 
 def check_fit(page):
  for button in ['axo', 'plan', 'side']:
@@ -92,6 +93,30 @@ with sync_playwright() as p:
  assert page.evaluate('model.total<=state.areaCap+1e-5')
  check_fit(page)
  page.screenshot(path=str(out/'model-preview.png'))
+ before_drawing = page.evaluate('JSON.stringify({state, camera})')
+ page.locator('#openDrawings').click()
+ drawing_export = page.locator('#exportDrawing')
+ expect(drawing_export).to_be_enabled()
+ page.locator('#drawingView').select_option('plan')
+ page.locator('#addDrawingPlane').click()
+ expect(drawing_export).to_be_enabled()
+ ground_cut = page.locator('#drawingSections').get_attribute('d')
+ assert ground_cut
+ page.locator('#drawingPlaneOffset').fill('6')
+ page.locator('#drawingPlaneOffset').press('Tab')
+ expect(drawing_export).to_be_enabled()
+ assert page.locator('#drawingSections').get_attribute('d') != ground_cut
+ page.locator('#drawingPaper').select_option('tabloid')
+ page.locator('#drawingOrientation').select_option('portrait')
+ page.locator('#drawingScale').select_option('1000')
+ expect(drawing_export).to_be_enabled()
+ with page.expect_download() as saved_drawing:
+  drawing_export.click()
+ drawing_svg = ET.parse(saved_drawing.value.path()).getroot()
+ assert drawing_svg.attrib['width'] == '11in' and drawing_svg.attrib['height'] == '17in'
+ assert '1:1000 · Tabloid' in ''.join(drawing_svg.itertext())
+ page.locator('#openMassing').click()
+ assert page.evaluate('JSON.stringify({state, camera})') == before_drawing
  print('desktop navigation, imagery, unchanged model + state, variation passed',flush=True)
  mobile=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=1,is_mobile=True,has_touch=True)
  mobile.on('pageerror',lambda err:errors.append(str(err)))
@@ -112,6 +137,9 @@ with sync_playwright() as p:
  mobile.wait_for_function('!pending && model.circulation.bridges.length === 3')
  assert mobile.evaluate('state.inspect === 0 && document.documentElement.scrollWidth <= innerWidth+1')
  check_fit(mobile)
+ mobile.locator('#openDrawings').click()
+ expect(mobile.locator('#exportDrawing')).to_be_enabled()
+ assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth+1')
  print('mobile width and navigation passed; errors',errors,flush=True)
  assert not errors
  browser.close()

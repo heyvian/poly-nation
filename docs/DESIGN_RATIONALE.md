@@ -58,7 +58,7 @@ means the design requirement or concept is traceable to the student's requests, 
 
 Two facing ground-floor lobbies connect the public plaza through the Infinite Rinse biofiltration greenhouse. Their axis runs perpendicular to the lift cores. The designer added this through-route to increase cross-traffic and create more opportunities for indoor and outdoor visitors to meet.
 
-The path bends around the mast, and galleries carry the upper corridor across both lobby voids.
+A straight path from each lobby joins a circular walk around the mast. Galleries carry the upper corridor across both lobby voids.
 
 ### Radial and vertically aligned bridges
 

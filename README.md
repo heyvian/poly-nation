@@ -13,6 +13,8 @@ Use **Massing → Building → Atrium bridges**, under **Core geometry**, to cho
 
 **Materials** starts from a separate copy of the current massing and saves the study locally in the browser. **Update from massing** refreshes that copy. Use the swatch palettes to assign structure and cladding to the building, core, or module programs. Open any of the six assembly cards to see its exploded axonometric below the live model. **Snapshot** downloads a PNG sheet with the current model view and all six assembly cards. Each card lists its structure and cladding combinations. **Cost & analysis** shows CAD estimates by assembly, per-module averages, and a building summary based on the chosen materials. **Estimate assumptions** sets the two benchmark rates. The estimates cover the core ring and enclosed modules. Use **Material design rationale** to keep your own notes alongside the study.
 
+**Drawings** creates plan, elevation and axonometric linework from the current massing. Add and move horizontal or vertical clipping planes to draw sections. Set a vertical plane's angle and use **Align view** to look square to it. Choose Letter or Tabloid, portrait or landscape, and an architectural scale. **Auto fit** picks the largest listed scale that fits the view on the sheet. Export a physically sized SVG or use **Print / PDF** with actual-size printing.
+
 Use **Design rationale** to open the illustrated design record. Refreshing the same browser tab reopens the active view. Export JSON to carry a saved design to another browser or machine.
 
 ## Files
