@@ -57,6 +57,7 @@ with sync_playwright() as p:
  page.locator('#openRationale').click(); page.wait_for_timeout(200)
  assert page.locator('#designRationale').is_visible() and not page.locator('.layout').is_visible()
  assert page.locator('.dr-svg').count()>=8
+ assert page.locator('.dr-slide').evaluate_all('(slides) => slides.every(slide => slide.querySelector("svg, img"))')
  assert page.locator('.dr-hero-image img').evaluate('(im)=>im.complete && im.naturalWidth>0')
  page.get_by_role('link', name='Atrium and roofline').click()
  decisions = page.locator('#drAtrium')
@@ -123,6 +124,20 @@ with sync_playwright() as p:
  page.locator('#drawingRendering').select_option('combined')
  expect(drawing_export).to_be_enabled()
  assert page.locator('#drawingSheet image').get_attribute('href').startswith('data:image/png')
+ page.get_by_text('Line weights', exact=True).click()
+ page.locator('#drawingPenStyle').select_option('sketch')
+ expect(drawing_export).to_be_enabled()
+ with page.expect_download() as saved_hybrid:
+  drawing_export.click()
+ hybrid = ET.parse(saved_hybrid.value.path()).getroot()
+ layers = {group.get('data-layer'): group for group in hybrid if group.get('data-layer')}
+ assert {'Paper', 'Colour fills', 'Construction lines', 'Pencil marks', 'Surface texture', 'Title and scale'} <= layers.keys()
+ assert all(group.get('id', '').startswith('PN_') for group in layers.values())
+ assert not hybrid.findall('.//{*}image')
+ assert len({path.get('fill') for path in layers['Colour fills'].findall('.//{*}path')}) > 10
+ assert any('Q' in path.get('d') for path in layers['Pencil marks'].findall('.//{*}path'))
+ assert len({path.get('stroke-width') for path in next(group for label, group in layers.items() if label.startswith('Pen ')).findall('.//{*}path')}) > 1
+ page.locator('#drawingPenStyle').select_option('standard')
  page.locator('#drawingRendering').select_option('linework')
  page.locator('#drawingView').select_option('elevation')
  page.get_by_role('button', name='View from northeast').click()
@@ -155,6 +170,12 @@ with sync_playwright() as p:
  page.locator('#drawingPlanSheet').select_option('floors')
  expect(drawing_export).to_be_enabled()
  assert page.locator('#drawingSheet text').filter(has_text='Level 2 · Cut 5.40 m').count() == 1
+ with page.expect_download() as saved_plans:
+  drawing_export.click()
+ floor_sheet = ET.parse(saved_plans.value.path()).getroot()
+ floor_labels = next(layer for layer in floor_sheet if layer.get('data-layer') == 'Floor labels')
+ assert len(floor_labels.findall('{*}text')) == 4
+ assert len(floor_sheet.findall('./{*}defs/{*}clipPath')) == 4
  page.locator('#drawingPlanSheet').select_option('single')
  page.locator('#drawingPaper').select_option('tabloid')
  page.locator('#drawingOrientation').select_option('portrait')
@@ -166,8 +187,9 @@ with sync_playwright() as p:
  assert drawing_svg.attrib['width'] == '11in' and drawing_svg.attrib['height'] == '17in'
  assert '1:1000 · Tabloid' in ''.join(drawing_svg.itertext())
  # A vector editor must be able to control the drawing layers independently.
- drawing_layers = {group.get('data-layer') for group in drawing_svg.iter() if group.get('data-layer')}
- assert {'Paper', 'Colour wash', 'Surface texture'} <= drawing_layers
+ drawing_layers = {group.get('data-layer') for group in drawing_svg if group.get('data-layer')}
+ assert {'Paper', 'Title and scale'} <= drawing_layers
+ assert not (drawing_layers & {'Colour fills', 'Construction lines', 'Pencil marks'})
  assert sum(label.startswith('Pen ') for label in drawing_layers) == 3
  page.locator('#openBuild').click()
  expect(page.locator('#buildCanvas')).to_be_visible()

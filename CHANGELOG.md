@@ -1,5 +1,10 @@
 # Changelog
 
+## Illustrator export and jury diagrams
+- Reorganized exported SVGs into named top-level groups and added an optional Illustrator script to promote them to native layers. Hybrid shading is exported as editable vector fills.
+- Made the pencil overlay more visible, added geometry-based construction lines and introduced subtle pressure variation within each pen layer.
+- Added illustrated site, atrium, programme allocation and jury review slides. Every rationale slide now has a visual.
+
 ## Runout pool, drawing pens and jury rationale
 - Extended the receiving pool along the slide exit and added a slide paint picker, hex field and sheen control.
 - Added one to five physical line weights, distance and component assignments, a pen-over-pencil style and adjustable ink and paper colours. SVG drawings carry separate colour, texture, pencil and pen layers.
