@@ -3,6 +3,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import os
 import shutil
+import struct
 from threading import Thread
 from playwright.sync_api import expect, sync_playwright
 
@@ -125,7 +126,18 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     expect(page.locator('#materialStructuralSummary')).to_contain_text('triangulated')
     expect(page.locator('#materialDiversitySummary')).to_contain_text('finishes')
     expect(page.locator('#materialCostRows tr').first).to_contain_text('Core ring')
-    expect(page.locator('#materialCostRows tr').filter(has_text='Marine firehall')).to_contain_text('5')
+    firehall_count = page.locator('#materialCostRows tr').filter(has_text='Marine firehall')
+    expect(firehall_count.locator('td').nth(1)).to_have_text(str(start['modules'][2]))
+    with page.expect_download() as download:
+        page.locator('#saveMaterialSnapshot').click()
+    snapshot = download.value
+    assert snapshot.suggested_filename.startswith('poly-nation-materials-')
+    assert snapshot.suggested_filename.endswith('.png')
+    png = snapshot.path().read_bytes()
+    assert png.startswith(b'\x89PNG\r\n\x1a\n')
+    width, height = struct.unpack('>II', png[16:24])
+    assert width == 1800 and height > 1200
+    expect(schedule).to_be_hidden()
     before_rates = page.evaluate("""() => {
       const study = JSON.parse(localStorage.getItem('poly-nation-material-study-v1'));
       const total = estimateMaterialAssemblies(study.model, study.assignments, DEFAULT_MATERIAL_RATES);
@@ -141,7 +153,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     page.locator('.material-rationale summary').click()
     page.locator('#materialNotes').fill('Compare cedar and galvanized metal.')
     assert page.evaluate('state.seed')==start['seed']
-    page.locator('#openMaterials').click()
+    page.locator('#openMassing').click()
     page.locator('#shuffle').click()
     page.wait_for_function('state.seed === 607 && !pending')
     page.locator('#openMaterials').click()
@@ -153,25 +165,27 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     page.reload()
     page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
     expect(page.locator('#materialsPhase')).to_be_visible()
-    expect(page.locator('#openMaterials')).to_have_attribute('aria-expanded', 'true')
+    expect(page.locator('#openMaterials')).to_have_attribute('aria-current', 'page')
     expect(page.locator('.layout')).to_be_hidden()
     expect(page.locator('#materialSnapshot')).to_contain_text('Seed 607')
     expect(page.locator('#materialFacade [data-material=cedar]')).to_have_attribute('aria-pressed', 'true')
     expect(page.locator('#materialNotes')).to_have_value('Compare cedar and galvanized metal.')
-    page.locator('#openMaterials').click()
+    page.locator('#openMassing').click()
     print('materials snapshot, multiple scopes, preview changes and reload passed',flush=True)
 
     page.locator('#openRationale').click()
     page.reload()
     expect(page.locator('#designRationale')).to_be_visible()
-    expect(page.locator('#openRationale')).to_have_attribute('aria-expanded', 'true')
+    expect(page.locator('#openRationale')).to_have_attribute('aria-current', 'page')
     expect(page.locator('.layout')).to_be_hidden()
-    page.locator('#openRationale').click()
+    page.locator('#openMassing').click()
     page.reload()
     expect(page.locator('.layout')).to_be_visible()
     expect(page.locator('#designRationale')).to_be_hidden()
     page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
 
+    # Leave docking capacity so this fixture can exercise successful addition as well as rejection.
+    page.evaluate('state.modules=94;update()')
     page.locator('#editProgramming').click()
     page.locator('#plan').click()
     [(x, y)] = editable_points(page, 'module')
@@ -228,7 +242,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
         page.mouse.click(*dock_point)
         expect(selection).to_contain_text('Available for a module')
         expect(page.locator('#applyProgram')).to_have_text('Add module')
-        page.locator('#programChoice').select_option('2')
+        page.locator('#programChoice').select_option('0')
         page.locator('#applyProgram').click()
         if not dialog.is_visible():
             break
@@ -244,7 +258,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     page.locator('#updateMaterials').click()
     expect(page.locator('#materialSnapshot')).to_contain_text(str(before_count+1)+' modules')
     print('valid dock insertion and snapshot separation passed',flush=True)
-    page.locator('#openMaterials').click()
+    page.locator('#openMassing').click()
     guard=page.evaluate("""() => {
    state=defaults();
    state.relations['1-3']='repel';
@@ -285,7 +299,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     mobile.locator('#returnToAssembly').click()
     expect(mobile.locator('#assembly-2 button')).to_be_focused()
     assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
-    mobile.locator('#openMaterials').click()
+    mobile.locator('#openMassing').click()
     mobile.locator('#editProgramming').tap()
     mobile.locator('#plan').tap()
     [module_point] = editable_points(mobile, 'module')

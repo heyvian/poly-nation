@@ -1,5 +1,12 @@
 # Changelog
 
+## Material snapshots and circulation
+- Added a PNG snapshot of the current material model with all six assembly cards and their material variants.
+- Added persistent Massing and Materials navigation alongside Design rationale.
+- Modeled two opposing lobby atriums and a walkable greenhouse crossing between their plaza approaches. Recorded the designer's cross-pollination intent in the design rationale.
+- Added optional radial or vertically aligned atrium bridges to the upper-floor geometry, walking graph and trial comparison log.
+- Pitched the glass greenhouse roof and added a ramp to the raised swing platform. Seeded roof heights now include occasional two-storey pavilions within the area cap.
+
 ## Allocation search
 - Added **Optimize allocation** to compare built core-to-module ratios while preserving the total area of each program.
 - Renamed the comparison button **Run Pollination Trial**.

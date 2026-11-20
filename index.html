@@ -42,21 +42,11 @@
 /* V3.5 — Original, quiet two-column workspace. One settings rail; model first. */
 :root{--bg:#f2f3ef;--paper:#fcfcf9;--ink:#26322f;--muted:#6b7771;--line:#d9ddd6;--accent:#314e43}
 .app-header{min-height:60px;padding:11px 18px}.app-header h1{font-size:clamp(18px,2vw,23px);letter-spacing:-.65px}.header-actions{gap:6px}
-.header-actions #openMaterials {
- background: #294e3e;
- border-color: #294e3e;
- color: #fffefa;
- font-weight: 650;
-}
-.header-actions #openMaterials:hover { background: #1f3e31; }
-.header-actions #openRationale { background: transparent; border-color: transparent; color: var(--accent); }
-.header-actions #openRationale:hover { background: #edf2ec; }
-.header-actions #openMaterials[aria-expanded="true"],
-.header-actions #openRationale[aria-expanded="true"] {
- background: #e7efe6;
- border-color: #bdcebd;
- color: var(--accent);
-}
+.workspace-nav { display: flex; gap: 4px; align-items: center; }
+.workspace-nav button { background: transparent; border-color: transparent; color: var(--accent); }
+.workspace-nav button:hover { background: #edf2ec; }
+.workspace-nav button[aria-current="page"] { background: #294e3e; color: #fffefa; font-weight: 650; }
+.header-actions #openRationale { margin-right: 3px; }
 .layout{display:grid;grid-template-columns:minmax(280px,336px) minmax(0,1fr);gap:1px;align-items:start;background:var(--line)}
 .layout aside#design-panel{grid-column:1;grid-row:1;min-width:0;background:var(--paper);padding:0;gap:0;display:flex;flex-direction:column}
 .topology-persistent{display:flex;flex-direction:column;flex:none;max-height:none;overflow:visible;padding:0;border-bottom:1px solid var(--line)}
@@ -416,6 +406,8 @@
  color: #294b3f;
 }
 .material-view-switch .cost-basis { margin-left: auto; }
+#saveMaterialSnapshot { background: #dce8dd; border-color: #a7b9ad; color: #294b3f; }
+#saveMaterialSnapshot:hover { background: #cddfd1; }
 .assembly-cards {
  display: grid;
  grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -555,7 +547,9 @@
 }
 
 /* V3.6: self-contained presentation page, scoped to avoid altering laboratory UI. */
-#designRationale[hidden],#materialsPhase[hidden]{display:none!important}body.materials-open>.layout{display:none!important}body.materials-open .app-header .header-actions>*:not(#openMaterials){display:none!important}body.dr-open>.layout{display:none!important}body.dr-open .app-header .header-actions>*:not(#openRationale){display:none!important}body.dr-open #openRationale{background:#dce8dd;color:var(--accent)}
+#designRationale[hidden],#materialsPhase[hidden],#massingPhase[hidden]{display:none!important}
+body.materials-open .header-actions > :not(.workspace-nav),
+body.dr-open .header-actions > :not(.workspace-nav){display:none}
 .rationale{background:#f7f8f3;overflow:auto;min-height:0;flex:1;color:#293b30;font-size:14px;line-height:1.55}.dr-wrap{max-width:1270px;margin:auto;padding:24px clamp(16px,4vw,56px) 40px}.dr-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 28px;flex-wrap:wrap}.dr-kicker,.dr-section-heading>span{font-size:10px;letter-spacing:1.75px;font-weight:700;color:#66776a;text-transform:uppercase}.dr-hero{display:grid;grid-template-columns:1.04fr 1fr;gap:34px;align-items:center}.dr-hero h2{font-size:clamp(36px,5vw,66px);font-weight:650;letter-spacing:-.055em;line-height:1.01;margin:12px 0 18px}.dr-lead{font-size:17px;color:#53665a;line-height:1.55;max-width:52ch}.dr-credit{border-top:1px solid #cdd6ca;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;padding-top:14px;margin-top:24px;font-size:12px}.dr-credit span{color:#617065}.dr-hero-image{margin:0;background:white;border:1px solid var(--line);border-radius:7px;padding:9px}.dr-hero-image img{width:100%;height:auto;display:block;border-radius:4px}.dr-hero-image figcaption{padding:7px 5px 0}.dr-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#d6ded2;border:1px solid #d6ded2;margin:28px 0 14px;border-radius:6px;overflow:hidden}.dr-summary>div{background:#fffefa;padding:20px}.dr-summary h3{font-size:18px!important;margin:8px 0}.dr-key{font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap;display:inline-block;border-radius:3px;padding:2px 6px;vertical-align:middle;color:#fff}.dr-key.student{background:#426e55}.dr-key.ai{background:#657684}.dr-key.shared{background:#8b7854}.dr-note{font-size:12px;line-height:1.6;color:#657368;border-left:2px solid #9db09a;padding:5px 0 5px 12px;margin:16px 0}.dr-nav{display:flex;flex-wrap:wrap;gap:7px 15px;border-top:1px solid #d5dcd1;border-bottom:1px solid #d5dcd1;padding:13px 0;margin:24px 0 10px}.dr-nav a{font-size:12px;text-decoration:none;color:#37654d;font-weight:600}.dr-nav a:hover{text-decoration:underline}.dr-section{padding:34px 0;border-bottom:1px solid #d2d9ce;scroll-margin-top:16px}.dr-section-heading h2{font-size:clamp(25px,3.5vw,37px);font-weight:650;letter-spacing:-.04em;line-height:1.15;margin:8px 0}.dr-section-heading>p{font-size:15px;color:#647368;margin:0 0 23px}.dr-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}.dr-pair figure,.dr-score-method figure{margin:0;min-width:0}.dr-svg{width:100%;height:auto;display:block;border:1px solid #dce2d8;border-radius:7px;font-family:system-ui,-apple-system,sans-serif}.rationale figcaption{font-size:11.5px;line-height:1.5;color:#708073;margin-top:8px}.rationale h3{font-size:15px;font-weight:700;color:#314738;margin:16px 0 7px}.dr-pair>div h3:first-child,.dr-score-method>div h3:first-child{margin-top:1px}.dr-pair h3 .dr-key{margin-right:5px}.rationale p{margin:7px 0 12px}.rationale ul{margin:6px 0 16px;padding-left:19px}.rationale li{padding:2px 0}.rationale blockquote{margin:19px 0 0;background:#edf1e9;border-left:3px solid #73947b;padding:13px 17px;font-size:15px;font-weight:500;color:#395341}.rationale blockquote cite{display:block;font-size:11px;font-style:normal;color:#6e7e70;font-weight:400;margin-top:7px}.dr-wide-diagram{max-width:850px;margin:20px auto 0}.dr-equation{padding:14px 16px;background:#e9eee5;border:1px solid #d1dacd;border-radius:5px;font-weight:550;margin:18px 0}.dr-equation small{display:block;color:#67786b;font-weight:400;margin-top:6px;font-size:12px}.dr-chart,.dr-score-chart{border:1px solid #dce2d8;background:#fffefa;border-radius:6px;padding:18px}.dr-chart-legend{display:flex;gap:15px;font-size:11px;color:#69766b;margin-bottom:13px}.dr-chart-legend i,.dr-program i:not(.dr-bar i){width:10px;height:10px;display:inline-block;vertical-align:middle;border-radius:2px;margin-right:6px}.dr-program{margin:14px 0}.dr-program>div:first-child{display:flex;justify-content:space-between;gap:8px;font-size:13px}.dr-program small{font-size:11px;color:#758075}.dr-bar{display:flex;height:12px;margin:6px 0 3px;background:#e3e8df;border-radius:2px;overflow:hidden}.dr-bar i{display:block;height:100%}.dr-total{margin-top:19px;border-top:1px solid #cfd8cc;padding-top:11px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}.dr-total strong{font-size:22px;letter-spacing:-.8px}.dr-weight{display:grid;grid-template-columns: minmax(110px,1.2fr) minmax(50px,1fr) 26px;gap:8px;align-items:center;font-size:12px;margin:12px 0}.dr-weight b{text-align:right;font-variant-numeric:tabular-nums}.dr-weight-track{background:#e5e9e1;height:14px;border-radius:2px;overflow:hidden}.dr-weight-track i{display:block;height:100%}.dr-score-method{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:25px 0 15px}.dr-multipliers{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dr-multipliers>div{background:#fffefa;padding:10px;border:1px solid #dce2d8;border-radius:4px}.dr-multipliers b{display:block;font-size:22px;line-height:1.2;color:#426c52}.dr-multipliers span{font-size:11px;color:#617365}.dr-method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.dr-method-grid>div{padding:15px;background:white;border:1px solid #dce2d8;border-radius:5px}.dr-method-grid p{font-size:12px;margin-bottom:0}.dr-text-pair{margin-top:15px}.dr-table-wrap{overflow-x:auto}.dr-audit{width:100%;border-collapse:collapse;background:#fffefa;font-size:13px;line-height:1.5}.dr-audit th,.dr-audit td{border:1px solid #dce2d8;padding:12px;text-align:left;vertical-align:top}.dr-audit th{background:#e5ece1;font-weight:650}.dr-audit td:first-child{width:130px;font-weight:650}.dr-audit td:nth-child(2){width:43%}.dr-author-statement{background:#e7eee4;border:1px solid #cdd9c8;padding:18px 22px;margin:24px 0;border-radius:6px}.dr-author-statement h3{margin:0 0 8px}.dr-author-statement p{font-size:15px;margin:0}.dr-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:25px;font-size:11px;color:#68796c}
 @media(max-width:760px){.dr-hero,.dr-pair,.dr-score-method{grid-template-columns:1fr;gap:18px}.dr-summary,.dr-method-grid{grid-template-columns:1fr}.dr-wrap{padding:18px 16px 30px}.dr-section{padding:25px 0}.dr-hero h2{font-size:40px}.dr-credit{grid-template-columns:1fr}.dr-credit span{margin-bottom:7px}.dr-top{margin-bottom:17px}.dr-audit{min-width:610px}.dr-chart,.dr-score-chart{padding:12px}.dr-summary>div{padding:15px}.dr-weight{grid-template-columns:minmax(105px,1.4fr) 1fr 23px}.dr-footer{flex-direction:column;align-items:flex-start}}
 @media print{body.dr-open{display:block!important;height:auto!important;overflow:visible!important;background:white!important}body.dr-open .app-header,body.dr-open>.layout,.dr-top,.dr-nav,.dr-footer button{display:none!important}.rationale{overflow:visible!important;background:white!important}.dr-wrap{max-width:none;padding:0}.dr-hero,.dr-pair,.dr-score-method{grid-template-columns:1fr 1fr;gap:15px}.dr-summary,.dr-method-grid{grid-template-columns:repeat(3,1fr)}.dr-hero h2{font-size:35pt}.dr-section-heading h2{font-size:22pt}.dr-section{break-before:page;padding:12px 0;border:0}.dr-hero,.dr-summary,figure,.dr-method-grid,.dr-author-statement,.dr-audit tr{break-inside:avoid}.dr-svg{max-height:260px}.rationale{font-size:10pt;line-height:1.35}.rationale h3{font-size:12pt}.rationale blockquote{font-size:11pt}.dr-audit{min-width:0;font-size:9pt}.dr-audit td,.dr-audit th{padding:7px}.dr-note{font-size:9pt}.dr-table-wrap{overflow:visible}.dr-section-heading p{font-size:11pt}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:13mm}}
@@ -584,10 +578,13 @@
   </svg>
   <h1><span class="app-brand-name">Poly Nation</span> <span class="app-brand-caption">Cross Pollination Laboratory</span></h1>
  </div><div class="header-actions">
-<button id="openMaterials" type="button" aria-controls="materialsPhase" aria-expanded="false">Materials</button>
-<button id="openRationale" type="button" aria-controls="designRationale" aria-expanded="false">Design rationale</button>
+<nav class="workspace-nav" aria-label="Project workspaces">
+ <button id="openMassing" type="button" aria-controls="massingPhase" aria-current="page">Massing</button>
+ <button id="openMaterials" type="button" aria-controls="materialsPhase">Materials</button>
+ <button id="openRationale" type="button" aria-controls="designRationale">Design rationale</button>
+</nav>
 <details class="file-menu"><summary>Files &amp; export</summary><div class="file-menu-content"><button id="import">Load JSON</button><input accept=".json,application/json" hidden="" id="importFile" type="file"/><button id="export">Save JSON</button><div class="menu-label">3D geometry</div><button id="export3DM">Export 3DM</button><button id="exportRhinoScript" title="Offline alternative: run this generated Python script inside Rhino">Rhino script</button></div></details><span aria-live="polite" id="exportStatus" role="status"></span><span class="credit" id="saveStatus" style="align-self:center"></span></div></header>
-<div class="layout"><aside id="design-panel"><div class="topology-persistent" id="program-panel-0">
+<div class="layout" id="massingPhase"><aside id="design-panel"><div class="topology-persistent" id="program-panel-0">
 <div class="topology-heading">
 <h2>Topology Designer</h2>
 <button class="mobile-jump" id="returnModelMobile" type="button">Model ↑</button>
@@ -596,7 +593,7 @@
 <div class="topology-controls" id="topologyControls">
 <p class="hint topology-instructions"><strong>Drag nodes</strong> closer or farther apart to weigh relationships. <strong>Click lines</strong> to set Attract, Repel or Neutral. <strong>Click nodes</strong> to toggle clustering. This guides room and module placement.</p><svg aria-label="Draggable program relationship map" class="wheel" id="wheel" viewbox="0 0 400 280"></svg><div class="relationship-key"><span><i style="border-color:#47866a"></i>Attract</span><span><i style="border-color:#999f99;border-top-style:dotted"></i>Neutral</span><span><i style="border-color:#bd665c;border-top-style:dashed"></i>Repel</span></div><div id="affinityField"></div><div aria-live="polite" class="hint relation-status-compact" id="relationStatus">Click a line to cycle its relationship. Clustering strength applies to the programs toggled on.</div><div class="legend" id="legend" style="margin-top:5px"></div><p class="hint" id="repelStatus" role="status" hidden></p><p class="hint" id="firehallStatus" role="status" hidden></p></div></div>
 <div aria-label="Design and simulation settings" class="panel-tabs" role="tablist"><button aria-controls="design-panel-0" aria-selected="true" data-panel="design-panel-0" id="design-panel-0-tab" role="tab" tabindex="0" type="button">Building</button><button aria-controls="design-panel-1" aria-selected="false" data-panel="design-panel-1" id="design-panel-1-tab" role="tab" tabindex="-1" type="button">Modules</button><button aria-controls="design-panel-2" aria-selected="false" data-panel="design-panel-2" id="design-panel-2-tab" role="tab" tabindex="-1" type="button">Features</button><button aria-controls="cpPaneAllocation" aria-selected="false" data-panel="cpPaneAllocation" id="cpPaneAllocation-tab" role="tab" tabindex="-1" type="button">Allocation</button><button aria-controls="cpPaneVisitors" aria-selected="false" data-panel="cpPaneVisitors" id="cpPaneVisitors-tab" role="tab" tabindex="-1" type="button">Visitors</button><button aria-controls="cpPaneScore" aria-selected="false" data-panel="cpPaneScore" id="cpPaneScore-tab" role="tab" tabindex="-1" type="button">Score</button></div>
-<div class="design-scroll" id="designSettings"><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; entrance calculations</summary><div class="readout"><span>Entrance / lobby</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details></div></div></aside>
+<div class="design-scroll" id="designSettings"><div aria-labelledby="design-panel-0-tab" class="tab-panel" id="design-panel-0" role="tabpanel"><div class="section"><h2>Core geometry</h2><label class="check"><input checked="" id="autoCore" type="checkbox"/> Auto-size core within area cap</label><div id="coreFields"></div><p class="hint">Auto-size distributes the available floor area across the ring. Disable it to set the footprint manually.</p><div class="readout"><span>Actual ring width</span><b id="actualWidth"></b></div><details class="calc-details"><summary>Geometry &amp; lobby calculations</summary><div class="readout"><span>Lobby atriums</span><b id="lobbyArea"></b></div><div class="readout"><span>Upper-level void</span><b id="lobbyVoid"></b></div><div class="readout"><span>Lobby volume</span><b id="lobbyVolume"></b></div><div class="readout"><span>Entrance slots reserved</span><b id="lobbyBlocked"></b></div><div class="readout"><span>Outdoor public plaza</span><b id="plazaArea"></b></div><div class="readout"><span>Exterior wall thickness</span><b id="wallThickness"></b></div><div class="readout"><span>Outer diameter</span><b id="diameter"></b></div><div class="readout"><span>Ring / level</span><b id="ringArea"></b></div><div class="readout"><span>Greenhouse / ground</span><b id="courtArea"></b></div><p class="hint">Lobby counts once; the void above removes upper-floor area. The continuous exterior public plaza is open-air space outside the enclosed-area budget.</p><p class="hint">Auto mode solves the footprint from the remaining program area, floors and preferred ring width. Only the ring repeats on upper levels.</p></details><p class="status" id="geometryWarning"></p></div><div class="section"><h2>Circulation &amp; lifts</h2><div id="circulationFields"></div><div id="mixField"></div><div class="readout"><span>Actual outer corridor</span><b id="corridorActual"></b></div><details class="calc-details"><summary>Circulation breakdown</summary><div class="readout"><span>Corridors / links</span><b id="corridorArea"></b></div><div class="readout"><span>Two lift blocks</span><b id="elevatorArea"></b></div><div class="readout"><span>Shared lobbies</span><b id="hubArea"></b></div><div class="readout"><span>Shared lobby count</span><b id="hubCount"></b></div><div class="readout"><span>Attracted pairs with a hub</span><b id="hubCoverage"></b></div><details class="pair-controls"><summary>Shared lobby connections</summary><div class="pair-list" id="hubPairs"></div></details><div class="readout"><span>Total circulation</span><b id="circulationArea"></b></div></details><p class="status" id="circulationWarning"></p><p class="hint">The outer corridor links every active dock. Attracted programs can share gathering lobbies.</p><div class="legend"><span><i class="dot" style="background:#eee9da"></i>Corridor</span><span><i class="dot" style="background:#80509e"></i>Shared lobby</span><span><i class="dot" style="background:#777a91"></i>Lift</span></div></div></div><div aria-labelledby="design-panel-1-tab" class="tab-panel" hidden="" id="design-panel-1" role="tabpanel"><div class="section"><h2>Modular system</h2><div id="moduleFields"></div><div class="readout"><span>Maximum modules</span><b id="maxModules"></b></div><details class="calc-details"><summary>Module dimensions &amp; capacity</summary><div class="readout"><span>Module dimensions</span><b>4.5 × 18 × 3.5 m</b></div><div class="readout"><span>Module area</span><b>81 m²</b></div><div class="readout"><span>Slots / floor</span><b id="slots"></b></div></details><p class="status" id="capacityWarning"></p><p class="hint">Radial pods are 81 m² each. The actual count is limited by space and program demand.</p></div><div class="section"><h2>Vacant slots</h2><p class="hint">These four shares divide the unoccupied docking slots. Retail uses enclosed floor area; gardens and balconies do not.</p><div class="readout"><span>Available slots</span><b id="vacantCount"></b></div><div class="area-bar" id="vacancyBar" style="margin-top:10px"></div><div id="vacancyFields"></div><div class="readout"><span>Balconies + gardens</span><b id="outdoorArea"></b></div><div class="readout"><span>Retail GFA (within cap)</span><b id="retailArea"></b></div></div></div><div aria-labelledby="design-panel-2-tab" class="tab-panel" hidden="" id="design-panel-2" role="tabpanel"><div class="section"><h2>Attractions</h2><div id="featureFields"></div><div class="field"><label for="atriumBridges">Atrium bridges</label><select id="atriumBridges"><option value="off">Off</option><option value="radial">Radial</option><option value="aligned">Vertically aligned</option></select><p class="hint" id="bridgeInfo" hidden></p></div><div id="climbFields"></div><div class="readout"><span>Climbing wall</span><b id="climbSize"></b></div><div class="readout"><span>Climbing slots reserved</span><b id="climbBlocked"></b></div><div class="readout"><span>Slide / climb clearance</span><b id="climbClearance"></b></div><p class="hint">Width 0 turns climbing off. Height is capped at 19.8 m (65 ft). Climbers always return to the base. The slide bows outward at crossings; 5 m is a conceptual clear zone, not a certified safety distance.</p><div class="readout"><span>Slide run</span><b id="slideRun"></b></div><div class="readout"><span>Direct room connections</span><b id="slideConnections"></b></div><div class="readout"><span>Slots blocked by slide</span><b id="blockedSlots"></b></div><details class="calc-details"><summary>Ride &amp; slide calculations</summary><div class="readout"><span>Ride height</span><b id="rideHeight"></b></div><div class="readout"><span>Swing cruise speed</span><b>40 km/h · 8.8 rpm</b></div><div class="readout"><span>Ride cycle</span><b id="swingPhase">At the top / 136 s</b></div><p class="hint">60 seconds at the top; the ride follows simulation time while visitors are active. When paused, an empty ride can animate independently; queued or boarded riders pause with the simulation.</p><div class="readout"><span>Slide-side room detours</span><b id="slideDetours"></b></div><div class="readout"><span>Slide descent</span><b id="slideLevels"></b></div></details><p class="status" id="slideWarning"></p><p class="hint">The slide joins Infinite Rinse rooms directly and reserves any docking slots it crosses.</p></div><div class="section"><h2>Public rooftop</h2><div class="readout"><span>Open roof landscape</span><b id="roofPublic"></b></div><div class="readout"><span>Roof retail pavilions</span><b id="roofRetail"></b></div><details class="calc-details"><summary>Roof area breakdown</summary><div class="readout"><span>Lift access + service</span><b id="roofService"></b></div></details><p class="hint">The annular rooftop is public outdoor space. Enclosed commercial pavilions and lift extensions count toward floor area.</p></div><div class="section"><h2>Display options</h2><label class="check"><input checked="" id="showModules" type="checkbox"/> Show exterior modules + shared slots</label><p class="hint">Use the visible-level control below the model to progressively reveal lower floors.</p><label class="check"><input checked="" id="roof" type="checkbox"/> Transparent greenhouse roof</label><label class="check"><input checked="" id="grid" type="checkbox"/> Ground reference grid</label><label class="check"><input checked="" id="supports" type="checkbox"/> Show attachment frames</label><p class="credit">Meters throughout. Concept-stage geometric gross areas, not code-verified GFA.</p><label class="check"><input checked="" id="showPeople" type="checkbox"/> Show people</label><label class="check"><input checked="" id="showAnimals" type="checkbox"/> Show animals</label></div></div><div aria-labelledby="cpPaneAllocation-tab" class="tab-panel" hidden="" id="cpPaneAllocation" role="tabpanel"><h2>Core / module allocation</h2><p class="hint">Set each program’s preference for permanent or modular space. Actual allocations are shown below; remaining program fits in the core.</p><div id="programFields"></div><p class="status" id="allocationWarning"></p></div><div aria-labelledby="cpPaneVisitors-tab" class="tab-panel" hidden="" id="cpPaneVisitors" role="tabpanel"><h2>Live occupancy</h2><p class="hint" hidden="" id="cpNoEntry">No usable entrance: only wildlife is simulated.</p><div id="simFields"></div><div class="readout"><span>Visitors on site</span><b id="simPeople">—</b></div><div class="readout"><span>Non-human visitors</span><b id="simAnimals">—</b></div><div class="readout"><span>Shared-lobby visits</span><b id="simGather">—</b></div><div class="readout"><span>Ride / slide visits</span><b id="simFun">—</b></div><button id="simRestart" style="width:100%;margin-top:8px">Restart simulation</button><p class="hint">Conceptual visitors and wildlife. Pause with Simulation; hide species with People / Animals.</p></div><div aria-labelledby="cpPaneScore-tab" class="tab-panel" hidden="" id="cpPaneScore" role="tabpanel"><h2>Cross-pollination analysis</h2><div class="readout"><span>Encounters</span><b id="cpEncounters">0</b></div><div class="readout"><span>Different previous rooms</span><b id="cpMemory">0</b></div><div class="readout"><span>Different programs</span><b id="cpPrograms">0</b></div><div class="readout"><span>Human / non-human</span><b id="cpSpecies">0</b></div><div class="readout"><span>All cross-species encounters</span><b id="cpCrossSpecies">0</b></div><div class="readout"><span>Recent ride experience</span><b id="cpFun">0</b></div><div class="readout"><span>Simulated time</span><b id="cpTime">0 s</b></div><details open=""><summary>Encounter breakdown</summary><div id="cpBreakdown"></div></details><details><summary>Scoring weights &amp; method</summary><div id="cpWeights"></div><p class="hint">Pairs within 2.5 m in the same accessible space (or adjoining corridor cells) earn points with time together. Each encounter earns at most 15 seconds of credit (base weight per 10 seconds); a pair must separate for 8 seconds before a new encounter. Memory records the last room or module departed, not the current one. Different remembered rooms, different programs, recent fun (90 seconds) and cross-species contact multiply the score. This is a design heuristic, not a measured social outcome.</p></details></div></div></aside>
 <main class="center"><div class="model-stage"><div class="viewport" id="viewport"><canvas aria-label="Interactive three-dimensional massing model" id="canvas"></canvas><span class="program-hover-label" id="programHoverLabel" hidden></span><div class="view-top"><div class="actions"><button id="axo" title="Axonometric view">3D</button><button id="plan" title="Top view">Plan</button><button id="side" title="Ground-level side view">Side</button><button id="fit" title="Reset zoom and vertical pan">Fit</button><button class="mobile-jump" id="jumpTopology" type="button">Topology ↓</button></div></div><div class="view-bottom"><span id="programEditHint" hidden>Click a room, module, or green dock to assign its program.</span><span id="orbitHint">Orbit: left drag  ·  Pan: right drag  ·  Zoom: scroll</span></div>
 <div class="actions model-actions" role="group" aria-label="Massing design actions">
  <button id="shuffle" type="button" title="Generate a new layout with the same settings">New variation</button>
@@ -659,8 +656,8 @@
  <article id="dr01" class="dr-section"><div class="dr-section-heading"><span>01 / ARCHITECTURAL FRAMEWORK</span><h2>A stable core. A changing periphery.</h2><p>Geometry becomes an infrastructure for future programmatic change, rather than a fixed distribution of rooms.</p></div><div class="dr-pair"><figure><svg class="dr-svg" viewBox="0 0 560 320" role="img" aria-label="Ring diagram" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrRin" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="320" fill="#f5f6f0" rx="8"/><text x="18" y="25" font-size="11" font-weight="650" text-anchor="start" fill="#69776d">RADIAL PLAN</text><circle cx="181" cy="161" r="103" fill="#d9dfd4" stroke="#b7c1b4" stroke-width="1"/><circle cx="181" cy="161" r="58" fill="#c8d7c2" stroke="none" stroke-width="1"/><path d="M268.97 163.20 A88 88 0 0 1 258.29 203.08 L232.82 189.21 A59 59 0 0 0 239.98 162.47 Z" fill="#72a9c8" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M256.09 206.89 A88 88 0 0 1 226.89 236.09 L211.77 211.34 A59 59 0 0 0 231.34 191.77 Z" fill="#d681a7" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M223.08 238.29 A88 88 0 0 1 183.20 248.97 L182.47 219.98 A59 59 0 0 0 209.21 212.82 Z" fill="#8bb28a" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M178.80 248.97 A88 88 0 0 1 138.92 238.29 L152.79 212.82 A59 59 0 0 0 179.53 219.98 Z" fill="#e0bb62" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M135.11 236.09 A88 88 0 0 1 105.91 206.89 L130.66 191.77 A59 59 0 0 0 150.23 211.34 Z" fill="#d681a7" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M103.71 203.08 A88 88 0 0 1 93.03 163.20 L122.02 162.47 A59 59 0 0 0 129.18 189.21 Z" fill="#d46f62" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M93.03 158.80 A88 88 0 0 1 103.71 118.92 L129.18 132.79 A59 59 0 0 0 122.02 159.53 Z" fill="#72a9c8" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M105.91 115.11 A88 88 0 0 1 135.11 85.91 L150.23 110.66 A59 59 0 0 0 130.66 130.23 Z" fill="#d681a7" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M138.92 83.71 A88 88 0 0 1 178.80 73.03 L179.53 102.02 A59 59 0 0 0 152.79 109.18 Z" fill="#8bb28a" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M183.20 73.03 A88 88 0 0 1 223.08 83.71 L209.21 109.18 A59 59 0 0 0 182.47 102.02 Z" fill="#72a9c8" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M226.89 85.91 A88 88 0 0 1 256.09 115.11 L231.34 130.23 A59 59 0 0 0 211.77 110.66 Z" fill="#d46f62" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><path d="M258.29 118.92 A88 88 0 0 1 268.97 158.80 L239.98 159.53 A59 59 0 0 0 232.82 132.79 Z" fill="#d681a7" stroke="#f5f6f0" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="181" cy="161" r="95" stroke="#eee9da" stroke-width="12" fill="none"/><g transform="translate(181 161) rotate(0.0)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#72a9c8" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(16.363636363636363)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#d7ddd3" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(32.72727272727273)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#d46f62" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(49.09090909090909)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#e0bb62" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(65.45454545454545)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#8bb28a" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(81.81818181818181)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#72a9c8" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(98.18181818181819)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#91b3c0" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(114.54545454545455)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#d46f62" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(130.9090909090909)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#e0bb62" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(147.27272727272728)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#8bb28a" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(163.63636363636363)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#72a9c8" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(180.0)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#d681a7" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(196.36363636363637)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#7ca475" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(212.72727272727272)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#e0bb62" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(229.0909090909091)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#8bb28a" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(245.45454545454547)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#72a9c8" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(261.8181818181818)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#b9a2ce" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(278.1818181818182)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#d46f62" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(294.54545454545456)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#e0bb62" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(310.90909090909093)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#8bb28a" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(327.27272727272725)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#72a9c8" stroke="#b7c1b4"/></g><g transform="translate(181 161) rotate(343.6363636363636)"><rect x="104" y="-5.5" width="40" height="11" rx="1" fill="#d681a7" stroke="#b7c1b4"/></g><text x="181" y="153" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">INFINITE</text><text x="181" y="168" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">RINSE</text><text x="181" y="184" font-size="10" font-weight="450" text-anchor="middle" fill="#34483e">greenhouse</text><path d="M237 106L306 58" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="314" y="58" font-size="11" font-weight="450" text-anchor="start" fill="#69776d">Permanent core</text><path d="M295 183L335 174" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="345" y="176" font-size="11" font-weight="450" text-anchor="start" fill="#69776d">Radial docking</text><text x="369" y="26" font-size="11" font-weight="650" text-anchor="start" fill="#69776d">REMOVABLE POD</text><rect x="393" y="83" width="112" height="28" rx="1" fill="#d681a7" stroke="#34483e"/><path d="M393 70H505M393 66V74M505 66V74" fill="none" stroke="#34483e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="449" y="62" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">18 m</text><path d="M519 83V111M515 83H523M515 111H523" fill="none" stroke="#34483e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="530" y="100" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">4.5 m</text><text x="449" y="134" font-size="18" font-weight="650" text-anchor="middle" fill="#34483e">81 m²</text><text x="349" y="207" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">A vacant attachment can become:</text><rect x="349" y="219" width="17" height="12" rx="2" fill="#d7ddd3" stroke="#b7c1b4"/><text x="374" y="229" font-size="11" font-weight="450" text-anchor="start" fill="#34483e">Empty</text><rect x="349" y="239" width="17" height="12" rx="2" fill="#91b3c0" stroke="#b7c1b4"/><text x="374" y="249" font-size="11" font-weight="450" text-anchor="start" fill="#34483e">Balcony</text><rect x="349" y="259" width="17" height="12" rx="2" fill="#7ca475" stroke="#b7c1b4"/><text x="374" y="269" font-size="11" font-weight="450" text-anchor="start" fill="#34483e">Garden</text><rect x="349" y="279" width="17" height="12" rx="2" fill="#b9a2ce" stroke="#b7c1b4"/><text x="374" y="289" font-size="11" font-weight="450" text-anchor="start" fill="#34483e">Retail</text></svg><figcaption>Conceptual plan and module anatomy. The ring and its rooms endure; exterior units and uses can be reconfigured. Diagram not to scale.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Set a radial annular core surrounded by removable, outward-facing modules; place the greenhouse / biofilter in the full-height central space as Infinite Rinse.</li><li>Let the designer adjust the number of floors, footprint, ring width and module count. Make the core itself a mixed-program environment, not a single-use support structure for the modules.</li><li>Use 4.5 × 18 m single modules (81 m²). Earlier studio brief also contemplated 9 × 18 m doubles (162 m²); the laboratory currently instantiates singles only.</li><li>Allow unoccupied docking positions to remain vacant or support public balconies, community gardens or retail; make those shares configurable.</li></ul><h3><span class="dr-key ai">AI implementation</span> Computational translation</h3><p>Annular geometry, angular docking slots by level, seeded layout generation and collision reservations. The 4.2 m floor-to-floor, 3.5 m module height in the app, docking gap, frame geometry and default dimensions are model assumptions or carried-forward brief parameters, not structural verification. Modules are discrete 81 m² units, not fractions.</p></div></div></article>
  <article id="dr02" class="dr-section"><div class="dr-section-heading"><span>02 / PROGRAM &amp; AREA</span><h2>One program budget, two modes of occupation.</h2><p>Permanent space and modular space are distributions of the same demand.</p></div><div class="dr-pair"><figure><div class="dr-chart"><div class="dr-chart-legend"><span><i style="background:#56695a"></i>Core share</span><span><i style="background:#d9ded5"></i>Modular share</span></div><div class="dr-program"><div><span><i style="background:#72a9c8"></i>Infinite Rinse</span><b>7,500 m²</b></div><div class="dr-bar" style="width:93.75%"><i style="width:80%;background:#72a9c8"></i><i style="width:20%;background:#72a9c8;opacity:.35"></i></div><small>80% requested core · 20% modular</small></div><div class="dr-program"><div><span><i style="background:#d681a7"></i>Love hotel</span><b>8,000 m²</b></div><div class="dr-bar" style="width:100.0%"><i style="width:35%;background:#d681a7"></i><i style="width:65%;background:#d681a7;opacity:.35"></i></div><small>35% requested core · 65% modular</small></div><div class="dr-program"><div><span><i style="background:#d46f62"></i>Marine firehall</span><b>1,500 m²</b></div><div class="dr-bar" style="width:18.75%"><i style="width:75%;background:#d46f62"></i><i style="width:25%;background:#d46f62;opacity:.35"></i></div><small>75% requested core · 25% modular</small></div><div class="dr-program"><div><span><i style="background:#e0bb62"></i>Daycare</span><b>1,000 m²</b></div><div class="dr-bar" style="width:12.5%"><i style="width:40%;background:#e0bb62"></i><i style="width:60%;background:#e0bb62;opacity:.35"></i></div><small>40% requested core · 60% modular</small></div><div class="dr-program"><div><span><i style="background:#8bb28a"></i>Senior care</span><b>2,000 m²</b></div><div class="dr-bar" style="width:25.0%"><i style="width:35%;background:#8bb28a"></i><i style="width:65%;background:#8bb28a;opacity:.35"></i></div><small>35% requested core · 65% modular</small></div><div class="dr-total"><b>Total base target</b><strong>20,000 m²</strong></div></div><figcaption>Original program targets and initial core-share slider values documented in the brief. Actual generated areas may differ after shared space and physical constraints.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Set five programs and target areas: Infinite Rinse (water treatment, museum, greenhouse), Love hotel, Marine firehall, Daycare, Senior care.</li><li>Allow each program to have its own proportion of permanent core vs. modular accommodation.</li><li>Originally impose a hard 20,000 m² limit, then make the cap adjustable with 20,000 m² remaining the default.</li><li>Require variable-sized internal rooms, with sizes suited to the programs; later reject the tiny rooms produced by the first implementation.</li></ul><h3><span class="dr-key ai">AI implementation</span> Accounting and packing</h3><p>Reserve greenhouse area once; distribute remaining program capacity, use whole modules, and account for enclosed retail, shared circulation, core lobby and rooftop lift/service enclosures. Open plaza, gardens and balconies do not add enclosed GFA. The 80 m² default minimum, 40–200 m² range, room-size bands, proportional allocation and residual-room merging are AI-developed numerical/packing choices. The minimum is for gross program zones, not individual suites or a code minimum.</p></div></div><div class="dr-equation"><b>Enclosed area</b> = ring floors − upper entrance void + greenhouse at grade + enclosed modules / retail + enclosed roof structures ≤ selected area cap.<small>Circulation, lifts and shared lobbies inside the ring are already in the ring area; never add them twice. Detailed GFA and wall measurement conventions are not code-verified.</small></div><blockquote>“Maybe add a few random ‘rooms’ on the roof too that are retail/commercial space.”<cite>Student request · V2.9 iteration (quotation punctuation normalized)</cite></blockquote></article>
  <article id="dr03" class="dr-section"><div class="dr-section-heading"><span>03 / TOPOLOGY DESIGNER</span><h2>Relationships are the design input.</h2><p>The Topology Designer starts with a graph of program relationships. The same graph shapes rooms in the permanent ring and docks along its edge.</p></div><div class="dr-pair"><figure><svg class="dr-svg" viewBox="0 0 560 320" role="img" aria-label="Topology diagram" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrTop" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="320" fill="#f5f6f0" rx="8"/><text x="20" y="26" font-size="11" font-weight="650" text-anchor="start" fill="#69776d">ABSTRACT RELATIONSHIPS</text><path d="M154.00 56.00L249.00 125.00" fill="none" stroke="#47866a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><path d="M154.00 56.00L213.00 241.00" fill="none" stroke="#9ca59c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 5" /><path d="M154.00 56.00L87.00 241.00" fill="none" stroke="#9ca59c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 5" /><path d="M154.00 56.00L59.00 125.00" fill="none" stroke="#9ca59c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 5" /><path d="M249.00 125.00L213.00 241.00" fill="none" stroke="#9ca59c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 5" /><path d="M249.00 125.00L87.00 241.00" fill="none" stroke="#bd665c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5" /><path d="M249.00 125.00L59.00 125.00" fill="none" stroke="#9ca59c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 5" /><path d="M213.00 241.00L87.00 241.00" fill="none" stroke="#9ca59c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 5" /><path d="M213.00 241.00L59.00 125.00" fill="none" stroke="#9ca59c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 5" /><path d="M87.00 241.00L59.00 125.00" fill="none" stroke="#9ca59c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 5" /><circle cx="154" cy="56" r="24" fill="#72a9c8" stroke="white" stroke-width="2"/><text x="154" y="60" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">IR</text><circle cx="249" cy="125" r="24" fill="#d681a7" stroke="white" stroke-width="2"/><text x="249" y="129" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">LH</text><circle cx="213" cy="241" r="24" fill="#d46f62" stroke="white" stroke-width="2"/><text x="213" y="245" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">FH</text><circle cx="87" cy="241" r="24" fill="#e0bb62" stroke="white" stroke-width="2"/><text x="87" y="245" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">DC</text><circle cx="59" cy="125" r="24" fill="#8bb28a" stroke="white" stroke-width="2"/><text x="59" y="129" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">SC</text><circle cx="213" cy="241" r="30" fill="none" stroke="#34483e" stroke-width="2"/><text x="215" y="285" font-size="10" font-weight="450" text-anchor="middle" fill="#34483e">cluster enabled</text><text x="306" y="43" font-size="11" font-weight="650" text-anchor="start" fill="#69776d">TRANSLATE TO SPACE</text><rect x="310" y="78" width="49" height="28" rx="3" fill="#72a9c8" stroke="none"/><rect x="371" y="78" width="49" height="28" rx="3" fill="#d681a7" stroke="none"/><text x="334" y="96" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">IR</text><text x="395" y="96" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">LH</text><path d="M360 92H370" fill="none" stroke="#47866a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><text x="433" y="90" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Attract</text><text x="433" y="106" font-size="10" font-weight="450" text-anchor="start" fill="#69776d">Prefer adjacency</text><rect x="310" y="154" width="49" height="28" rx="3" fill="#d681a7" stroke="none"/><rect x="371" y="154" width="49" height="28" rx="3" fill="#e0bb62" stroke="none"/><text x="334" y="172" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">LH</text><text x="395" y="172" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">DC</text><path d="M360 168H370" fill="none" stroke="#bd665c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2" /><text x="433" y="166" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Repel</text><text x="433" y="182" font-size="10" font-weight="450" text-anchor="start" fill="#69776d">Prefer separation</text><rect x="310" y="230" width="49" height="28" rx="3" fill="#d46f62" stroke="none"/><rect x="371" y="230" width="49" height="28" rx="3" fill="#d46f62" stroke="none"/><text x="334" y="248" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">FH</text><text x="395" y="248" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">FH</text><path d="M360 244H370" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><text x="433" y="242" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Cluster</text><text x="433" y="258" font-size="10" font-weight="450" text-anchor="start" fill="#69776d">Align same program</text><text x="309" y="304" font-size="10" font-weight="450" text-anchor="start" fill="#69776d">Clustering strength applies to selected programs</text></svg><figcaption>Example relationship settings, not the default. By default all inter-program relationships are neutral and explicit clustering is off.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Use the distance between nodes to weight pair relationships. Group each program’s rooms and modules around one part of the ring when clustering is selected.</li><li>Explicitly distinguish attraction, repulsion and neutrality between program pairs. Start every pair neutral; do not impose a social hierarchy before the experiment.</li><li>Use relationships to influence both internal rooms and module placement. Give the core its own opportunities for cross-pollination, even with few modules.</li><li>Originally identify the firehall as one program that should be concentrated and vertically aligned; then generalize that requirement into an optional clustering toggle on every node, off by default.</li></ul><h3><span class="dr-key ai">AI implementation</span> Heuristics</h3><p>Attraction favors adjacent rooms and can create a shared lobby where space allows. Repel prioritizes separation among rooms and modules on the same floor, while permitting vertical neighbors and shared public routes. Neutral carries no pair-specific preference. Selected programs cluster even at 0%, with the slider adding emphasis independently of the pair relationships. The seeded room and dock solvers balance those preferences with area, circulation and the available geometry.</p><div class="dr-callout"><strong>Ground-first Firehall</strong><p>Firehall modules fill compatible ground-floor docks first. Each higher floor can have at most as many Firehall modules as the floor directly below. Clustering can still group the Firehall around a common part of the ring.</p></div></div></div><blockquote>“The default for all program types should be neutral”<br/>“Actually maybe all programming can have that option but by default it's turned of. It can be a toggle when you click on the icon in the topology designer”<cite>Student requests · V2.8.1 and V3.1 iterations</cite></blockquote></article>
- <article id="dr04" class="dr-section"><div class="dr-section-heading"><span>04 / CIRCULATION AS SOCIAL INFRASTRUCTURE</span><h2>Attraction becomes a place to gather.</h2><p>Circulation is more than a route to a destination: it shapes whether different programs meet.</p></div><div class="dr-pair"><figure><svg class="dr-svg" viewBox="0 0 560 298" role="img" aria-label="Gathering diagrams" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrGat" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="298" fill="#f5f6f0" rx="8"/><text x="20" y="24" font-size="12" font-weight="650" text-anchor="start" fill="#47866a">ATTRACT</text><text x="302" y="24" font-size="12" font-weight="650" text-anchor="start" fill="#a3645b">NEUTRAL / REPEL</text><rect x="20" y="46" width="238" height="174" rx="3" fill="#dce2d8" stroke="#b7c1b4"/><rect x="20" y="178" width="238" height="42" rx="0" fill="#eee9da" stroke="none"/><text x="139" y="204" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Public corridor</text><rect x="302" y="46" width="238" height="174" rx="3" fill="#dce2d8" stroke="#b7c1b4"/><rect x="302" y="178" width="238" height="42" rx="0" fill="#eee9da" stroke="none"/><text x="421" y="204" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Public corridor</text><rect x="30" y="55" width="83" height="113" rx="3" fill="#72a9c8" stroke="#b7c1b4"/><rect x="165" y="55" width="83" height="113" rx="3" fill="#d681a7" stroke="#b7c1b4"/><rect x="113" y="55" width="52" height="113" rx="1" fill="#b79ac5" stroke="#b7c1b4"/><rect x="119" y="83" width="40" height="56" rx="3" fill="#80509e" stroke="none"/><rect x="122" y="88" width="9" height="43" rx="2" fill="#e4d4bb" stroke="none"/><rect x="148" y="89" width="8" height="43" rx="2" fill="#e4d4bb" stroke="none"/><circle cx="140" cy="110" r="7" fill="#d9bb90" stroke="none" stroke-width="1"/><text x="71" y="115" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">IR</text><text x="206" y="115" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">LH</text><path d="M96 114H119M159 114H182M139 156V189" fill="none" stroke="#506d58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"  /><g transform="translate(132 148) scale(0.53)"><circle cx="0" cy="-15" r="5" fill="#3b443e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#3b443e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(152 150) scale(0.48)"><circle cx="0" cy="-15" r="5" fill="#3b443e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#3b443e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><text x="137" y="239" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Shared gathering lobby</text><rect x="312" y="55" width="107" height="113" rx="3" fill="#d681a7" stroke="#b7c1b4"/><rect x="423" y="55" width="107" height="113" rx="3" fill="#e0bb62" stroke="#b7c1b4"/><path d="M421 56V170" fill="none" stroke="#59665c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><path d="M365 157V195M476 157V195" fill="none" stroke="#687c6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"  /><text x="366" y="115" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">LH</text><text x="477" y="115" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">DC</text><text x="421" y="239" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Separate thresholds</text><text x="280" y="279" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Shared network remains available to everyone</text></svg><figcaption>Attract → shared lobby when feasible; neutral/repel → separate thresholds to the public network. Wall and door graphics are conceptual.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Two elevator blocks on opposite sides, one aligned to the swing ride access; an outer corridor connects all occupied docking positions. Make corridor width adjustable; introduce internal variation rather than pure randomness.</li><li>Avoid direct connections between repelling programs and encourage direct connections for attracting ones. Turn the space between attracted programs into a shared lobby where different occupants can linger.</li><li>Make those lobbies identifiable through furniture (rug, couches) and a color distinguishable from daycare.</li><li>Where the slide blocks modules, move the internal rooms against the façade and route the corridor behind them. The slide's endpoints must connect directly to Infinite Rinse rooms, not discharge into hallways.</li><li>Use an opaque exterior façade rather than curtain-wall glazing; remove visually overlapping room/wall geometry.</li></ul><h3><span class="dr-key ai">AI implementation</span> Geometry rules</h3><p>Generate annular corridor sectors, optional inner band, opposing lift sectors and room-door thresholds. Carve a purple shared zone out of adjacent attracted rooms when area and minimum clearance allow it; neutral and repel pairs keep independent entrances. The AI chose numerical thresholds, 500 mm nominal wall thickness (reduced if needed), and a rerouting method. A shared public corridor is still available to repelled programs.</p></div></div><figure class="dr-wide-diagram"><svg class="dr-svg" viewBox="0 0 600 215" role="img" aria-label="Detour diagram" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrDet" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="600" height="215" fill="#f5f6f0" rx="8"/><text x="23" y="26" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">TYPICAL DOCK FRONTAGE</text><text x="320" y="26" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">SLIDE BLOCKS DOCKS</text><rect x="20" y="68" width="260" height="9" rx="0" fill="#aaa99f" stroke="none"/><rect x="320" y="68" width="260" height="9" rx="0" fill="#aaa99f" stroke="none"/><rect x="25" y="39" width="57" height="25" rx="2" fill="#72a9c8" stroke="#b7c1b4"/><rect x="25" y="121" width="57" height="53" rx="2" fill="#d681a7" stroke="#b7c1b4"/><rect x="89" y="39" width="57" height="25" rx="2" fill="#d681a7" stroke="#b7c1b4"/><rect x="89" y="121" width="57" height="53" rx="2" fill="#d46f62" stroke="#b7c1b4"/><rect x="153" y="39" width="57" height="25" rx="2" fill="#d46f62" stroke="#b7c1b4"/><rect x="153" y="121" width="57" height="53" rx="2" fill="#e0bb62" stroke="#b7c1b4"/><rect x="217" y="39" width="57" height="25" rx="2" fill="#e0bb62" stroke="#b7c1b4"/><rect x="217" y="121" width="57" height="53" rx="2" fill="#8bb28a" stroke="#b7c1b4"/><rect x="20" y="80" width="260" height="37" rx="0" fill="#eee9da" stroke="none"/><text x="150" y="103" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Outer corridor</text><path d="M342 57Q445 17 556 57" fill="none" stroke="#287fa7" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"  /><path d="M320 100H374V161H524V100H580" fill="none" stroke="#eee9da" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"  /><rect x="328" y="123" width="34" height="51" rx="2" fill="#d681a7" stroke="none"/><rect x="389" y="80" width="121" height="59" rx="2" fill="#72a9c8" stroke="#b7c1b4"/><rect x="542" y="123" width="34" height="51" rx="2" fill="#8bb28a" stroke="none"/><text x="450" y="105" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">IR landing /</text><text x="450" y="120" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">façade rooms</text><text x="448" y="166" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">Inward bypass</text><path d="M322 100H374V161H524V100H578" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 4" /><text x="450" y="201" font-size="11" font-weight="450" text-anchor="middle" fill="#69776d">Direct connection to the slide</text></svg><figcaption>Slide-side topology changes the floor plan: the normal outer ring gives way locally to an inward bypass.</figcaption></figure><blockquote>“Maybe lobby areas have like a rug and couches visual to symbolize gathering.”<cite>Student request · V3.1 iteration</cite></blockquote></article>
- <article id="dr05" class="dr-section"><div class="dr-section-heading"><span>05 / PUBLIC REALM</span><h2>Every spare surface is an opportunity.</h2><p>Public activity occurs at the ground, along the modular perimeter, inside the central atrium and on the roof.</p></div><div class="dr-pair"><figure><svg class="dr-svg" viewBox="0 0 560 320" role="img" aria-label="Public section" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrPub" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="320" fill="#f5f6f0" rx="8"/><text x="20" y="25" font-size="11" font-weight="650" text-anchor="start" fill="#69776d">PUBLIC SPACE AT EVERY LEVEL</text><rect x="126" y="133" width="320" height="125" rx="0" fill="#d9ded4" stroke="#b7c1b4"/><rect x="219" y="135" width="134" height="122" rx="0" fill="#e4eddf" stroke="#b7c1b4"/><path d="M218 133Q286 100 354 133" fill="#d8e9e7" stroke="#8faea5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><rect x="131" y="145" width="83" height="28" rx="1" fill="#72a9c8" stroke="#b7c1b4"/><rect x="72" y="145" width="53" height="28" rx="1" fill="#d46f62" stroke="#b7c1b4"/><rect x="356" y="145" width="83" height="28" rx="1" fill="#d681a7" stroke="#b7c1b4"/><rect x="443" y="145" width="53" height="28" rx="1" fill="#d46f62" stroke="#b7c1b4"/><rect x="131" y="183" width="83" height="28" rx="1" fill="#d681a7" stroke="#b7c1b4"/><rect x="72" y="183" width="53" height="28" rx="1" fill="#86a683" stroke="#b7c1b4"/><rect x="356" y="183" width="83" height="28" rx="1" fill="#d46f62" stroke="#b7c1b4"/><rect x="443" y="183" width="53" height="28" rx="1" fill="#86a683" stroke="#b7c1b4"/><rect x="131" y="221" width="83" height="28" rx="1" fill="#d46f62" stroke="#b7c1b4"/><rect x="72" y="221" width="53" height="28" rx="1" fill="#9ebbc5" stroke="#b7c1b4"/><rect x="356" y="221" width="83" height="28" rx="1" fill="#e0bb62" stroke="#b7c1b4"/><rect x="443" y="221" width="53" height="28" rx="1" fill="#9ebbc5" stroke="#b7c1b4"/><rect x="121" y="124" width="99" height="9" rx="0" fill="#86a683" stroke="none"/><rect x="354" y="124" width="97" height="9" rx="0" fill="#86a683" stroke="none"/><rect x="20" y="258" width="523" height="13" rx="0" fill="#d7cbb4" stroke="none"/><rect x="131" y="253" width="83" height="5" rx="0" fill="#eee9da" stroke="none"/><rect x="232" y="244" width="108" height="11" rx="0" fill="#86a683" stroke="none"/><rect x="379" y="103" width="36" height="20" rx="1" fill="#b99bc6" stroke="#b7c1b4"/><path d="M137 124V107" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="137" cy="105" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M193 124V107" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="193" cy="105" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M364 124V107" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="364" cy="105" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M441 124V107" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="441" cy="105" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M38 257V240" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="38" cy="238" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M90 257V240" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="90" cy="238" r="11" fill="#86a683" stroke="none" stroke-width="1"/><g transform="translate(51 244) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(176 110) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(439 110) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(277 235) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(474 197) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(86 197) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><text x="27" y="291" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Entrance plaza</text><text x="216" y="290" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Greenhouse at grade</text><text x="20" y="60" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Public roof park</text><path d="M139 64L172 122" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="369" y="60" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Retail pavilion</text><path d="M406 64V100" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="367" y="307" font-size="11" font-weight="650" text-anchor="start" fill="#34483e">Balcony / garden docks</text><path d="M478 295L476 211" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /></svg><figcaption>Conceptual section: open public surfaces (green) and enclosed programming (colored) support different kinds of encounters.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Enlarge the exterior entrance floor past the module footprint so it becomes a decorated public plaza, not just a threshold; the entrance lobby is double-height.</li><li>Make the whole annular roof public, including greenery, walking paths, gardens, gazebos and scattered retail/commercial rooms.</li><li>Extend elevator access to the roof and provide overhead service space for both lift blocks. Preserve the transparent atrium roof as a distinct central element.</li><li>Use vacant dock spaces for public uses and the greenhouse as an inhabited setting, not a purely technical void.</li></ul><h3><span class="dr-key ai">AI implementation</span> Spatial details</h3><p>AI-generated planters, communal tables, benches, paving, gazebos, railings, a perimeter walking loop, seeded retail locations, lift overruns and a roof bridge. The default plaza extension and furniture dimensions are implementation decisions. Roof pavilions and lift enclosures consume budget; the outdoor park does not. Geometry remains conceptual.</p></div></div><blockquote>“Also the whole roof will be public space, green space, walking path, gardens, gazebos etc.”<cite>Student request · V2.9 iteration</cite></blockquote><div class="dr-callout"><strong>Later student refinement · continuous public realm</strong><p>Wrap the entire building in a connected exterior plaza linking the lobby and climbing wall. The student proposed patios, umbrellas, fountains, benches, picnic tables, planting, beach volleyball and pickleball, with the neighboring programs influencing the character of the spaces. The AI translated this into a clear annular walking loop and program-influenced activity islands; their distribution and dimensions are implementation choices.</p></div><figure class="dr-wide-diagram"><svg class="dr-svg" viewBox="0 0 700 290" role="img" aria-label="Continuous plaza with activity islands and two inward connections"><rect width="700" height="290" fill="#f4f6f0" rx="6"/><circle cx="178" cy="145" r="124" fill="#ddd8cc"/><circle cx="178" cy="145" r="97" fill="none" stroke="#e9d9b7" stroke-width="9"/><circle cx="178" cy="145" r="86" fill="#f4f6f0"/><circle cx="178" cy="145" r="55" fill="#b8cbb0"/><circle cx="178" cy="145" r="31" fill="#dbe7da"/><g stroke="#f7f8f3" stroke-width="1.5"><rect x="232.14" y="150.55" width="30" height="10.8" rx="1" fill="#72a9c8" transform="rotate(9.0 247.14 155.95)"/><rect x="225.37" y="171.38" width="30" height="10.8" rx="1" fill="#72a9c8" transform="rotate(27.0 240.37 176.78)"/><rect x="212.50" y="189.10" width="30" height="10.8" rx="1" fill="#72a9c8" transform="rotate(45.0 227.50 194.50)"/><rect x="194.78" y="201.97" width="30" height="10.8" rx="1" fill="#72a9c8" transform="rotate(63.0 209.78 207.37)"/><rect x="131.22" y="201.97" width="30" height="10.8" rx="1" fill="#d681a7" transform="rotate(117.0 146.22 207.37)"/><rect x="113.50" y="189.10" width="30" height="10.8" rx="1" fill="#d681a7" transform="rotate(135.0 128.50 194.50)"/><rect x="100.63" y="171.38" width="30" height="10.8" rx="1" fill="#d46f62" transform="rotate(153.0 115.63 176.78)"/><rect x="93.86" y="150.55" width="30" height="10.8" rx="1" fill="#d46f62" transform="rotate(171.0 108.86 155.95)"/><rect x="93.86" y="128.65" width="30" height="10.8" rx="1" fill="#d46f62" transform="rotate(189.0 108.86 134.05)"/><rect x="100.63" y="107.82" width="30" height="10.8" rx="1" fill="#d46f62" transform="rotate(207.0 115.63 113.22)"/><rect x="113.50" y="90.10" width="30" height="10.8" rx="1" fill="#e0bb62" transform="rotate(225.0 128.50 95.50)"/><rect x="131.22" y="77.23" width="30" height="10.8" rx="1" fill="#e0bb62" transform="rotate(243.0 146.22 82.63)"/><rect x="194.78" y="77.23" width="30" height="10.8" rx="1" fill="#8bb28a" transform="rotate(297.0 209.78 82.63)"/><rect x="212.50" y="90.10" width="30" height="10.8" rx="1" fill="#8bb28a" transform="rotate(315.0 227.50 95.50)"/><rect x="225.37" y="107.82" width="30" height="10.8" rx="1" fill="#8bb28a" transform="rotate(333.0 240.37 113.22)"/><rect x="232.14" y="128.65" width="30" height="10.8" rx="1" fill="#8bb28a" transform="rotate(351.0 247.14 134.05)"/></g><path d="M178 199V246M178 91V43" stroke="#d6bb85" stroke-width="18"/><path d="M178 199V246M178 91V43" stroke="#7e8c7e" stroke-width="1.2" stroke-dasharray="4 3"/><rect x="164" y="89" width="28" height="5" fill="#a77b55"/><rect x="164" y="196" width="28" height="7" fill="#d6bb85"/><g fill="#9bb590"><circle cx="87" cy="206" r="7"/><circle cx="100" cy="219" r="7"/><circle cx="255" cy="73" r="7"/><circle cx="270" cy="88" r="7"/></g><g fill="#ba96a8"><circle cx="275" cy="187" r="7"/><circle cx="263" cy="201" r="7"/></g><g><rect x="77" y="63" width="36" height="17" rx="2" fill="#d3b887"/><path d="M95 63V80" stroke="#fff"/><circle cx="284" cy="136" r="8" fill="#77a7b6"/><rect x="65" y="130" width="16" height="36" fill="#81a99b"/><path d="M65 148H81" stroke="#fff"/></g><g font-family="system-ui" fill="#34483e"><text x="340" y="48" font-size="17" font-weight="650">Continuous inhabited perimeter</text><text x="340" y="78" font-size="13">01  Clear walking loop around module tips</text><text x="340" y="105" font-size="13">02  Entrance and climbing wall connect inward</text><text x="340" y="132" font-size="13">03  Patios, gardens, fountains and sport</text><text x="340" y="159" font-size="13">04  Nearby programs influence plaza character</text><text x="340" y="186" font-size="13">05  People and wildlife share outdoor destinations</text><text x="340" y="242" font-size="11" fill="#69796c">Conceptual plan, not a site survey or court layout.</text><text x="178" y="14" font-size="11" text-anchor="middle">Climbing approach</text><text x="178" y="280" font-size="11" text-anchor="middle">Main lobby approach</text></g></svg><figcaption>Student direction: turn the perimeter into a continuous outdoor social space, not only an entrance forecourt. The exact activity arrangement depends on generated program distribution.</figcaption></figure></article>
+ <article id="dr04" class="dr-section"><div class="dr-section-heading"><span>04 / CIRCULATION AS SOCIAL INFRASTRUCTURE</span><h2>Attraction becomes a place to gather.</h2><p>Circulation is more than a route to a destination: it shapes whether different programs meet.</p></div><div class="dr-pair"><figure><svg class="dr-svg" viewBox="0 0 560 298" role="img" aria-label="Gathering diagrams" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrGat" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="298" fill="#f5f6f0" rx="8"/><text x="20" y="24" font-size="12" font-weight="650" text-anchor="start" fill="#47866a">ATTRACT</text><text x="302" y="24" font-size="12" font-weight="650" text-anchor="start" fill="#a3645b">NEUTRAL / REPEL</text><rect x="20" y="46" width="238" height="174" rx="3" fill="#dce2d8" stroke="#b7c1b4"/><rect x="20" y="178" width="238" height="42" rx="0" fill="#eee9da" stroke="none"/><text x="139" y="204" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Public corridor</text><rect x="302" y="46" width="238" height="174" rx="3" fill="#dce2d8" stroke="#b7c1b4"/><rect x="302" y="178" width="238" height="42" rx="0" fill="#eee9da" stroke="none"/><text x="421" y="204" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Public corridor</text><rect x="30" y="55" width="83" height="113" rx="3" fill="#72a9c8" stroke="#b7c1b4"/><rect x="165" y="55" width="83" height="113" rx="3" fill="#d681a7" stroke="#b7c1b4"/><rect x="113" y="55" width="52" height="113" rx="1" fill="#b79ac5" stroke="#b7c1b4"/><rect x="119" y="83" width="40" height="56" rx="3" fill="#80509e" stroke="none"/><rect x="122" y="88" width="9" height="43" rx="2" fill="#e4d4bb" stroke="none"/><rect x="148" y="89" width="8" height="43" rx="2" fill="#e4d4bb" stroke="none"/><circle cx="140" cy="110" r="7" fill="#d9bb90" stroke="none" stroke-width="1"/><text x="71" y="115" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">IR</text><text x="206" y="115" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">LH</text><path d="M96 114H119M159 114H182M139 156V189" fill="none" stroke="#506d58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"  /><g transform="translate(132 148) scale(0.53)"><circle cx="0" cy="-15" r="5" fill="#3b443e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#3b443e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(152 150) scale(0.48)"><circle cx="0" cy="-15" r="5" fill="#3b443e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#3b443e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><text x="137" y="239" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Shared gathering lobby</text><rect x="312" y="55" width="107" height="113" rx="3" fill="#d681a7" stroke="#b7c1b4"/><rect x="423" y="55" width="107" height="113" rx="3" fill="#e0bb62" stroke="#b7c1b4"/><path d="M421 56V170" fill="none" stroke="#59665c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><path d="M365 157V195M476 157V195" fill="none" stroke="#687c6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"  /><text x="366" y="115" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">LH</text><text x="477" y="115" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">DC</text><text x="421" y="239" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Separate thresholds</text><text x="280" y="279" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Shared network remains available to everyone</text></svg><figcaption>Attract → shared lobby when feasible; neutral/repel → separate thresholds to the public network. Wall and door graphics are conceptual.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Two elevator blocks on opposite sides, one aligned to the swing ride access; an outer corridor connects all occupied docking positions. Make corridor width adjustable; introduce internal variation rather than pure randomness.</li><li>Avoid direct connections between repelling programs and encourage direct connections for attracting ones. Turn the space between attracted programs into a shared lobby where different occupants can linger.</li><li>Make those lobbies identifiable through furniture (rug, couches) and a color distinguishable from daycare.</li><li>Where the slide blocks modules, move the internal rooms against the façade and route the corridor behind them. The slide's endpoints must connect directly to Infinite Rinse rooms, not discharge into hallways.</li><li>Use an opaque exterior façade rather than curtain-wall glazing; remove visually overlapping room/wall geometry.</li></ul><div class="dr-callout"><strong>Designer decision · Opposing lobby atriums</strong><p>The designer placed two facing lobby atriums on an axis perpendicular to the lift cores. A ground-level path through the Infinite Rinse biofiltration greenhouse links the lobbies and their exterior approaches. The designer made this change to increase cross-traffic and create more opportunities for cross-pollination between indoor programs and the public plaza.</p><p>The two lobbies share the existing lobby area allowance. The greenhouse crossing bends around the swing mast, and the climbing wall moves beside the opposite approach. A gallery maintains the outer corridor across both upper voids.</p></div><div class="dr-callout"><strong>Designer decision · Atrium bridges</strong><p>The designer added optional upper-floor shortcuts through the atrium to test whether they increase cross-pollination. Stacking bridges along one line or rotating them around the atrium changes what people see from the higher floors and how much of the greenhouse is visible below. Each bridge passes beside the swing mast and connects back to the outer corridor at both ends.</p></div><h3><span class="dr-key ai">AI implementation</span> Geometry rules</h3><p>Generate annular corridor sectors, optional inner band, opposing lift sectors and room-door thresholds. Carve a purple shared zone out of adjacent attracted rooms when area and minimum clearance allow it; neutral and repel pairs keep independent entrances. The AI chose numerical thresholds, 500 mm nominal wall thickness (reduced if needed), and a rerouting method. A shared public corridor is still available to repelled programs.</p></div></div><figure class="dr-wide-diagram"><svg class="dr-svg" viewBox="0 0 600 215" role="img" aria-label="Detour diagram" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrDet" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="600" height="215" fill="#f5f6f0" rx="8"/><text x="23" y="26" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">TYPICAL DOCK FRONTAGE</text><text x="320" y="26" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">SLIDE BLOCKS DOCKS</text><rect x="20" y="68" width="260" height="9" rx="0" fill="#aaa99f" stroke="none"/><rect x="320" y="68" width="260" height="9" rx="0" fill="#aaa99f" stroke="none"/><rect x="25" y="39" width="57" height="25" rx="2" fill="#72a9c8" stroke="#b7c1b4"/><rect x="25" y="121" width="57" height="53" rx="2" fill="#d681a7" stroke="#b7c1b4"/><rect x="89" y="39" width="57" height="25" rx="2" fill="#d681a7" stroke="#b7c1b4"/><rect x="89" y="121" width="57" height="53" rx="2" fill="#d46f62" stroke="#b7c1b4"/><rect x="153" y="39" width="57" height="25" rx="2" fill="#d46f62" stroke="#b7c1b4"/><rect x="153" y="121" width="57" height="53" rx="2" fill="#e0bb62" stroke="#b7c1b4"/><rect x="217" y="39" width="57" height="25" rx="2" fill="#e0bb62" stroke="#b7c1b4"/><rect x="217" y="121" width="57" height="53" rx="2" fill="#8bb28a" stroke="#b7c1b4"/><rect x="20" y="80" width="260" height="37" rx="0" fill="#eee9da" stroke="none"/><text x="150" y="103" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Outer corridor</text><path d="M342 57Q445 17 556 57" fill="none" stroke="#287fa7" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"  /><path d="M320 100H374V161H524V100H580" fill="none" stroke="#eee9da" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"  /><rect x="328" y="123" width="34" height="51" rx="2" fill="#d681a7" stroke="none"/><rect x="389" y="80" width="121" height="59" rx="2" fill="#72a9c8" stroke="#b7c1b4"/><rect x="542" y="123" width="34" height="51" rx="2" fill="#8bb28a" stroke="none"/><text x="450" y="105" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">IR landing /</text><text x="450" y="120" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">façade rooms</text><text x="448" y="166" font-size="11" font-weight="650" text-anchor="middle" fill="#34483e">Inward bypass</text><path d="M322 100H374V161H524V100H578" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 4" /><text x="450" y="201" font-size="11" font-weight="450" text-anchor="middle" fill="#69776d">Direct connection to the slide</text></svg><figcaption>Slide-side topology changes the floor plan: the normal outer ring gives way locally to an inward bypass.</figcaption></figure><blockquote>“Maybe lobby areas have like a rug and couches visual to symbolize gathering.”<cite>Student request · V3.1 iteration</cite></blockquote></article>
+ <article id="dr05" class="dr-section"><div class="dr-section-heading"><span>05 / PUBLIC REALM</span><h2>Every spare surface is an opportunity.</h2><p>Public activity occurs at the ground, along the modular perimeter, inside the central atrium and on the roof.</p></div><div class="dr-pair"><figure><svg class="dr-svg" viewBox="0 0 560 320" role="img" aria-label="Public section" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrPub" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="320" fill="#f5f6f0" rx="8"/><text x="20" y="25" font-size="11" font-weight="650" text-anchor="start" fill="#69776d">PUBLIC SPACE AT EVERY LEVEL</text><rect x="126" y="133" width="320" height="125" rx="0" fill="#d9ded4" stroke="#b7c1b4"/><rect x="219" y="135" width="134" height="122" rx="0" fill="#e4eddf" stroke="#b7c1b4"/><path d="M218 133Q286 100 354 133" fill="#d8e9e7" stroke="#8faea5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><rect x="131" y="145" width="83" height="28" rx="1" fill="#72a9c8" stroke="#b7c1b4"/><rect x="72" y="145" width="53" height="28" rx="1" fill="#d46f62" stroke="#b7c1b4"/><rect x="356" y="145" width="83" height="28" rx="1" fill="#d681a7" stroke="#b7c1b4"/><rect x="443" y="145" width="53" height="28" rx="1" fill="#d46f62" stroke="#b7c1b4"/><rect x="131" y="183" width="83" height="28" rx="1" fill="#d681a7" stroke="#b7c1b4"/><rect x="72" y="183" width="53" height="28" rx="1" fill="#86a683" stroke="#b7c1b4"/><rect x="356" y="183" width="83" height="28" rx="1" fill="#d46f62" stroke="#b7c1b4"/><rect x="443" y="183" width="53" height="28" rx="1" fill="#86a683" stroke="#b7c1b4"/><rect x="131" y="221" width="83" height="28" rx="1" fill="#d46f62" stroke="#b7c1b4"/><rect x="72" y="221" width="53" height="28" rx="1" fill="#9ebbc5" stroke="#b7c1b4"/><rect x="356" y="221" width="83" height="28" rx="1" fill="#e0bb62" stroke="#b7c1b4"/><rect x="443" y="221" width="53" height="28" rx="1" fill="#9ebbc5" stroke="#b7c1b4"/><rect x="121" y="124" width="99" height="9" rx="0" fill="#86a683" stroke="none"/><rect x="354" y="124" width="97" height="9" rx="0" fill="#86a683" stroke="none"/><rect x="20" y="258" width="523" height="13" rx="0" fill="#d7cbb4" stroke="none"/><rect x="131" y="253" width="83" height="5" rx="0" fill="#eee9da" stroke="none"/><rect x="232" y="244" width="108" height="11" rx="0" fill="#86a683" stroke="none"/><rect x="379" y="103" width="36" height="20" rx="1" fill="#b99bc6" stroke="#b7c1b4"/><path d="M137 124V107" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="137" cy="105" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M193 124V107" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="193" cy="105" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M364 124V107" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="364" cy="105" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M441 124V107" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="441" cy="105" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M38 257V240" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="38" cy="238" r="11" fill="#86a683" stroke="none" stroke-width="1"/><path d="M90 257V240" fill="none" stroke="#9d8566" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="90" cy="238" r="11" fill="#86a683" stroke="none" stroke-width="1"/><g transform="translate(51 244) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(176 110) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(439 110) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(277 235) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(474 197) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(86 197) scale(0.7)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><text x="27" y="291" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Entrance plaza</text><text x="216" y="290" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Greenhouse at grade</text><text x="20" y="60" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Public roof park</text><path d="M139 64L172 122" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="369" y="60" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Retail pavilion</text><path d="M406 64V100" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="367" y="307" font-size="11" font-weight="650" text-anchor="start" fill="#34483e">Balcony / garden docks</text><path d="M478 295L476 211" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /></svg><figcaption>Conceptual section: open public surfaces (green) and enclosed programming (colored) support different kinds of encounters.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Enlarge the exterior entrance floor past the module footprint so it becomes a decorated public plaza, not just a threshold; the entrance lobby is double-height.</li><li>Make the whole annular roof public, including greenery, walking paths, gardens, gazebos and scattered retail/commercial rooms.</li><li>Extend elevator access to the roof and provide overhead service space for both lift blocks. Preserve the transparent atrium roof as a distinct central element.</li><li>Use vacant dock spaces for public uses and the greenhouse as an inhabited setting, not a purely technical void.</li></ul><h3><span class="dr-key ai">AI implementation</span> Spatial details</h3><p>AI-generated planters, communal tables, benches, paving, gazebos, railings, a perimeter walking loop, seeded retail locations, lift overruns and a roof bridge. The default plaza extension and furniture dimensions are implementation decisions. Roof pavilions and lift enclosures consume budget; the outdoor park does not. Geometry remains conceptual.</p></div></div><blockquote>“Also the whole roof will be public space, green space, walking path, gardens, gazebos etc.”<cite>Student request · V2.9 iteration</cite></blockquote><div class="dr-callout"><strong>Later student refinement · continuous public realm</strong><p>Wrap the entire building in a connected exterior plaza linking the lobby and climbing wall. The student proposed patios, umbrellas, fountains, benches, picnic tables, planting, beach volleyball and pickleball, with the neighboring programs influencing the character of the spaces. The AI translated this into a clear annular walking loop and program-influenced activity islands; their distribution and dimensions are implementation choices.</p></div><figure class="dr-wide-diagram"><svg class="dr-svg" viewBox="0 0 700 290" role="img" aria-label="Continuous plaza, opposing lobbies, and a crossing through the greenhouse"><rect width="700" height="290" fill="#f4f6f0" rx="6"/><circle cx="178" cy="145" r="124" fill="#ddd8cc"/><circle cx="178" cy="145" r="97" fill="none" stroke="#e9d9b7" stroke-width="9"/><circle cx="178" cy="145" r="86" fill="#f4f6f0"/><circle cx="178" cy="145" r="55" fill="#b8cbb0"/><circle cx="178" cy="145" r="31" fill="#dbe7da"/><g stroke="#f7f8f3" stroke-width="1.5"><rect x="232.14" y="150.55" width="30" height="10.8" rx="1" fill="#72a9c8" transform="rotate(9.0 247.14 155.95)"/><rect x="225.37" y="171.38" width="30" height="10.8" rx="1" fill="#72a9c8" transform="rotate(27.0 240.37 176.78)"/><rect x="212.50" y="189.10" width="30" height="10.8" rx="1" fill="#72a9c8" transform="rotate(45.0 227.50 194.50)"/><rect x="194.78" y="201.97" width="30" height="10.8" rx="1" fill="#72a9c8" transform="rotate(63.0 209.78 207.37)"/><rect x="131.22" y="201.97" width="30" height="10.8" rx="1" fill="#d681a7" transform="rotate(117.0 146.22 207.37)"/><rect x="113.50" y="189.10" width="30" height="10.8" rx="1" fill="#d681a7" transform="rotate(135.0 128.50 194.50)"/><rect x="100.63" y="171.38" width="30" height="10.8" rx="1" fill="#d46f62" transform="rotate(153.0 115.63 176.78)"/><rect x="93.86" y="150.55" width="30" height="10.8" rx="1" fill="#d46f62" transform="rotate(171.0 108.86 155.95)"/><rect x="93.86" y="128.65" width="30" height="10.8" rx="1" fill="#d46f62" transform="rotate(189.0 108.86 134.05)"/><rect x="100.63" y="107.82" width="30" height="10.8" rx="1" fill="#d46f62" transform="rotate(207.0 115.63 113.22)"/><rect x="113.50" y="90.10" width="30" height="10.8" rx="1" fill="#e0bb62" transform="rotate(225.0 128.50 95.50)"/><rect x="131.22" y="77.23" width="30" height="10.8" rx="1" fill="#e0bb62" transform="rotate(243.0 146.22 82.63)"/><rect x="194.78" y="77.23" width="30" height="10.8" rx="1" fill="#8bb28a" transform="rotate(297.0 209.78 82.63)"/><rect x="212.50" y="90.10" width="30" height="10.8" rx="1" fill="#8bb28a" transform="rotate(315.0 227.50 95.50)"/><rect x="225.37" y="107.82" width="30" height="10.8" rx="1" fill="#8bb28a" transform="rotate(333.0 240.37 113.22)"/><rect x="232.14" y="128.65" width="30" height="10.8" rx="1" fill="#8bb28a" transform="rotate(351.0 247.14 134.05)"/></g><path d="M178 199V246M178 91V43" stroke="#d6bb85" stroke-width="18"/><path d="M178 199V246M178 91V43" stroke="#7e8c7e" stroke-width="1.2" stroke-dasharray="4 3"/><rect x="164" y="89" width="28" height="5" fill="#a77b55"/><rect x="164" y="196" width="28" height="7" fill="#d6bb85"/><g fill="#9bb590"><circle cx="87" cy="206" r="7"/><circle cx="100" cy="219" r="7"/><circle cx="255" cy="73" r="7"/><circle cx="270" cy="88" r="7"/></g><g fill="#ba96a8"><circle cx="275" cy="187" r="7"/><circle cx="263" cy="201" r="7"/></g><g><rect x="77" y="63" width="36" height="17" rx="2" fill="#d3b887"/><path d="M95 63V80" stroke="#fff"/><circle cx="284" cy="136" r="8" fill="#77a7b6"/><rect x="65" y="130" width="16" height="36" fill="#81a99b"/><path d="M65 148H81" stroke="#fff"/></g><g font-family="system-ui" fill="#34483e"><text x="340" y="48" font-size="17" font-weight="650">Continuous inhabited perimeter</text><text x="340" y="78" font-size="13">01  Clear walking loop around module tips</text><text x="340" y="105" font-size="13">02  Opposing lobbies link the plaza and greenhouse</text><text x="340" y="132" font-size="13">03  Patios, gardens, fountains and sport</text><text x="340" y="159" font-size="13">04  Nearby programs influence plaza character</text><text x="340" y="186" font-size="13">05  People and wildlife share outdoor destinations</text><text x="340" y="242" font-size="11" fill="#69796c">Conceptual plan, not a site survey or court layout.</text><text x="178" y="14" font-size="11" text-anchor="middle">Climbing approach</text><text x="178" y="280" font-size="11" text-anchor="middle">Main lobby approach</text></g></svg><figcaption>Student direction: turn the perimeter into a continuous outdoor social space, not only an entrance forecourt. The exact activity arrangement depends on generated program distribution.</figcaption></figure><div class="dr-callout"><strong>Designer decision · Roofline variation</strong><p>The designer pitched the glass greenhouse roof upward toward the swing mast and introduced a mix of one- and two-storey rooftop pavilions to vary the silhouette. A sloped walkway connects the public deck to the raised swing platform. The seeded massing places upper rooms on eligible pavilions and counts them in the enclosed area budget.</p></div></article>
  <article id="dr06" class="dr-section"><div class="dr-section-heading"><span>06 / PLEASURE AS A SPATIAL FORCE</span><h2>Play changes the shape of the building.</h2><p>Recreation is both part of the architecture and a driver of visitor behavior.</p></div><div class="dr-pair"><figure><svg class="dr-svg" viewBox="0 0 560 320" role="img" aria-label="Play features" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrPla" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="320" fill="#f5f6f0" rx="8"/><text x="18" y="24" font-size="11" font-weight="650" text-anchor="start" fill="#69776d">PLAY + PHYSICAL CONSTRAINTS</text><rect x="112" y="171" width="324" height="107" rx="0" fill="#d8dfd4" stroke="#b7c1b4"/><rect x="137" y="182" width="264" height="96" rx="0" fill="#e6e8dd" stroke="#b7c1b4"/><path d="M228 171Q273 145 318 171" fill="#d6e8e5" stroke="#a3bdb7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"  /><rect x="267" y="46" width="10" height="230" rx="2" fill="#c78b51" stroke="none"/><ellipse cx="272" cy="57" rx="36" ry="8" fill="#d9ad67"/><path d="M241 60L226 96" fill="none" stroke="#997c54" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"  /><rect x="221" y="95" width="10" height="5" rx="1" fill="#b6866b" stroke="none"/><path d="M303 60L318 96" fill="none" stroke="#997c54" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"  /><rect x="313" y="95" width="10" height="5" rx="1" fill="#b6866b" stroke="none"/><rect x="416" y="171" width="20" height="107" rx="0" fill="#d3b694" stroke="#b7c1b4"/><path d="M396 189Q471 190 491 211Q509 237 436 245Q408 247 392 260" fill="none" stroke="#287fa7" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"  /><circle cx="423" cy="180" r="2.4" fill="#d46f62" stroke="none" stroke-width="1"/><circle cx="427" cy="187" r="2.4" fill="#72a9c8" stroke="none" stroke-width="1"/><circle cx="423" cy="194" r="2.4" fill="#e0bb62" stroke="none" stroke-width="1"/><circle cx="427" cy="201" r="2.4" fill="#d46f62" stroke="none" stroke-width="1"/><circle cx="423" cy="208" r="2.4" fill="#72a9c8" stroke="none" stroke-width="1"/><circle cx="427" cy="215" r="2.4" fill="#e0bb62" stroke="none" stroke-width="1"/><circle cx="423" cy="222" r="2.4" fill="#d46f62" stroke="none" stroke-width="1"/><circle cx="427" cy="229" r="2.4" fill="#72a9c8" stroke="none" stroke-width="1"/><circle cx="423" cy="236" r="2.4" fill="#e0bb62" stroke="none" stroke-width="1"/><circle cx="427" cy="243" r="2.4" fill="#d46f62" stroke="none" stroke-width="1"/><circle cx="423" cy="250" r="2.4" fill="#72a9c8" stroke="none" stroke-width="1"/><circle cx="427" cy="257" r="2.4" fill="#e0bb62" stroke="none" stroke-width="1"/><circle cx="423" cy="264" r="2.4" fill="#d46f62" stroke="none" stroke-width="1"/><path d="M441 224H483" fill="none" stroke="#34483e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 3" /><text x="459" y="220" font-size="10" font-weight="650" text-anchor="middle" fill="#34483e">5 m*</text><path d="M407 177V270" fill="none" stroke="#34483e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 3" /><text x="400" y="168" font-size="11" font-weight="650" text-anchor="end" fill="#34483e">≤19.8 m</text><text x="20" y="72" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Swing · 117 m</text><path d="M129 73L235 61" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="23" y="127" font-size="11" font-weight="650" text-anchor="start" fill="#34483e">Upper IR</text><path d="M82 131L396 189" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="28" y="261" font-size="11" font-weight="650" text-anchor="start" fill="#34483e">Lower IR</text><path d="M87 259L392 260" fill="none" stroke="#69776d" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  /><text x="320" y="299" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Climb ↑ then descend ↓</text><text x="20" y="307" font-size="10" font-weight="450" text-anchor="start" fill="#69776d">* Conceptual clearance, not a safety standard.</text></svg><figcaption>Ride, slide and climb are linked to their surroundings, not placed independently as objects. Schematic only.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Place a tall Prater-inspired swing ride through the glazed central atrium; animate it at a plausible real-world speed.</li><li>Run an external water slide from a high concentration of Infinite Rinse space to a lower Infinite Rinse room; route it around the façade, reserve affected module positions and expose the connected rooms.</li><li>Add a façade climbing wall with adjustable width; cap its height by reference to Calgary Climbing Centre Rocky Mountain. Climbers must descend to the base, never exit onto the roof.</li><li>Allow the slide to cross the climbing wall by bowing out for clearance rather than forbidding that crossing.</li><li>Make all three features attractive destinations, with recent experiences of fun affecting the cross-pollination metric. Give the slide a recognizable blue-green hue.</li></ul><h3><span class="dr-key ai">AI implementation</span> Geometry and motion</h3><p>117 m modeled tower, 40 km/h cruise, 12 m seat radius and ≈8.8 rpm; speed-dependent seat geometry with a complete boarding-to-unloading cycle. Slide route selection, swept geometry and blocked-slot tests are AI-coded. The 19.8 m climb cap was taken from the referenced 65 ft precedent during development. The 5 m slide-to-climb clearance is an AI-selected planning assumption, not a safety-certified requirement; actual belay/fall zones and ride engineering require specialist design.</p></div></div><blockquote>“no the slide generator doesn't have to avoid that strip but it just sticks out further from the facade there to create a safe climbing area”<br/>“Climber avatars will always decend. That's how climbing works.”<cite>Student corrections · V3.3 iteration</cite></blockquote><div class="dr-callout"><strong>Later student refinement · the swing as a timed event</strong><p>The student specified a queue while the ride is at the top, slowing and vertical hanging chains, descent and loading, acceleration and outward swing, 30 seconds at the top, return and unloading. The student later doubled the top dwell and asked for less outward swing. The AI implemented a 136-second cycle with a smaller seat radius and less chain tilt at cruise. The existing rooftop boarding platform is the bottom of the ride; its capacity and the remaining phase durations are chosen model parameters, not engineered specifications.</p></div><figure class="dr-wide-diagram"><svg class="dr-svg" viewBox="0 0 720 240" role="img" aria-label="Swing ride cycle; boarding, ascending, cruise, descending and unloading"><rect width="720" height="240" rx="6" fill="#f4f6f0"/><g><path d="M72 38V176" stroke="#b88c55" stroke-width="6"/><rect x="47" y="174" width="50" height="5" rx="1" fill="#c4b18e"/><ellipse cx="72" cy="126" rx="19" ry="5" fill="#d6ab65" stroke="#b99156"/><path d="M56 128L56 162.0M88 128L88 162.0" stroke="#6f7061" stroke-width="1.6"/><path d="M51 162.0h10M83 162.0h10" stroke="#aa7865" stroke-width="4"/><g font-family="system-ui" fill="#34483e" text-anchor="middle"><text x="72" y="201" font-size="13" font-weight="650">Board</text><text x="72" y="217" font-size="11">18 s</text></g></g><path d="M120 105h24l-6-5m6 5-6 5" fill="none" stroke="#8b988b" stroke-width="1.5"/><g><path d="M216 38V176" stroke="#b88c55" stroke-width="6"/><rect x="191" y="174" width="50" height="5" rx="1" fill="#c4b18e"/><ellipse cx="216" cy="88" rx="19" ry="5" fill="#d6ab65" stroke="#b99156"/><path d="M200 90L187 118.15M232 90L245 118.15" stroke="#6f7061" stroke-width="1.6"/><path d="M182 118.15h10M240 118.15h10" stroke="#aa7865" stroke-width="4"/><g font-family="system-ui" fill="#34483e" text-anchor="middle"><text x="216" y="201" font-size="13" font-weight="650">Ascend</text><text x="216" y="217" font-size="11">22 s</text></g></g><path d="M264 105h24l-6-5m6 5-6 5" fill="none" stroke="#8b988b" stroke-width="1.5"/><g><path d="M360 38V176" stroke="#b88c55" stroke-width="6"/><rect x="335" y="174" width="50" height="5" rx="1" fill="#c4b18e"/><ellipse cx="360" cy="37" rx="19" ry="5" fill="#d6ab65" stroke="#b99156"/><path d="M344 39L320 62.2M376 39L400 62.2" stroke="#6f7061" stroke-width="1.6"/><path d="M315 62.2h10M395 62.2h10" stroke="#aa7865" stroke-width="4"/><g font-family="system-ui" fill="#34483e" text-anchor="middle"><text x="360" y="201" font-size="13" font-weight="650">Cruise</text><text x="360" y="217" font-size="11">60 s</text></g></g><path d="M408 105h24l-6-5m6 5-6 5" fill="none" stroke="#8b988b" stroke-width="1.5"/><g><path d="M504 38V176" stroke="#b88c55" stroke-width="6"/><rect x="479" y="174" width="50" height="5" rx="1" fill="#c4b18e"/><ellipse cx="504" cy="88" rx="19" ry="5" fill="#d6ab65" stroke="#b99156"/><path d="M488 90L478 119.5M520 90L530 119.5" stroke="#6f7061" stroke-width="1.6"/><path d="M473 119.5h10M525 119.5h10" stroke="#aa7865" stroke-width="4"/><g font-family="system-ui" fill="#34483e" text-anchor="middle"><text x="504" y="201" font-size="13" font-weight="650">Descend</text><text x="504" y="217" font-size="11">26 s</text></g></g><path d="M552 105h24l-6-5m6 5-6 5" fill="none" stroke="#8b988b" stroke-width="1.5"/><g><path d="M648 38V176" stroke="#b88c55" stroke-width="6"/><rect x="623" y="174" width="50" height="5" rx="1" fill="#c4b18e"/><ellipse cx="648" cy="126" rx="19" ry="5" fill="#d6ab65" stroke="#b99156"/><path d="M632 128L632 162.0M664 128L664 162.0" stroke="#6f7061" stroke-width="1.6"/><path d="M627 162.0h10M659 162.0h10" stroke="#aa7865" stroke-width="4"/><g font-family="system-ui" fill="#34483e" text-anchor="middle"><text x="648" y="201" font-size="13" font-weight="650">Unload</text><text x="648" y="217" font-size="11">10 s</text></g></g></svg><figcaption>136-second model cycle. The 60-second top dwell and sequence were specified by the student; the other durations, rotational approximation, 18 seats and rooftop boarding implementation are AI choices.</figcaption></figure></article>
  <article id="dr07" class="dr-section"><div class="dr-section-heading"><span>07 / HUMAN &amp; NON-HUMAN OCCUPATION</span><h2>From scale figures to spatial agents.</h2><p>The laboratory tests potential patterns of occupation, rather than showing an uninhabited object.</p></div><div class="dr-pair"><figure><svg class="dr-svg" viewBox="0 0 560 320" role="img" aria-label="The agent cycle" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrThe" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="320" fill="#f5f6f0" rx="8"/><text x="20" y="25" font-size="11" font-weight="650" text-anchor="start" fill="#69776d">THE VISITOR CYCLE</text><rect x="20" y="49" width="152" height="57" rx="5" fill="#e5d3ae" stroke="#b7c1b4"/><text x="96.0" y="71" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Enter plaza</text><text x="96.0" y="88" font-size="10" font-weight="450" text-anchor="middle" fill="#69776d">Entrance lobby</text><rect x="204" y="49" width="152" height="57" rx="5" fill="#eee9da" stroke="#b7c1b4"/><text x="280.0" y="71" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Explore</text><text x="280.0" y="88" font-size="10" font-weight="450" text-anchor="middle" fill="#69776d">Corridors + lifts</text><rect x="388" y="49" width="152" height="57" rx="5" fill="#c6dce8" stroke="#b7c1b4"/><text x="464.0" y="71" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Visit a room</text><text x="464.0" y="88" font-size="10" font-weight="450" text-anchor="middle" fill="#69776d">Dwell + remember</text><rect x="388" y="154" width="152" height="57" rx="5" fill="#d6c4e0" stroke="#b7c1b4"/><text x="464.0" y="176" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Gather</text><text x="464.0" y="193" font-size="10" font-weight="450" text-anchor="middle" fill="#69776d">Attracted hub</text><rect x="204" y="154" width="152" height="57" rx="5" fill="#c9dbc1" stroke="#b7c1b4"/><text x="280.0" y="176" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Play / dwell</text><text x="280.0" y="193" font-size="10" font-weight="450" text-anchor="middle" fill="#69776d">Ride + public space</text><rect x="20" y="154" width="152" height="57" rx="5" fill="#e5d3ae" stroke="#b7c1b4"/><text x="96.0" y="176" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Move on / exit</text><text x="96.0" y="193" font-size="10" font-weight="450" text-anchor="middle" fill="#69776d">Return to plaza</text><path d="M172 77H200" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"  marker-end="url(#arrThe)"/><path d="M356 77H384" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"  marker-end="url(#arrThe)"/><path d="M464 106V149" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"  marker-end="url(#arrThe)"/><path d="M388 183H360" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"  marker-end="url(#arrThe)"/><path d="M204 183H176" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"  marker-end="url(#arrThe)"/><path d="M96 154V112" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"  marker-end="url(#arrThe)"/><path d="M280 154V112" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"  marker-end="url(#arrThe)"/><g transform="translate(50 256) scale(0.88)"><circle cx="0" cy="-15" r="5" fill="#527b67" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#527b67" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(106 257)"><circle cx="0" cy="7" r="10" fill="none" stroke="#527b67" stroke-width="2.5"/><circle cx="-2" cy="-14" r="5" fill="#527b67" stroke="none" stroke-width="1"/><path d="M-3 -7L-3 1H9L13 12H18" fill="none" stroke="#527b67" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(173 261)"><rect x="-14" y="-8" width="25" height="12" rx="4" fill="#846d55" stroke="none"/><rect x="8" y="-13" width="10" height="10" rx="2" fill="#846d55" stroke="none"/><path d="M-12 -5L-20 -13M-8 2V9M7 2V9" fill="none" stroke="#846d55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><path d="M327 256Q332 247 336 256Q340 247 345 256" fill="none" stroke="#846d55" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"  /><g transform="translate(396 263)"><rect x="-14" y="-8" width="25" height="12" rx="4" fill="#846d55" stroke="none"/><rect x="8" y="-13" width="10" height="10" rx="2" fill="#846d55" stroke="none"/><path d="M-12 -5L-20 -13M-8 2V9M7 2V9" fill="none" stroke="#846d55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><text x="20" y="294" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Shared visitor network</text><text x="305" y="294" font-size="12" font-weight="650" text-anchor="start" fill="#34483e">Outdoor / roof wildlife paths</text></svg><figcaption>Conceptual state diagram. Agents move, dwell, remember, meet and move on. Paths and timings are model assumptions, not observed human or animal behavior.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Design decisions</h3><ul><li>Populate the building with low-poly avatars of varied body shapes and sizes, including wheelchair users; also represent dogs, birds, rabbits and squirrels. Make them independently visible or hidden.</li><li>Transform figures into agents: enter and leave through the entrance plaza/lobby, visit program rooms and modules, stay for a while, use elevators between floors, and explore the greenhouse, rooftop and public spaces.</li><li>After leaving an attracting program, gravitate toward the shared lobby for a temporary period; then the attraction wears off and exploration continues.</li><li>Draw visitors toward the fun of the swing, slide and climbing wall. Remember the last occupied room and recent fun experiences for the encounter calculation.</li></ul><h3><span class="dr-key ai">AI implementation</span> Behavioral mechanics</h3><p>Build a route graph from adjacent circulation, halls, lifts, rooms, modules, and outdoor destinations; use shortest-path routing and seeded probabilities. Lifts are vertical graph connections; dwell time and destination-choice probabilities are numerical defaults. Humans and dogs enter/exit and respawn; the initial simulation is partly pre-populated rather than starting exclusively at the plaza. Humans visit rooms and rides; dogs use the shared public network; birds, rabbits and squirrels use exterior/roof habitat pools. The seed and visitor count govern reproducibility; the simulation supports pause, speed and restart.</p></div></div><blockquote>“if they leave a room that's got an ‘attract’ connection they gravitate towards the lobby for some time before it wares off and they continue to wander around”<cite>Student request · V3.1 iteration (quotation punctuation normalized)</cite></blockquote><p class="dr-note">AI-supplied limitations: this is a schematic agent-based model. It does not solve individual collision avoidance, detailed queue geometry or crowd dynamics, social identity, accessibility compliance or real animal ethology. Wheelchairs are represented and have modeled movement speeds, not a validated universal-access network.</p></article>
  <article id="dr08" class="dr-section"><div class="dr-section-heading"><span>08 / CROSS-POLLINATION METRIC</span><h2>Measure the encounter, not the number of lobbies.</h2><p>The performance question proposed by the student: do different spatial configurations create different opportunities for human and more-than-human interaction?</p></div><div class="dr-pair"><figure><div class="dr-score-chart"><div class="dr-weight"><span>Shared lobby</span><div class="dr-weight-track"><i style="width:100.0%;background:#80509e"></i></div><b>5</b></div><div class="dr-weight"><span>Same room / module</span><div class="dr-weight-track"><i style="width:60.0%;background:#72a9c8"></i></div><b>3</b></div><div class="dr-weight"><span>Garden / gazebo</span><div class="dr-weight-track"><i style="width:50.0%;background:#86a683"></i></div><b>2.5</b></div><div class="dr-weight"><span>Plaza / entrance</span><div class="dr-weight-track"><i style="width:50.0%;background:#cab48e"></i></div><b>2.5</b></div><div class="dr-weight"><span>Public balcony</span><div class="dr-weight-track"><i style="width:50.0%;background:#9ebbc5"></i></div><b>2.5</b></div><div class="dr-weight"><span>Greenhouse</span><div class="dr-weight-track"><i style="width:50.0%;background:#86a683"></i></div><b>2.5</b></div><div class="dr-weight"><span>Ride experience</span><div class="dr-weight-track"><i style="width:50.0%;background:#287fa7"></i></div><b>2.5</b></div><div class="dr-weight"><span>Roof promenade</span><div class="dr-weight-track"><i style="width:40.0%;background:#9ba995"></i></div><b>2</b></div><div class="dr-weight"><span>Passing / circulation</span><div class="dr-weight-track"><i style="width:10.0%;background:#b4b9ad"></i></div><b>0.5</b></div></div><figcaption>V3.5 default base weights, in points per ten credited seconds before multipliers. Editable experimental assumptions, not empirically calibrated values. The student's requested ordering informed these AI-supplied values.</figcaption></figure><div><h3><span class="dr-key student">Designer-led</span> Measurement concept</h3><ul><li>Use observed encounters between avatars (human and non-human) as the performance signal, rather than treating the number of rooms or lobbies as success by itself.</li><li>Weight types of encounters: shared lobby gathering highest, being in the same room second, brief passing lowest; public gardens, plazas and balconies more valuable than passing.</li><li>Give each avatar a memory of its last room. Interactions between avatars from different recent rooms should score more than those with the same room memory.</li><li>Reward encounters after a fun activity. Use the score to compare modular vs. core allocation, core size and other settings.</li></ul><h3><span class="dr-key ai">AI implementation</span> Metric definition</h3><p>The AI introduced additional different-program and cross-species multipliers, a bounded encounter window, 2.5 m proximity threshold, 90-second fun memory, and normalization per active visitor time. They operationalize the student's goals, but their magnitudes and timing are assumptions. The score is not a percentage or bounded 0–100 index.</p></div></div><div class="dr-score-method"><figure><svg class="dr-svg" viewBox="0 0 560 320" role="img" aria-label="Memory example" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrMem" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#34483e"/></marker></defs><rect x="0" y="0" width="560" height="320" fill="#f5f6f0" rx="8"/><rect x="20" y="28" width="156" height="73" rx="3" fill="#72a9c8" stroke="#b7c1b4"/><rect x="384" y="28" width="156" height="73" rx="3" fill="#d681a7" stroke="#b7c1b4"/><text x="98" y="48" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Last room A</text><text x="462" y="48" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Last room B</text><g transform="translate(98 76) scale(0.8)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(462 76) scale(0.8)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><rect x="143" y="146" width="274" height="136" rx="6" fill="#d4c1dc" stroke="#b7c1b4"/><text x="280" y="170" font-size="13" font-weight="650" text-anchor="middle" fill="#34483e">Shared lobby</text><rect x="187" y="193" width="186" height="59" rx="5" fill="#9875ae" stroke="none"/><g transform="translate(246 223) scale(1.05)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><g transform="translate(317 223) scale(0.95)"><circle cx="0" cy="-15" r="5" fill="#34483e" stroke="none" stroke-width="1"/><path d="M0 -9V7M-7 -4L0 0L7 -4M-6 17L0 7L6 17" fill="none" stroke="#34483e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"  /></g><circle cx="280" cy="224" r="15" fill="#f2e8d8" stroke="none" stroke-width="1"/><text x="280" y="228" font-size="18" font-weight="650" text-anchor="middle" fill="#34483e">+</text><path d="M98 101Q99 142 222 189" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 4" marker-end="url(#arrMem)"/><path d="M462 101Q461 142 337 189" fill="none" stroke="#34483e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 4" marker-end="url(#arrMem)"/><text x="280" y="127" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Remembered origins</text><text x="280" y="303" font-size="12" font-weight="650" text-anchor="middle" fill="#34483e">Space + room memory + recent experience</text></svg><figcaption>Illustration of two remembered origins meeting in one space; context and bonuses determine the score.</figcaption></figure><div><h3>One encounter, four possible modifiers</h3><div class="dr-multipliers"><div><b>×1.5</b><span>Different most recent room</span></div><div><b>×1.2</b><span>Different most recent program</span></div><div><b>×1.4</b><span>Recent fun (within 90 s)</span></div><div><b>×1.3</b><span>Different species / agent kinds</span></div></div><p class="dr-equation">Points = space weight × credited seconds / 10 × applicable multipliers<br/><small>Example: 10 credited seconds between two humans in a shared lobby, different remembered rooms and programs, one recently enjoyed a ride: 5 × 1.5 × 1.2 × 1.4 = 12.6 points. A human–dog encounter in that lobby with no other bonus would score 5 × 1.3 = 6.5 points. In the current agent rules dogs do not visit program rooms, so the room-memory and cross-species bonuses do not normally combine.</small></p></div></div><div class="dr-method-grid"><div><b>1 · Proximity &amp; context</b><p>Every simulated second, active pairs within 2.5 m count only if the navigation-zone relationship is eligible and on the same floor. Excludes in-transit climbing, slide and elevator paths.</p></div><div><b>2 · Bound repeated contact</b><p>A continuous pair encounter earns at most 15 credited seconds. A gap of more than 8 seconds permits a fresh encounter. Shared-lobby and room category rules use zone membership rather than walls being transparent.</p></div><div><b>3 · Normalize</b><p>Score = total weighted points × 100 / active visitor-minutes (human and non-human agent time). The live dashboard hides the score during the first 15 simulated seconds.</p></div></div><blockquote>“each little avatar carries a memory of the most recent room it was in and if two avatars of different room memories interact thats a higher score than of the same room.”<cite>Student request · V3.2 iteration</cite></blockquote><p class="dr-note">A score reports modeled co-presence, not actual social exchange. The current code separately counts human/non-human encounters and encounters between different agent kinds; the cross-species multiplier uses different agent kinds. An improved layout may have a lower score depending on paths, dwell, population and weights. None of these weights has been validated against observed data.</p></article>
@@ -749,6 +746,7 @@
      <button id="materialAxo" type="button">3D</button>
      <button id="materialPlan" type="button">Plan</button>
      <button id="materialFit" type="button">Fit</button>
+     <button id="saveMaterialSnapshot" type="button" title="Download a PNG with the model and all six assembly cards">Snapshot</button>
     </div>
    </div>
    <div class="view-bottom"><span>Drag to orbit · Scroll to zoom</span></div>
@@ -876,6 +874,7 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
     vacancy: [25, 30, 30, 15],
     slideLength: 40,
     climbWidth: 10,
+    atriumBridges: 'off',
     lobby: 240,
     relations: {},
     corridorWidth: 2.4,
@@ -914,6 +913,7 @@ const VACANCY = [
   { id: 'garden', name: 'Community garden', color: '#548b57' },
   { id: 'retail', name: 'Commercial / retail', color: '#ad91c7' }
 ];
+const BRIDGE_MODES = { off: 'Off', radial: 'Radial', aligned: 'Vertically aligned' };
 // Conceptual gross room / zone area ranges; not code minima. Large rooms may be subdivided later.
 const OUTER_WALL_THICKNESS = 0.5;
 const facadeThickness = (m) => Math.min(OUTER_WALL_THICKNESS, m.width * 0.45);
@@ -951,7 +951,7 @@ const coreSpecs = [
   ['floors', 'Floors', 1, 10, 1, ''],
   ['footprint', 'Outer footprint', 100, 22000, 1, ' m²'],
   ['ringWidth', 'Preferred ring width', 5, 35, 0.5, ' m'],
-  ['lobby', 'Entrance / lobby footprint', 0, 1000, 20, ' m²'],
+  ['lobby', 'Combined lobby area', 0, 1000, 20, ' m²'],
   ['minRoomArea', 'Minimum core room area', 40, 200, 5, ' m²']
 ];
 const moduleSpecs = [['modules', 'Requested modules', 0, 300, 1, '']];
@@ -1055,6 +1055,10 @@ $('inspect').onchange = () => {
     queueSave();
   } else scheduleUpdate();
 };
+$('atriumBridges').onchange = () => {
+  state.atriumBridges = $('atriumBridges').value;
+  scheduleUpdate();
+};
 PROGRAMS.forEach((p, i) => {
   const d = document.createElement('div');
   d.className = 'program-row';
@@ -1074,6 +1078,7 @@ $('legend').innerHTML = PROGRAMS.map(
 function syncControls() {
   refreshInputs.forEach((f) => f());
   $('autoCore').checked = state.autoCore;
+  $('atriumBridges').value = state.atriumBridges;
   $('footprint').disabled = state.autoCore;
   $('footprint').closest('.field').querySelector('.num-edit').disabled = state.autoCore;
   PROGRAMS.forEach((p, i) => {
@@ -1162,7 +1167,83 @@ function openArcs(holes) {
   if (x < TAU - 1e-9) out.push([x, TAU]);
   return out;
 }
-// Reserve the corridors, opposed lifts, and entrance void before assigning room area.
+// Saved material studies may still contain the original single entrance.
+function lobbyBays(lobby) {
+  return lobby.area ? (lobby.bays ?? [{ angle: lobby.angle, span: lobby.span }]) : [];
+}
+
+function lobbyHoles(lobby, floor) {
+  return floor < lobby.levels ? lobbyBays(lobby).map(({ angle, span }) => [angle, span / 2]) : [];
+}
+
+// A bridge spans one upper level on a chord beside the mast, with a passage to the outer corridor
+// at either end. Rotating the same chord makes the radial and aligned spans comparable.
+function designAtriumBridges(r, lobby, liftHalf) {
+  if (state.atriumBridges === 'off' || state.floors < 2) return [];
+  const width = Math.min(2.2, r * 0.32),
+    offset = Math.max(r * 0.3, swingMastRadius(r) + width / 2 + 0.65),
+    halfSpan = Math.acos(offset / r);
+  const outerEdge = offset + width / 2;
+  if (outerEdge >= r - 0.05) return [];
+  const accessHalf = Math.acos((offset - width / 2) / r) - Math.acos(outerEdge / r) + 0.015,
+    phases = Array.from({ length: state.floors - 1 }, (_, i) =>
+      state.atriumBridges === 'radial' ? (i * TAU) / (state.floors - 1) : 0
+    ),
+    lift = lobby.angle + Math.PI / 2;
+  function fits(heading, f) {
+    const reserved = [[lift, liftHalf], [lift + Math.PI, liftHalf], ...lobbyHoles(lobby, f)];
+    return [-1, 1].every((side) =>
+      reserved.every(
+        ([angle, half]) => angDist(heading + side * halfSpan, angle) > half + accessHalf
+      )
+    );
+  }
+  // Prefer an even rotation across the full stack. If a reservation prevents it, keep
+  // the best fit and move only the affected radial landings to the nearest clear heading.
+  const headings = Array.from({ length: 180 }, (_, i) => lobby.angle + (i * TAU) / 180);
+  let start = lobby.angle,
+    bestFit = -1;
+  for (const heading of headings) {
+    const fit = phases.filter((phase, i) => fits(heading + phase, i + 1)).length;
+    if (fit > bestFit) {
+      start = heading;
+      bestFit = fit;
+    }
+    if (fit === phases.length) break;
+  }
+  // Integrate the circular ends so the counted floor area stops at the inner ring.
+  const chordIntegral = (x) => x * Math.sqrt(r * r - x * x) + r * r * Math.asin(x / r);
+  const area = chordIntegral(outerEdge) - chordIntegral(offset - width / 2);
+  const bridges = [];
+  for (const [i, phase] of phases.entries()) {
+    const f = i + 1,
+      ideal = start + phase;
+    const heading = fits(ideal, f)
+      ? ideal
+      : state.atriumBridges === 'radial'
+        ? headings.reduce(
+            (best, angle) =>
+              fits(angle, f) && (best == null || angDist(angle, ideal) < angDist(best, ideal))
+                ? angle
+                : best,
+            null
+          )
+        : null;
+    if (heading == null) continue;
+    bridges.push({
+      f,
+      heading,
+      width,
+      offset,
+      area,
+      accessHalf,
+      angles: [heading - halfSpan, heading + halfSpan]
+    });
+  }
+  return bridges;
+}
+
+// Reserve the corridors, opposed lifts, and lobby voids before assigning room area.
 function circulationPlan(r, R, lobby) {
   const width = R - r,
     cw = Math.min(state.corridorWidth, width * 0.38),
@@ -1178,6 +1259,8 @@ function circulationPlan(r, R, lobby) {
   const axis = lobby.angle + Math.PI / 2,
     half = Math.min(0.3, Math.max(0.045, 4.1 / Math.max(4, r + width * 0.32))),
     liftR = Math.min(outer, r + Math.min(4.2, Math.max(0.01, (outer - r) * 0.75))),
+    bridges = designAtriumBridges(r, lobby, half),
+    bridgeArea = bridges.reduce((total, bridge) => total + bridge.area, 0),
     regions = [],
     floorPlans = [];
   const add = (f, kind, a, b, start, end, extra = {}) => {
@@ -1194,14 +1277,19 @@ function circulationPlan(r, R, lobby) {
     });
   };
   for (let f = 0; f < state.floors; f++) {
-    const lobbyHole = f < lobby.levels && lobby.area ? [[lobby.angle, lobby.span / 2]] : [],
+    const lobbyHole = lobbyHoles(lobby, f),
       lifts = [
         [axis, half],
         [axis + Math.PI, half]
       ],
-      arcs = openArcs([...lobbyHole, ...lifts]);
-    for (const [a, b] of openArcs(lobbyHole)) add(f, 'outer', outer, R, a, b);
+      bridge = bridges.find((item) => item.f === f),
+      approaches = bridge ? bridge.angles.map((angle) => [angle, bridge.accessHalf]) : [],
+      arcs = openArcs([...lobbyHole, ...lifts, ...approaches]);
+    // The upper gallery bridges both lobby voids so the outer corridor stays continuous.
+    for (const [a, b] of openArcs(f === 1 && lobby.gallery ? [] : lobbyHole))
+      add(f, 'outer', outer, R, a, b);
     if (dual) for (const [a, b] of arcs) add(f, 'inner', mid - cw / 2, mid + cw / 2, a, b);
+    for (const [a, h] of approaches) add(f, 'bridgeAccess', r, outer, a - h, a + h);
     lifts.forEach(([a, h], i) => {
       add(f, 'elevator', r, liftR, a - h, a, { block: i });
       add(f, 'link', liftR, outer, a - h, a, { block: i });
@@ -1218,11 +1306,13 @@ function circulationPlan(r, R, lobby) {
     dual,
     axis,
     bridgeAngle: axis + half / 2,
+    bridges,
+    bridgeArea,
     half,
     regions,
     floorPlans,
     roomCapacity: floorPlans.reduce((a, p) => a + p.area, 0),
-    area: regions.reduce((a, p) => a + p.area, 0)
+    area: bridgeArea + regions.reduce((a, p) => a + p.area, 0)
   };
 }
 // Variable sized rooms in the spaces left between corridors, lift blocks and the lobby.
@@ -1668,10 +1758,12 @@ function angDist(a, b) {
 // Size the exterior climb and reserve any dock that would intersect the wall.
 function designClimbing(R, slotN, lobby) {
   if (!state.climbWidth) return null;
-  const angle = mod(lobby.angle + Math.PI, TAU),
-    face = R + 0.3,
+  const face = R + 0.3,
     width = Math.min(state.climbWidth, face * Math.PI * 0.6),
     half = width / (2 * face),
+    rear = lobbyBays(lobby)[1],
+    // Keep the climbing face beside the rear lobby instead of across its opening.
+    angle = mod(lobby.angle + Math.PI + (rear ? rear.span / 2 + half + 1.6 / face : 0), TAU),
     blocked = new Set(),
     pad = Math.atan((MODULE.width / 2 + 1) / (R + 0.65));
   const height = Math.min(19.8, state.floors * 4.2);
@@ -1681,10 +1773,14 @@ function designClimbing(R, slotN, lobby) {
   return { angle, width, half, face, height, clearance: 5, blocked };
 }
 // Choose feasible Infinite Rinse slide endpoints, sweep the path, and reserve its dock crossings.
+function swingMastRadius(radius) {
+  return Math.min(2.2, radius * 0.64 * 0.37);
+}
+
 function designRideAndSlide(layout, R, r, slotN, lobby) {
   const floorH = 4.2,
     platformRadius = Math.min(8.2, r * 0.64),
-    towerRadius = Math.min(2.2, platformRadius * 0.37);
+    towerRadius = swingMastRadius(r);
   const flightRadius = 12,
     speedKmh = 40;
   const ride = {
@@ -1757,7 +1853,9 @@ function designRideAndSlide(layout, R, r, slotN, lobby) {
           Array.from({ length: 65 }, (_, i) => i / 64).some(
             (t) =>
               topY - drop * t < lobby.levels * floorH + 1.8 &&
-              angDist(a.angle + arc * t, lobby.angle) < lobby.span / 2 + 0.1
+              lobbyBays(lobby).some(
+                (bay) => angDist(a.angle + arc * t, bay.angle) < bay.span / 2 + 0.1
+              )
           )
         )
           continue;
@@ -1853,6 +1951,7 @@ function designRoof(R, r, circulation) {
     .map((q) => ({ ...q, y, accessHeight: 3.0, serviceHeight: 1.8, area: q.area }));
   const serviceArea = 2 * lifts.reduce((a, q) => a + q.area, 0),
     rng = random(state.seed ^ 0x88762ab),
+    heightRandom = random(state.seed ^ 0x51a709f2),
     pavilions = [],
     garden = [];
   // Use bounded annular patches. Keep the continuous outer walk and lift/bridge approaches clear.
@@ -1882,8 +1981,25 @@ function designRoof(R, r, circulation) {
       );
       if (area < 11) continue;
       const mid = (q.start + q.end) / 2,
-        span = area / scale;
-      pavilions.push({ r: inner, R: outer, start: mid - span / 2, end: mid + span / 2, area });
+        twoStoreys = area >= 28 && heightRandom() < 0.42,
+        footprint = twoStoreys ? area / 1.62 : area,
+        span = footprint / scale,
+        // A smaller upper room varies the silhouette within the same enclosed area.
+        upperSpan = twoStoreys ? span * 0.62 : 0;
+      pavilions.push({
+        r: inner,
+        R: outer,
+        start: mid - span / 2,
+        end: mid + span / 2,
+        area: footprint,
+        upper: twoStoreys
+          ? {
+              start: mid - upperSpan / 2,
+              end: mid + upperSpan / 2,
+              area: footprint * 0.62
+            }
+          : null
+      });
     }
     for (const q of segments) {
       if (pavilions.some((p) => p.start < q.end && p.end > q.start)) continue;
@@ -1899,7 +2015,8 @@ function designRoof(R, r, circulation) {
         });
     }
   }
-  const retailArea = pavilions.reduce((a, q) => a + q.area, 0),
+  const retailFootprint = pavilions.reduce((a, q) => a + q.area, 0),
+    retailArea = retailFootprint + pavilions.reduce((a, q) => a + (q.upper?.area ?? 0), 0),
     liftFootprint = serviceArea / 2,
     area = serviceArea + retailArea;
   return {
@@ -1911,7 +2028,7 @@ function designRoof(R, r, circulation) {
     retailArea,
     serviceArea,
     area,
-    publicArea: Math.max(0, Math.PI * (R * R - r * r) - liftFootprint - retailArea)
+    publicArea: Math.max(0, Math.PI * (R * R - r * r) - liftFootprint - retailFootprint)
   };
 }
 // Reconfigure the outer corridor at each slide landing. The original room's angular
@@ -2048,7 +2165,7 @@ function connectSlide(layout, feature, R, slotN) {
       continue;
     moveRoom(q, false);
   }
-  c.area = c.regions.reduce((a, q) => a + q.area, 0);
+  c.area = c.bridgeArea + c.regions.reduce((a, q) => a + q.area, 0);
   c.corridorArea = c.area - c.elevatorArea;
   c.total = c.area + c.hubArea;
 }
@@ -2140,16 +2257,17 @@ function derive(dockVariant = state.dockVariant) {
       A,
       ringPer,
       roofBudget = 220,
+      voidBudget = l * (levels - 1),
       roofPlan,
       circulation,
       lobby;
-    // The ground lobby is new enclosed area, its upper-level void is not. Solve gross annulus with void allowance.
+    // Fit the roof and the net void above the two lobbies, including their upper gallery.
     for (let pass = 0; pass < 40; pass++) {
       goals = goalsForRetail(k, l, roofBudget);
       counts = inventory(n, goals);
       count = sum(counts);
       required = goals.map((a, i) => a - counts[i] * MODULE.area);
-      A = state.areaCap - (count + k) * MODULE.area - roofBudget + (levels - 1) * l;
+      A = state.areaCap - (count + k) * MODULE.area - roofBudget + voidBudget;
       if (
         required[0] < Math.PI * MIN_COURT_RADIUS ** 2 - 1e-7 ||
         A < Math.PI * MIN_COURT_RADIUS ** 2 + 0.01
@@ -2163,34 +2281,43 @@ function derive(dockVariant = state.dockVariant) {
       );
       if (l > allowed + 1e-6) {
         l = allowed * 0.999;
+        voidBudget = Math.min(voidBudget, l);
         continue;
       }
+      const span = ringPer ? (TAU * l) / ringPer : 0;
+      const gallery =
+        levels > 1 && l > 0 ? geom.R - Math.min(state.corridorWidth, geom.width * 0.38) : null;
       lobby = {
         area: l,
-        voidArea: l * (levels - 1),
-        volume: l * levels * 4.2,
+        voidArea: gallery == null ? 0 : 0.5 * (gallery ** 2 - geom.r ** 2) * span,
         levels,
+        gallery,
         angle,
-        span: ringPer ? (TAU * l) / ringPer : 0,
+        span,
+        bays: [angle, angle + Math.PI].map((heading) => ({ angle: heading, span: span / 2 })),
         blocked: new Set()
       };
+      lobby.volume = (l + lobby.voidArea) * 4.2;
       circulation = circulationPlan(geom.r, geom.R, lobby);
       roofPlan = designRoof(geom.R, geom.r, circulation);
       const need = roofPlan.area + 0.00002;
-      if (Math.abs(need - roofBudget) < 0.000005) break;
+      const netVoid = lobby.voidArea - circulation.bridgeArea;
+      if (Math.abs(need - roofBudget) + Math.abs(netVoid - voidBudget) < 0.000005) break;
       roofBudget = need;
+      voidBudget = netVoid;
       if (pass === 39) return null;
     }
     const { R, r, width } = geom,
       court = Math.PI * r * r,
-      ringArea = ringPer * state.floors - (levels - 1) * l,
+      ringArea = ringPer * state.floors - lobby.voidArea,
       programRing = ringArea - l,
       slotN = slotCapacity(R),
       rawMax = slotN * state.floors;
     if (
       !roofPlan ||
       count + k > rawMax ||
-      ringArea + court + (count + k) * MODULE.area + roofPlan.area > state.areaCap + 1e-6 ||
+      ringArea + circulation.bridgeArea + court + (count + k) * MODULE.area + roofPlan.area >
+        state.areaCap + 1e-6 ||
       programRing < 0
     )
       return null;
@@ -2198,8 +2325,11 @@ function derive(dockVariant = state.dockVariant) {
       for (let f = 0; f < levels; f++)
         for (let j = 0; j < slotN; j++)
           if (
-            angDist((j * TAU) / slotN, angle) <=
-            lobby.span / 2 + Math.atan((MODULE.width / 2 + 0.5) / (R + 0.65))
+            lobbyBays(lobby).some(
+              (bay) =>
+                angDist((j * TAU) / slotN, bay.angle) <=
+                bay.span / 2 + Math.atan((MODULE.width / 2 + 0.5) / (R + 0.65))
+            )
           )
             lobby.blocked.add(f * slotN + j);
     const available = Math.max(0, circulation.roomCapacity),
@@ -2271,7 +2401,14 @@ function derive(dockVariant = state.dockVariant) {
     }
     circulation = layout.circulation;
     const feature = designRideAndSlide(layout, R, r, slotN, lobby);
-    feature.ride.roofLevel = roofPlan.y + 0.065;
+    // Raise the inner glazing and boarding deck together. The approach shares their pitch.
+    const ride = feature.ride,
+      eaveY = roofPlan.y + 0.082,
+      rise = Math.min(2.4, (r - ride.platformRadius) / 12);
+    ride.roofLevel = eaveY + rise - 0.16;
+    const rampHalfWidth = Math.min(2.4, circulation.width, ride.platformRadius * 0.85) / 2,
+      rampEnd = Math.sqrt(ride.platformRadius ** 2 - rampHalfWidth ** 2) - 0.06;
+    ride.roofPitch = { eaveY, rise, rampHalfWidth, rampEnd };
     connectSlide(layout, feature, R, slotN);
     const actualRing = P.map((p, i) =>
         sum(layout.rooms.filter((q) => q.id === i).map((q) => q.area))
@@ -2421,7 +2558,8 @@ function derive(dockVariant = state.dockVariant) {
   const vacancyCounts = assignVacancies(activeSlots, k),
     retail = vacancyCounts[3] * MODULE.area,
     outdoor = (vacancyCounts[1] + vacancyCounts[2]) * MODULE.area,
-    primary = ringArea + court + count * MODULE.area + roofPlan.serviceArea,
+    primary =
+      ringArea + circulation.bridgeArea + court + count * MODULE.area + roofPlan.serviceArea,
     total = primary + retail + roofPlan.retailArea;
   const plaza = designPlaza(R, lobby, slots, feature.climbing);
   const layout = {
@@ -2463,6 +2601,7 @@ function derive(dockVariant = state.dockVariant) {
     blocked,
     circulation,
     plaza,
+    greenhouse: designGreenhouse(r, lobby, feature.ride),
     roofPlan
   };
   return state.allocationMoves.length
@@ -2586,11 +2725,52 @@ function applyAllocationMoves(original, moves, dockVariant) {
   return layout;
 }
 
-// Entrance forecourt: the existing approach widens only beyond the outermost docking tips.
+// The same grade crossing sets out the greenhouse paving, beds and walking graph.
+function designGreenhouse(radius, lobby, ride) {
+  const bays = lobbyBays(lobby);
+  if (bays.length < 2) return null;
+  const axis = bays[0].angle,
+    width = Math.min(2.4, radius * 0.42, radius * bays[0].span * 0.8),
+    offset = ride.towerRadius + width / 2 + 0.28;
+  const point = (along, across) => [
+    along * Math.cos(axis) - across * Math.sin(axis),
+    along * Math.sin(axis) + across * Math.cos(axis)
+  ];
+  // The approaches align with the lobby doors. The middle section skirts the swing mast.
+  const points = [
+    [radius, 0],
+    [radius * 0.83, 0],
+    [radius * 0.5, offset],
+    [-radius * 0.5, offset],
+    [-radius * 0.83, 0],
+    [-radius, 0]
+  ].map(([along, across]) => point(along, across));
+  const beds = [],
+    clearance = 0.45,
+    bedWidth = Math.min(3.6, radius / 6),
+    plantingRadius = radius - 1.55;
+  // Keep the planted beds clear of the crossing, mast and perimeter promenade.
+  for (const [side, start] of [
+    [-1, Math.max(width / 2 + clearance, ride.towerRadius + clearance)],
+    [1, offset + width / 2 + clearance]
+  ]) {
+    for (let near = start; near + bedWidth < plantingRadius; near += bedWidth + 0.9) {
+      const depth = 2 * Math.sqrt(plantingRadius ** 2 - (near + bedWidth) ** 2);
+      if (depth < 1.5) continue;
+      const [x, z] = point(0, side * (near + bedWidth / 2));
+      beds.push({ x, z, width: bedWidth, depth });
+    }
+  }
+  return { axis, points, width, beds };
+}
+
+// The lobby approaches stay between docks and open onto the continuous promenade.
 function designPlaza(R, lobby, slots, climb) {
-  const mouth = R + MODULE.depth + 2,
+  const bays = lobbyBays(lobby),
+    approachSpan = bays[0]?.span ?? 0,
+    mouth = R + MODULE.depth + 2,
     outer = mouth + 24,
-    span = Math.max(lobby.span, Math.min(0.95, 32 / mouth)),
+    span = Math.max(approachSpan, Math.min(0.95, 32 / mouth)),
     walkRadius = mouth + 3.4,
     rad = mouth + 15.0;
   const n = Math.max(12, Math.min(24, Math.floor((TAU * rad) / 19))),
@@ -2601,7 +2781,7 @@ function designPlaza(R, lobby, slots, climb) {
   for (let i = 0; i < n; i++) {
     const a = mod(lobby.angle + ((i + 0.5) * TAU) / n, TAU);
     if (
-      (lobby.area && angDist(a, lobby.angle) < span / 2 + 0.17) ||
+      bays.some((bay) => angDist(a, bay.angle) < Math.max(span, bay.span) / 2 + 0.17) ||
       (climb && angDist(a, climb.angle) < climb.half + 0.18)
     )
       continue;
@@ -2643,7 +2823,7 @@ function designPlaza(R, lobby, slots, climb) {
   }
   return {
     angle: lobby.angle,
-    approachSpan: lobby.span,
+    approachSpan,
     inner: R,
     mouth,
     outer,
@@ -3629,10 +3809,8 @@ function drawMaterialModule(b, slot, x, y, z, preview, values) {
 
 // Keep opening extents and program boundaries shared by the preview and the cost takeoff.
 function coreFacadeSpans(model, floor, floorHeight = 4.2) {
-  const fullHeightHoles = [],
+  const fullHeightHoles = lobbyHoles(model.lobby, floor),
     doorHoles = [];
-  if (model.lobby.area && floor < model.lobby.levels)
-    fullHeightHoles.push([model.lobby.angle, model.lobby.span / 2]);
   for (const slot of model.slots)
     if (slot.f === floor && !slot.blocked && (slot.p !== EMPTY || slot.use !== 'empty'))
       doorHoles.push([slot.angle, Math.min(0.45, 1.1 / model.R)]);
@@ -3723,30 +3901,52 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   mark('Core_Foundation');
   sector(0, m.R + 0.25, 0, TAU, 0, 0.18, slab);
   mark('Infinite_Rinse_Greenhouse');
-  sector(0, m.r, 0, TAU, 0.19, 0.11, rgb('#c8d7c2'));
-  // Symbolic bioremediation beds and paths, all within the central courtyard.
+  const greenhouseLevel = m.greenhouse ? 0.46 : 0.3;
+  sector(0, m.r, 0, TAU, 0.19, greenhouseLevel - 0.19, rgb('#c8d7c2'));
+  // Symbolic biofiltration beds and paths, all within the central courtyard.
   const rr = m.r;
-  let num = Math.max(2, Math.min(6, Math.floor(rr / 5)));
-  const bedWidth = Math.min(3.6, rr / (num + 1));
-  for (let i = 0; i < num; i++) {
-    let x = (i - (num - 1) / 2) * (bedWidth + 1.2),
-      zmax = Math.sqrt(Math.max(0, (rr - 1.5) ** 2 - (Math.abs(x) + bedWidth / 2) ** 2));
-    if (zmax < 1) continue;
-    for (const side of [-1, 1]) {
-      let depth = Math.max(0.8, zmax - 0.85);
-      box(
-        x,
-        0.3,
-        side * (depth / 2 + 0.85),
-        bedWidth,
-        0.26,
-        depth,
-        -Math.PI / 2,
-        rgb(i % 2 ? '#8fb8a8' : '#91b6c4')
-      );
+  if (m.greenhouse) {
+    const { axis, points, width, beds } = m.greenhouse;
+    beds.forEach(({ x, z, width, depth }, i) =>
+      box(x, greenhouseLevel, z, width, 0.26, depth, axis, rgb(i % 2 ? '#8fb8a8' : '#91b6c4'))
+    );
+    mark('Infinite_Rinse_Perimeter_Walk');
+    sector(rr - 1.25, rr, 0, TAU, 0.46, 0.075, rgb('#d6dfce'));
+    mark('Infinite_Rinse_Atrium_Crossing');
+    const edge = ([x, z], side) => [
+      x - (Math.sin(axis) * side * width) / 2,
+      0.541,
+      z + (Math.cos(axis) * side * width) / 2
+    ];
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1],
+        b = points[i];
+      quad(edge(a, -1), edge(b, -1), edge(b, 1), edge(a, 1), rgb('#e9d6ae'));
     }
-  } // central pedestrian route
-  if (rr > 3) box(0, 0.32, 0, 1.6, 0.07, rr * 1.8, 0, rgb('#efeee3'));
+  } else {
+    // Preserve the original bed layout for saved studies and layouts without lobby atriums.
+    const num = Math.max(2, Math.min(6, Math.floor(rr / 5))),
+      bedWidth = Math.min(3.6, rr / (num + 1));
+    for (let i = 0; i < num; i++) {
+      const x = (i - (num - 1) / 2) * (bedWidth + 1.2),
+        zmax = Math.sqrt(Math.max(0, (rr - 1.5) ** 2 - (Math.abs(x) + bedWidth / 2) ** 2));
+      if (zmax < 1) continue;
+      for (const side of [-1, 1]) {
+        const depth = Math.max(0.8, zmax - 0.85);
+        box(
+          x,
+          0.3,
+          side * (depth / 2 + 0.85),
+          bedWidth,
+          0.26,
+          depth,
+          -Math.PI / 2,
+          rgb(i % 2 ? '#8fb8a8' : '#91b6c4')
+        );
+      }
+    }
+    if (rr > 3) box(0, 0.32, 0, 1.6, 0.07, rr * 1.8, 0, rgb('#efeee3'));
+  }
   // Permanent ring: independent variable-size rooms, with diagrammatic seams.
   const visible = (f) => exporting || !view.inspect || f < view.inspect;
   const cut = !exporting && view.inspect > 0,
@@ -3756,17 +3956,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const y = f * floorH + 0.22;
     mark(`Core_L${f + 1}_Slab`);
     const l = m.lobby;
-    if (f === 1 && l.area && l.levels === 2)
-      sector(
-        m.r - 0.08,
-        m.R + 0.12,
-        l.angle + l.span / 2,
-        l.angle + TAU - l.span / 2,
-        y,
-        0.23,
-        slab
-      );
-    else sector(m.r - 0.08, m.R + 0.12, 0, TAU, y, 0.23, slab);
+    for (const [a, z] of openArcs(f ? lobbyHoles(l, f) : []))
+      sector(m.r - 0.08, m.R + 0.12, a, z, y, 0.23, slab);
     for (const room of m.rooms) {
       if (room.f !== f || (!exporting && !view.showRooms)) continue;
       mark(
@@ -3893,6 +4084,56 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       }
     }
   }
+  // Upper bridges span the atrium, with open landings into dedicated core passages.
+  for (const bridge of circulation.bridges ?? []) {
+    if (!visible(bridge.f)) continue;
+    const { heading, width, offset } = bridge,
+      top = bridge.f * floorH + 0.535,
+      bottom = top - 0.23,
+      deck = rgb('#d9bb87'),
+      rail = rgb('#987753');
+    const edge = (across, end, y) => {
+      // The deck meets the ring along its circular inner edge.
+      const along = end * Math.sqrt(rr * rr - across * across);
+      return [
+        across * Math.cos(heading) - along * Math.sin(heading),
+        y,
+        across * Math.sin(heading) + along * Math.cos(heading)
+      ];
+    };
+    mark(`Atrium_Bridge_L${bridge.f + 1}`);
+    const left = offset - width / 2,
+      right = offset + width / 2;
+    for (let i = 0; i < 8; i++) {
+      const a = left + (width * i) / 8,
+        b = left + (width * (i + 1)) / 8;
+      quad(edge(a, -1, top), edge(a, 1, top), edge(b, 1, top), edge(b, -1, top), deck);
+      quad(edge(a, -1, bottom), edge(b, -1, bottom), edge(b, 1, bottom), edge(a, 1, bottom), deck);
+    }
+    for (const [side, start, end] of [
+      [left, -1, 1],
+      [right, 1, -1]
+    ]) {
+      quad(
+        edge(side, start, bottom),
+        edge(side, end, bottom),
+        edge(side, end, top),
+        edge(side, start, top),
+        deck
+      );
+      const handrail = top + 1.1;
+      quad(
+        edge(side, start, top),
+        edge(side, end, top),
+        edge(side, end, handrail),
+        edge(side, start, handrail),
+        rgb('#c7dbd9'),
+        glass,
+        0.38
+      );
+      line(edge(side, start, handrail), edge(side, end, handrail), rail);
+    }
+  }
   // Separate room thresholds and paired shared doors: diagrammatic lines, not detailed door openings.
   for (const d of circulation.doors) {
     if (!visible(d.f)) continue;
@@ -3925,35 +4166,59 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       rgb('#eee9da')
     );
   }
-  // Double-height entrance lobby: glazed sidewalls, no intermediate floor, open portal toward approach.
+  // Each lobby atrium opens toward the plaza and the greenhouse, with no intermediate floor.
   const l = m.lobby;
-  if (l.area) {
-    const a = l.angle - l.span / 2,
-      z = l.angle + l.span / 2,
-      h = l.levels * floorH,
+  for (const [i, { angle, span }] of lobbyBays(l).entries()) {
+    const a = angle - span / 2,
+      z = angle + span / 2,
       base = 0.45,
       top = Math.min(l.levels * floorH + 0.22, cutY),
+      sideBase = m.greenhouse ? base + 2.35 : base,
       frame = rgb('#ac9271'),
       glaze = rgb('#c7dbd9');
-    mark('Entrance_Lobby');
-    sector(m.r, m.R, a, z, 0.23, 0.23, rgb('#e5d3ae'));
+    mark(i ? 'Opposite_Lobby_Atrium' : 'Entrance_Lobby');
+    sector(m.r, m.R, a, z, base, 0.08, rgb('#e5d3ae'));
+    if (l.gallery && visible(1)) {
+      mark('Lobby_Atrium_Upper_Gallery', 'Level 2 corridor bridge');
+      sector(l.gallery, m.R + 0.12, a, z, floorH + 0.22, 0.23, slab);
+      for (const radius of [l.gallery, m.R]) {
+        const n = Math.max(1, Math.ceil((z - a) / 0.055));
+        for (let j = 0; j < n; j++) {
+          const left = a + ((z - a) * j) / n,
+            right = a + ((z - a) * (j + 1)) / n,
+            railBase = floorH + 0.53,
+            railTop = railBase + 1.1;
+          quad(
+            ringPoint(radius, left, railBase),
+            ringPoint(radius, right, railBase),
+            ringPoint(radius, right, railTop),
+            ringPoint(radius, left, railTop),
+            glaze,
+            glass,
+            0.35
+          );
+          line(ringPoint(radius, left, railTop), ringPoint(radius, right, railTop), frame);
+        }
+      }
+      mark(i ? 'Opposite_Lobby_Atrium' : 'Entrance_Lobby');
+    }
     if (!cut || view.inspect > l.levels) sector(m.r, m.R, a, z, top - 0.2, 0.2, rgb('#e5d3ae'));
     for (const k of [a, z]) {
       quad(
-        ringPoint(m.r, k, base),
-        ringPoint(m.R, k, base),
+        ringPoint(m.r, k, sideBase),
+        ringPoint(m.R, k, sideBase),
         ringPoint(m.R, k, top - 0.2),
         ringPoint(m.r, k, top - 0.2),
         glaze,
         glass,
         0.3
       );
-      line(ringPoint(m.R, k, base), ringPoint(m.R, k, top - 0.2), frame);
+      line(ringPoint(m.R, k, sideBase), ringPoint(m.R, k, top - 0.2), frame);
     }
-    const portal = Math.min(l.span * 0.32, 2.8 / m.R);
+    const portal = Math.min(span * 0.32, 2.8 / m.R);
     for (const [x1, x2] of [
-      [a, l.angle - portal],
-      [l.angle + portal, z]
+      [a, angle - portal],
+      [angle + portal, z]
     ])
       if (x2 > x1) {
         const n = Math.max(1, Math.ceil((x2 - x1) / 0.07));
@@ -3984,8 +4249,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       paving = rgb('#ddd8cc'),
       border = rgb('#c0b6a3'),
       seat = rgb('#b69b75');
-    mark('Entrance_Plaza_Paving', 'Entrance approach');
-    sector(p.inner, p.mouth, a - p.approachSpan / 2, a + p.approachSpan / 2, 0.01, 0.17, walk);
+    for (const [i, { angle, span }] of lobbyBays(l).entries()) {
+      mark(i ? 'Opposite_Lobby_Plaza_Paving' : 'Entrance_Plaza_Paving', 'Lobby approach');
+      sector(p.inner, p.mouth, angle - span / 2, angle + span / 2, 0.01, 0.17, walk);
+    }
     mark('Public_Plaza_Paving', 'Continuous exterior plaza');
     sector(p.mouth, p.outer, 0, TAU, 0.01, 0.17, paving);
     mark('Public_Plaza_Promenade', 'Continuous clear pedestrian loop');
@@ -3998,6 +4265,11 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const pathHalf = Math.min(p.approachSpan / 2, p.span * 0.19, 3.2 / p.mouth);
     mark('Entrance_Plaza_Promenade', 'Clear central pedestrian axis');
     sector(p.mouth, p.outer, a - pathHalf, a + pathHalf, 0.182, 0.015, walk);
+    const rear = lobbyBays(l)[1];
+    if (rear) {
+      mark('Opposite_Lobby_Promenade', 'Connection to the atrium crossing');
+      sector(p.mouth, p.outer, rear.angle - pathHalf, rear.angle + pathHalf, 0.182, 0.015, walk);
+    }
     mark('Entrance_Plaza_Paving', 'Paving joints and perimeter');
     for (let i = 0; i <= 5; i++) {
       const r = p.mouth + ((p.outer - p.mouth) * i) / 5;
@@ -4313,19 +4585,26 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       );
     }
     for (const [i, q] of p.pavilions.entries()) {
-      mark('Roof_Commercial_Retail', `Pavilion ${i + 1}`);
-      sector(q.r, q.R, q.start, q.end, y + 0.05, 3.0, rgb('#ad91c7'));
-      const a = q.start + 0.16 * (q.end - q.start),
-        d = q.end - 0.16 * (q.end - q.start),
-        rad = q.R + 0.015;
-      for (let j = 0; j < 12; j++)
-        quad(
-          ringPoint(rad, a + ((d - a) * j) / 12, y + 0.42),
-          ringPoint(rad, a + ((d - a) * (j + 1)) / 12, y + 0.42),
-          ringPoint(rad, a + ((d - a) * (j + 1)) / 12, y + 2.45),
-          ringPoint(rad, a + ((d - a) * j) / 12, y + 2.45),
-          rgb('#dfdce3')
+      const storeys = q.upper ? [q, q.upper] : [q];
+      for (const [floor, { start, end }] of storeys.entries()) {
+        const base = y + 0.05 + floor * 3,
+          a = start + 0.16 * (end - start),
+          d = end - 0.16 * (end - start),
+          rad = q.R + 0.015;
+        mark(
+          floor ? 'Roof_Commercial_Retail_Upper' : 'Roof_Commercial_Retail',
+          `Pavilion ${i + 1}`
         );
+        sector(q.r, q.R, start, end, base, 3, rgb(floor ? '#b79ece' : '#ad91c7'));
+        for (let j = 0; j < 12; j++)
+          quad(
+            ringPoint(rad, a + ((d - a) * j) / 12, base + 0.37),
+            ringPoint(rad, a + ((d - a) * (j + 1)) / 12, base + 0.37),
+            ringPoint(rad, a + ((d - a) * (j + 1)) / 12, base + 2.4),
+            ringPoint(rad, a + ((d - a) * j) / 12, base + 2.4),
+            rgb('#dfdce3')
+          );
+      }
     }
     for (const [i, q] of p.garden.entries()) {
       const a = (q.start + q.end) / 2,
@@ -4484,7 +4763,27 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     sector(ride.towerRadius, ride.platformRadius, 0, TAU, ride.roofLevel - 0.2, 0.36, platform);
     const bridge = (rr + ride.platformRadius) / 2,
       aBridge = m.circulation.bridgeAngle;
-    box(
+    if (ride.roofPitch) {
+      const { eaveY, rise, rampHalfWidth: halfWidth, rampEnd } = ride.roofPitch,
+        point = (rad, across, y) => [
+          rad * Math.cos(aBridge) - across * Math.sin(aBridge),
+          y,
+          rad * Math.sin(aBridge) + across * Math.cos(aBridge)
+        ];
+      const near = [point(rr, -halfWidth, eaveY), point(rr, halfWidth, eaveY)],
+        far = [point(rampEnd, -halfWidth, eaveY + rise), point(rampEnd, halfWidth, eaveY + rise)];
+      mark('Swing_Boarding_Ramp');
+      quad(near[0], far[0], far[1], near[1], platform);
+      for (const side of [0, 1]) {
+        const a = near[side],
+          b = far[side],
+          railTop = ([x, y, z]) => [x, y + 1.1, z];
+        quad(a, b, railTop(b), railTop(a), rgb('#c7dbd9'), glass, 0.35);
+        line(railTop(a), railTop(b), rgb('#ac9271'));
+      }
+    } else {
+      // Saved material studies with the original flat roof retain their boarding bridge.
+      box(
       bridge * Math.cos(aBridge),
       ride.roofLevel,
       bridge * Math.sin(aBridge),
@@ -4494,8 +4793,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       aBridge,
       platform,
       true
-    );
-    sector(
+      );
+      sector(
       rr,
       Math.min(m.R, rr + 3),
       aBridge - 0.07,
@@ -4503,40 +4802,46 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       ride.roofLevel - 0.1,
       0.18,
       platform
-    );
+      );
+    }
     mark('Swing_Crown_and_Seats');
     buildSwing(b, ride, swingPose(ride, 0));
     if (exporting || (view.roof && !view.xray)) {
       mark('Atrium_Glass_Roof');
       const roofc = rgb('#c4dfde'),
         frame = rgb('#9aada8'),
-        roofY = H + 0.07,
-        inner = ride.platformRadius;
+        inner = ride.platformRadius,
+        roofY = (radius) =>
+          ride.roofPitch
+            ? ride.roofPitch.eaveY - 0.045 + (ride.roofPitch.rise * (rr - radius)) / (rr - inner)
+            : H + 0.07,
+        roofPoint = (radius, angle, frameOffset = 0) =>
+          ringPoint(radius, angle, roofY(radius) + frameOffset);
       const n = 96;
       for (let i = 0; i < n; i++) {
         const a = (i * TAU) / n,
           d = ((i + 1) * TAU) / n;
         quad(
-          ringPoint(inner, a, roofY),
-          ringPoint(rr, a, roofY),
-          ringPoint(rr, d, roofY),
-          ringPoint(inner, d, roofY),
+          roofPoint(inner, d),
+          roofPoint(rr, d),
+          roofPoint(rr, a),
+          roofPoint(inner, a),
           roofc,
           glass,
           0.28
         );
-        line(ringPoint(rr, a, roofY + 0.01), ringPoint(rr, d, roofY + 0.01), frame);
-        line(ringPoint(inner, a, roofY + 0.01), ringPoint(inner, d, roofY + 0.01), frame);
+        line(roofPoint(rr, a, 0.01), roofPoint(rr, d, 0.01), frame);
+        line(roofPoint(inner, a, 0.01), roofPoint(inner, d, 0.01), frame);
       }
       for (let i = 0; i < 24; i++) {
         const a = (i * TAU) / 24;
-        line(ringPoint(inner, a, roofY + 0.035), ringPoint(rr, a, roofY + 0.035), frame);
+        line(roofPoint(inner, a, 0.02), roofPoint(rr, a, 0.02), frame);
       }
       for (const scale of [0.33, 0.66])
         for (let i = 0; i < n; i++)
           line(
-            ringPoint(inner + (rr - inner) * scale, (i * TAU) / n, roofY + 0.035),
-            ringPoint(inner + (rr - inner) * scale, ((i + 1) * TAU) / n, roofY + 0.035),
+            roofPoint(inner + (rr - inner) * scale, (i * TAU) / n, 0.02),
+            roofPoint(inner + (rr - inner) * scale, ((i + 1) * TAU) / n, 0.02),
             frame
           );
     }
@@ -4810,10 +5115,35 @@ function buildNavigation(m) {
     }
     return ids;
   }
+  const bridgeLandings = new Map();
   for (const q of m.circulation.regions) {
     const kind = q.kind === 'elevator' ? 'lift' : 'corridor',
-      ids = addCell(q, kind, kind === 'corridor');
+      ids = addCell(q, kind, kind === 'corridor' && q.kind !== 'bridgeAccess');
     if (kind === 'lift' && ids.length) liftNodes[q.block].push({ f: q.f, id: ids[0] });
+    if (q.kind === 'bridgeAccess' && ids.length) {
+      if (!bridgeLandings.has(q.f)) bridgeLandings.set(q.f, []);
+      bridgeLandings.get(q.f).push(ids[0]);
+    }
+  }
+  // The two passage nodes meet the visible bridge at its centerline. Short links let the
+  // encounter model identify visitors while they are midway across a long span.
+  for (const [f, [start, end]] of bridgeLandings) {
+    if (end == null) continue;
+    const landing = (id) => {
+      const { start, end } = nodes[id].cell;
+      return xyz(m.r, (start + end) / 2, yFor(f));
+    };
+    const a = landing(start),
+      b = landing(end),
+      segments = Math.ceil(Math.hypot(...sub(b, a)) / 3);
+    let previous = start;
+    for (let i = 0; i <= segments; i++) {
+      const p = a.map((x, axis) => x + ((b[axis] - x) * i) / segments);
+      const id = node(p, 'corridor', { f });
+      connect(previous, id, null, 'atriumBridge');
+      previous = id;
+    }
+    connect(previous, end, null, 'atriumBridge');
   }
   for (const q of m.circulation.hubs) {
     const ids = addCell(q, 'hub');
@@ -4825,18 +5155,39 @@ function buildNavigation(m) {
     dest.push(...ids);
   }
   const l = m.lobby;
-  let lobby = null,
-    entry = null;
-  if (l.area) {
-    lobby = addCell(
-      { f: 0, r: m.r, R: m.R, start: l.angle - l.span / 2, end: l.angle + l.span / 2 },
-      'lobby'
-    )[0];
-    if (lobby != null) dest.push(lobby);
+  const bays = lobbyBays(l),
+    lobbyNodes = bays.map(
+      ({ angle, span }) =>
+        addCell(
+          { f: 0, r: m.r, R: m.R, start: angle - span / 2, end: angle + span / 2 },
+          'lobby'
+        )[0]
+    ),
+    [lobby, oppositeLobby] = lobbyNodes;
+  let entry = null;
+  dest.push(...lobbyNodes.filter((id) => id != null));
+
+  // Use the modeled crossing, including its bend around the mast, for human and dog routes.
+  if (m.greenhouse && lobby != null && oppositeLobby != null) {
+    const points = m.greenhouse.points;
+    let previous = lobby;
+    function crossingNode(x, z) {
+      const id = node([x, yFor(0), z], 'greenhouse', { f: 0 });
+      connect(previous, id, null, 'atriumCrossing');
+      previous = id;
+    }
+    crossingNode(...points[0]);
+    for (let i = 1; i < points.length; i++) {
+      const [x, z] = points[i - 1],
+        [endX, endZ] = points[i],
+        steps = Math.ceil(Math.hypot(endX - x, endZ - z) / 3);
+      for (let j = 1; j <= steps; j++)
+        crossingNode(x + ((endX - x) * j) / steps, z + ((endZ - z) * j) / steps);
+    }
+    connect(previous, oppositeLobby, null, 'atriumCrossing');
   }
   // Open atrium perimeter and the visible greenhouse promenade, kept away from the mast.
-  const atriumR = Math.max(0.3, m.r - 0.6),
-    atriumIds = addCell(
+  const atriumIds = addCell(
       { f: 0, r: Math.max(0.1, m.r - 1.25), R: m.r, start: 0, end: TAU },
       'greenhouse',
       true
@@ -5016,12 +5367,14 @@ function buildNavigation(m) {
             : best,
         null
       ),
-      bridge = node(xyz(m.r - 0.05, a, yFor(roofLevel)), 'roofLink', { f: roofLevel }),
-      swing = node(xyz(ride.platformRadius - 0.45, a, ride.roofLevel + 0.27), 'swing', {
+      bridge = node(xyz(m.r, a, yFor(roofLevel)), 'roofLink', { f: roofLevel }),
+      boardingHeight = ride.roofLevel + 0.16,
+      swing = node(xyz(ride.platformRadius - 0.45, a, boardingHeight), 'swing', {
         f: roofLevel
       });
-    connect(near, bridge);
-    connect(bridge, swing);
+    connect(near, bridge, [nodes[near].p, xyz(m.r + 0.6, a, yFor(roofLevel)), nodes[bridge].p]);
+    const rampEnd = ride.roofPitch?.rampEnd ?? ride.platformRadius - 0.1;
+    connect(bridge, swing, [nodes[bridge].p, xyz(rampEnd, a, boardingHeight), nodes[swing].p]);
     dest.push(swing);
   }
   // Waterslide is a destination / directed experience from its actual landing rooms.
@@ -5092,6 +5445,17 @@ function buildNavigation(m) {
   }
   const nearestLoop = (a) => loop[Math.round((mod(a - axis, TAU) / TAU) * loopN) % loopN];
   if (entry != null) connect(entry, loop[0]);
+  if (oppositeLobby != null) {
+    const rear = bays[1].angle,
+      mouth = node(xyz(p.mouth, rear, 0.205), 'plaza', { f: 0 }),
+      door = node(xyz(m.R + 0.09, rear, 0.3), 'plaza', { f: 0 }),
+      near = nearestLoop(rear);
+    connect(near, mouth, [nodes[near].p, xyz(p.walkRadius, rear, 0.205), nodes[mouth].p]);
+    connect(mouth, door);
+    connect(door, oppositeLobby);
+    dest.push(mouth, door);
+    outdoor.push(mouth, door);
+  }
   for (const q of p.zones) {
     const a = q.angle,
       near = nearestLoop(a),
@@ -5768,7 +6132,7 @@ function agentZone(a, s) {
     )
       return n;
   }
-  // Route-local outdoor/deck transitions; do not credit proximity through walls.
+  // Routes outside the room cells include the greenhouse crossing and exterior approaches.
   for (const i of ids) {
     const n = g.nodes[i];
     if (
@@ -5776,6 +6140,8 @@ function agentZone(a, s) {
       [
         'entry',
         'plaza',
+        'greenhouse',
+        'corridor',
         'outdoor',
         'garden',
         'balcony',
@@ -5963,6 +6329,7 @@ function trialLayout(model, trial) {
     footprint: Math.PI * model.R ** 2,
     width: model.width,
     lobby: lobby.area,
+    bridges: circulation.bridges.length,
     entry: trial.graph.entry != null,
     corridors: circulation.corridorArea,
     plaza: model.plaza.area,
@@ -6034,7 +6401,8 @@ function trialLogSections(record) {
       'Module arrangement': settings.dockVariant ? 'Variation ' + settings.dockVariant : 'Original'
     },
     'Circulation and play': {
-      'Entrance area setting': area(settings.lobby),
+      'Combined lobby area setting': area(settings.lobby),
+      'Atrium bridge arrangement': BRIDGE_MODES[settings.atriumBridges ?? 'off'],
       'Preferred corridor width': metres(settings.corridorWidth),
       'Slide length setting': percent(settings.slideLength),
       'Climbing width': settings.climbWidth === 0 ? 'Off' : metres(settings.climbWidth)
@@ -6070,7 +6438,8 @@ function trialLogSections(record) {
       'Modules installed': trialValue(record.modules)
     },
     'Circulation and play': {
-      'Entrance area built': area(layout.lobby),
+      'Lobby area built': area(layout.lobby),
+      'Atrium bridges built': trialValue(layout.bridges),
       'Usable visitor entrance':
         typeof layout.entry === 'boolean' ? (layout.entry ? 'Yes' : 'No') : null,
       'Corridor area': area(layout.corridors),
@@ -6378,7 +6747,7 @@ async function toggleTrial() {
       rooms: trialModel.rooms.length,
       modules: trialModel.count,
       hubs: trialModel.circulation.hubs.length,
-      core: Math.round(trialModel.ringArea + trialModel.court),
+      core: Math.round(trialModel.ringArea + trialModel.circulation.bridgeArea + trialModel.court),
       encounters: score.encounters,
       cross: score.memory,
       species: score.species,
@@ -7356,11 +7725,17 @@ function draw() {
   paintWebGL(canvas, gl, gpu, camera);
 }
 
-function paintWebGL(canvas, gl, gpu, camera) {
+function paintWebGL(
+  canvas,
+  gl,
+  gpu,
+  camera,
+  viewport = canvas,
+  dpr = Math.min(2, window.devicePixelRatio || 1)
+) {
   if (!gl || !gpu?.mesh) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1),
-    w = Math.max(1, Math.round(canvas.clientWidth * dpr)),
-    h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+  const w = Math.max(1, Math.round(viewport.clientWidth * dpr)),
+    h = Math.max(1, Math.round(viewport.clientHeight * dpr));
   if (canvas.width !== w || canvas.height !== h) {
     canvas.width = w;
     canvas.height = h;
@@ -7563,8 +7938,13 @@ function update() {
       ? 'No crossing'
       : '—';
   $('roofPublic').textContent = fmt(m.roofPlan.publicArea) + ' m²';
+  const twoStoreyPavilions = m.roofPlan.pavilions.filter((pavilion) => pavilion.upper).length;
   $('roofRetail').textContent =
-    m.roofPlan.pavilions.length + ' / ' + fmt(m.roofPlan.retailArea) + ' m²';
+    m.roofPlan.pavilions.length +
+    ' / ' +
+    fmt(m.roofPlan.retailArea) +
+    ' m²' +
+    (twoStoreyPavilions ? ' · ' + twoStoreyPavilions + ' two-storey' : '');
   $('roofService').textContent = fmt(m.roofPlan.serviceArea) + ' m²';
   $('slideConnections').textContent = m.feature.slide
     ? m.feature.slide.connections.length + ' direct landings'
@@ -7579,6 +7959,18 @@ function update() {
   $('actualWidth').textContent = m.width.toFixed(2) + ' m';
   $('wallThickness').textContent = Math.round(facadeThickness(m) * 1000) + ' mm';
   $('corridorActual').textContent = m.circulation.width.toFixed(2) + ' m';
+  const bridgeInfo = $('bridgeInfo');
+  bridgeInfo.hidden = state.atriumBridges === 'off';
+  if (state.floors === 1) bridgeInfo.textContent = 'Add an upper floor to place a bridge.';
+  else {
+    const count = m.circulation.bridges.length;
+    bridgeInfo.textContent =
+      count +
+      ' of ' +
+      (state.floors - 1) +
+      ' upper floors with a crossing' +
+      (count < state.floors - 1 ? '. Some landings overlap lobby or lift space.' : '.');
+  }
   $('corridorArea').textContent = fmt(m.circulation.corridorArea) + ' m²';
   $('elevatorArea').textContent = fmt(m.circulation.elevatorArea) + ' m²';
   $('hubArea').textContent = fmt(m.circulation.hubArea) + ' m²';
@@ -7609,7 +8001,7 @@ function update() {
         ? 'Corridor width reduced to fit the narrow ring.'
         : '',
       m.lobby.voidArea
-        ? 'Level 2 outer corridor is interrupted by the double-height entrance; its two ends remain connected around the other side.'
+        ? 'Level 2 galleries keep the outer corridor connected across both lobby atriums.'
         : ''
     ]
       .filter(Boolean)
@@ -7657,7 +8049,9 @@ function update() {
       : ''
   );
   $('totalArea').textContent = fmt(m.total);
-  $('coreArea').textContent = fmt(m.ringArea + m.court + m.roofPlan.area);
+  $('coreArea').textContent = fmt(
+    m.ringArea + m.circulation.bridgeArea + m.court + m.roofPlan.area
+  );
   $('moduleArea').textContent = fmt(m.count * 81);
   $('totalModules').textContent = m.count;
   $('vacantCount').textContent = m.max - m.count;
@@ -7699,12 +8093,13 @@ function update() {
     bar += `<div title="${p.name}: ${fmt(total)} m²" style="background:${p.color};width:${(total / m.total) * 100}%"></div>`;
   });
   if (m.lobby.area) {
-    rows += `<tr><td><i class="dot" style="background:#e5d3ae"></i>Entrance / lobby</td><td>—</td><td>${fmt(m.lobby.area)}</td><td>—</td><td><b>${fmt(m.lobby.area)}</b></td><td>—</td></tr>`;
+    rows += `<tr><td><i class="dot" style="background:#e5d3ae"></i>Lobby atriums</td><td>—</td><td>${fmt(m.lobby.area)}</td><td>—</td><td><b>${fmt(m.lobby.area)}</b></td><td>—</td></tr>`;
     bar += `<div style="background:#e5d3ae;width:${(m.lobby.area / m.total) * 100}%"></div>`;
   }
   if (m.circulation.total) {
     for (const [name, value, color] of [
-      ['Corridors / links', m.circulation.corridorArea, '#eee9da'],
+      ['Corridors / links', m.circulation.corridorArea - m.circulation.bridgeArea, '#eee9da'],
+      ['Atrium bridges', m.circulation.bridgeArea, '#d9bb87'],
       ['Elevator blocks', m.circulation.elevatorArea, '#777a91'],
       ['Shared lobbies', m.circulation.hubArea, '#80509e']
     ]) {
@@ -7842,6 +8237,8 @@ $('export').onclick = () => {
         corridorArea: m.circulation.corridorArea,
         elevatorArea: m.circulation.elevatorArea,
         sharedLobbyArea: m.circulation.hubArea,
+        bridgeArea: m.circulation.bridgeArea,
+        bridges: m.circulation.bridges,
         roomPacking: m.circulation.roomPacking,
         regions: m.circulation.regions,
         hubs: m.circulation.hubs,
@@ -7861,6 +8258,7 @@ $('export').onclick = () => {
         state.areaCap - m.retail - m.roofPlan.area - m.lobby.area - m.circulation.total,
       camera,
       lobby: { ...m.lobby, blocked: [...m.lobby.blocked] },
+      greenhouse: m.greenhouse,
       primaryArea: m.primary,
       retailArea: m.retail,
       outdoorPublicArea: m.outdoor + (m.plaza?.area || 0) + m.roofPlan.publicArea,
@@ -7932,6 +8330,7 @@ function applySaved(data) {
   };
   for (const [k, [a, b]] of Object.entries(ranges))
     if (typeof s[k] === 'number' && Number.isFinite(s[k])) d[k] = clamp(s[k], a, b);
+  if (Object.hasOwn(BRIDGE_MODES, s.atriumBridges)) d.atriumBridges = s.atriumBridges;
   for (const k of ['floors', 'modules', 'seed', 'dockVariant', 'inspect', 'visitorCount'])
     d[k] = Math.round(d[k]);
   for (const k of [
@@ -8503,50 +8902,6 @@ function rememberWorkspace(workspace) {
   }
 }
 
-// Documentation view. The model and score stay intact when navigating.
-(function () {
-  const rationale = document.getElementById('designRationale'),
-    toggle = document.getElementById('openRationale'),
-    layout = document.querySelector('body>.layout');
-  let oldScroll = 0;
-  function show(on) {
-    if (on === !rationale.hidden) return;
-    if (on) {
-      oldScroll = window.scrollY;
-      document.body.classList.add('dr-open');
-      rationale.hidden = false;
-      layout.setAttribute('aria-hidden', 'true');
-      toggle.setAttribute('aria-expanded', 'true');
-      toggle.textContent = 'Back to laboratory';
-      rationale.scrollTop = 0;
-      window.scrollTo(0, 0);
-      document.getElementById('drTitle').focus({ preventScroll: true });
-    } else {
-      document.body.classList.remove('dr-open');
-      rationale.hidden = true;
-      layout.removeAttribute('aria-hidden');
-      toggle.setAttribute('aria-expanded', 'false');
-      toggle.textContent = 'Design rationale';
-      window.scrollTo(0, oldScroll);
-      toggle.focus({ preventScroll: true });
-      requestAnimationFrame(() => draw());
-    }
-    rememberWorkspace(on ? 'rationale' : 'massing');
-  }
-  toggle.addEventListener('click', () => show(rationale.hidden));
-  for (const id of ['drBack', 'drBottomBack'])
-    document.getElementById(id).addEventListener('click', () => show(false));
-  document.getElementById('drPrint').addEventListener('click', () => window.print());
-  rationale.querySelectorAll('.dr-nav a').forEach((a) =>
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      const target = document.querySelector(a.getAttribute('href'));
-      if (target) target.scrollIntoView({ block: 'start' });
-    })
-  );
-  if (initialWorkspace === 'rationale') show(true);
-})();
-
 // Comparative study assumptions, per m² of floor for structure and per m² of wall for finish.
 // Cost indices compare layers independently. Strength describes system behavior, not capacity.
 const STRUCTURE_STUDY = {
@@ -8591,11 +8946,16 @@ function assemblyVariants(entries, fallback) {
 }
 
 // Render a schematic axonometric with space between the finish and its support system.
-function drawExplodedAssembly(canvas, values, ring) {
-  const width = canvas.clientWidth,
-    height = canvas.clientHeight;
+function drawExplodedAssembly(
+  canvas,
+  values,
+  ring,
+  viewport = canvas,
+  dpr = Math.min(2, devicePixelRatio || 1)
+) {
+  const width = viewport.clientWidth,
+    height = viewport.clientHeight;
   if (!width || !height) return;
-  const dpr = Math.min(2, devicePixelRatio || 1);
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
   const ctx = canvas.getContext('2d');
@@ -8792,6 +9152,141 @@ function drawExplodedAssembly(canvas, values, ring) {
     }
 }
 
+function assemblyQuantity(ring, quantity) {
+  return ring ? fmt(quantity) + ' m²' : quantity + (quantity === 1 ? ' module' : ' modules');
+}
+
+// Build a sheet from the material study itself so labels and diagrams are independent of UI collapse state.
+function drawMaterialSnapshot(study, cards, variantsInView, renderModel, date) {
+  const width = 1800;
+  const margin = 50;
+  const gap = 20;
+  const contentWidth = width - 2 * margin;
+  const cardWidth = (contentWidth - 2 * gap) / 3;
+  const modelTop = 146;
+  const modelHeight = 572;
+  const cardsTop = modelTop + modelHeight + 54;
+  const cardBodyHeights = cards.map(({ variants }) => Math.max(170, variants.length * 78));
+  const rowHeights = [
+    80 + Math.max(...cardBodyHeights.slice(0, 3)),
+    80 + Math.max(...cardBodyHeights.slice(3))
+  ];
+  const height = cardsTop + rowHeights[0] + gap + rowHeights[1] + margin;
+  // Keep a single PNG usable on mobile even with many material combinations in an older study.
+  const scale = Math.min(1, 4096 / height);
+  const sheet = document.createElement('canvas');
+  sheet.width = Math.round(width * scale);
+  sheet.height = Math.round(height * scale);
+  const ctx = sheet.getContext('2d');
+  if (!ctx) throw Error('Canvas export is unavailable.');
+  ctx.scale(scale, scale);
+  ctx.textBaseline = 'top';
+  const ink = '#243b30';
+  const muted = '#52665a';
+  const rule = '#d2dbcf';
+  function text(value, x, y, size, weight = 400, color = ink, maxWidth = width) {
+    ctx.fillStyle = color;
+    ctx.font = `${weight} ${size}px system-ui, sans-serif`;
+    ctx.fillText(value, x, y, maxWidth);
+  }
+  function box(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+  }
+  box(0, 0, width, height, '#f7f8f3');
+  text('Poly Nation', margin, 31, 23, 700, muted);
+  text('Materials snapshot', margin, 56, 50, 700);
+  ctx.textAlign = 'right';
+  text(
+    date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+    width - margin,
+    40,
+    22,
+    400,
+    muted
+  );
+  const { model, view } = study;
+  text(
+    fmt(model.total) +
+      ' m² enclosed  ·  ' +
+      view.floors +
+      (view.floors === 1 ? ' floor' : ' floors') +
+      '  ·  ' +
+      assemblyQuantity(false, model.count),
+    width - margin,
+    78,
+    24,
+    600
+  );
+  ctx.textAlign = 'left';
+
+  ctx.drawImage(
+    renderModel(contentWidth, modelHeight),
+    margin,
+    modelTop,
+    contentWidth,
+    modelHeight
+  );
+  ctx.strokeStyle = rule;
+  ctx.strokeRect(margin, modelTop, contentWidth, modelHeight);
+  text('Assemblies', margin, cardsTop - 38, 25, 700);
+
+  const diagram = document.createElement('canvas');
+  const diagramSize = { clientWidth: 174, clientHeight: 142 };
+  cards.forEach(({ key, title, program, ring, variants }, index) => {
+    const x = margin + (index % 3) * (cardWidth + gap);
+    const row = Math.floor(index / 3);
+    const y = row ? cardsTop + rowHeights[0] + gap : cardsTop;
+    const selected =
+      variants.find((variant) => variant.key === variantsInView.get(key)) ?? variants[0];
+    const ordered = [selected, ...variants.filter((variant) => variant !== selected)];
+    const quantity = variants.reduce((total, variant) => total + variant.quantity, 0);
+
+    box(x, y, cardWidth, rowHeights[row], '#fffefa');
+    ctx.strokeRect(x, y, cardWidth, rowHeights[row]);
+    box(x, y, 6, rowHeights[row], PROGRAMS[program]?.color || '#547765');
+    text(title, x + 20, y + 16, 25, 700, ink, cardWidth - 40);
+    text(
+      assemblyQuantity(ring, quantity) + (ring ? ' of rooms' : ''),
+      x + 20,
+      y + 46,
+      17,
+      400,
+      muted
+    );
+    box(x + 20, y + 76, diagramSize.clientWidth, diagramSize.clientHeight, '#edf1e9');
+    drawExplodedAssembly(diagram, selected.values, ring, diagramSize, 1);
+    ctx.drawImage(diagram, x + 20, y + 76);
+
+    const labelX = x + 210;
+    const available = cardWidth - 232;
+    const many = variants.length > 1;
+    if (many)
+      text(
+        'Shown · ' + assemblyQuantity(ring, selected.quantity),
+        x + 20,
+        y + 222,
+        13,
+        500,
+        muted,
+        174
+      );
+    ordered.forEach((variant, i) => {
+      const line = y + 76 + i * 78;
+      const structure = STRUCTURAL_SYSTEMS[variant.values.structure];
+      const finish = EXTERIOR_FINISHES[variant.values.facade];
+      if (many)
+        text(assemblyQuantity(ring, variant.quantity), labelX, line, 15, 650, muted, available);
+      const detail = line + (many ? 22 : 2);
+      box(labelX, detail + 4, 12, 12, structure.color);
+      text('Structure · ' + structure.name, labelX + 20, detail, 17, 550, ink, available - 20);
+      box(labelX, detail + 30, 12, 12, finish.color);
+      text('Cladding · ' + finish.name, labelX + 20, detail + 26, 17, 550, ink, available - 20);
+    });
+  });
+  return sheet;
+}
+
 function assemblyLayerMarkup(values) {
   const structure = STRUCTURAL_SYSTEMS[values.structure],
     finish = EXTERIOR_FINISHES[values.facade];
@@ -8863,7 +9358,7 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     core,
     'structure',
     materialValues(assignments, 'core').structure,
-    Math.max(0, model.ringArea - roomsArea)
+    Math.max(0, model.ringArea + (model.circulation.bridgeArea ?? 0) - roomsArea)
   );
   for (let floor = 0; floor < model.layers.length; floor++)
     for (const wall of coreFacadeSpans(model, floor))
@@ -8905,8 +9400,6 @@ function estimateMaterialAssemblies(model, assignments, rates) {
 // Work on a detached massing snapshot. Changing massing never mutates the material study.
 (function () {
   const phase = $('materialsPhase');
-  const toggle = $('openMaterials');
-  const layout = document.querySelector('body>.layout');
   const materialCanvas = $('materialsCanvas');
   let materialGL = null,
     materialRenderer = null,
@@ -8917,7 +9410,6 @@ function estimateMaterialAssemblies(model, assignments, rates) {
   const studyCamera = { az: -0.84, el: 0.57, zoom: 0.95, pan: 0 };
   let study = null,
     mesh = null,
-    massingScroll = 0,
     drag = null,
     frame = 0;
 
@@ -8976,6 +9468,27 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     if (phase.hidden || !mesh) return;
     if (materialRenderer) paintWebGL(materialCanvas, materialGL, materialRenderer, studyCamera);
     else if (materialSoftware) paintSoftware(mesh, materialSoftware, studyCamera, materialCanvas);
+  }
+
+  function captureMaterialModel(width, height) {
+    const capture = document.createElement('canvas');
+    const viewport = { clientWidth: width, clientHeight: height };
+    const ctx = capture.getContext('2d');
+    if (!ctx || !mesh) throw Error('The material model is unavailable.');
+    if (materialRenderer && !materialGL.isContextLost()) {
+      capture.width = width;
+      capture.height = height;
+      // Copy the WebGL frame immediately, before the browser clears the drawing buffer.
+      try {
+        paintWebGL(materialCanvas, materialGL, materialRenderer, studyCamera, viewport, 1);
+        ctx.drawImage(materialCanvas, 0, 0);
+      } finally {
+        present();
+      }
+    } else {
+      paintSoftware(mesh, { canvas: capture, ctx }, studyCamera, viewport, 1);
+    }
+    return capture;
   }
   function redraw() {
     if (frame) return;
@@ -9069,8 +9582,7 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     titleText.textContent = title;
     const meta = document.createElement('span');
     meta.className = 'assembly-meta';
-    meta.textContent =
-      key === 'core' ? fmt(count) + ' m² of rooms' : count + (count === 1 ? ' module' : ' modules');
+    meta.textContent = assemblyQuantity(cardData.ring, count) + (key === 'core' ? ' of rooms' : '');
     const chevron = document.createElement('span');
     chevron.className = 'assembly-chevron';
     chevron.setAttribute('aria-hidden', 'true');
@@ -9409,6 +9921,24 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     $('materialStatus').textContent =
       'Updated from massing. Matching material assignments were kept.';
   });
+  const snapshotButton = $('saveMaterialSnapshot');
+  snapshotButton.addEventListener('click', async () => {
+    const date = new Date();
+    snapshotButton.disabled = true;
+    try {
+      const sheet = drawMaterialSnapshot(study, cards, currentVariants, captureMaterialModel, date);
+      const png = await new Promise((resolve) => sheet.toBlob(resolve, 'image/png'));
+      if (!png) throw Error('The browser could not create a PNG.');
+      const filename = 'poly-nation-materials-' + date.toISOString().replace(/[:.]/g, '-') + '.png';
+      downloadBlob(png, 'image/png', filename);
+      $('materialStatus').textContent = 'Materials snapshot downloaded.';
+    } catch (error) {
+      console.error('Materials snapshot failed', error);
+      $('materialStatus').textContent = 'Could not save the snapshot. Try again.';
+    } finally {
+      snapshotButton.disabled = false;
+    }
+  });
   $('materialAxo').onclick = () => {
     studyCamera.az = -0.84;
     studyCamera.el = 0.57;
@@ -9449,32 +9979,52 @@ function estimateMaterialAssemblies(model, assignments, rates) {
     { passive: false }
   );
 
-  function showMaterials() {
-    massingScroll = window.scrollY;
-    if (!study) restoreStudy();
-    if (!study) captureMassing();
-    phase.hidden = false;
-    document.body.classList.add('materials-open');
-    layout.setAttribute('aria-hidden', 'true');
-    toggle.setAttribute('aria-expanded', 'true');
-    toggle.textContent = 'Back to massing';
-    syncStudy();
-    window.scrollTo(0, 0);
-    $('materialsTitle').focus({ preventScroll: true });
-    rememberWorkspace('materials');
+  // All three pages share stable navigation. Switching views keeps the model and score in memory.
+  const rationale = $('designRationale'),
+    workspaces = {
+      massing: { panel: $('massingPhase'), button: $('openMassing') },
+      materials: { panel: phase, button: $('openMaterials'), title: $('materialsTitle') },
+      rationale: { panel: rationale, button: $('openRationale'), title: $('drTitle') }
+    },
+    pageScroll = { massing: 0, materials: 0, rationale: 0 };
+  let activeWorkspace = 'massing',
+    lastStudyWorkspace = 'massing';
+
+  function showWorkspace(workspace) {
+    if (workspace === activeWorkspace) return;
+    pageScroll[activeWorkspace] = window.scrollY;
+    if (workspace !== 'rationale') lastStudyWorkspace = workspace;
+    for (const [name, { panel, button }] of Object.entries(workspaces)) {
+      panel.hidden = name !== workspace;
+      if (name === workspace) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    }
+    document.body.classList.toggle('materials-open', workspace === 'materials');
+    document.body.classList.toggle('dr-open', workspace === 'rationale');
+    activeWorkspace = workspace;
+    if (workspace === 'materials') {
+      if (!study) restoreStudy();
+      if (!study) captureMassing();
+      syncStudy();
+    }
+    if (workspace === 'massing') requestAnimationFrame(draw);
+    window.scrollTo(0, pageScroll[workspace]);
+    const { title, button } = workspaces[workspace];
+    (title || button).focus({ preventScroll: true });
+    rememberWorkspace(workspace);
   }
-  function showMassing() {
-    phase.hidden = true;
-    document.body.classList.remove('materials-open');
-    layout.removeAttribute('aria-hidden');
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.textContent = 'Materials';
-    window.scrollTo(0, massingScroll);
-    toggle.focus({ preventScroll: true });
-    requestAnimationFrame(draw);
-    rememberWorkspace('massing');
-  }
-  toggle.addEventListener('click', () => (phase.hidden ? showMaterials() : showMassing()));
-  if (initialWorkspace === 'materials') showMaterials();
+
+  for (const [name, { button }] of Object.entries(workspaces))
+    button.addEventListener('click', () => showWorkspace(name));
+  for (const id of ['drBack', 'drBottomBack'])
+    $(id).addEventListener('click', () => showWorkspace(lastStudyWorkspace));
+  $('drPrint').addEventListener('click', () => window.print());
+  rationale.querySelectorAll('.dr-nav a').forEach((link) =>
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      document.querySelector(link.getAttribute('href'))?.scrollIntoView({ block: 'start' });
+    })
+  );
+  if (Object.hasOwn(workspaces, initialWorkspace)) showWorkspace(initialWorkspace);
 })();
 </script></body></html>

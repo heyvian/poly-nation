@@ -153,6 +153,54 @@ with sync_playwright() as p:
  print('simulation',res,flush=True);assert res['maxQueue']>0 and res['topRiders']>0 and res['unloaded']>0 and res['plaza']>0
  configurations=page.evaluate('''()=>{let out=[];for(const [floors,areaCap,climbWidth,lobby] of [[1,5000,0,0],[2,10000,12,240],[4,20000,10,240],[7,35000,24,300],[10,50000,24,450]]){Object.assign(state,{floors,areaCap,climbWidth,lobby});const m=derive(),g=buildNavigation(m);out.push({floors,total:m.total,cap:areaCap,area:m.plaza.area,count:m.plaza.zones.length,finite:m.plaza.zones.every(q=>Number.isFinite(q.r)&&q.width>0),reach:g.entry==null?null:g.nodes.filter(n=>n.kind==='climbBase').map(n=>g.reachable.has(n.id))});}return out;}''')
  print('configs',configurations,flush=True);assert all(c['total']<=c['cap']+1e-5 and c['finite'] and c['area']>0 for c in configurations)
+ # Check the rendered circulation against the graph, area schedule and three bridge modes.
+ atrium = page.evaluate('''() => {
+   state = defaults();
+   const base = derive();
+   const graph = buildNavigation(base);
+   const [front, rear] = graph.nodes.filter(node => node.kind === 'lobby');
+   const lobbies = base.lobby.bays;
+   const crossing = shortestPath(graph, front.id, rear.id, 'human');
+   const swinging = graph.nodes.find(node => node.kind === 'swing');
+   const ride = base.feature.ride;
+   const modes = ['aligned', 'radial'].map(mode => {
+     state.atriumBridges = mode;
+     const m = derive(), g = buildNavigation(m);
+     const { bridges, bridgeArea, total } = m.circulation;
+     const bridgeNodes = g.nodes.filter(node =>
+       g.edges[node.id].some(edge => edge.kind === 'atriumBridge'));
+     const areas = m.core.reduce((sum, area) => sum + area, 0) +
+       m.count * MODULE.area + m.lobby.area + total + m.retail + m.roofPlan.area;
+     return {
+       headings: bridges.map(bridge => bridge.heading),
+       network: bridgeNodes.length > 0 && bridgeNodes.every(node => g.reachable.has(node.id)),
+       area: bridgeArea > 0 && Math.abs(m.total - areas) < 1e-5 && m.total <= state.areaCap,
+       clear: bridges.every(bridge =>
+         bridge.offset - bridge.width / 2 > m.feature.ride.towerRadius)
+     };
+   });
+   const roof = base.roofPlan;
+   const upper = roof.pavilions.filter(pavilion => pavilion.upper);
+   const retail = roof.pavilions.reduce((sum, p) => sum + p.area + (p.upper?.area ?? 0), 0);
+   return {
+     opposite: Math.abs(angDist(lobbies[0].angle, lobbies[1].angle) - Math.PI) < 1e-8,
+     perpendicular: Math.abs(angDist(lobbies[0].angle, base.circulation.axis) - Math.PI/2) < 1e-8,
+     crossing: crossing.some(edge => edge.kind === 'atriumCrossing'),
+     outside: graph.edges[rear.id].some(edge => graph.nodes[edge.to].kind === 'plaza'),
+     ramp: ride.roofPitch.rise > 0 && graph.reachable.has(swinging.id) &&
+       Math.abs(swinging.p[1] - ride.roofPitch.eaveY - ride.roofPitch.rise) < 1e-8,
+     roofArea: upper.length > 0 && upper.length < roof.pavilions.length &&
+       Math.abs(roof.retailArea - retail) < 1e-8,
+     off: base.circulation.bridges.length === 0,
+     modes
+   };
+ }''')
+ assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'outside', 'ramp', 'roofArea', 'off']), atrium
+ aligned, radial = atrium['modes']
+ assert len(set(aligned['headings'])) == 1 and len(radial['headings']) == 3, atrium
+ assert abs(radial['headings'][1] - radial['headings'][0] - 2 * 3.141592653589793 / 3) < 1e-8, atrium
+ assert all(mode['network'] and mode['area'] and mode['clear'] for mode in atrium['modes']), atrium
+ print('lobby crossing, upper bridge layouts, conical roof access and pavilion area passed', flush=True)
  slider_label = page.locator('label[for="affinity"]')
  assert slider_label.is_visible() and slider_label.inner_text().startswith('Clustering strength')
  topology = page.evaluate('''() => {
@@ -216,6 +264,7 @@ with sync_playwright() as p:
    function measure(seed, clusterEnabled) {
      state = defaults();
      state.seed = seed;
+     state.modules = 94;
      state.affinity = 0;
      state.cluster[id] = clusterEnabled;
      const layout = derive();

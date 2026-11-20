@@ -166,7 +166,7 @@ Reserve greenhouse area once; distribute remaining program capacity, use whole m
 
 Enclosed area
 
-= ring floors − upper entrance void + greenhouse at grade + enclosed modules / retail + enclosed roof structures ≤ selected area cap.
+= ring floors − lobby voids above grade + upper atrium bridges + greenhouse at grade + enclosed modules and rooftop structures ≤ selected area cap.
 
 Circulation, lifts and shared lobbies inside the ring are already in the ring area; never add them twice. Detailed GFA and wall measurement conventions are not code-verified.
 
@@ -232,6 +232,14 @@ Where the slide blocks modules, move the internal rooms against the façade and 
 
 Use an opaque exterior façade rather than curtain-wall glazing; remove visually overlapping room/wall geometry.
 
+Opposing lobby atriums
+
+The designer placed two facing lobby atriums on an axis perpendicular to the lift cores. A ground-level path through the Infinite Rinse biofiltration greenhouse links the lobbies and their exterior approaches. The designer made this change to increase cross-traffic and create more opportunities for cross-pollination between indoor programs and the public plaza.
+
+The two lobbies share the existing lobby area allowance. The greenhouse crossing bends around the swing mast, and the climbing wall moves beside the opposite approach. Galleries keep the outer corridor connected across both upper voids.
+
+**Atrium bridges.** The designer added optional shortcuts across the atrium on upper floors to test whether they increase cross-pollination. Stacking the bridges or rotating them around the atrium lets the designer compare views from the higher floors, including sightlines down to the greenhouse. Each bridge passes beside the mast and joins the outer corridor at both ends. The bridges are counted as enclosed circulation. Radial landings shift where needed to clear the lift cores or lobby voids.
+
 AI implementation
 
 Geometry rules
@@ -263,6 +271,8 @@ Make the whole annular roof public, including greenery, walking paths, gardens, 
 Extend elevator access to the roof and provide overhead service space for both lift blocks. Preserve the transparent atrium roof as a distinct central element.
 
 Use vacant dock spaces for public uses and the greenhouse as an inhabited setting, not a purely technical void.
+
+**Roofline variation.** The designer pitched the glass greenhouse roof toward the swing mast and varied rooftop pavilion heights to give the roofline more visual diversity. A sloped walk connects the public deck to the raised boarding platform. Some pavilions get a set-back upper room. Both storeys count toward the enclosed area cap, and the ground footprint determines how much public roof remains.
 
 AI implementation
 
