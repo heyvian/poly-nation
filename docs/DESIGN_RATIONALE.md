@@ -510,6 +510,10 @@ Adjacency at the edge
 
 Rooms can create a sheltered gathering point, and nearby docks give the same program room to expand. The outer corridor reaches the module doors. Programs that repel can occupy separate stretches of the same floor and still reach the lifts, roof and promenade through common routes.
 
+Life at the module edge
+
+The designer added small semicircular balconies at the outer ends of Senior care and Love hotel modules, upper-floor Marine firehall modules, and a sample of Infinite Rinse modules. Laundry lines span gaps between some Senior care modules and their immediate neighbors. These open-air details show how residents might use the edge of an otherwise repeated module.
+
 The case for an empty dock
 
 The entrance, slide and climb reserve parts of the perimeter. Where the slide blocks a dock, an interior room can meet the façade and the circulation can pass behind it. Other open docks can stay available for a future module or support a balcony, garden or retail use.

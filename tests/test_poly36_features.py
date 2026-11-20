@@ -6,6 +6,45 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium') or None,args=['--no-sandbox','--disable-dev-shm-usage','--disable-webgl'])
  page=browser.new_page(viewport={'width':1440,'height':900});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.set_content(src.read_text(),wait_until='domcontentloaded');page.wait_for_function('model && occupancy');page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')
+ detail_checks = page.evaluate('''() => {
+   const { balconies, laundry } = moduleExteriorDetails(model, state.seed);
+   const repeated = moduleExteriorDetails(structuredClone(model), state.seed);
+   const occupied = model.slots.filter(slot => !slot.blocked && slot.p !== EMPTY);
+   const rinse = occupied.filter(slot => P[slot.p].id === 'rinse');
+   const senior = occupied.filter(slot => P[slot.p].id === 'senior');
+   const exported = exportGeometry(model).objects;
+   const cut = buildMesh(model, false, { ...state, inspect: 1 });
+   const mesh = buildAssemblyMesh(model, { modules: true }, 0, { assignments: {}, view: state });
+   const sample = structuredClone(model);
+   const upper = sample.slots.find(slot => !slot.blocked && slot.f === 1 && slot.p !== EMPTY);
+   upper.p = PROGRAMS.findIndex(program => program.id === 'fire');
+   const ground = moduleExteriorDetails(sample, state.seed).balconies;
+   return {
+     validPrograms: occupied.every(slot => {
+       const program = P[slot.p].id;
+       if (program === 'rinse') return true;
+       return balconies.has(slot.i) === (
+         ['senior', 'love'].includes(program) || (program === 'fire' && slot.f > 0));
+     }),
+     upperFirehall: ground.has(upper.i),
+     rinseSample: rinse.filter(slot => balconies.has(slot.i)).length === Math.round(rinse.length * 0.2),
+     laundrySample: laundry.length >= Math.floor(senior.length * 0.3) &&
+       laundry.length <= Math.ceil(senior.length * 0.6),
+     hasLaundry: laundry.length > 0,
+     validGaps: laundry.every(({ slot, neighbor, side }) => slot.f === neighbor.f &&
+       !neighbor.blocked && (neighbor.p !== EMPTY || neighbor.use === 'retail') &&
+       neighbor.j === mod(slot.j + side, model.slotN)),
+     uniqueGaps: new Set(laundry.map(({ slot, neighbor }) => relationKey(slot.i, neighbor.i))).size === laundry.length,
+     repeatable: [...balconies].join() === [...repeated.balconies].join() &&
+       JSON.stringify(laundry) === JSON.stringify(repeated.laundry),
+     exported: exported.filter(item => item.kind === 'mesh' && item.layer.startsWith('Module_Balconies_')).length === balconies.size &&
+       exported.filter(item => item.kind === 'mesh' && item.layer.startsWith('Senior_Care_Laundry_')).length === laundry.length,
+     cut: !cut.groups.some(group => /^(Module_Balconies|Senior_Care_Laundry)_L[2-9]/.test(group.layer)),
+     build: mesh.groups.filter(group => group.layer.startsWith('Module_Balconies_')).length === balconies.size,
+   };
+ }''')
+ assert all(detail_checks.values()), detail_checks
+ print('program balconies, senior laundry, cutaway and exports passed', flush=True)
  quick_trial = page.locator('#cpQuickTrial')
  quick_result = page.locator('#cpDashTrialResult')
  drawer = page.locator('#trialDrawer')

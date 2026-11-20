@@ -1,5 +1,10 @@
 # Changelog
 
+## Module balconies and laundry
+- Added semicircular balconies at the outer ends of Senior care, Love hotel, upper-floor Marine firehall, and about one fifth of Infinite Rinse modules.
+- Added seeded laundry lines between Senior care modules and adjacent enclosed modules on the same floor. Balcony and laundry geometry appears in the Massing model, material previews, and Massing drawing and geometry exports.
+- Included the module balconies in the Build assembly and its drawings.
+
 ## Material-led build and floor drawings
 - Ordered the navigation from Massing through Materials and Build to Drawings.
 - Added a compass and horizontal orbit for Elevation, floor-relative horizontal cuts, and a center snap for vertical cuts.
