@@ -6,6 +6,7 @@ python tests/test_poly36.py
 python tests/test_poly36_features.py
 python tests/test_materials_editing.py
 python tests/test_site_and_plan.py
+python tests/test_connections.py
 ```
 
-Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve the real static app over localhost and use software rendering. Screenshots go to `tests/output/`. The suites cover workspace and drawing exports, storage, responsive layouts, ride boarding and unloading, outdoor encounters, area caps, topology rules, clustering, Materials and direct programming edits. `test_site_and_plan.py` checks the overhead projection in each model workspace and serves controlled elevation and OpenStreetMap responses to verify the terrain, natural layers and common water plane independently of public service availability.
+Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve the real static app over localhost and use software rendering. Screenshots go to `tests/output/`. The suites cover workspace and drawing exports, storage, responsive layouts, ride boarding and unloading, outdoor encounters, area caps, topology rules, clustering, Materials and direct programming edits. `test_site_and_plan.py` checks true overhead projection, contour visibility and the canal plane with controlled Overpass and OSM XML responses. `test_connections.py` checks all six dock support systems, exterior fitting layers, and visibility behind a thin façade at 1:2000.

@@ -11,6 +11,7 @@
 | `workspaces.js` | Startup and workspace navigation |
 | `build.js` | Experimental assembly, dock support and slab studies |
 | `drawing-geometry.js`, `drawing-documents.js`, `drawings.js` | Projected geometry, architectural and Illustrator exports, drawing controls |
+| `connection-details.js` | Scaled connection contexts, exterior fitting profiles and demand annotations shared by both drawing outputs |
 | `site-maps.js`, `site-water.js`, `site.js` | Natural features, control-point alignment, terrain cuts, elevation tiles and building placement |
 | `rationale.js`, `rationale-page.js` | Shared deck controls and the standalone page entry point |
 
@@ -25,7 +26,8 @@
 - `slideSurface` resolves tube paint and sheen and supplies both 3D renderers through the mesh. `receivingPoolPlan` fits the basin along the terminal tube heading inside the annular room. These details belong to the assembly and drawing study.
 - `floorPitch` adds slab depth while preserving typical clear height. `derive` shares that pitch with the level-dependent model features, and `buildStorey` computes slab and soffit datums from it. `buildGravityStudy` compares dock reactions and the core slab strip. `drawSharedDockSupports` places the roof-hung return below the deck.
 - `drawingGeometry` carries model-layer names into drawing components and identifies surface-joint strokes. `renderDrawing` finds visible strokes, assigns physical pen widths and adds sketch marks. `traceDrawingFills` traces visible colour regions into closed paths. `vectorDrawingSheet` moves the drawing into named root groups with independent crops and keeps each floor-plan tile aligned. The optional Illustrator script promotes the named groups while preserving their stack order.
-- `drawConnectionDetail` draws the local 1:25 concepts in metres. `drawingSetPages` builds the printable schedule and diagram sets from the current model. `siteElevationSampler` decodes public elevation tiles and `siteAssemblyMesh` places the Build mesh at the local site datum. `alignWestVillageWater` matches two Bow River crossings to the source sheets. `terrainOutsideSiteWater` cuts the sampled terrain triangles along the digitized waterside edges.
+- `drawConnectionContext` draws the 1:25 context. `drawFittingPanels` uses the same exterior profiles in the scaled connection sheets and the printed structure set. `dockSupportDemand` feeds Build and the drawing annotations from one service-load estimate.
+- `siteElevationSampler` decodes public elevation tiles and `siteAssemblyMesh` places the Build mesh at the local site datum. `fetchSiteNaturalFeatures` tries Overpass and the public OSM map endpoint with independent timeouts. `alignWestVillageWater` matches two Bow River crossings to the source sheets. `terrainOutsideSiteWater` cuts the sampled terrain triangles along the digitized waterside edges.
 - `initRationaleSlides` gives each jury topic its own view. Print styles show the full deck. Keep the embedded and standalone deck content synchronized with the Markdown companion.
 
 Exact controls, default paths and export semantics should be verified against source and tested after changes. No major framework migration was performed in the handoff.

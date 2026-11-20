@@ -1,5 +1,10 @@
 # Changelog
 
+## Structural fittings and Site fallbacks
+- Added enlarged exterior fitting elevations to the 1:25 connection sheets, with separate SVG layers and service demand from the current dock study. Added the selected fittings to the structural document set.
+- Improved architectural line visibility at small scales by comparing each stroke to the occluding face at the same subpixel position.
+- Added the standard OpenStreetMap map API as a keyless fallback for the two Overpass hosts. Site now remembers the terrain contour visibility setting.
+
 ## West Village site study and overhead cameras
 - Added mapped OpenStreetMap waterways, woodland and trees to Site. The West Village preset matches two Bow River crossings to the supplied drawings and cuts the proposed canals into the DEM at a shared river study elevation.
 - Set Plan to a true vertical orthographic projection in the model viewers and plan drawings.

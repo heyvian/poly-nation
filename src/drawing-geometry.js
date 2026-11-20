@@ -153,7 +153,7 @@ function clipDrawingLine(start, end, planes) {
 }
 
 // The depth buffer hides linework behind the geometry while the strokes remain vector paths.
-function rasterDrawingFace(depth, width, height, a, b, c, pixels, color, outline, body) {
+function rasterDrawingFace(depth, width, height, a, b, c, pixels, color, outline, body, gradient) {
   const bx = b[0] - a[0],
     by = b[1] - a[1],
     cx = c[0] - a[0],
@@ -162,6 +162,8 @@ function rasterDrawingFace(depth, width, height, a, b, c, pixels, color, outline
   if (Math.abs(denominator) < 1e-7) return;
   const dzB = b[2] - a[2],
     dzC = c[2] - a[2],
+    dzDx = (dzB * cy - by * dzC) / denominator,
+    dzDy = (bx * dzC - dzB * cx) / denominator,
     left = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]))),
     right = Math.min(width - 1, Math.ceil(Math.max(a[0], b[0], c[0]))),
     top = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1]))),
@@ -183,6 +185,10 @@ function rasterDrawingFace(depth, width, height, a, b, c, pixels, color, outline
       }
       if (z <= depth[i]) continue;
       depth[i] = z;
+      if (gradient) {
+        gradient.x[i] = dzDx;
+        gradient.y[i] = dzDy;
+      }
       if (pixels) {
         const offset = i * 4;
         pixels[offset] = color[0];
@@ -209,7 +215,7 @@ function drawingFaceColor(face, sun) {
   return face.color.map((channel) => (0.49 + 0.51 * channel * shade) * 255);
 }
 
-function rasterDrawingPolygon(depth, width, height, polygon, pixels, color, outline, body) {
+function rasterDrawingPolygon(depth, width, height, polygon, pixels, color, outline, body, gradient) {
   for (let i = 1; i + 1 < polygon.length; i++)
     rasterDrawingFace(
       depth,
@@ -221,7 +227,8 @@ function rasterDrawingPolygon(depth, width, height, polygon, pixels, color, outl
       pixels,
       color,
       outline,
-      body
+      body,
+      gradient
     );
 }
 
@@ -492,6 +499,7 @@ function renderDrawing(
       placement.y * pixelsPerMillimetre,
     projected = raw.map(([x, y, z]) => [originX + x * scale, originY + y * scale, z]),
     depth = new Float32Array(width * height).fill(-Infinity),
+    gradient = { x: new Float32Array(depth.length), y: new Float32Array(depth.length) },
     paint = hybrid ? new ImageData(width, height) : null,
     sun = unit([-0.4, 1, 0.65]),
     cutLines = [];
@@ -523,7 +531,8 @@ function renderDrawing(
         paint?.data,
         color,
         face.body ? outline : null,
-        face.body
+        face.body,
+        gradient
       );
     }
     for (const plane of clips) {
@@ -546,7 +555,7 @@ function renderDrawing(
   const marks = [],
     section = [],
     seen = new Set(),
-    tolerance = Math.max(0.035, 0.85 / scale);
+    tolerance = 0.008;
   const coordinate = (p) => p[0].toFixed(1) + ' ' + p[1].toFixed(1);
   const sheetEdges = [
     { x: -1, y: 0, z: 0, level: -margin },
@@ -569,12 +578,12 @@ function renderDrawing(
         z = a[2] + (b[2] - a[2]) * t,
         column = Math.floor(x),
         row = Math.floor(y),
-        visible =
-          column >= 0 &&
-          column < width &&
-          row >= 0 &&
-          row < height &&
-          z + tolerance >= depth[row * width + column];
+        pixel = row * width + column;
+      // Match the face depth to the exact stroke position. A pixel-sized allowance in
+      // model units can otherwise show geometry through thin opaque surfaces at small scales.
+      const visible = column >= 0 && column < width && row >= 0 && row < height &&
+        z + tolerance >= depth[pixel] +
+          (x - column - 0.5) * gradient.x[pixel] + (y - row - 0.5) * gradient.y[pixel];
       if (visible && start == null) start = i;
       if ((!visible || i === steps) && start != null) {
         const end = visible ? i : i - 0.5;

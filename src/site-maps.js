@@ -22,9 +22,12 @@ function siteCoordinates(location) {
 
 const SITE_OVERPASS = [
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter'
+  'https://overpass.private.coffee/api/interpreter'
 ];
-const WEST_VILLAGE_BOUNDS = '51.039,-114.130,51.063,-114.076';
+const SITE_OSM_MAP = 'https://api.openstreetmap.org/api/0.6/map';
+const WEST_VILLAGE_BOUNDS = [51.039, -114.13, 51.063, -114.076];
+const WEST_CROSSING = /Crowchild Trail/i;
+const EAST_CROSSING = /Mewata|14 Street|14 St\b/i;
 const SITE_MAP_COLOURS = {
   woodland: '#8ba77b',
   wetland: '#a2b990',
@@ -32,17 +35,19 @@ const SITE_MAP_COLOURS = {
   tree: '#4d7750'
 };
 
-function siteNaturalQuery(location, size, study) {
+function siteMapBounds(location, size) {
   const { geographic } = siteCoordinates(location),
     radius = size / 2 + 45;
   const southWest = geographic([radius, -radius]),
     northEast = geographic([-radius, radius]);
-  const bounds = (west, east) =>
-    [southWest.latitude, west, northEast.latitude, east].map((n) => n.toFixed(6)).join(',');
-  const boxes =
-    southWest.longitude <= northEast.longitude
-      ? [bounds(southWest.longitude, northEast.longitude)]
-      : [bounds(southWest.longitude, 180), bounds(-180, northEast.longitude)];
+  const bounds = (west, east) => [southWest.latitude, west, northEast.latitude, east];
+  return southWest.longitude <= northEast.longitude
+    ? [bounds(southWest.longitude, northEast.longitude)]
+    : [bounds(southWest.longitude, 180), bounds(-180, northEast.longitude)];
+}
+
+function siteNaturalQuery(location, size, study) {
+  const boxes = siteMapBounds(location, size).map((box) => box.map((n) => n.toFixed(6)).join(','));
   const features = boxes
     .map(
       (b) => `
@@ -65,19 +70,112 @@ function siteNaturalQuery(location, size, study) {
 
 async function fetchSiteNaturalFeatures(location, size, study, signal) {
   const query = siteNaturalQuery(location, size, study);
+  let partial = null;
   for (const endpoint of SITE_OVERPASS) {
     try {
-      const response = await fetch(endpoint + '?data=' + encodeURIComponent(query), { signal });
+      const response = await fetch(endpoint + '?data=' + encodeURIComponent(query), {
+        signal: AbortSignal.any([signal, AbortSignal.timeout(5500)])
+      });
       if (response.ok) {
         const data = await response.json();
-        if (Array.isArray(data.elements) && !data.remark) return data.elements;
+        if (Array.isArray(data.elements) && !data.remark) {
+          if (!study || hasWestVillageControls(data.elements)) return data.elements;
+          if (!partial || data.elements.length > partial.length) partial = data.elements;
+        }
       }
     } catch (error) {
       if (signal.aborted) throw error;
-      // The two public mirrors can have different availability.
+      // Give each public Overpass service its own budget before trying the main OSM API.
     }
   }
-  throw new Error('OpenStreetMap natural features are unavailable');
+  const bounds = siteMapBounds(location, size);
+  const results = await Promise.allSettled(bounds.map((box) => fetchSiteOsmBox(box, signal)));
+  const maps = results
+    .filter((result) => result.status === 'fulfilled')
+    .map((result) => result.value);
+  if (!maps.length && !partial) throw new Error('OpenStreetMap natural features are unavailable');
+  const known = new Map();
+  function keep(elements) {
+    for (const item of elements)
+      known.set(item.id == null ? item : `${item.type}/${item.id}`, item);
+  }
+  if (partial) keep(partial);
+  for (const map of maps) keep(map);
+  if (study && !hasWestVillageControls([...known.values()])) {
+    // Close-up extents and partial Overpass responses can omit the district reference crossings.
+    keep(await fetchSiteOsmBox(WEST_VILLAGE_BOUNDS, signal).catch(() => []));
+  }
+  return [...known.values()];
+}
+
+function hasWestVillageControls(elements) {
+  const bridges = elements.filter(({ tags }) => tags?.bridge);
+  const hasCrossing = (pattern) => bridges.some(({ tags }) => pattern.test(tags.name ?? ''));
+  return (
+    hasCrossing(WEST_CROSSING) &&
+    hasCrossing(EAST_CROSSING) &&
+    elements.some(({ tags }) => tags?.waterway === 'river' && tags.name === 'Bow River')
+  );
+}
+
+async function fetchSiteOsmBox([south, west, north, east], signal) {
+  const bbox = [west, south, east, north].map((n) => n.toFixed(6)).join(',');
+  const response = await fetch(`${SITE_OSM_MAP}?bbox=${bbox}`, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(8000)])
+  });
+  if (!response.ok) throw new Error('OSM map data is unavailable');
+  return readSiteOsmXml(await response.text());
+}
+
+// The standard map endpoint returns OSM XML with node references. Normalize it to the
+// same small set of natural features and bridge controls used by the Overpass path.
+function readSiteOsmXml(source) {
+  const root = new DOMParser().parseFromString(source, 'application/xml').documentElement;
+  if (root.localName !== 'osm') throw new Error('Invalid OSM map response');
+  const nodes = new Map(),
+    ways = new Map(),
+    relations = [],
+    features = [];
+  const tagsFor = (element) =>
+    Object.fromEntries(
+      [...element.children]
+        .filter((child) => child.localName === 'tag')
+        .map((tag) => [tag.getAttribute('k'), tag.getAttribute('v')])
+    );
+  for (const element of root.children) {
+    const { localName } = element,
+      id = element.getAttribute('id');
+    if (localName === 'node') {
+      const lat = Number(element.getAttribute('lat')),
+        lon = Number(element.getAttribute('lon'));
+      const tags = tagsFor(element);
+      nodes.set(id, { lat, lon });
+      if (tags.natural === 'tree') features.push({ type: 'node', id, tags, lat, lon });
+    } else if (localName === 'relation') relations.push(element);
+  }
+  for (const element of root.children) {
+    if (element.localName !== 'way') continue;
+    const id = element.getAttribute('id'),
+      tags = tagsFor(element);
+    const geometry = [...element.children]
+      .filter((child) => child.localName === 'nd')
+      .map((child) => nodes.get(child.getAttribute('ref')));
+    if (!geometry.length || geometry.some((point) => !point)) continue;
+    ways.set(id, geometry);
+    if (siteFeatureKind(tags) || tags.bridge) features.push({ type: 'way', id, tags, geometry });
+  }
+  for (const element of relations) {
+    const tags = tagsFor(element);
+    if (tags.type !== 'multipolygon' || !siteFeatureKind(tags)) continue;
+    const members = [...element.children]
+      .filter((child) => child.getAttribute('type') === 'way')
+      .map((child) => ({
+        role: child.getAttribute('role'),
+        geometry: ways.get(child.getAttribute('ref'))
+      }));
+    features.push({ type: 'relation', id: element.getAttribute('id'), tags, members });
+  }
+  return features;
 }
 
 function siteFeatureKind(tags) {
@@ -248,8 +346,8 @@ async function alignWestVillageWater(elements, terrain, elevationAt) {
       (_, axis) => nearby.reduce((sum, point) => sum + point[axis], 0) / nearby.length
     );
   }
-  const west = crossing(/Crowchild Trail/i),
-    east = crossing(/Mewata|14 Street|14 St\b/i);
+  const west = crossing(WEST_CROSSING),
+    east = crossing(EAST_CROSSING);
   if (!west || !east || west[0] < east[0]) return null;
 
   const [p, q] = WEST_VILLAGE_WATER.controls,

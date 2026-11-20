@@ -265,133 +265,84 @@ const openDrawingWorkspace = (() => {
       height = paper.height * DRAWING_PIXELS_PER_INCH,
       margin = (10 * DRAWING_PIXELS_PER_INCH) / 25.4,
       drawingHeight = height - margin * 3.2,
-      unitsPerMetre = (1000 * DRAWING_PIXELS_PER_INCH) / (25.4 * denominator),
-      origin = [width / 2, margin + drawingHeight / 2],
+      millimetres = DRAWING_PIXELS_PER_INCH / 25.4,
+      scale = (1000 * millimetres) / denominator,
+      origin = [width / 2, margin + 76 + 1.27 * scale],
       ink = sheetInk(settings.pens.paper),
       layers = buildViewLayers(),
+      structure = layers.dockStructure,
+      detail = settings.detail,
       penWidths = printedDrawingPenWidths(settings.pens, denominator),
-      millimetres = DRAWING_PIXELS_PER_INCH / 25.4,
       thin = Math.min(...penWidths) * millimetres,
       thick = Math.max(...penWidths) * millimetres;
     const cutMaterial = markSvgLayer(svgElement('g', {}), 'Cut materials'),
       connections = markSvgLayer(svgElement('g', {}), 'Connection linework'),
       services = markSvgLayer(svgElement('g', {}), 'Service routes'),
+      fittings = markSvgLayer(svgElement('g', {}), 'Fitting elevations'),
       labels = markSvgLayer(
         svgElement('g', { fill: ink, 'font-family': 'system-ui, sans-serif' }),
         'Dimensions and notes'
       );
     const palette = { concrete: '#b8b9aa', steel: '#6d8e85', timber: '#b89568' };
-    const px = (x) => origin[0] + x * unitsPerMetre,
-      py = (y) => origin[1] - y * unitsPerMetre;
-
-    function stroke(group, x1, y1, x2, y2, color = ink, weight = thin) {
-      group.append(
-        svgElement('line', {
-          x1: px(x1),
-          x2: px(x2),
-          y1: py(y1),
-          y2: py(y2),
-          stroke: color,
-          'stroke-width': weight
-        })
-      );
+    function emit(group, kind, attributes, text) {
+      const element = svgElement(kind, attributes);
+      if (text !== undefined) element.textContent = text;
+      group.append(element);
+      return element;
     }
-    function line(x1, y1, x2, y2, style) {
-      stroke(connections, x1, y1, x2, y2, ink, style === 'heavy' ? thick : thin);
+    const style = { ink, paper: settings.pens.paper, thin, thick, emit },
+      pen = svgConnectionPen(connections, { ...style, origin, scale }),
+      { px, py } = pen;
+    function text(x, y, words, size = 11, align = 'start', weight = 450) {
+      emit(labels, 'text', { x, y, 'font-size': size, 'text-anchor': align, 'font-weight': weight }, words);
     }
-    function cut(x, y, w, h, material) {
-      cutMaterial.append(
-        svgElement('rect', {
-          x: px(x),
-          y: py(y),
-          width: w * unitsPerMetre,
-          height: h * unitsPerMetre,
-          fill: palette[material],
-          'fill-opacity': 0.32,
-          stroke: ink,
-          'stroke-width': thick
-        })
-      );
+    function label(x, y, words) {
+      text(px(x), py(y), words, 9, 'start', 600);
     }
-    function shape(points, material) {
-      cutMaterial.append(
-        svgElement('polygon', {
-          points: points.map(([x, y]) => `${px(x)},${py(y)}`).join(' '),
-          fill: palette[material],
-          'fill-opacity': 0.4,
-          stroke: ink,
-          'stroke-width': thick
-        })
-      );
+    function leader(x1, y1, x2, y2) {
+      emit(labels, 'line', { x1: px(x1), y1: py(y1), x2: px(x2), y2: py(y2),
+        stroke: ink, 'stroke-width': thin });
     }
-    function pin(x, y, radius) {
-      connections.append(
-        svgElement('circle', {
-          cx: px(x),
-          cy: py(y),
-          r: radius * unitsPerMetre,
-          fill: settings.pens.paper,
-          stroke: ink,
-          'stroke-width': thin
-        })
-      );
-    }
-    function label(x, y, text, size = 11, align = 'start', weight = 450) {
-      const node = svgElement('text', {
-        x: px(x),
-        y: py(y),
-        'font-size': size,
-        'text-anchor': align,
-        'font-weight': weight
-      });
-      node.textContent = text;
-      labels.append(node);
-    }
-    function callout(text, x, y, targetX, targetY) {
-      const elbow = x < 0 ? x + 0.34 : x - 0.34;
-      stroke(labels, x, y - 0.045, elbow, y - 0.045);
-      stroke(labels, elbow, y - 0.045, targetX, targetY);
-      labels.append(svgElement('circle', { cx: px(targetX), cy: py(targetY), r: 1.8, fill: ink }));
-      label(x, y, text, 11, x < 0 ? 'start' : 'end');
+    function callout(words, x, y, targetX, targetY) {
+      const elbow = x + (x < 0 ? 0.50 : -0.50);
+      leader(x, y - 0.04, elbow, y - 0.04);
+      leader(elbow, y - 0.04, targetX, targetY);
+      emit(labels, 'circle', { cx: px(targetX), cy: py(targetY), r: 1.55, fill: ink });
+      text(px(x), py(y), words, 10.5, x < 0 ? 'start' : 'end');
     }
     function dim(x, bottom, top, value) {
-      stroke(labels, x, bottom, x, top);
-      for (const y of [bottom, top]) stroke(labels, x - 0.035, y - 0.025, x + 0.035, y + 0.025);
-      label(
-        x + (x < 0 ? -0.07 : 0.07),
-        (top + bottom) / 2 - 0.03,
-        value,
-        10,
-        x < 0 ? 'end' : 'start'
-      );
+      leader(x, bottom, x, top);
+      for (const y of [bottom, top]) leader(x - 0.035, y - 0.025, x + 0.035, y + 0.025);
+      text(px(x + (x < 0 ? -0.07 : 0.07)), py((top + bottom) / 2 - 0.03),
+        value, 10, x < 0 ? 'end' : 'start');
+    }
+    function cut(x, y, w, h, material) {
+      emit(cutMaterial, 'rect', { x: px(x), y: py(y), width: w * scale, height: h * scale,
+        fill: palette[material], 'fill-opacity': 0.22, stroke: ink, 'stroke-width': thick });
     }
     function service(points, kind) {
       const serviceInk = { power: '#b57847', water: '#43848c', drain: '#536c86' };
-      services.append(
-        svgElement('polyline', {
-          points: points.map(([x, y]) => `${px(x)},${py(y)}`).join(' '),
-          fill: 'none',
-          stroke: serviceInk[kind],
-          'stroke-width': thick,
-          'stroke-dasharray': kind === 'power' ? '4 2' : kind === 'drain' ? '8 2' : 'none'
-        })
-      );
+      emit(services, 'polyline', { points: points.map(([x, y]) => `${px(x)},${py(y)}`).join(' '),
+        fill: 'none', stroke: serviceInk[kind], 'stroke-width': thick });
     }
+    const demand = dockSupportDemand(sourceModel, sourceAssignments, structure, layers.slabThickness),
+      summary = connectionDemandCopy(detail, structure, demand);
+    text(margin + 1, margin + 13, 'CONNECTION STUDY', 9, 'start', 650);
+    text(margin + 1, margin + 36, CONNECTION_DETAIL_TITLES[detail], 22, 'start', 650);
+    text(margin + 1, margin + 53, DOCK_STRUCTURES[structure].name + ' · Local detail', 11);
+    text(width - margin - 1, margin + 14, 'REFERENCE SERVICE DEMAND', 9, 'end', 650);
+    text(width - margin - 1, margin + 34, summary.value, 14, 'end', 650);
+    text(width - margin - 1, margin + 51, demand.governing.label + ' · unfactored', 10, 'end');
+    drawConnectionContext(detail, sourceModel, layers, demand, { ...pen, cut, callout, dim, label, service });
 
-    label(-2.05, 1.95, CONNECTION_DETAIL_TITLES[settings.detail], 18, 'start', 650);
-    label(-2.05, 1.78, DOCK_STRUCTURES[layers.dockStructure].name + ' · Concept section', 11);
-    drawConnectionDetail(settings.detail, sourceModel, layers, {
-      cut,
-      line,
-      shape,
-      pin,
-      callout,
-      dim,
-      label,
-      service
-    });
+    const fitY = margin + 76 + 2.51 * scale + 14;
+    drawFittingPanels(fittings, fittingPanels(detail, structure),
+      { x: margin + 1, y: fitY, width: width - 2 * margin - 2, printScale: true }, style);
+    text(margin + 1, fitY + 171, summary.check, 10);
+    text(margin + 1, fitY + 185,
+      'Exterior fitting profiles are schematic. Confirm manufacturer ratings and the complete connection before specification.', 9.5);
     sheetArtwork.replaceChildren(
-      ...[cutMaterial, connections, services, labels].filter((group) => group.childElementCount)
+      ...[cutMaterial, services, connections, fittings, labels].filter((group) => group.childElementCount)
     );
     return { width, height, margin, drawingHeight, denominator, populated: true };
   }
@@ -758,7 +709,7 @@ const openDrawingWorkspace = (() => {
   }
   function showStatus() {
     status.textContent = settings.detail
-      ? '1:25 concept section using the current Build dock structure and slab thickness.'
+      ? '1:25 connection detail with enlarged exterior fittings. Uses the current Build dock structure and slab.'
       : placing
       ? 'Click the drawing to place the selected plane.'
       : rendered?.cropped

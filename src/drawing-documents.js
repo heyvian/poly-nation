@@ -557,21 +557,18 @@ function drawingSetPages(name, model, assignments) {
     floorPages(kind);
   } else {
     const layers = buildViewLayers();
-    const { cases, span, slabSpan, slabMoment, dryLoad } = buildGravityStudy(
+    const demand = dockSupportDemand(
       model,
       assignments,
       layers.dockStructure,
       layers.slabThickness
-    );
+    ), { governing, span, slabSpan, slabMoment, dryLoad } = demand;
     const waterDepth = clamp(Number($('buildWaterDepth').value) || 0, 0, 10);
     const water = 9.81 * waterDepth,
       wetMoment = slabMoment + (water * slabSpan ** 2) / 8;
     const section = add(
       'Structure · Radial load-path section',
       'A typical bay shows loads entering the core slab and dock, moving through the frame and down to foundations.'
-    );
-    const governing = cases.reduce((largest, row) =>
-      row.rootMoment > largest.rootMoment ? row : largest
     );
     const dockNote = document.createElement('p');
     dockNote.textContent = `Across the ${span.toFixed(2)} m dock, the ${governing.label.toLowerCase()} case gives ${Math.round(governing.shear)} kN total service gravity load and ${(governing.rootMoment / 1000).toFixed(1)} MN·m about the core face before crediting tip supports.`;
@@ -584,288 +581,18 @@ function drawingSetPages(name, model, assignments) {
     const note = document.createElement('p');
     note.textContent = `The ${Math.round(layers.slabThickness * 1000)} mm concrete strip at the ${slabSpan.toFixed(2)} m span carries ${dryLoad.toFixed(1)} kPa dry and ${(dryLoad + water).toFixed(1)} kPa with ${waterDepth.toFixed(2)} m of water. The corresponding service moments are ${slabMoment.toFixed(1)} and ${wetMoment.toFixed(1)} kN·m/m. Reinforcement, concentrated loads, connections and foundations require separate checks.`;
     page.append(note);
+    const structure = layers.dockStructure,
+      summary = connectionDemandCopy('support', structure, demand),
+      hardware = add('Structure · Dock fittings', `${DOCK_STRUCTURES[structure].name} · Exterior elevations`),
+      elevations = studySVG(880, 172, 'Exterior elevations of the selected dock fittings'),
+      demandNote = document.createElement('p'),
+      sources = document.createElement('p');
+    drawFittingPanels(elevations, fittingPanels('support', structure), { x: 8, y: 8, width: 864 }, {
+      ink: STUDY_INK, paper: '#fafbf7', thin: 0.75, thick: 1.55, emit: studyMark
+    });
+    demandNote.textContent = `${summary.value} in the unfactored ${governing.label.toLowerCase()} case. ${summary.check}`;
+    sources.textContent = 'Catalog ratings and final connection design require verification. See the 1:25 connection presets for the assembly view and scaled fitting elevations.';
+    hardware.append(elevations, demandNote, sources);
   }
   return pages;
-}
-
-const CONNECTION_DETAIL_TITLES = {
-  support: 'Dock support',
-  root: 'Dock to core',
-  services: 'Module seat and services'
-};
-
-// Draw local radial sections in metres. The attachment plates and services are concept geometry.
-function drawConnectionDetail(detail, model, layers, draw) {
-  const { cut, line, shape, pin, callout, dim, label, service } = draw,
-    structure = layers.dockStructure,
-    slab = layers.slabThickness,
-    gap = BUILD_SECTION.dockGap,
-    girder = buildGirderDepth(model);
-
-  function core() {
-    cut(-1.45, 0, 1.45, slab, 'concrete');
-    cut(-0.36, -slab, 0.36, girder, 'steel');
-    cut(-1.36, -slab, 0.98, 0.22, 'steel');
-    line(-1.45, 0.06, 0, 0.06);
-  }
-  function weldTab(x, y) {
-    cut(x, y + 0.2, 0.13, 0.46, 'steel');
-    for (const offset of [-0.16, 0.12]) pin(x + 0.065, y + offset, 0.023);
-  }
-
-  if (detail === 'services') {
-    core();
-    const serviceDepth = 0.5,
-      end = 1.65;
-    cut(gap, 0, end - gap, 0.075, 'timber');
-    cut(gap, -0.075, 0.1, serviceDepth - 0.075, 'steel');
-    cut(gap, -serviceDepth + 0.065, end - gap, 0.065, 'steel');
-    cut(0.74, -serviceDepth, 0.52, 0.08, 'steel');
-    cut(0.72, -serviceDepth - 0.08, 0.57, 0.16, 'steel');
-    line(0, 0, gap, 0);
-    line(0.08, 0.045, gap - 0.08, 0.045);
-    line(gap, 0, gap, 0.76);
-    line(gap + 0.1, 0, gap + 0.1, 0.76);
-    line(gap - 0.06, 0.76, gap + 0.16, 0.76);
-    // Project three routes from a service bay beside the structural collector.
-    service(
-      [
-        [-0.84, -0.31],
-        [-0.3, -0.31],
-        [-0.15, -0.15],
-        [0.3, -0.15],
-        [0.52, -0.2],
-        [1.48, -0.2]
-      ],
-      'power'
-    );
-    service(
-      [
-        [-0.84, -0.43],
-        [-0.26, -0.43],
-        [-0.04, -0.31],
-        [0.28, -0.31],
-        [0.58, -0.27],
-        [1.48, -0.27]
-      ],
-      'water'
-    );
-    service(
-      [
-        [1.48, -0.36],
-        [0.64, -0.38],
-        [0.27, -0.41],
-        [-0.2, -0.46],
-        [-0.7, -0.54]
-      ],
-      'drain'
-    );
-    cut(0.22, -0.1, 0.13, 0.1, 'steel');
-    pin(0.3, -0.31, 0.042);
-    pin(0.27, -0.41, 0.035);
-    callout('Dry power + data plug', -2.05, 0.48, 0.27, -0.15);
-    callout('Isolated water coupling', -2.05, -0.87, 0.3, -0.31);
-    callout('Gravity drain to core stack', -2.05, -1.17, 0.27, -0.41);
-    callout('Bearing pad and locating stop', 2.05, -1.2, 1, -0.55);
-    callout('Removable threshold cover', 2.05, 0.48, 0.24, 0.05);
-    dim(1.8, -serviceDepth, 0, '500 mm');
-    label(-2.05, -1.5, 'Study envelope 4.0 m overall · 3.5 m above finished floor');
-    label(
-      -2.05,
-      -1.66,
-      'Services projected from adjacent bay. Verify falls, firestop, weather seal and clearance.'
-    );
-    return;
-  }
-
-  if (detail === 'root') {
-    core();
-    if (structure === 'roof-hung') {
-      const collector = -slab - girder * 0.65;
-      cut(-1.4, collector + 0.24, 1.68, 0.48, 'steel');
-      cut(0.05, 1.21, 0.46, 1.21 - collector + 0.12, 'steel');
-      cut(0.28, 0.57, 1.38, 0.38, 'steel');
-      weldTab(0.04, collector + 0.14);
-      dim(-1.68, -slab, 0, Math.round(slab * 1000) + ' mm');
-      callout('Public roof deck', -2.05, 0.59, -0.85, 0.05);
-      callout('Inboard collector below deck', -2.05, -1.12, -0.82, collector);
-      callout('Outboard frame continues to rod', 2.05, 0.98, 1.22, 0.44);
-      callout('Fixed perimeter joint', 2.05, -1.0, 0.26, collector);
-      label(-2.05, -1.55, 'Collector and tie-down return the hanger reactions to the core.');
-      return;
-    }
-    const depth = structure === 'box-floor' ? DOCK_STRUCTURES[structure].depth : 0.32;
-    cut(0.06, -0.14, 1.5, depth, 'steel');
-    weldTab(-0.02, -0.29);
-    dim(-1.68, -slab, 0, Math.round(slab * 1000) + ' mm');
-    label(-2.05, 0.76, 'CORE');
-    label(1.05, 0.76, 'DOCK');
-    callout('Ring edge girder', -2.05, 0.54, -0.22, -slab - 0.09);
-    callout('Radial collector to core', -2.05, -1.11, -0.81, -slab - 0.12);
-    if (structure === 'side-truss' || structure === 'side-portal') {
-      cut(0.08, 0.64, 0.15, 0.78, 'steel');
-      shape(
-        [
-          [0.21, 0.5],
-          [1.21, 0.5],
-          [1.21, 0.29],
-          [0.21, 0.29]
-        ],
-        'steel'
-      );
-      if (structure === 'side-truss')
-        shape(
-          [
-            [0.23, 0.36],
-            [1.23, -0.13],
-            [1.16, -0.26],
-            [0.23, 0.19]
-          ],
-          'steel'
-        );
-      else cut(1.11, 0.4, 0.17, 0.58, 'steel');
-      callout('Upper chord return continues above', 2.05, 1.1, 0.15, 0.55);
-      callout('Lower root plate', 2.05, -0.91, 0.045, -0.27);
-    } else if (structure === 'box-floor') {
-      line(0.19, -0.24, 1.36, -0.24);
-      line(0.19, -0.47, 1.36, -0.47);
-      callout('Box diaphragm at root', 2.05, 0.61, 0.14, -0.37);
-      callout('Flange and return into collector', 2.05, -0.97, 0.74, -0.51);
-    } else {
-      callout(
-        structure === 'cable-stayed'
-          ? 'Lower compression return'
-          : 'Inboard restraint and load transfer',
-        2.05,
-        0.53,
-        0.08,
-        -0.29
-      );
-      callout('Deck rail continues to tip bearing', 2.05, -0.98, 1.18, -0.3);
-    }
-    label(
-      -2.05,
-      -1.54,
-      'Local section at the perimeter. Plates, bolts and reinforcement require design.'
-    );
-    return;
-  }
-
-  if (structure === 'cable-stayed') {
-    core();
-    weldTab(0, -0.27);
-    const storey = buildStorey(model, 0, slab),
-      slope = dockCableRise(storey) / (BUILD_SECTION.dockGap + MODULE.depth - 0.6);
-    const stay = (x) => -0.28 - x * slope;
-    shape(
-      [
-        [0.1, -0.13],
-        [0.42, stay(0.42) + 0.075],
-        [0.42, stay(0.42) - 0.075],
-        [0.1, -0.44]
-      ],
-      'steel'
-    );
-    pin(0.37, stay(0.37), 0.045);
-    line(0.4, stay(0.4), 1.89, stay(1.89), 'heavy');
-    shape(
-      [
-        [0.55, stay(0.55) + 0.06],
-        [1.04, stay(1.04) + 0.06],
-        [1.04, stay(1.04) - 0.06],
-        [0.55, stay(0.55) - 0.06]
-      ],
-      'steel'
-    );
-    for (const x of [0.52, 1.07]) line(x, stay(x) - 0.072, x, stay(x) + 0.072, 'heavy');
-    callout('Upper pin and clevis', 2.05, 0.67, 0.37, stay(0.37));
-    callout('Tensioner and locknuts', 2.05, 0.38, 0.78, stay(0.78));
-    callout('Stay continues to dock tip', 2.05, -0.98, 1.73, stay(1.73));
-    callout('Edge beam and back-tie', -2.05, 0.51, -0.28, -0.32);
-    label(-2.05, -1.53, 'Upper anchor at the top of the same storey.');
-  } else if (structure === 'roof-hung') {
-    cut(-1.46, 0.56, 2.92, 0.38, 'steel');
-    cut(0.58, 0.49, 0.34, 0.08, 'steel');
-    cut(0.71, 0.72, 0.085, 2.01, 'steel');
-    shape(
-      [
-        [0.44, 0.56],
-        [0.58, 0.56],
-        [0.58, 0.23]
-      ],
-      'steel'
-    );
-    cut(0.66, 0.72, 0.19, 0.15, 'steel');
-    cut(0.67, -0.56, 0.17, 0.28, 'steel');
-    callout('Overhead collector beam', -2.05, 1.03, -0.38, 0.43);
-    callout('Nut, washer and stiffened plate', 2.05, 1.1, 0.76, 0.63);
-    callout('Threaded rod coupling', 2.05, -0.66, 0.76, -0.64);
-    callout('Rod continues to stacked docks', 2.05, -1.55, 0.76, -1.18);
-  } else if (structure === 'columns') {
-    cut(-1.45, 0.23, 2.72, 0.32, 'steel');
-    cut(0.4, -0.09, 0.48, 0.1, 'steel');
-    cut(0.5, -0.19, 0.28, 1.22, 'steel');
-    shape(
-      [
-        [0.42, -0.2],
-        [0.51, -0.2],
-        [0.51, -0.55]
-      ],
-      'steel'
-    );
-    callout('Tip deck rail', -2.05, 0.77, -0.62, 0.05);
-    callout('Bearing and cap plate', 2.05, 0.66, 0.67, -0.14);
-    callout('Post continues to foundation', 2.05, -1.53, 0.64, -1.3);
-  } else if (structure === 'box-floor') {
-    core();
-    const depth = DOCK_STRUCTURES[structure].depth;
-    cut(0.04, -0.15, 1.6, depth, 'steel');
-    line(0.12, -0.23, 1.54, -0.23);
-    line(0.12, -0.49, 1.54, -0.49);
-    weldTab(-0.01, -0.32);
-    dim(1.79, -0.15 - depth, -0.15, '420 mm');
-    callout('Closed torsion box', 2.05, 0.56, 1.25, -0.16);
-    callout('Root diaphragm', -2.05, -1.12, 0.1, -0.47);
-  } else {
-    core();
-    const portal = structure === 'side-portal';
-    cut(0.05, 1.48, portal ? 0.24 : 0.18, 2.98, 'steel');
-    shape(
-      [
-        [0.2, 1.4],
-        [1.7, 1.19],
-        [1.7, portal ? 0.91 : 1.0],
-        [0.2, portal ? 1.12 : 1.21]
-      ],
-      'steel'
-    );
-    cut(0.2, -1.24, 1.5, portal ? 0.35 : 0.26, 'steel');
-    cut(1.52, 1.1, portal ? 0.18 : 0.12, 2.44, 'steel');
-    if (!portal)
-      shape(
-        [
-          [0.28, 1.18],
-          [1.61, -1.17],
-          [1.51, -1.27],
-          [0.18, 1.06]
-        ],
-        'steel'
-      );
-    callout(
-      portal ? 'Rigid post-to-chord joint' : 'Gusset and chord junction',
-      2.05,
-      1.7,
-      0.25,
-      1.29
-    );
-    callout(
-      portal ? 'Open panel for glazing' : 'Diagonal web to lower chord',
-      2.05,
-      0.66,
-      portal ? 1.59 : 0.72,
-      0.39
-    );
-    callout('Lower dock chord', 2.05, -1.69, 1.03, -1.35);
-    callout('Support returns to the core', -2.05, -0.93, 0.08, -1.28);
-  }
 }

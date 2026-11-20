@@ -131,13 +131,31 @@ function buildGravityStudy(
   return { cases, span, moduleWeight, slabSpan, slabMoment, slabWeight, dryLoad };
 }
 
-function showBuildGravityStudy(model, assignments, structure, slabThickness, waterDepth = 1) {
-  const { cases, span, moduleWeight, slabSpan, slabMoment, slabWeight, dryLoad } =
-      buildGravityStudy(model, assignments, structure, slabThickness),
-    { rootDepth, tipDepth, chordWidth, chordDepth, chordWall } = BUILD_SECTION,
-    governing = cases.reduce((largest, row) =>
+// Idealized service reactions shared by the Build readout and the connection drawings.
+function dockSupportDemand(model, assignments, structure, thickness) {
+  const study = buildGravityStudy(model, assignments, structure, thickness),
+    governing = study.cases.reduce((largest, row) =>
       row.rootMoment > largest.rootMoment ? row : largest
-    );
+    ),
+    arm = study.span - 0.6,
+    rise = Math.min(...model.layers.map((_, floor) => dockCableRise(buildStorey(model, floor, thickness)))),
+    slope = rise / arm,
+    tipPair = governing.rootMoment / arm;
+  return {
+    ...study,
+    governing,
+    slope,
+    tipPair,
+    stayTension: (tipPair / 2) * Math.hypot(1, 1 / slope),
+    deckCompression: tipPair / slope,
+    stackedSupport: (tipPair * model.layers.length) / 2
+  };
+}
+
+function showBuildGravityStudy(model, assignments, structure, slabThickness, waterDepth = 1) {
+  const demand = dockSupportDemand(model, assignments, structure, slabThickness),
+    { cases, span, moduleWeight, slabSpan, slabMoment, slabWeight, dryLoad, governing } = demand,
+    { rootDepth, tipDepth, chordWidth, chordDepth, chordWall } = BUILD_SECTION;
   const freeCantilever = structure === 'side-truss' || Boolean(DOCK_STRUCTURES[structure].depth);
   let finding;
   if (structure === 'side-truss') {
@@ -148,19 +166,12 @@ function showBuildGravityStudy(model, assignments, structure, slabThickness, wat
     finding =
       'The table shows global gravity demand. Portal joints and chords also bend locally, so tip deflection needs a frame analysis.';
   } else {
-    const arm = span - 0.6,
-      vertical = governing.rootMoment / arm;
     if (structure === 'cable-stayed') {
-      const rise = Math.min(
-        ...model.layers.map((_, floor) => dockCableRise(buildStorey(model, floor, slabThickness)))
-      );
-      const slope = rise / arm;
-      const tension = (vertical / 2) * Math.hypot(1, 1 / slope);
-      finding = `At the shallowest same-storey angle, about ${((Math.atan(slope) * 180) / Math.PI).toFixed(1)}°, each stay needs about ${(tension / 1000).toFixed(2)} MN in tension under an ideal pinned-root check. The pair pushes about ${(vertical / slope / 1000).toFixed(2)} MN horizontally into the deck and core.`;
+      finding = `At the shallowest same-storey angle, about ${((Math.atan(demand.slope) * 180) / Math.PI).toFixed(1)}°, each stay needs about ${(demand.stayTension / 1000).toFixed(2)} MN in tension under an ideal pinned-root check. The pair pushes about ${(demand.deckCompression / 1000).toFixed(2)} MN horizontally into the deck and core.`;
     } else if (structure === 'roof-hung') {
-      finding = `The ideal tip support carries about ${Math.round(vertical)} kN per loaded deck. If all ${model.layers.length} floors used the governing case at the same dock, the roof pair could collect ${((vertical * model.layers.length) / 1000).toFixed(2)} MN.`;
+      finding = `The ideal tip support carries about ${Math.round(demand.tipPair)} kN per loaded deck. If all ${model.layers.length} floors used the governing case at the same dock, the roof pair could collect ${(2 * demand.stackedSupport / 1000).toFixed(2)} MN.`;
     } else {
-      finding = `The ideal outer post pair carries about ${Math.round(vertical)} kN per loaded deck. Its footing takes the combined reaction from the floors above.`;
+      finding = `The ideal outer post pair carries about ${Math.round(demand.tipPair)} kN per loaded deck. Its footing takes the combined reaction from the floors above.`;
     }
   }
   const waterLoad = waterDepth * 9.81,

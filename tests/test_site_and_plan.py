@@ -3,6 +3,7 @@
 import os
 import shutil
 import struct
+import xml.etree.ElementTree as ET
 import zlib
 from pathlib import Path
 
@@ -26,6 +27,31 @@ def terrarium_tile(elevation):
 def way(tags, *points):
     return {'type': 'way', 'tags': tags,
             'geometry': [{'lat': lat, 'lon': lon} for lat, lon in points]}
+
+
+def osm_xml(features):
+    root = ET.Element('osm', version='0.6')
+    node_id = 0
+    for item_id, feature in enumerate(features, 1):
+        kind = feature['type']
+        if kind == 'node':
+            node_id += 1
+            item = ET.SubElement(root, 'node', id=str(node_id),
+                                 lat=str(feature['lat']), lon=str(feature['lon']))
+        else:
+            item = ET.SubElement(root, 'way', id=str(item_id))
+            nodes = {}
+            for point in feature['geometry']:
+                location = (point['lat'], point['lon'])
+                if location not in nodes:
+                    node_id += 1
+                    nodes[location] = str(node_id)
+                    ET.SubElement(root, 'node', id=str(node_id),
+                                  lat=str(point['lat']), lon=str(point['lon']))
+                ET.SubElement(item, 'nd', ref=nodes[location])
+        for key, value in feature['tags'].items():
+            ET.SubElement(item, 'tag', k=key, v=value)
+    return ET.tostring(root, encoding='unicode')
 
 
 def verify_plan(page, selector):
@@ -78,7 +104,9 @@ with serve_lab(root) as url, sync_playwright() as p:
         requests.append(route.request.url)
         route.fulfill(json={'elements': features})
 
-    page.route('https://overpass.kumi.systems/api/interpreter?*', mapped_features)
+    mirror = 'https://overpass.private.coffee/api/interpreter?*'
+    official = 'https://api.openstreetmap.org/api/0.6/map?*'
+    page.route(mirror, mapped_features)
     page.goto(url + '/')
     page.evaluate('''() => {
       state.simRunning = state.animateSwing = false;
@@ -128,10 +156,27 @@ with serve_lab(root) as url, sync_playwright() as p:
     }''', features)
     verify_plan(page, '#sitePlan')
 
+    page.locator('#siteContours').uncheck()
+    assert len(requests) == 1, 'Contours caused another map request'
+    assert page.evaluate('''() => {
+      const terrain = {size: 80, count: 2, datum: 1040, elevations: [1040, 1048, 1040, 1048]};
+      const building = {...meshBuilder(), H: 0, extent: 0};
+      const withLines = siteAssemblyMesh(building, terrain, 0, 0);
+      const withoutLines = siteAssemblyMesh(building, terrain, 0, 0, null, null, false);
+      return withLines.lines.length > 0 && !withoutLines.lines.length &&
+        withLines.solid.join() === withoutLines.solid.join();
+    }''')
+
     page.reload()
     expect(page.locator('#sitePhase')).to_be_visible()
+    expect(page.locator('#siteContours')).not_to_be_checked()
     expect(page.locator('#siteWaterStatus')).to_contain_text('share a 1040.0 m study plane', timeout=15000)
-    page.route('https://overpass.kumi.systems/api/interpreter?*', lambda route: route.abort())
+    page.route(mirror, lambda route: route.abort())
+    page.route(official, lambda route: route.fulfill(body=osm_xml(features), content_type='application/xml'))
+    page.locator('#loadSite').click()
+    expect(page.locator('#siteNaturalStatus')).to_have_text('4 mapped natural features. Bow River.')
+    expect(page.locator('#siteWaterStatus')).to_contain_text('share a 1040.0 m study plane', timeout=15000)
+    page.route(official, lambda route: route.abort())
     page.locator('#loadSite').click()
     expect(page.locator('#siteNaturalStatus')).to_have_text('OpenStreetMap is unavailable. The elevation terrain is ready.')
     expect(page.locator('#siteCanalLegend')).to_be_hidden()
@@ -141,4 +186,4 @@ with serve_lab(root) as url, sync_playwright() as p:
     page.locator('#drNext').press('ArrowRight')
     expect(page.locator('#drSite')).to_be_visible()
     assert not errors, errors
-    print('Exact overhead plans, natural feature fallback, canal grade, site persistence and standalone rationale passed.')
+    print('Overhead plans, Overpass and OSM XML fallback, canal grade, contour preference and rationale passed.')

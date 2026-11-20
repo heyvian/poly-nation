@@ -115,7 +115,15 @@ function siteTerrainHeight(terrain, x, z) {
   return top * (1 - fz) + bottom * fz - datum;
 }
 
-function siteAssemblyMesh(assembly, terrain, grade, bearing, natural = null, alignedWater = null) {
+function siteAssemblyMesh(
+  assembly,
+  terrain,
+  grade,
+  bearing,
+  natural = null,
+  alignedWater = null,
+  showContours = true
+) {
   const mesh = meshBuilder();
   if (terrain) {
     const { size, elevations, datum } = terrain,
@@ -145,6 +153,7 @@ function siteAssemblyMesh(assembly, terrain, grade, bearing, natural = null, ali
         t = (mean - low) / Math.max(1, high - low);
       const color = [0.76 + t * 0.1, 0.81 + t * 0.07, 0.73 + t * 0.1];
       mesh.tri(a, b, c, tintNatural(color, (a[0] + b[0] + c[0]) / 3, (a[2] + b[2] + c[2]) / 3));
+      if (!showContours) return;
       const triangle = [a, b, c],
         min = Math.min(a[1], b[1], c[1]),
         max = Math.max(a[1], b[1], c[1]);
@@ -243,6 +252,7 @@ const openSiteWorkspace = (() => {
     naturalStatus = $('siteNaturalStatus'),
     waterStatus = $('siteWaterStatus'),
     study = $('siteCanalStudy'),
+    contours = $('siteContours'),
     westVillage = $('loadWestVillage'),
     input = $('siteCoordinates'),
     extent = $('siteExtent'),
@@ -265,6 +275,7 @@ const openSiteWorkspace = (() => {
     autoLoad = false;
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey));
+    contours.checked = saved?.contours !== false;
     if (saved && parseSiteCoordinates(saved.coordinates)) {
       input.value = saved.coordinates;
       extent.value = ['300', '500', '1000', '2200'].includes(saved.extent) ? saved.extent : '500';
@@ -290,26 +301,28 @@ const openSiteWorkspace = (() => {
       clamp(Number(grade.value) || 0, -100, 100),
       clamp(Number(bearing.value) || 0, 0, 360),
       natural,
-      water
+      water,
+      contours.checked
     );
     if (renderer) uploadWebGLMesh(context, renderer, scene);
     if (fit) fitModel(scene, view, canvas);
     present();
   }
   function savePlacement() {
-    if (!terrain) return;
     try {
-      const { location, size } = terrain;
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({
+      const previous = terrain ? null : JSON.parse(localStorage.getItem(storageKey));
+      const placement = { ...previous, contours: contours.checked };
+      if (terrain) {
+        const { location, size } = terrain;
+        Object.assign(placement, {
           coordinates: `${location.latitude}, ${location.longitude}`,
           extent: String(size),
           grade: grade.value,
           bearing: bearing.value,
           study: study.checked
-        })
-      );
+        });
+      }
+      localStorage.setItem(storageKey, JSON.stringify(placement));
     } catch {
       // Toggling or positioning the assembly does not depend on saved state.
     }
@@ -336,7 +349,7 @@ const openSiteWorkspace = (() => {
       ? 'Matching the study drawings to the Bow River crossings…'
       : '';
     const controller = new AbortController(),
-      timeout = setTimeout(() => controller.abort(), 24000),
+      timeout = setTimeout(() => controller.abort(), 30000),
       elevationAt = siteElevationSampler(controller.signal),
       mapRequest = fetchSiteNaturalFeatures(
         location,
@@ -345,8 +358,11 @@ const openSiteWorkspace = (() => {
         controller.signal
       ).catch(() => null);
     try {
-      const nextTerrain = await sampleSiteTerrain(location, Number(extent.value), elevationAt)
-        .catch(() => null);
+      const nextTerrain = await sampleSiteTerrain(
+        location,
+        Number(extent.value),
+        elevationAt
+      ).catch(() => null);
       if (!nextTerrain) {
         status.textContent = terrain
           ? `Terrain could not be loaded. Showing the previous site at ${terrain.location.latitude}, ${terrain.location.longitude}.`
@@ -377,8 +393,8 @@ const openSiteWorkspace = (() => {
       if (study.checked) {
         if (elements)
           water = await alignWestVillageWater(elements, terrain, elevationAt).catch(() => null);
-        const hasCanals = water && siteWaterStudy(terrain, water, 1).faces
-          .some(({ kind }) => kind === 'proposed');
+        const hasCanals =
+          water && siteWaterStudy(terrain, water, 1).faces.some(({ kind }) => kind === 'proposed');
         waterStatus.textContent = hasCanals
           ? `West Village aligned at Crowchild Trail and 14 Street. The Bow River and canals share a ${water.level.toFixed(1)} m study plane sampled from the Bow DEM.`
           : water
@@ -405,10 +421,13 @@ const openSiteWorkspace = (() => {
     study.checked = true;
     loadTerrain();
   };
-  grade.onchange = bearing.onchange = () => {
-    rebuild();
-    savePlacement();
-  };
+  grade.onchange =
+    bearing.onchange =
+    contours.onchange =
+      () => {
+        rebuild();
+        savePlacement();
+      };
   bindModelCamera({
     canvas,
     getCamera: () => view,
