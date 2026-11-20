@@ -1,5 +1,11 @@
 # Changelog
 
+## Drawing composition and assembly studies
+- Added drawing pan, Fit and Ground placement, axonometric compass directions, and hybrid linework with program colors or material textures.
+- Grouped material presets by family, added core options for steel framing with rammed-earth cladding, and restricted module palettes to lightweight assemblies. Added stable variation to repeated module finishes.
+- Added an independent experimental Build canvas for framing, slabs, walls, module chassis, and dock connections.
+- Replaced the swing crown's upright ring bracing with tapered radial trusses based on the designer's section sketch.
+
 ## Drawings and atrium details
 - Added a Drawings workspace with orthographic SVG linework and movable horizontal and vertical clipping planes.
 - Added Letter and Tabloid drawing sheets in either orientation, with architectural scales and physical dimensions in SVG and print output.

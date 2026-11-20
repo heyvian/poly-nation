@@ -23,3 +23,4 @@ This is the available design trajectory, not a verbatim transcript. The illustra
 `archive/` retains available executable prior builds to inspect. `COPILOT.md` contains more granular release engineering history. These versions are not independent design alternatives or code-validated buildings.
 - The student placed the swing boarding platform at the roof ridge to close the glass roof around the mast, with stairs above the glazing from the public deck.
 - The student drew the ground crossing as two straight lobby approaches joined by a circular walk around the mast. The moving swing crown uses open vertical bracing inspired by the Prater ride.
+- The student proposed a steel frame wrapped in rammed earth and lightweight module systems with subtly varied finishes. Their next swing sketch placed tapered radial trusses between the mast and the chain ring.

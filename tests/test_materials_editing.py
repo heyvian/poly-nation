@@ -100,8 +100,10 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     choose('materialStructure', 'space-frame')
     page.locator('#materialScope').select_option('moduleProgram')
     page.locator('#materialTarget').select_option('2')
-    choose('materialFacade', 'brick')
-    expect(detail).to_contain_text('Brick veneer')
+    expect(page.locator('#materialStructure [data-material=concrete]')).to_have_count(0)
+    expect(page.locator('#materialFacade [data-material=brick]')).to_have_count(0)
+    choose('materialFacade', 'weathering-steel')
+    expect(detail).to_contain_text('Weathering steel cassette panels')
     expect(detail).to_contain_text('Triangulated load paths')
     page.locator('#materialScope').select_option('coreProgram')
     page.locator('#materialTarget').select_option('3')
@@ -110,7 +112,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     assert page.evaluate("""() => {
       const {assignments} = JSON.parse(localStorage.getItem('poly-nation-material-study-v1'));
       return materialValues(assignments, 'core', 3).facade === 'vinyl' &&
-        materialValues(assignments, 'module', 2).facade === 'brick' &&
+        materialValues(assignments, 'module', 2).facade === 'weathering-steel' &&
         materialValues(assignments, 'module', 2).structure === 'space-frame';
     }""")
     page.locator('#materialAnalysisView').click()
@@ -147,6 +149,20 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     page.locator('#materialProgramColors').check()
     page.locator('.material-rationale summary').click()
     page.locator('#materialNotes').fill('Compare cedar and galvanized metal.')
+    page.locator('#materialScope').select_option('core')
+    page.locator('#structureFamilies').select_option('Metal')
+    choose('materialStructure', 'steel-outrigger')
+    page.locator('#facadeFamilies').select_option('Earth and mineral')
+    choose('materialFacade', 'rammed-earth')
+    assert page.evaluate("""() => {
+      const {assignments} = JSON.parse(localStorage.getItem('poly-nation-material-study-v1'));
+      const core = materialValues(assignments, 'core');
+      const legacy = materialValues({building: {structure: 'concrete', facade: 'brick'}}, 'module', 2);
+      return core.structure === 'steel-outrigger' && core.facade === 'rammed-earth' &&
+        legacy.structure === 'steel-frame' && legacy.facade === 'corrugated';
+    }""")
+    page.locator('#materialShowModules').uncheck()
+    page.locator('#materialShowModules').check()
     assert page.evaluate('state.seed')==start['seed']
     page.locator('#openMassing').click()
     page.locator('#shuffle').click()
@@ -156,6 +172,7 @@ with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server, sync_playwright()
     page.locator('#updateMaterials').click()
     expect(page.locator('#materialSnapshot')).to_contain_text('Seed 607')
     page.locator('#materialScope').select_option('building')
+    page.locator('#facadeFamilies').select_option('')
     expect(page.locator('#materialFacade [data-material=cedar]')).to_have_attribute('aria-pressed', 'true')
     page.reload()
     page.evaluate('state.simRunning=false;state.animateSwing=false;refreshView()')

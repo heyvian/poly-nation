@@ -135,7 +135,7 @@ with sync_playwright() as p:
      box(...args) { parts.push(args); },
      ringPoint(r, a, y) { return [r * Math.cos(a), y, r * Math.sin(a)]; }
    }, ride, cruise);
-   const [, seat, back] = parts;
+   const [seat, back] = parts;
    const heading = seat[6];
    return {
      radius: cruise.rad,

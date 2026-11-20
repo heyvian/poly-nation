@@ -15,6 +15,10 @@ Use **Massing → Building → Atrium bridges**, under **Core geometry**, to cho
 
 **Drawings** creates plan, elevation and axonometric linework from the current massing. Add and move horizontal or vertical clipping planes to draw sections. Set a vertical plane's angle and use **Align view** to look square to it. Choose Letter or Tabloid, portrait or landscape, and an architectural scale. **Auto fit** picks the largest listed scale that fits the view on the sheet. Export a physically sized SVG or use **Print / PDF** with actual-size printing.
 
+Drag the sheet or use the arrow keys to position a crop at the selected scale. **Fit** centers the sheet and restores automatic scale. **Ground** lines up elevations and axonometrics at a fixed height above the lower drawing margin. The axonometric compass uses the same north as plan. Hybrid sheets overlay linework on program colors, material textures, or both. SVG exports keep vector strokes and embed the optional color layer.
+
+**Build** makes a separate schematic assembly from a copy of the current massing. Switch between structural framing, slabs, walls, dock connections, and module chassis to inspect how the parts meet. The assembly uses the massing's geometry and openings. Member sizes and connections are conceptual.
+
 Use **Design rationale** to open the illustrated design record. Refreshing the same browser tab reopens the active view. Export JSON to carry a saved design to another browser or machine.
 
 ## Files

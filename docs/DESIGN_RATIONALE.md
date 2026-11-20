@@ -532,6 +532,8 @@ From massing to materials
 
 The core ring and the removable modules have different structural roles. A continuous core supports rooms and public routes. Repeated module framing could simplify connections to the core while allowing finishes to vary by program. The exploded drawings make it possible to examine the frame and envelope independently.
 
+The designer proposed studying a steel frame for the cantilevered module docks with an independently supported rammed-earth outer leaf. The comparison uses the layered earth surface and its modeled mass to distinguish the enclosure from the frame. Lightweight braced metal and engineered timber assemblies give the removable modules a different construction palette.
+
 Comparative estimates
 
 The cost study applies editable CAD rates to the core floor area, modeled façade area and enclosed module quantities. Starting assumptions are $350 per m² of floor for the reference concrete structure and $95 per m² of wall for the reference corrugated cladding. Estimated assembly mass, typical structural behavior and the range of finishes help compare the consequences of a material choice across the building.
