@@ -75,18 +75,20 @@ function fittingPen(pen, x = 0, y = 0, angle = 0) {
   return { outline, line, plate, ring, bolt, chamfer, thread, nut };
 }
 
-function cableFork(pen, x = 0, y = 0, angle = 0) {
+function cableFork(pen, x = 0, y = 0, angle = 0, showLug = true) {
   const { outline, plate, line, ring } = fittingPen(pen, x, y, angle);
   // Side elevation. The exposed retaining system is drawn at the near end of the pin.
-  plate(-0.35, -0.137, 0.045, 0.274);
-  outline([
-    [-0.305, -0.124],
-    [-0.151, -0.079],
-    [-0.113, -0.044],
-    [-0.11, 0.034],
-    [-0.145, 0.08],
-    [-0.305, 0.124]
-  ]);
+  if (showLug) {
+    plate(-0.35, -0.137, 0.045, 0.274);
+    outline([
+      [-0.305, -0.124],
+      [-0.151, -0.079],
+      [-0.113, -0.044],
+      [-0.11, 0.034],
+      [-0.145, 0.08],
+      [-0.305, 0.124]
+    ]);
+  }
   plate(0.18, -0.04, 0.17, 0.08, 'fine');
   for (let at = 0.23; at < 0.34; at += 0.024) line(at, -0.038, at - 0.032, 0.038, 'fine');
   outline([
@@ -115,6 +117,23 @@ function cableFork(pen, x = 0, y = 0, angle = 0) {
   ring(-0.167, 0, 0.035);
   ring(-0.167, 0, 0.011);
   line(-0.193, 0.034, -0.205, 0.061, 'fine');
+}
+
+const stayBoltRows = [-0.33, -0.14, 0.14, 0.33];
+
+function stayCollectorFace(pen, stay) {
+  const { plate, bolt, line } = fittingPen(pen),
+    { plateWidth, beamDepth, flangeThickness } = stay,
+    edge = plateWidth / 2,
+    top = beamDepth / 2;
+  plate(-edge, -top, plateWidth, beamDepth);
+  // Looking inboard: the central lug is seen edge-on. Both bolt columns
+  // clear the lug and sit between the beam flanges for access behind the plate.
+  plate(-0.035, -0.31 * beamDepth, 0.07, 0.62 * beamDepth);
+  for (const x of [-0.32 * plateWidth, 0.32 * plateWidth]) {
+    for (const row of stayBoltRows) bolt(x, row * beamDepth, 0.021);
+  }
+  for (const y of [-top + flangeThickness, top - flangeThickness]) line(-edge, y, edge, y, 'fine');
 }
 
 function stayTensioner(pen, x = 0, y = 0, angle = 0) {
@@ -285,13 +304,8 @@ const CONNECTION_FITTINGS = {
   'cable-stayed': [
     {
       title: 'Pinned fork socket',
-      note: 'Factory socket · retained pin · welded lug',
+      note: 'Two fork cheeks around the welded lug · retained pin',
       draw: cableFork
-    },
-    {
-      title: 'Enclosed stay tensioner',
-      note: 'Exposed threads · locknuts · wrench flats',
-      draw: stayTensioner
     }
   ],
   'roof-hung': [
@@ -382,7 +396,7 @@ function connectionDemandCopy(detail, structure, demand) {
     demandByStructure = {
       'cable-stayed': {
         value: kN(demand.stayTension) + ' tension per stay',
-        check: 'Match the rated strand, socket, pin, tensioner and welded lug as one load path.'
+        check: `Each upper anchor: ${kN(demand.anchorOut)} outward, ${kN(demand.anchorDown)} down, ${Math.round(demand.anchorMoment)} kN·m from pin offset.`
       },
       'roof-hung': {
         value: kN(demand.stackedSupport) + ' tension per upper rod',
@@ -422,13 +436,15 @@ function connectionDemandCopy(detail, structure, demand) {
   if (detail === 'root' && structure === 'roof-hung')
     return {
       value: kN(demand.stackedSupport) + ' vertical load per roof return',
-      check: 'All decks loaded in the stack. The outboard reach also puts bending into the roof collector.'
+      check:
+        'All decks loaded in the stack. The outboard reach also puts bending into the roof collector.'
     };
   if (detail === 'root' && structure === 'columns') {
     const reaction = demand.governing.shear - demand.tipPair;
     return {
       value: kN(Math.abs(reaction)) + (reaction < 0 ? ' uplift at the core' : ' shear into core'),
-      check: 'Ideal inboard reaction for the whole deck. Verify how the seat and restraint share it.'
+      check:
+        'Ideal inboard reaction for the whole deck. Verify how the seat and restraint share it.'
     };
   }
   return demandByStructure[structure];
@@ -574,29 +590,56 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
   }
 
   if (structure === 'cable-stayed') {
-    core();
-    const angle = -Math.atan(demand.slope),
-      anchor = 0.5,
-      stay = (x) => -0.3 - x * demand.slope;
-    deckRail(-1.2, -slab - 0.05, 1.25, 0.25);
-    jointPlate(0.016, -0.33, 0.4);
-    const anchorPen = fittingPen(pen, 0.12, -0.34);
-    anchorPen.outline([
-      [-0.035, 0.147],
-      [0.16, 0.08],
-      [0.16, -0.101],
-      [-0.035, -0.153]
+    const { beamDepth, face, pinReach, plateThickness, flangeThickness } = demand.stay,
+      pinY = -slab - beamDepth / 2,
+      bottom = -slab - beamDepth,
+      behind = face - plateThickness,
+      front = face + plateThickness,
+      angle = -Math.atan(demand.slope),
+      stayY = (x) => pinY - (x - pinReach) * demand.slope,
+      { plate, outline } = fittingPen(pen);
+    cut(-1.58, 0, 1.58, slab, 'concrete');
+    // This section follows the radial W-beam. Its web and both flanges
+    // reach the welded receiver plate at the bolt plane.
+    cut(-1.58, -slab, behind + 1.58, beamDepth, 'steel');
+    for (const y of [bottom, -slab - flangeThickness])
+      plate(-1.58, y, behind + 1.58, flangeThickness);
+    plate(-0.43, bottom + flangeThickness, 0.04, beamDepth - 2 * flangeThickness);
+    plate(behind, bottom, plateThickness, beamDepth);
+    plate(face, bottom, plateThickness, beamDepth);
+    for (const row of stayBoltRows) {
+      const bolt = fittingPen(pen, face, pinY + row * beamDepth);
+      bolt.plate(-0.048, -0.012, 0.096, 0.024, 'fine');
+      bolt.nut(-0.062, -0.038, 0.022);
+      bolt.nut(0.035, 0.059, 0.022);
+    }
+    outline([
+      [front, pinY - 0.28 * beamDepth],
+      [pinReach + 0.054, pinY - 0.049],
+      [pinReach + 0.054, pinY + 0.049],
+      [front, pinY + 0.28 * beamDepth]
     ]);
-    anchorPen.line(-0.014, 0.118, -0.014, -0.122, 'fine');
-    fittingPen(pen, anchor, stay(anchor), angle).plate(-0.03, -0.04, 1.48, 0.08);
-    cableFork(pen, anchor, stay(anchor), angle);
-    stayTensioner(pen, 1.05, stay(1.05), angle);
-    fittingPen(pen, 1.77, stay(1.77), angle).line(0, -0.1, 0, 0.1, 'fine');
-    callout('Upper edge beam and back-tie', -2.25, 0.52, -0.47, -slab - 0.12);
-    callout('A  Pinned fork at upper anchor', 2.25, 0.61, 0.33, stay(0.33));
-    callout('B  Tensioner and locknuts', 2.25, 0.34, 1.05, stay(1.05));
-    callout('Stay continues to dock tip', 2.25, -1.08, 1.64, stay(1.64));
-    label(-1.39, 0.13, 'ANCHOR AT TOP OF THE DOCK STOREY');
+    fittingPen(pen, pinReach, pinY, angle).plate(0.18, -0.04, 1.36, 0.08);
+    cableFork(
+      pen,
+      pinReach + 0.167 * Math.cos(angle),
+      pinY + 0.167 * Math.sin(angle),
+      angle,
+      false
+    );
+    stayTensioner(pen, 1.12, stayY(1.12), angle);
+    callout('Radial I-beam collector into core', -2.25, 0.64, -1.03, pinY);
+    callout('Stiffener welded between flanges', -2.25, -1.12, -0.41, pinY, 1.22);
+    callout(
+      'B  Bolts through paired end plates',
+      2.25,
+      0.69,
+      front + 0.019,
+      pinY + 0.33 * beamDepth
+    );
+    callout('A  Retained fork pin', 2.25, 0.36, pinReach, pinY, 0.74);
+    callout('Tensioner and locknuts', 2.25, -1.17, 1.12, stayY(1.12), 0.89);
+    label(-1.18, 0.13, 'UPPER ANCHOR · SAME STOREY');
     return;
   }
 
@@ -680,7 +723,7 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
   callout('Lower chord to permanent frame', 2.25, -1.24, 1.09, -1.1);
 }
 
-function fittingPanels(detail, structure) {
+function fittingPanels(detail, structure, demand) {
   if (detail === 'services') return CONNECTION_FITTINGS.services;
   if (detail === 'root') {
     const collector = {
@@ -699,6 +742,16 @@ function fittingPanels(detail, structure) {
         }
       ];
   }
+  if (structure === 'cable-stayed')
+    return [
+      CONNECTION_FITTINGS[structure][0],
+      {
+        title: 'Bolted collector face',
+        note: 'Looking inboard · bolt layout schematic',
+        draw: (pen) => stayCollectorFace(pen, demand.stay),
+        scale: demand.stay.beamDepth <= 0.56 ? 20 : 25
+      }
+    ];
   return CONNECTION_FITTINGS[structure];
 }
 

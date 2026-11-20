@@ -305,8 +305,8 @@ const openDrawingWorkspace = (() => {
       emit(labels, 'line', { x1: px(x1), y1: py(y1), x2: px(x2), y2: py(y2),
         stroke: ink, 'stroke-width': thin });
     }
-    function callout(words, x, y, targetX, targetY) {
-      const elbow = x + (x < 0 ? 0.50 : -0.50);
+    function callout(words, x, y, targetX, targetY, extension = 0.50) {
+      const elbow = x + (x < 0 ? extension : -extension);
       leader(x, y - 0.04, elbow, y - 0.04);
       leader(elbow, y - 0.04, targetX, targetY);
       emit(labels, 'circle', { cx: px(targetX), cy: py(targetY), r: 1.55, fill: ink });
@@ -338,11 +338,13 @@ const openDrawingWorkspace = (() => {
     drawConnectionContext(detail, sourceModel, layers, demand, { ...pen, cut, callout, dim, label, service });
 
     const fitY = margin + 76 + 2.51 * scale + 14;
-    drawFittingPanels(fittings, fittingPanels(detail, structure),
+    drawFittingPanels(fittings, fittingPanels(detail, structure, demand),
       { x: margin + 1, y: fitY, width: width - 2 * margin - 2, printScale: true }, style);
     text(margin + 1, fitY + 171, summary.check, 10);
-    text(margin + 1, fitY + 185,
-      'Exterior fitting profiles are schematic. Confirm manufacturer ratings and the complete connection before specification.', 9.5);
+    const limits = detail === 'support' && structure === 'cable-stayed'
+      ? 'Schematic bolt layout. Check combined bolt tension and shear, prying, the welds and the full collector load path.'
+      : 'Exterior fitting profiles are schematic. Confirm manufacturer ratings and the complete connection before specification.';
+    text(margin + 1, fitY + 185, limits, 9.5);
     sheetArtwork.replaceChildren(
       ...[cutMaterial, services, connections, fittings, labels].filter((group) => group.childElementCount)
     );

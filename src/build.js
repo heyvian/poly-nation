@@ -36,7 +36,7 @@ const DOCK_STRUCTURES = {
   },
   'cable-stayed': {
     name: 'Same-storey cable stays',
-    note: 'Two slim stays run from the dock tip to the edge beam at the top of its own storey. The ties return into the core framing.'
+    note: 'Two stays run from the dock tip to the top of its own storey. A bolted end-plate splice aligns each head with a radial steel collector.'
   },
   'roof-hung': {
     name: 'Roof-hung rods',
@@ -48,9 +48,29 @@ const DOCK_STRUCTURES = {
   }
 };
 
-function dockCableRise({ base, soffit }) {
-  // The socket sits 20 mm below the soffit, measured from the cable pin at the dock tip.
-  return soffit - base - 0.02;
+// Coordinates are relative to the core face in the radial direction and to the dock floor vertically.
+function dockStayConnection(model, { base, soffit }) {
+  const beamDepth = buildGirderDepth(model),
+    tipReach = BUILD_SECTION.dockGap + MODULE.depth - 0.6,
+    face = 0.025,
+    pinReach = 0.27,
+    upper = soffit - base - beamDepth / 2,
+    lower = -0.12;
+  return {
+    beamDepth,
+    tipReach,
+    face,
+    pinReach,
+    upper,
+    lower,
+    rise: upper - lower,
+    run: tipReach - pinReach,
+    plateWidth: 0.34,
+    plateThickness: 0.035,
+    flangeWidth: 0.23,
+    flangeThickness: 0.027,
+    webThickness: 0.016
+  };
 }
 
 // Compare gravity service loads for the reusable dock. All dimensions are metres and forces kN.
@@ -138,16 +158,27 @@ function dockSupportDemand(model, assignments, structure, thickness) {
       row.rootMoment > largest.rootMoment ? row : largest
     ),
     arm = study.span - 0.6,
-    rise = Math.min(...model.layers.map((_, floor) => dockCableRise(buildStorey(model, floor, thickness)))),
-    slope = rise / arm,
-    tipPair = governing.rootMoment / arm;
+    connections = model.layers.map((_, floor) =>
+      dockStayConnection(model, buildStorey(model, floor, thickness))
+    ),
+    stay = connections.reduce((shallowest, next) =>
+      next.rise < shallowest.rise ? next : shallowest
+    ),
+    slope = stay.rise / stay.run,
+    tipPair = governing.rootMoment / arm,
+    anchorDown = tipPair / 2,
+    anchorOut = anchorDown / slope;
   return {
     ...study,
     governing,
     slope,
     tipPair,
-    stayTension: (tipPair / 2) * Math.hypot(1, 1 / slope),
-    deckCompression: tipPair / slope,
+    stay,
+    anchorOut,
+    anchorDown,
+    anchorMoment: anchorDown * (stay.pinReach - stay.face),
+    stayTension: Math.hypot(anchorOut, anchorDown),
+    deckCompression: 2 * anchorOut,
     stackedSupport: (tipPair * model.layers.length) / 2
   };
 }
@@ -167,9 +198,9 @@ function showBuildGravityStudy(model, assignments, structure, slabThickness, wat
       'The table shows global gravity demand. Portal joints and chords also bend locally, so tip deflection needs a frame analysis.';
   } else {
     if (structure === 'cable-stayed') {
-      finding = `At the shallowest same-storey angle, about ${((Math.atan(demand.slope) * 180) / Math.PI).toFixed(1)}°, each stay needs about ${(demand.stayTension / 1000).toFixed(2)} MN in tension under an ideal pinned-root check. The pair pushes about ${(demand.deckCompression / 1000).toFixed(2)} MN horizontally into the deck and core.`;
+      finding = `At the shallowest same-storey angle, about ${((Math.atan(demand.slope) * 180) / Math.PI).toFixed(1)}°, each stay needs about ${(demand.stayTension / 1000).toFixed(2)} MN in tension under an ideal pinned-root check. Per upper anchor the stay pulls ${Math.round(demand.anchorOut)} kN outward and ${Math.round(demand.anchorDown)} kN down. The pin projection adds about ${Math.round(demand.anchorMoment)} kN·m at the plate. The two stays push ${(demand.deckCompression / 1000).toFixed(2)} MN back through the lower deck rails.`;
     } else if (structure === 'roof-hung') {
-      finding = `The ideal tip support carries about ${Math.round(demand.tipPair)} kN per loaded deck. If all ${model.layers.length} floors used the governing case at the same dock, the roof pair could collect ${(2 * demand.stackedSupport / 1000).toFixed(2)} MN.`;
+      finding = `The ideal tip support carries about ${Math.round(demand.tipPair)} kN per loaded deck. If all ${model.layers.length} floors used the governing case at the same dock, the roof pair could collect ${((2 * demand.stackedSupport) / 1000).toFixed(2)} MN.`;
     } else {
       finding = `The ideal outer post pair carries about ${Math.round(demand.tipPair)} kN per loaded deck. Its footing takes the combined reaction from the floors above.`;
     }
@@ -189,7 +220,7 @@ function showBuildGravityStudy(model, assignments, structure, slabThickness, wat
    <tbody><tr><th scope="row">Dry reference</th><td>${dryLoad.toFixed(1)}</td><td>${slabMoment.toFixed(1)}</td></tr>
    <tr><th scope="row">With ${waterDepth.toFixed(2)} m of water</th><td>${(dryLoad + waterLoad).toFixed(1)}</td><td>${wetMoment.toFixed(1)}</td></tr></tbody></table>
    <p class="hint">Assumed dry loads are 1.5 kPa for finishes and 4.8 kPa for occupancy. The wet case adds ${waterLoad.toFixed(1)} kPa of uniformly distributed water. This is an unfactored one-way strip comparison. Tank weight, concentrated supports, saturated media, pumps, slide reactions and vibration need their own load cases.</p>
-   <p class="hint">Slab reinforcement, shear, deflection, crack control, waterproofing and the load path through the beams and foundations still require design. Cable anchors bear on a dedicated edge beam and back-tie.</p>
+   <p class="hint">Slab reinforcement, shear, deflection, crack control, waterproofing and the load path through the beams and foundations still require design. The cable concept uses a local steel collector, with the inboard transfer and any steel-to-core transition subject to design.</p>
    <p class="hint">Assumptions in kPa include 3.0 occupancy and 1.2 snow for enclosed modules, 4.8 occupancy on open decks and 6.0 saturated planter load over six planter footprints. The comparison uses 105 kN per dock as a common frame-weight allowance. Detailed design would establish actual member weights and check site loads, vibration, connections and load transfer.</p>`;
 }
 
@@ -291,20 +322,56 @@ function drawAlternativeDock(mesh, model, slot, storey, structure) {
   }
 
   const side = MODULE.width / 2 + 0.14;
+  const railY = structure === 'cable-stayed' ? dockStayConnection(model, storey).lower : -0.16;
   for (const offset of [-side, side])
-    member(point(offset, -span, -0.16), point(offset, 0, -0.16), 0.2, steel, 0.32);
+    member(point(offset, -span, railY), point(offset, 0, railY), 0.2, steel, 0.32);
   for (const depth of [-span + dockGap, -span / 2, -0.6])
     member(point(-side, depth, -0.11), point(side, depth, -0.11), 0.17, steel, 0.2);
   if (structure !== 'cable-stayed') return;
+  const stay = dockStayConnection(model, storey);
   mark('Assembly_Dock_Stays_L' + (slot.f + 1), 'Slot_' + slot.j);
+  for (const offset of [-side, side])
+    member(
+      point(offset, stay.tipReach - span, stay.lower),
+      point(offset, stay.pinReach - span, stay.upper),
+      0.08,
+      cable
+    );
+
+  mark('Assembly_Dock_Stay_Anchors_L' + (slot.f + 1), 'Slot_' + slot.j);
+  const width = model.R - model.r,
+    innerRing = model.r + Math.min(0.42, width * 0.16),
+    outerRing = model.R - Math.min(0.48, width * 0.16),
+    openings = lobbyHoles(model.lobby, slot.f + 1);
   for (const offset of [-side, side]) {
-    const upper = dockCableRise(storey) - 0.12,
-      [x, y, z] = point(offset, -span, upper);
-    member(point(offset, -0.6, -0.12), [x, y, z], 0.08, cable);
-    box(x, y - 0.12, z, 0.3, 0.24, 0.32, slot.angle, steel);
-    // The socket takes tension at the beam above. The lower collector returns deck compression.
-    member([x, y, z], point(offset, -span - back, upper), 0.24);
-    member(point(offset, -span, -0.16), point(offset, -span - back, -0.16), 0.24);
+    const opensOnLobby = openings.some(
+      ([angle, half]) => angDist(angle, slot.angle + Math.atan2(offset, innerRing)) < half + 0.02
+    );
+    // A gallery can receive a return beside the void. At an open bay stop at the
+    // perimeter node. The engineer still needs to resolve the transfer around the void.
+    const receiver = opensOnLobby ? (slot.f === 0 && model.lobby.gallery) || outerRing : innerRing,
+      inboard = Math.sqrt(Math.max(0, receiver ** 2 - offset ** 2)) - model.R,
+      { beamDepth, face, pinReach, upper, plateWidth, plateThickness, flangeThickness } = stay;
+    function block(start, end, bottom, height, width, color = steel) {
+      const [x, y, z] = point(offset, (start + end) / 2 - span, bottom);
+      box(x, y, z, width, height, end - start, slot.angle, color);
+    }
+    // Model the aligned W section, its fixed end plate, and the removable lug plate.
+    const bottom = upper - beamDepth / 2,
+      behind = face - plateThickness;
+    block(inboard, behind, bottom, flangeThickness, stay.flangeWidth);
+    block(inboard, behind, bottom + beamDepth - flangeThickness, flangeThickness, stay.flangeWidth);
+    block(
+      inboard,
+      behind,
+      bottom + flangeThickness,
+      beamDepth - 2 * flangeThickness,
+      stay.webThickness
+    );
+    block(behind, face, bottom, beamDepth, plateWidth);
+    block(face, face + plateThickness, bottom, beamDepth, plateWidth, cable);
+    block(face + plateThickness, pinReach, upper - 0.075, 0.15, 0.07);
+    member(point(offset, -span, railY), point(offset, -span - back, railY), 0.24);
   }
 }
 

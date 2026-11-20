@@ -15,7 +15,7 @@ fittings = {
     'side-truss': ('Chord end plate', 'Web gusset'),
     'side-portal': ('Moment end plate', 'Rigid post junction'),
     'box-floor': ('Full-depth end plate', 'Dock seat and keeper'),
-    'cable-stayed': ('Pinned fork socket', 'Enclosed stay tensioner'),
+    'cable-stayed': ('Pinned fork socket', 'Bolted collector face'),
     'roof-hung': ('Hanger head', 'Threaded bar coupler'),
     'columns': ('Tip post cap', 'Post base plate'),
 }
@@ -48,6 +48,19 @@ with serve_lab(root) as url, sync_playwright() as p:
     for system, expected in fittings.items():
         page.locator('#openBuild').click()
         page.locator('#buildDockStructure').select_option(system)
+        if system == 'cable-stayed':
+            reactions = page.evaluate('''() => {
+              const demand = dockSupportDemand(model, {}, 'cable-stayed');
+              const mesh = buildAssemblyMesh(model, {docks: true, dockStructure: 'cable-stayed'}, 0,
+                {assignments: {}, view: state});
+              return {
+                anchorGroup: mesh.groups.some(group => group.layer.startsWith('Assembly_Dock_Stay_Anchors')),
+                momentBalance: Math.abs(2*demand.anchorDown*demand.stay.tipReach - demand.governing.rootMoment) < 1e-7,
+                projectionMoment: Math.abs(demand.anchorDown*(demand.stay.pinReach-demand.stay.face) - demand.anchorMoment) < 1e-7,
+                resultant: Math.abs(demand.stayTension**2 - demand.anchorOut**2 - demand.anchorDown**2) < 1e-6
+              };
+            }''')
+            assert all(reactions.values()), reactions
         page.locator('#openDrawings').click()
         page.locator('#drawingDetail').select_option('support')
         page.locator('#drawingOrientation').select_option('portrait')
@@ -64,7 +77,10 @@ with serve_lab(root) as url, sync_playwright() as p:
         if system == 'cable-stayed':
             expected_force = page.evaluate('Math.round(dockSupportDemand(model, {}, "cable-stayed").stayTension)')
             expect(sheet.get_by_text(f'{expected_force:,} kN tension per stay')).to_be_visible()
-            expect(sheet.get_by_text('1:10')).to_have_count(2)
+            expect(sheet.get_by_text('1:10')).to_have_count(1)
+            expect(sheet.get_by_text('Radial I-beam collector into core')).to_be_visible()
+            expect(sheet.get_by_text('B  Bolts through paired end plates')).to_be_visible()
+            expect(sheet.get_by_text('kN·m from pin offset.', exact=False)).to_be_visible()
             page.locator('#drawingOrientation').select_option('landscape')
             expect(views).to_have_count(2)
             expect(page.locator('#exportDrawing')).to_be_enabled()

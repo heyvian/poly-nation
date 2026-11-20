@@ -212,7 +212,7 @@ The baseline model uses paired tapered side trusses. The designer questioned how
 
 ### The same-storey stay
 
-The designer brought each cable anchor down to the top of its own storey. The shallow angle gives a slimmer side elevation and a larger horizontal reaction. The connection returns into the core through an edge beam and back-tie. The roof-hung study returns the upper reaction into a collector below the public deck so the rooftop shops and routes stay clear. The moment joint and inboard tie need design. Tip posts shift support to the plaza edge.
+The designer brought each cable anchor down to the top of its own storey. The shallow angle gives a slimmer side elevation and a larger horizontal reaction. A bolted end-plate splice aligns the stay with a radial steel collector that returns into the core. The joint and inboard transfer require engineering design. The roof-hung study returns the upper reaction into a collector below the public deck so the rooftop shops and routes stay clear. The moment joint and inboard tie need design. Tip posts shift support to the plaza edge.
 
 ### A scale check
 

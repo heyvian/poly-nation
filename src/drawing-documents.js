@@ -376,8 +376,10 @@ function structuralStudyFigure(model, layers, section) {
     [xOuter + 44, xOuter + 111, xOuter + 180].forEach((x) => arrow(x, deck - 49, x, deck - 3));
     line(xOuter, deck + 4, xTip, deck + 4, green, 5);
     if (structure === 'cable-stayed') {
-      line(xOuter, deck - floorSpace + 5, xTip, deck + 4, green, 3);
-      arrow(xTip - 60, deck - 8, xOuter + 22, deck - floorSpace + 10, green);
+      const y = deck - floorSpace + 5;
+      line(xOuter, y, xTip, deck + 4, green, 3);
+      arrow(xTip - 60, deck - 8, xOuter + 22, y + 5, green);
+      arrow(xOuter - 5, y, xInner + 9, y, green);
     } else if (structure === 'roof-hung') {
       line(xOuter, top - 9, xTip, top - 9, green, 5);
       line(xTip, top - 9, xTip, deck + 4, green, 3);
@@ -587,7 +589,7 @@ function drawingSetPages(name, model, assignments) {
       elevations = studySVG(880, 172, 'Exterior elevations of the selected dock fittings'),
       demandNote = document.createElement('p'),
       sources = document.createElement('p');
-    drawFittingPanels(elevations, fittingPanels('support', structure), { x: 8, y: 8, width: 864 }, {
+    drawFittingPanels(elevations, fittingPanels('support', structure, demand), { x: 8, y: 8, width: 864 }, {
       ink: STUDY_INK, paper: '#fafbf7', thin: 0.75, thick: 1.55, emit: studyMark
     });
     demandNote.textContent = `${summary.value} in the unfactored ${governing.label.toLowerCase()} case. ${summary.check}`;

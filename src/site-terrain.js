@@ -315,6 +315,10 @@ function siteAssemblyMesh(
     ...mesh,
     H: assembly.H + Math.max(0, foundation),
     extent: Math.max(assembly.extent, (terrain?.size ?? 0) / 2),
+    // Follow the placed assembly, independently of the district extent and drawing datum.
+    orbitPivot: relativeToBuilding
+      ? [0, assembly.H * 0.47, 0]
+      : [siteX, foundation + assembly.H * 0.47, siteZ],
     foundation
   };
 }

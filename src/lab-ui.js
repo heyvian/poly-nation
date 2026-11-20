@@ -738,7 +738,10 @@ function paintWebGL(
   gl.uniform2f(u.uScale, 1 / (half * aspect), 1 / half);
   // The district terrain extends well beyond the building-scale depth range.
   // Leave the smaller range in place for the closer assembly views.
-  gl.uniform1f(u.uDepth, Math.max(500, Math.hypot(gpu.mesh.extent * Math.SQRT2, gpu.mesh.H) + 32));
+  const { extent, H } = gpu.mesh,
+    [pivotX, , pivotZ] = modelViewPivot(gpu.mesh),
+    depth = Math.hypot(extent + Math.abs(pivotX), extent + Math.abs(pivotZ), H) + 32;
+  gl.uniform1f(u.uDepth, Math.max(500, depth));
   gl.uniform4f(u.uTint, 0, 0, 0, 0);
   function batch(k, mode, offset = 0, count = gpu.lengths[k]) {
     if (!count) return;

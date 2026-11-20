@@ -116,6 +116,7 @@ with serve_lab(root) as url, sync_playwright() as p:
       paintSoftware = (...args) => {
         window.projectedPlan = {...args[2]};
         window.paintedGroups = args[0].groups.map(group => group.layer);
+        if (args[1].canvas.id === 'siteCanvas') window.siteOrbitScene = args[0];
         return paint(...args);
       };
       const drawModel = renderDrawing;
@@ -168,6 +169,29 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(page.locator('#siteTerrainEmpty')).to_be_hidden()
     expect(page.locator('#siteCanvas')).to_be_visible()
     verify_plan(page, '#sitePlan')
+    page.locator('#siteAxo').click()
+    page.locator('#siteFit').click()
+    orbit_probe = '''() => {
+      const mesh = window.siteOrbitScene, view = window.projectedPlan;
+      const storage = JSON.parse(localStorage.getItem('poly-nation-west-village-v1'));
+      const [x, z] = westVillageToGround(storage.pin, storage.registration);
+      const pivot = modelViewPivot(mesh);
+      const {right, up, target, half} = modelProjection(mesh, view, 1);
+      return {az: view.az, pinned: Math.abs(pivot[0]-x) < 1e-6 && Math.abs(pivot[2]-z) < 1e-6,
+        screen: [dot(sub(pivot, target), right)/half, dot(sub(pivot, target), up)/half]};
+    }'''
+    before_orbit = page.evaluate(orbit_probe)
+    bounds = page.locator('#siteCanvas').bounding_box()
+    x = bounds['x'] + bounds['width'] / 2
+    y = bounds['y'] + bounds['height'] / 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + 120, y + 38, steps=4)
+    page.mouse.up()
+    after_orbit = page.evaluate(orbit_probe)
+    assert before_orbit['pinned'] and after_orbit['pinned']
+    assert before_orbit['az'] != after_orbit['az']
+    assert all(abs(a - b) < 1e-8 for a, b in zip(before_orbit['screen'], after_orbit['screen']))
     page.locator('#siteFocus').click()
     assert page.evaluate('window.projectedPlan.zoom < 0.15')
     page.locator('#siteCondition').select_option('existing')

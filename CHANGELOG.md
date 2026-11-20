@@ -1,5 +1,9 @@
 # Changelog
 
+## Cable stay connection and Site orbit
+- Reworked the upper cable stay as a bolted paired-end-plate joint on a radial I-beam collector. Build and Drawings now share the pin geometry and show the idealized anchor forces and pin-offset moment.
+- Set the Site orbit pivot to the placed project in the district and building views.
+
 ## Plan-led West Village study
 - Replaced general GPS placement with a shared building pin on the supplied master, water and circulation sheets.
 - Added an existing/proposed comparison on the district elevation grid, editable canal depth, and independent water and contour visibility. The PDF river and canal geometry can display with live elevations when map services are unavailable.

@@ -39,11 +39,15 @@ function baseViewHalf(mesh, camera, aspect) {
   return Math.max(extent, extent / aspect, camera.el > 1.4 ? 0 : mesh.H * 0.68);
 }
 
+function modelViewPivot(mesh) {
+  return mesh.orbitPivot ?? [0, mesh.H * 0.47, 0];
+}
+
 // Keep both renderers and the editing ray in the same camera coordinate system.
 function modelProjection(mesh, camera, aspect) {
   const basis = orbitBasis(camera),
     { right, up } = basis,
-    target = [0, mesh.H * 0.47, 0].map(
+    target = modelViewPivot(mesh).map(
       (coordinate, axis) => coordinate + right[axis] * (camera.panX ?? 0) + up[axis] * camera.pan
     );
   return { ...basis, target, half: baseViewHalf(mesh, camera, aspect) * camera.zoom };
@@ -57,14 +61,14 @@ function projectedModelBounds(mesh, { right, up }, startsAt = (group) => group.l
     maxX = -Infinity,
     minY = Infinity,
     maxY = -Infinity;
-  const originY = mesh.H * 0.47;
+  const [originX, originY, originZ] = modelViewPivot(mesh);
   if (!firstGroup) return { minX, maxX, minY, maxY };
   for (const kind of ['solid', 'glass', 'lines']) {
     const vertices = mesh[kind];
     for (let i = firstGroup[kind]; i < vertices.length; i += 10) {
-      const x = vertices[i],
+      const x = vertices[i] - originX,
         y = vertices[i + 1] - originY,
-        z = vertices[i + 2];
+        z = vertices[i + 2] - originZ;
       const across = x * right[0] + y * right[1] + z * right[2];
       const height = x * up[0] + y * up[1] + z * up[2];
       minX = Math.min(minX, across);
