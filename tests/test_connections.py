@@ -51,10 +51,42 @@ with serve_lab(root) as url, sync_playwright() as p:
         if system == 'cable-stayed':
             reactions = page.evaluate('''() => {
               const demand = dockSupportDemand(model, {}, 'cable-stayed');
-              const mesh = buildAssemblyMesh(model, {docks: true, dockStructure: 'cable-stayed'}, 0,
+              const mesh = buildAssemblyMesh(model, {frame: true, docks: true, dockStructure: 'cable-stayed'}, 0,
                 {assignments: {}, view: state});
+              const {outside, ringWidth} = buildRingFrame(model);
+              const named = (prefix) => mesh.groups.map((group, i) => ({
+                group, start: group.solid, end: mesh.groups[i+1]?.solid ?? mesh.solid.length
+              })).filter(({group}) => group.layer.startsWith(prefix));
+              const anchors = named('Assembly_Dock_Stay_Anchors');
+              const collectors = named('Assembly_Dock_Stay_Collectors');
+              const uniqueRadialCollectors = collectors.every(({start, end}) => {
+                // Each I-section consists of three boxes, with 36 interleaved vertices per box.
+                const boxSize = 360, memberSize = 3 * boxSize;
+                const axes = new Set();
+                if ((end - start) % memberSize !== 0) return false;
+                for (let i = start; i < end; i += memberSize) {
+                  let x = 0, z = 0;
+                  for (let j = i; j < i + boxSize; j += 10) {
+                    x += mesh.solid[j]; z += mesh.solid[j+2];
+                  }
+                  const gridAxis = Math.atan2(z,x) * 2 * model.slotN / TAU;
+                  if (Math.abs(gridAxis - Math.round(gridAxis)) > 1e-7) return false;
+                  const axis = mod(Math.round(gridAxis), 2 * model.slotN);
+                  if (axis % 2 !== 1 || axes.has(axis)) return false;
+                  axes.add(axis);
+                }
+                return axes.size > 0;
+              });
               return {
-                anchorGroup: mesh.groups.some(group => group.layer.startsWith('Assembly_Dock_Stay_Anchors')),
+                perimeterOnly: anchors.length > 0 && anchors.every(({start, end}) => {
+                  for (let i = start; i < end; i += 10)
+                    if (Math.hypot(mesh.solid[i], mesh.solid[i+2]) < outside + ringWidth/2 - 0.04)
+                      return false;
+                  return true;
+                }),
+                uniqueRadialCollectors: collectors.length > 0 && uniqueRadialCollectors,
+                roofCollectors: collectors.some(({group}) =>
+                  group.layer === 'Assembly_Dock_Stay_Collectors_L' + (model.layers.length + 1)),
                 momentBalance: Math.abs(2*demand.anchorDown*demand.stay.tipReach - demand.governing.rootMoment) < 1e-7,
                 projectionMoment: Math.abs(demand.anchorDown*(demand.stay.pinReach-demand.stay.face) - demand.anchorMoment) < 1e-7,
                 resultant: Math.abs(demand.stayTension**2 - demand.anchorOut**2 - demand.anchorDown**2) < 1e-6
@@ -78,7 +110,8 @@ with serve_lab(root) as url, sync_playwright() as p:
             expected_force = page.evaluate('Math.round(dockSupportDemand(model, {}, "cable-stayed").stayTension)')
             expect(sheet.get_by_text(f'{expected_force:,} kN tension per stay')).to_be_visible()
             expect(sheet.get_by_text('1:10')).to_have_count(1)
-            expect(sheet.get_by_text('Radial I-beam collector into core')).to_be_visible()
+            expect(sheet.get_by_text('Shared radial collector (projected)')).to_be_visible()
+            expect(sheet.get_by_text('Perimeter ring transfer')).to_be_visible()
             expect(sheet.get_by_text('B  Bolts through paired end plates')).to_be_visible()
             expect(sheet.get_by_text('kN·m from pin offset.', exact=False)).to_be_visible()
             page.locator('#drawingOrientation').select_option('landscape')

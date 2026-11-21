@@ -591,6 +591,7 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
 
   if (structure === 'cable-stayed') {
     const { beamDepth, face, pinReach, plateThickness, flangeThickness } = demand.stay,
+      perimeter = stayPerimeterFaces(model, MODULE.width / 2 + 0.14),
       pinY = -slab - beamDepth / 2,
       bottom = -slab - beamDepth,
       behind = face - plateThickness,
@@ -599,12 +600,18 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
       stayY = (x) => pinY - (x - pinReach) * demand.slope,
       { plate, outline } = fittingPen(pen);
     cut(-1.58, 0, 1.58, slab, 'concrete');
-    // This section follows the radial W-beam. Its web and both flanges
-    // reach the welded receiver plate at the bolt plane.
-    cut(-1.58, -slab, behind + 1.58, beamDepth, 'steel');
-    for (const y of [bottom, -slab - flangeThickness])
-      plate(-1.58, y, behind + 1.58, flangeThickness);
-    plate(-0.43, bottom + flangeThickness, 0.04, beamDepth - 2 * flangeThickness);
+    // The stay receiver meets the perimeter ring. The shared radial collector
+    // is projected on the inboard side of the ring to show the continuing load path.
+    for (const [start, end] of [
+      [-1.58, perimeter.inner],
+      [perimeter.outer, behind]
+    ]) {
+      cut(start, -slab, end - start, beamDepth, 'steel');
+      for (const y of [bottom, -slab - flangeThickness])
+        plate(start, y, end - start, flangeThickness);
+    }
+    cut(perimeter.inner, -slab, perimeter.outer - perimeter.inner, beamDepth, 'steel');
+    plate(perimeter.inner + 0.03, bottom + flangeThickness, 0.04, beamDepth - 2 * flangeThickness);
     plate(behind, bottom, plateThickness, beamDepth);
     plate(face, bottom, plateThickness, beamDepth);
     for (const row of stayBoltRows) {
@@ -628,8 +635,15 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
       false
     );
     stayTensioner(pen, 1.12, stayY(1.12), angle);
-    callout('Radial I-beam collector into core', -2.25, 0.64, -1.03, pinY);
-    callout('Stiffener welded between flanges', -2.25, -1.12, -0.41, pinY, 1.22);
+    callout('Shared radial collector (projected)', -2.25, 0.64, -1.19, pinY);
+    callout(
+      'Perimeter ring transfer',
+      -2.25,
+      -1.12,
+      (perimeter.inner + perimeter.outer) / 2,
+      pinY,
+      1.22
+    );
     callout(
       'B  Bolts through paired end plates',
       2.25,

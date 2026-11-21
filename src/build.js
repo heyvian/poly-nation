@@ -4,6 +4,15 @@ function buildGirderDepth(model) {
   return clamp((model.R - model.r) / 16, 0.35, 0.82);
 }
 
+function buildRingFrame(model) {
+  const width = model.R - model.r;
+  return {
+    inside: model.r + Math.min(0.42, width * 0.16),
+    outside: model.R - Math.min(0.48, width * 0.16),
+    ringWidth: Math.min(0.32, width * 0.24)
+  };
+}
+
 function buildStorey(model, floor, thickness = model.slabThickness ?? BUILD_SECTION.slabThickness) {
   const { slabBase, slabThickness } = BUILD_SECTION,
     floorHeight = modelFloorPitch(model);
@@ -36,7 +45,7 @@ const DOCK_STRUCTURES = {
   },
   'cable-stayed': {
     name: 'Same-storey cable stays',
-    note: 'Two stays run from the dock tip to the top of its own storey. A bolted end-plate splice aligns each head with a radial steel collector.'
+    note: 'Two stays run from the dock tip to the top of its own storey. Bolted heads meet the perimeter ring, which transfers the reactions into shared radial collectors.'
   },
   'roof-hung': {
     name: 'Roof-hung rods',
@@ -48,16 +57,25 @@ const DOCK_STRUCTURES = {
   }
 };
 
+function stayCollectorSection(model) {
+  return {
+    beamDepth: buildGirderDepth(model),
+    flangeWidth: 0.23,
+    flangeThickness: 0.027,
+    webThickness: 0.016
+  };
+}
+
 // Coordinates are relative to the core face in the radial direction and to the dock floor vertically.
 function dockStayConnection(model, { base, soffit }) {
-  const beamDepth = buildGirderDepth(model),
+  const section = stayCollectorSection(model),
     tipReach = BUILD_SECTION.dockGap + MODULE.depth - 0.6,
     face = 0.025,
     pinReach = 0.27,
-    upper = soffit - base - beamDepth / 2,
+    upper = soffit - base - section.beamDepth / 2,
     lower = -0.12;
   return {
-    beamDepth,
+    ...section,
     tipReach,
     face,
     pinReach,
@@ -66,11 +84,37 @@ function dockStayConnection(model, { base, soffit }) {
     rise: upper - lower,
     run: tipReach - pinReach,
     plateWidth: 0.34,
-    plateThickness: 0.035,
-    flangeWidth: 0.23,
-    flangeThickness: 0.027,
-    webThickness: 0.016
+    plateThickness: 0.035
   };
+}
+
+function stayPerimeterFaces(model, offset) {
+  const { outside, ringWidth } = buildRingFrame(model),
+    reach = (radius) => Math.sqrt(Math.max(0, radius ** 2 - offset ** 2)) - model.R;
+  return { inner: reach(outside - ringWidth / 2), outer: reach(outside + ringWidth / 2) };
+}
+
+function drawStayIBeam(block, start, end, bottom, section) {
+  const { beamDepth, flangeWidth, flangeThickness, webThickness } = section;
+  if (end <= start) return;
+  block(start, end, bottom, flangeThickness, flangeWidth);
+  block(start, end, bottom + beamDepth - flangeThickness, flangeThickness, flangeWidth);
+  block(start, end, bottom + flangeThickness, beamDepth - 2 * flangeThickness, webThickness);
+}
+
+// The two sides of a dock land near the dividing grid lines. Neighboring docks
+// feed the same divider, so each core floor needs a single collector there.
+function stayCollectorAxes(model, dockSlots) {
+  const axesByFloor = new Map();
+  for (const slot of dockSlots) {
+    for (const floor of [slot.f, slot.f + 1]) {
+      if (!axesByFloor.has(floor)) axesByFloor.set(floor, new Set());
+      const axes = axesByFloor.get(floor);
+      axes.add(mod(2 * slot.j - 1, 2 * model.slotN));
+      axes.add(2 * slot.j + 1);
+    }
+  }
+  return axesByFloor;
 }
 
 // Compare gravity service loads for the reusable dock. All dimensions are metres and forces kN.
@@ -220,7 +264,7 @@ function showBuildGravityStudy(model, assignments, structure, slabThickness, wat
    <tbody><tr><th scope="row">Dry reference</th><td>${dryLoad.toFixed(1)}</td><td>${slabMoment.toFixed(1)}</td></tr>
    <tr><th scope="row">With ${waterDepth.toFixed(2)} m of water</th><td>${(dryLoad + waterLoad).toFixed(1)}</td><td>${wetMoment.toFixed(1)}</td></tr></tbody></table>
    <p class="hint">Assumed dry loads are 1.5 kPa for finishes and 4.8 kPa for occupancy. The wet case adds ${waterLoad.toFixed(1)} kPa of uniformly distributed water. This is an unfactored one-way strip comparison. Tank weight, concentrated supports, saturated media, pumps, slide reactions and vibration need their own load cases.</p>
-   <p class="hint">Slab reinforcement, shear, deflection, crack control, waterproofing and the load path through the beams and foundations still require design. The cable concept uses a local steel collector, with the inboard transfer and any steel-to-core transition subject to design.</p>
+   <p class="hint">Slab reinforcement, shear, deflection, crack control, waterproofing and the load path through the beams and foundations still require design. The cable concept uses local receivers at the perimeter. Check combined reactions from adjacent docks, the ring transfer and any steel-to-core transition.</p>
    <p class="hint">Assumptions in kPa include 3.0 occupancy and 1.2 snow for enclosed modules, 4.8 occupancy on open decks and 6.0 saturated planter load over six planter footprints. The comparison uses 105 kN per dock as a common frame-weight allowance. Detailed design would establish actual member weights and check site loads, vibration, connections and load transfer.</p>`;
 }
 
@@ -322,13 +366,13 @@ function drawAlternativeDock(mesh, model, slot, storey, structure) {
   }
 
   const side = MODULE.width / 2 + 0.14;
-  const railY = structure === 'cable-stayed' ? dockStayConnection(model, storey).lower : -0.16;
+  const stay = structure === 'cable-stayed' ? dockStayConnection(model, storey) : null,
+    railY = stay?.lower ?? -0.16;
   for (const offset of [-side, side])
     member(point(offset, -span, railY), point(offset, 0, railY), 0.2, steel, 0.32);
   for (const depth of [-span + dockGap, -span / 2, -0.6])
     member(point(-side, depth, -0.11), point(side, depth, -0.11), 0.17, steel, 0.2);
-  if (structure !== 'cable-stayed') return;
-  const stay = dockStayConnection(model, storey);
+  if (!stay) return;
   mark('Assembly_Dock_Stays_L' + (slot.f + 1), 'Slot_' + slot.j);
   for (const offset of [-side, side])
     member(
@@ -339,39 +383,26 @@ function drawAlternativeDock(mesh, model, slot, storey, structure) {
     );
 
   mark('Assembly_Dock_Stay_Anchors_L' + (slot.f + 1), 'Slot_' + slot.j);
-  const width = model.R - model.r,
-    innerRing = model.r + Math.min(0.42, width * 0.16),
-    outerRing = model.R - Math.min(0.48, width * 0.16),
-    openings = lobbyHoles(model.lobby, slot.f + 1);
   for (const offset of [-side, side]) {
-    const opensOnLobby = openings.some(
-      ([angle, half]) => angDist(angle, slot.angle + Math.atan2(offset, innerRing)) < half + 0.02
-    );
-    // A gallery can receive a return beside the void. At an open bay stop at the
-    // perimeter node. The engineer still needs to resolve the transfer around the void.
-    const receiver = opensOnLobby ? (slot.f === 0 && model.lobby.gallery) || outerRing : innerRing,
-      inboard = Math.sqrt(Math.max(0, receiver ** 2 - offset ** 2)) - model.R,
-      { beamDepth, face, pinReach, upper, plateWidth, plateThickness, flangeThickness } = stay;
+    const node = stayPerimeterFaces(model, offset).outer,
+      { beamDepth, face, pinReach, upper, plateWidth, plateThickness } = stay;
     function block(start, end, bottom, height, width, color = steel) {
       const [x, y, z] = point(offset, (start + end) / 2 - span, bottom);
       box(x, y, z, width, height, end - start, slot.angle, color);
     }
-    // Model the aligned W section, its fixed end plate, and the removable lug plate.
+    // Keep the bolt head and its short steel receiver in the stay plane. The receiver
+    // ends at the outer ring, where the shared radial floor grid takes over.
     const bottom = upper - beamDepth / 2,
       behind = face - plateThickness;
-    block(inboard, behind, bottom, flangeThickness, stay.flangeWidth);
-    block(inboard, behind, bottom + beamDepth - flangeThickness, flangeThickness, stay.flangeWidth);
-    block(
-      inboard,
-      behind,
-      bottom + flangeThickness,
-      beamDepth - 2 * flangeThickness,
-      stay.webThickness
-    );
+    drawStayIBeam(block, node, behind, bottom, stay);
     block(behind, face, bottom, beamDepth, plateWidth);
     block(face, face + plateThickness, bottom, beamDepth, plateWidth, cable);
     block(face + plateThickness, pinReach, upper - 0.075, 0.15, 0.07);
-    member(point(offset, -span, railY), point(offset, -span - back, railY), 0.24);
+    // Bring the lower rail back to the same perimeter line without extending its
+    // off-axis compression stub across the floor or into the slab.
+    const seatBottom = storey.underside - storey.base - 0.2;
+    block(node, -0.04, seatBottom, 0.17, 0.23);
+    block(-0.04, 0, seatBottom, railY + 0.16 - seatBottom, 0.28);
   }
 }
 
@@ -488,8 +519,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     floorHeight = modelFloorPitch(model),
     slabThickness = layers.slabThickness ?? model.slabThickness ?? BUILD_SECTION.slabThickness,
     width = model.R - model.r,
-    inside = model.r + Math.min(0.42, width * 0.16),
-    outside = model.R - Math.min(0.48, width * 0.16),
+    { inside, outside, ringWidth } = buildRingFrame(model),
     concrete = rgb('#c7c8bd'),
     partition = rgb('#e1dacc');
   const coreValues = materialValues(preview.assignments, 'core'),
@@ -502,6 +532,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     slide = layers.slide && model.feature.slide,
     slideTube = slide ? slideTubeRings(slide, BUILD_SLIDE_SIDES, true) : null,
     slidePortals = slideTube ? buildSlidePortals(model, slideTube) : [],
+    dockStructure = layers.dockStructure ?? 'side-truss',
+    dockSlots = model.slots.filter((slot) => slot.f < floors && !slot.blocked),
+    stayAxes =
+      layers.docks && dockStructure === 'cable-stayed' ? stayCollectorAxes(model, dockSlots) : null,
     extent = model.plaza.outer + 2;
   mark('Reference');
   quad(
@@ -533,14 +567,13 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   // The radial grid puts columns between docks and secondary beams on the dock axes.
   const bayCount = model.slotN;
   const girderDepth = buildGirderDepth(model);
-  function floorFrame(y, openings, gallery) {
+  function floorFrame(y, openings, gallery, floor) {
     for (const radius of [inside, outside]) {
       const arcs = openArcs(gallery && radius >= gallery ? [] : openings);
-      const girderWidth = Math.min(0.32, width * 0.24);
       for (const arc of arcs)
         sector(
-          radius - girderWidth / 2,
-          radius + girderWidth / 2,
+          radius - ringWidth / 2,
+          radius + ringWidth / 2,
           ...arc,
           y - girderDepth,
           girderDepth,
@@ -559,20 +592,34 @@ function buildAssemblyMesh(model, layers, levels, preview) {
           coreFrame
         );
     }
+    const usedAxes = stayAxes?.get(floor),
+      collectors = [],
+      // Keep the member caps distinct where a straight beam meets a faceted ring.
+      beamBottom = y - girderDepth - (stayAxes ? 0.006 : 0);
     for (let i = 0; i < bayCount * 2; i++) {
-      const angle = ((i + 1) * TAU) / (2 * bayCount),
+      const axis = (i + 1) % (2 * bayCount),
+        angle = (axis * TAU) / (2 * bayCount),
         open = openings.some(([a, half]) => angDist(a, angle) < half + 0.015),
         inner = open ? gallery : inside;
       if (!inner || inner >= outside) continue;
-      at(
-        (inner + outside) / 2,
-        angle,
-        y - girderDepth,
-        0.21,
-        girderDepth,
-        outside - inner,
-        coreFrame
-      );
+      // Stop at the ring faces so the two beam systems do not share the same top surface.
+      const start = stayAxes ? inner + (open ? 0.24 : ringWidth / 2) : inner,
+        end = stayAxes ? outside - ringWidth / 2 : outside;
+      if (end <= start) continue;
+      if (usedAxes?.has(axis)) {
+        collectors.push({ angle, start, end });
+        continue;
+      }
+      at((start + end) / 2, angle, beamBottom, 0.21, girderDepth, end - start, coreFrame);
+    }
+    if (collectors.length) {
+      const section = stayCollectorSection(model),
+        steel = rgb('#657b76');
+      mark('Assembly_Dock_Stay_Collectors_L' + (floor + 1));
+      for (const { angle, start, end } of collectors) {
+        const block = (a, b, bottom, h, w) => at((a + b) / 2, angle, bottom, w, h, b - a, steel);
+        drawStayIBeam(block, start, end, beamBottom, section);
+      }
     }
   }
   for (let f = 0; f < floors; f++) {
@@ -598,7 +645,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     }
     if (layers.frame) {
       mark('Assembly_Ring_Beams_' + (f + 1));
-      if (f) floorFrame(y, openings, f === 1 ? model.lobby.gallery : null);
+      if (f) floorFrame(y, openings, f === 1 ? model.lobby.gallery : null, f);
       mark('Assembly_Columns_' + (f + 1));
       const column = Math.min(0.38, width * 0.3);
       const reserved = lobbyHoles(model.lobby, f);
@@ -668,7 +715,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   }
   if (full && layers.frame) {
     mark('Assembly_Roof_Framing');
-    floorFrame(model.roofPlan.y - slabThickness, [], null);
+    floorFrame(model.roofPlan.y - slabThickness, [], null, floors);
   }
   if (layers.swings) {
     drawSwingMast(mesh, ride, Math.min(cutY, ride.height), preview);
@@ -723,8 +770,6 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   if (full && layers.roofRetail) drawCommercialPavilions(mesh, model.roofPlan, preview);
 
   const exterior = layers.modules ? moduleExteriorDetails(model, preview.view.seed) : null;
-  const dockStructure = layers.dockStructure ?? 'side-truss',
-    dockSlots = model.slots.filter((slot) => slot.f < floors && !slot.blocked);
 
   // Dock plates, paired cantilevers and their tie-back show the relationship to the ring.
   for (const slot of dockSlots) {

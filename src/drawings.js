@@ -342,7 +342,7 @@ const openDrawingWorkspace = (() => {
       { x: margin + 1, y: fitY, width: width - 2 * margin - 2, printScale: true }, style);
     text(margin + 1, fitY + 171, summary.check, 10);
     const limits = detail === 'support' && structure === 'cable-stayed'
-      ? 'Schematic bolt layout. Check combined bolt tension and shear, prying, the welds and the full collector load path.'
+      ? 'Schematic bolt layout. Check combined bolt tension and shear, prying, welds and shared reactions at the perimeter ring.'
       : 'Exterior fitting profiles are schematic. Confirm manufacturer ratings and the complete connection before specification.';
     text(margin + 1, fitY + 185, limits, 9.5);
     sheetArtwork.replaceChildren(

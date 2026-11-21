@@ -1,5 +1,8 @@
 # Changelog
 
+## Cable-stay floor framing
+- Shortened the stay receivers and lower compression seats to the perimeter ring. Shared radial collectors now replace ordinary beams on their grid lines, resolving the crossing spans in Build and its drawing source.
+
 ## Cable stay connection and Site orbit
 - Reworked the upper cable stay as a bolted paired-end-plate joint on a radial I-beam collector. Build and Drawings now share the pin geometry and show the idealized anchor forces and pin-offset moment.
 - Set the Site orbit pivot to the placed project in the district and building views.
