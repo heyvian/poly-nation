@@ -1,5 +1,10 @@
 # Changelog
 
+## Lobby finishes and clear interiors
+- Gave shared lobbies green upholstery and seeded violet rug patterns based on the ring, plug-in docks and opposing entrances.
+- Added paired paving bands to circulation and staggered tile joints to room floors in Build, cutaway views and contextual lobby drawings.
+- Confined diagonal core bracing to the lift enclosures and shortened side-frame receivers to the perimeter ring.
+
 ## Shared lobby drawing set
 - Added automatically scaled axonometrics and plans for every shared lobby, with adjoining programme rooms and corridor approaches or a furniture-only view.
 - Added a lobby-relative compass with the building centre as south, per-sheet vector SVG export and PDF printing for the complete set.

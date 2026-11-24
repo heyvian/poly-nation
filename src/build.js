@@ -88,7 +88,7 @@ function dockStayConnection(model, { base, soffit }) {
   };
 }
 
-function stayPerimeterFaces(model, offset) {
+function dockPerimeterFaces(model, offset) {
   const { outside, ringWidth } = buildRingFrame(model),
     reach = (radius) => Math.sqrt(Math.max(0, radius ** 2 - offset ** 2)) - model.R;
   return { inner: reach(outside - ringWidth / 2), outer: reach(outside + ringWidth / 2) };
@@ -390,15 +390,6 @@ function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, op
       const [x, y, z] = chord(0, top);
       box(x, y - 0.23, z, 0.36, 0.46, 0.28, slot.angle, plates);
     }
-    if (showReturns) {
-      // A jamb connects the two reactions to the slabs. Radial collectors tie them back to the ring.
-      const attachment = -span - Math.min(0.3, (model.R - model.r) * 0.15),
-        back = -span - (model.R - model.r) + Math.min(0.42, (model.R - model.r) * 0.16),
-        head = storey.soffit - lower - 0.14;
-      member(point(side, attachment, 0), point(side, attachment, head), 0.32, steel);
-      for (const height of [0, head])
-        member(point(side, attachment, height), point(side, back, height), 0.23, steel, 0.28);
-    }
   }
   // Crossmembers carry a module or open deck between the two side frames.
   for (const depth of [dockGap, span / 2, span])
@@ -409,6 +400,20 @@ function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, op
       steel,
       0.2
     );
+  if (showReturns) {
+    // The jamb picks up both chord roots at the perimeter. The existing slab framing
+    // carries the transfer inboard, so a second set of members cannot cut across rooms.
+    mark(`Assembly_Dock_Perimeter_Receivers_L${slot.f + 1}`, `Slot_${slot.j}`);
+    const girder = buildGirderDepth(model),
+      foot = storey.underside - lower - girder / 2,
+      head = storey.soffit - lower - girder / 2;
+    for (const side of [-sideOffset, sideOffset]) {
+      const jamb = -span + dockPerimeterFaces(model, side).outer - 0.04;
+      member(point(side, jamb, foot), point(side, jamb, head), 0.24, steel);
+      for (const height of [0, dockTrussDepth(0)])
+        member(point(side, jamb, height), point(side, -span, height), 0.23, steel, 0.23);
+    }
+  }
 }
 
 // Study alternatives retain the docking pitch, door and deck height of the baseline.
@@ -451,7 +456,7 @@ function drawAlternativeDock(mesh, model, slot, storey, structure) {
 
   mark('Assembly_Dock_Stay_Anchors_L' + (slot.f + 1), 'Slot_' + slot.j);
   for (const offset of [-side, side]) {
-    const node = stayPerimeterFaces(model, offset).outer,
+    const node = dockPerimeterFaces(model, offset).outer,
       { beamDepth, face, pinReach, upper, plateWidth, plateThickness } = stay;
     function block(start, end, bottom, height, width, color = steel) {
       const [x, y, z] = point(offset, (start + end) / 2 - span, bottom);
@@ -740,13 +745,24 @@ function buildAssemblyMesh(model, layers, levels, preview) {
         // The wide face follows the tangent of the ring at each bay.
         at(inside, angle, base, column * 1.2, clearHeight, column, coreFrame);
         if (!slidePortal) at(outside, angle, base, column * 1.2, clearHeight, column, coreFrame);
-        if (coreSystem.frame === 'brace' && j % 3 === 0)
+      }
+      if (coreSystem.frame === 'brace') {
+        mark(`Assembly_Lift_Core_Bracing_L${f + 1}`);
+        for (const lift of model.circulation.regions) {
+          if (lift.f !== f || lift.kind !== 'elevator' || lift.R - lift.r < 0.5) continue;
+          // Keep diagonal members against the back of the lift enclosure. The public
+          // approach is on the opposite side, and no brace spans an occupied bay.
+          const radius = Math.min(lift.R - 0.18, lift.r + 0.28),
+            inset = 0.24 / radius,
+            width = column * 0.41;
+          if (lift.end - lift.start <= 2 * inset) continue;
           member(
-            ringPoint(inside, angle, soffit),
-            ringPoint(outside, angle, base),
-            column * 0.52,
+            ringPoint(radius, lift.start + inset, base + width / 2),
+            ringPoint(radius, lift.end - inset, soffit - width / 2),
+            width,
             coreFrame
           );
+        }
       }
     }
     if (layers.facade) {
@@ -796,13 +812,25 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     if (layers.slabs || layers.walls) for (const hub of model.circulation.hubs) {
       if (hub.f !== f || !hub.layout) continue;
       mark(`Circulation_L${f + 1}_Shared_Lobby`, `Lobby ${hub.start.toFixed(3)}`);
-      drawSharedLobbyFloor(mesh, hub, base, 0.018, rgb('#a889bc'));
+      drawSharedLobbyFloor(mesh, hub, base, 0.018);
       drawSharedLobby(mesh, hub, base + 0.018, preview.view?.seed, true);
     }
-    if (layers.slabs) for (const q of model.circulation.regions) {
-      if (q.f !== f || !['lobbyLanding', 'lobbyShoulder', 'lobbyReturn'].includes(q.kind)) continue;
-      mark(`Circulation_L${f + 1}_Shared_Lobby_Approach`);
-      sector(q.r, q.R, q.start, q.end, base, 0.018, rgb('#e5d9c0'));
+    if (layers.slabs) {
+      mark(`Core_L${f + 1}_Room_Floor_Pattern`);
+      for (const room of model.rooms)
+        if (room.f === f) drawInteriorFloorPattern(mesh, room, base, concrete, false);
+      for (const q of model.circulation.regions) {
+        if (q.f !== f || q.kind === 'elevator' || q.kind === 'lobbyDivider') continue;
+        const approach = ['lobbyLanding', 'lobbyShoulder', 'lobbyReturn'].includes(q.kind);
+        mark(
+          approach
+            ? `Circulation_L${f + 1}_Shared_Lobby_Approach`
+            : `Circulation_L${f + 1}_Floor_Pattern`
+        );
+        const color = approach ? rgb('#e5d9c0') : concrete;
+        if (approach) sector(q.r, q.R, q.start, q.end, base, 0.018, color);
+        drawInteriorFloorPattern(mesh, q, base + (approach ? 0.018 : 0), color, true);
+      }
     }
   }
   if (full && layers.slabs) {

@@ -573,7 +573,7 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
         ]);
         line(0.31, 0.75, 1.33, -0.08, 'fine');
       } else plate(1.23, -0.1, 0.17, 0.78);
-      callout('Upper chord return to frame', 2.25, 1.11, 0.36, 0.8);
+      callout('Upper chord to perimeter jamb', 2.25, 1.11, 0.36, 0.8);
     } else {
       callout(
         box ? 'A  Full-depth end plate' : 'A  Deck restraint at ring',
@@ -591,7 +591,7 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
 
   if (structure === 'cable-stayed') {
     const { beamDepth, face, pinReach, plateThickness, flangeThickness } = demand.stay,
-      perimeter = stayPerimeterFaces(model, MODULE.width / 2 + 0.14),
+      perimeter = dockPerimeterFaces(model, MODULE.width / 2 + 0.14),
       pinY = -slab - beamDepth / 2,
       bottom = -slab - beamDepth,
       behind = face - plateThickness,

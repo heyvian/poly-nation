@@ -32,6 +32,17 @@ with serve_lab(root) as url, sync_playwright() as p:
       const geometryChecks = hubs.map(hub => {
         const mesh = meshBuilder();
         drawSharedLobby(mesh, hub, 0, state.seed);
+        const rugBuffer = (mesh) => {
+          const index = mesh.groups.findIndex(group => group.layer.endsWith('Shared_Rugs'));
+          return mesh.solid.slice(mesh.groups[index].solid, mesh.groups[index+1].solid);
+        };
+        const rug = rugBuffer(mesh);
+        const rugColors = rug.reduce((colors, _, i) => {
+          if (i % 10 === 6) colors.add(rug.slice(i, i+3).join());
+          return colors;
+        }, new Set());
+        const alternate = meshBuilder();
+        drawSharedLobby(alternate, hub, 0, state.seed + 1);
         const { heading, axis, origin, passage, arch, tableRadius, couchDepth } = hub.layout;
         const alongLobby = (x, z) => (x - origin[0]) * axis[0] + (z - origin[1]) * axis[1];
         const acrossLobby = (x, z) => (x - origin[0]) * axis[1] - (z - origin[1]) * axis[0];
@@ -100,6 +111,8 @@ with serve_lab(root) as url, sync_playwright() as p:
             shelving.some((height, i) => i % 10 === 1 && Math.abs(height - 0.52) < 1e-8) &&
             shelving.some((color, i) => i % 10 === 6 && color === rgb('#9e7956')[0]),
           stocked,
+          rugs: rugColors.size >= 3 && !rugColors.has(rgb('#5e8c80').join()) &&
+            rug.join() !== rugBuffer(alternate).join(),
           plants: foliageClear && tops.every(height => height >= 2.2 && height < 2.76) &&
             new Set(tops).size === 4 && plantedWithSeed(state.seed) === plants.join() &&
             plantedWithSeed(state.seed + 1) !== plants.join()

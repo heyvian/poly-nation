@@ -19,7 +19,7 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
       radialMax = Math.min(model.R, hub.R + apron),
       start = hub.start - (apron + 1.5) / hub.layout.radius,
       end = hub.end + (apron + 1.5) / hub.layout.radius;
-    function contextSector(region, color, top, label = '') {
+    function contextSector(region, color, top, circulation, label = '') {
       const r = Math.max(radialMin, region.r),
         R = Math.min(radialMax, region.R);
       if (R - r < 0.02) return;
@@ -30,6 +30,11 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
           z = Math.min(end, region.end + shift);
         if ((z - a) * R < 0.02) continue;
         mesh.sector(r, R, a, z, -0.08, top + 0.08, color);
+        drawInteriorFloorPattern(mesh, { r, R, start: a, end: z }, top, color, circulation, {
+          ...region,
+          start: region.start + shift,
+          end: region.end + shift
+        });
         if (label && ((z - a) * (R ** 2 - r ** 2)) / 2 >= 2)
           labels.push({ label, point: mesh.ringPoint((r + R) / 2, (a + z) / 2, top) });
       }
@@ -43,7 +48,7 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
         region.route === 'outerLanding'
           ? 'Corridor'
           : '';
-      contextSector(region, rgb('#e5d9c0'), -0.015, label);
+      contextSector(region, rgb('#e5d9c0'), -0.015, true, label);
     }
     mesh.mark('Core_Lobby_Context');
     for (const room of model.rooms) {
@@ -56,12 +61,13 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
         room,
         color.map((part) => part + (1 - part) * (neighbour ? 0.18 : 0.46)),
         0.085,
+        false,
         neighbour ? program?.short : ''
       );
     }
   }
   mesh.mark(`Circulation_L${hub.f + 1}_Shared_Lobby`);
-  drawSharedLobbyFloor(mesh, hub, -0.08, 0.08, rgb('#b8a0ca'));
+  drawSharedLobbyFloor(mesh, hub, -0.08, 0.08);
   drawSharedLobby(mesh, hub, 0, seed, true);
   return { geometry: drawingGeometry(mesh), labels };
 }

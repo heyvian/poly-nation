@@ -51,11 +51,21 @@ with serve_lab(root) as url, sync_playwright() as p:
  dock_checks = page.evaluate('''() => {
    const preview = { assignments: {}, view: state };
    const build = buildAssemblyMesh(model, { walls: true, docks: true, modules: true }, 0, preview);
+   const braced = buildAssemblyMesh(model, { frame: true }, 0,
+     { ...preview, assignments: {core: {structure: 'space-frame'}} });
    const openBays = model.slots.filter(slot => !slot.blocked);
    const sealedBays = openBays.filter(slot => slot.p === EMPTY && slot.use === 'empty');
    const massing = buildMesh(model, true);
    const { cases, slabSpan, slabMoment } = buildGravityStudy(model, {});
    const count = (mesh, prefix) => mesh.groups.filter(group => group.layer.startsWith(prefix)).length;
+   const vertices = (mesh, prefix) => mesh.groups.flatMap((group, i) => {
+     if (!group.layer.startsWith(prefix)) return [];
+     const range = mesh.solid.slice(group.solid, mesh.groups[i + 1]?.solid);
+     return range.flatMap((_, j) => j % 10 === 0 ? [range.slice(j, j + 3)] : []);
+   });
+   const returns = vertices(build, 'Assembly_Dock_Perimeter_Receivers_L');
+   const braces = vertices(braced, 'Assembly_Lift_Core_Bracing_L');
+   const lifts = model.circulation.regions.filter(region => region.kind === 'elevator');
    const correctWalls = model.layers.every((_, f) => {
      const start = build.groups.findIndex(group => group.layer === 'Assembly_Room_Partitions_' + (f + 1));
      const y = build.solid.slice(build.groups[start].solid, build.groups[start + 1].solid)
@@ -67,6 +77,14 @@ with serve_lab(root) as url, sync_playwright() as p:
      fullHeightWalls: correctWalls,
      allDocks: count(build, 'Assembly_Dock_Connections') === openBays.length &&
        count(massing, 'Docking_L') === openBays.length,
+     dockReceivers: returns.length > 0 && returns.every(([x, , z]) =>
+       Math.hypot(x,z) > buildRingFrame(model).outside - 0.2),
+     liftBracing: braces.length > 0 && braces.every(([x, y, z]) => lifts.some(lift => {
+       const radius = Math.hypot(x, z), angle = mod(Math.atan2(z, x) - lift.start, TAU);
+       const storey = buildStorey(model, lift.f);
+       return angle < lift.end - lift.start && radius >= lift.r && radius < lift.r + 0.45 &&
+         y > storey.base - 1e-8 && y < storey.soffit + 1e-8;
+     })),
      closures: sealedBays.length > 0 && count(build, 'Dock_Closure_Sealed') === sealedBays.length &&
        count(build, 'Dock_Closure_Folded') === openBays.length - sealedBays.length &&
        count(massing, 'Dock_Closure_Sealed') === sealedBays.length,

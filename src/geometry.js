@@ -2228,18 +2228,89 @@ function drawSlideJoints({ mark, quad, tri }, points, radius, color, maxY, minRa
   }
 }
 
+// Lay paired paving bands along the corridor and stagger the joints of room tiles.
+function drawInteriorFloorPattern(mesh, patch, y, color, circulation, region = patch) {
+  const { r, R, start, end } = patch;
+  const top = y + 0.003,
+    ink = color.map((part) => part * (circulation ? 0.68 : 0.8)),
+    ring = (low, high, a, b) => {
+      if (high - low < 0.009 || (b - a) * high < 0.009) return;
+      const steps = Math.ceil((b - a) / 0.045);
+      for (let i = 0; i < steps; i++) {
+        const left = a + ((b - a) * i) / steps,
+          right = a + ((b - a) * (i + 1)) / steps;
+        mesh.quad(
+          mesh.ringPoint(low, left, top),
+          mesh.ringPoint(low, right, top),
+          mesh.ringPoint(high, right, top),
+          mesh.ringPoint(high, left, top),
+          ink
+        );
+      }
+    };
+  if (circulation) {
+    // The returns cross the ring, so their bands run radially into the next corridor.
+    const radial =
+      /return/i.test(region.kind ?? '') || ['link', 'bridgeAccess'].includes(region.kind);
+    for (const fraction of [0.32, 0.68]) {
+      if (radial) {
+        const axis = region.start + (region.end - region.start) * fraction,
+          half = 0.042 / ((region.r + region.R) / 2);
+        ring(r, R, Math.max(start, axis - half), Math.min(end, axis + half));
+      } else {
+        const axis = region.r + (region.R - region.r) * fraction;
+        ring(Math.max(r, axis - 0.042), Math.min(R, axis + 0.042), start, end);
+      }
+    }
+    return;
+  }
+  // Use the room's own grid origin even when a drawing crops away part of its floor.
+  const course = 1.18,
+    joint = 0.026,
+    spacing = 1.65 / ((region.r + region.R) / 2),
+    firstRow = Math.floor((r - region.r) / course);
+  for (let row = firstRow, edge = region.r + firstRow * course; edge < R; row++, edge += course) {
+    if (row > 0) ring(Math.max(r, edge - joint), Math.min(R, edge + joint), start, end);
+    const offset = region.start + spacing * (row % 2 ? 0.5 : 1),
+      firstColumn = Math.max(0, Math.ceil((start - offset) / spacing)),
+      half = joint / (edge + course / 2);
+    for (let angle = offset + firstColumn * spacing; angle < end; angle += spacing)
+      ring(
+        Math.max(r, edge + joint),
+        Math.min(R, edge + course - joint),
+        Math.max(start, angle - half),
+        Math.min(end, angle + half)
+      );
+  }
+}
+
 // Give the lobby surface small faces so its flat panels also sort under the furniture
 // in the software renderer. The perimeter remains a single curved floor element.
-function drawSharedLobbyFloor(mesh, hub, y, height, color) {
+function drawSharedLobbyFloor(mesh, hub, y, height) {
   const { r, R, start, end } = hub;
+  const color = rgb('#ded7c7');
   mesh.sector(r, R, start, end, y, height, color, null, true);
   const columns = Math.max(1, Math.ceil(((end - start) * R) / 0.75)),
     rows = Math.ceil((R - r) / 0.75),
-    point = (row, column) => mesh.ringPoint(r + ((R - r) * row) / rows,
-      start + ((end - start) * column) / columns, y + height);
+    point = (row, column) =>
+      mesh.ringPoint(
+        r + ((R - r) * row) / rows,
+        start + ((end - start) * column) / columns,
+        y + height
+      );
   for (let i = 0; i < rows; i++)
     for (let j = 0; j < columns; j++)
       mesh.quad(point(i, j), point(i, j + 1), point(i + 1, j + 1), point(i + 1, j), color);
+  const { passage, arch } = hub.layout;
+  // Continue the paired bands through the straight aisle between the rugs.
+  const length = arch - 0.065,
+    top = y + height + 0.003,
+    ink = rgb('#a29783');
+  for (const side of [-1, 1]) {
+    const across = side * passage * 0.29,
+      at = (along, offset) => sharedLobbyPoint(hub, along, across + offset, top);
+    mesh.quad(at(-length, -0.042), at(length, -0.042), at(length, 0.042), at(-length, 0.042), ink);
+  }
 }
 
 // Join the radial divider to the screen along the lobby edge. The only openings
@@ -2331,11 +2402,10 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     heading = axis ? Math.atan2(-axis[0], axis[1]) : hub.layout.heading,
     edge = passage / 2,
     timber = rgb('#b18a64'),
-    cushion = rgb('#a996b6'),
-    back = rgb('#73617f'),
-    base = rgb('#4f3c57'),
+    cushion = rgb('#5e8c80'),
+    back = rgb('#3f655d'),
+    base = rgb('#374b43'),
     tabletop = rgb('#d9ba91'),
-    rug = rgb('#b8a0ca'),
     lobbySeed = seed ^ Math.imul(hub.f + 1, 0x9e3779b1) ^ Math.round(hub.start * 1e5),
     cabinetRandom = random(lobbySeed ^ 0x546b2829),
     contentsRandom = random(lobbySeed ^ 0x3c6ef372);
@@ -2422,6 +2492,70 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
         color
       );
   }
+  // Both halves share a textile design, like a ring split by the public crossing.
+  // Solid inlays carry the pattern into coloured vector sheets and the 3D views.
+  const rugRandom = random(lobbySeed ^ 0x85ebca6b),
+    rugPalettes = [
+      ['#81648f', '#54405d', '#e2c5a2', '#bc8c95'],
+      ['#705879', '#453950', '#dcc3ab', '#ad9ab3'],
+      ['#986e83', '#624659', '#eacda5', '#b58a67']
+    ],
+    [rugField, rugBinding, rugRing, rugAccent] =
+      rugPalettes[Math.floor(rugRandom() * rugPalettes.length)].map(rgb),
+    dockCount = 8 + Math.floor(rugRandom() * 6),
+    docks = Array.from({ length: dockCount }, (_, i) => ({
+      angle: ((i + 0.5) * Math.PI) / dockCount,
+      halfWidth: ((0.21 + 0.13 * rugRandom()) * Math.PI) / dockCount,
+      crossing: i === 1 || i === dockCount - 2,
+      contrast: rugRandom() > 0.47
+    }));
+  function drawRug(sign) {
+    const outer = shelfOuter + 0.03,
+      top = 0.029;
+    strip(sign, 0.006, outer, 0.005, 0.022, rugField);
+    function inlay(a, b, c, d, color) {
+      if (sign > 0) quad(a, b, c, d, color);
+      else quad(d, c, b, a, color);
+    }
+    function ring(inner, outer, color, start = 0, end = Math.PI) {
+      const steps = Math.ceil((end - start) / 0.085);
+      for (let i = 0; i < steps; i++) {
+        const a = start + ((end - start) * i) / steps,
+          b = start + ((end - start) * (i + 1)) / steps;
+        inlay(
+          curved(sign, outer, b, top),
+          curved(sign, inner, b, top),
+          curved(sign, inner, a, top),
+          curved(sign, outer, a, top),
+          color
+        );
+      }
+    }
+    // Bound both cut edges beside the aisle while leaving the walkable strip bare.
+    const half = outer - 0.105,
+      edgePoint = (along, offset) => point(along, sign * (edge + offset), top);
+    inlay(
+      edgePoint(-half, 0.01),
+      edgePoint(half, 0.01),
+      edgePoint(half, 0.065),
+      edgePoint(-half, 0.065),
+      rugBinding
+    );
+    // Keep concentric rings visible in the gap between the table and the seat.
+    ring(tableRadius + 0.04, tableRadius + 0.097, rugRing, 0.09, Math.PI - 0.09);
+    ring(couchInner - 0.065, couchInner - 0.018, rugBinding, 0.09, Math.PI - 0.09);
+    ring(outer - 0.065, outer - 0.021, rugBinding, 0.09, Math.PI - 0.09);
+    for (const dock of docks) {
+      // Wider tabs at the opposite ends refer to the two entrances through the core.
+      ring(
+        dock.crossing ? tableRadius + 0.097 : tableRadius + 0.128,
+        dock.crossing ? couchInner - 0.065 : couchInner - 0.093,
+        dock.crossing || dock.contrast ? rugRing : rugAccent,
+        Math.max(0.09, dock.angle - dock.halfWidth),
+        Math.min(Math.PI - 0.09, dock.angle + dock.halfWidth)
+      );
+    }
+  }
   const shelfInner = couchOuter + 0.018,
     board = 0.038,
     shelfPitch = 0.31,
@@ -2429,7 +2563,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     seatTop = 0.52;
   const bookColors = ['#b27765', '#778f82', '#c5a771', '#66778c', '#d8c4ab', '#856b70'].map(rgb);
   const gameColors = ['#bd985d', '#7f9c81', '#9a6a63', '#7b91a4'].map(rgb);
-  const pillowColors = ['#c1a78e', '#b8a2c6', '#91a396'].map(rgb);
+  const pillowColors = ['#e6cb9f', '#ad7462', '#a4b9a8'].map(rgb);
   // Scribe each back to the radial or angular room edge. Keep the ends of the
   // lounge free so the public approaches can turn past the planted arches.
   function shelfLimit(sign, angle) {
@@ -2467,10 +2601,11 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     bays[medium].extraShelves = 1 + Math.floor(cabinetRandom() * 2);
     return bays;
   });
+  mark(`Circulation_L${hub.f + 1}_Shared_Rugs`, `Woven lobby rugs ${hub.start.toFixed(3)}`);
+  for (const sign of [-1, 1]) drawRug(sign);
   mark(`Circulation_L${hub.f + 1}_Shared_Furniture`, `Shared gathering ${hub.start.toFixed(3)}`);
   for (const sign of [-1, 1]) {
     // A broad half-round table and a regular-depth upholstered seat face each other.
-    strip(sign, 0.006, shelfOuter + 0.03, 0.012, 0.022, rug);
     strip(sign, 0.005, tableRadius, 0.69, 0.075, tabletop);
     block(0, sign * (edge + tableRadius * 0.48), 0.037, 0.29, 0.65, 0.32, base);
     const backInner = couchOuter - 0.25;
@@ -2518,7 +2653,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
         );
       }
       if (assembly)
-        surfaceDetail(sign, couchInner + 0.055, seatTop + 0.003, a + 0.03, b - 0.03, rgb('#c4b1cc'));
+        surfaceDetail(sign, couchInner + 0.055, seatTop + 0.003, a + 0.03, b - 0.03, rgb('#9eafa1'));
     }
   }
   // Use separate seeded variation so contents never change the cabinet or plant layouts.
@@ -2850,6 +2985,20 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         portal,
         !exporting && !view.inspect && view.showRoofDeck && !view.xray && f === view.floors - 1
       );
+      if (flat)
+        drawInteriorFloorPattern(
+          b,
+          {
+            r: ra,
+            R: rb,
+            start: room.start + gap,
+            end: room.end - gap
+          },
+          y + 0.25 + h,
+          c,
+          false,
+          room
+        );
       if (portal) {
         const frame = rgb('#287fa7'),
           a = portal.a,
@@ -2885,8 +3034,9 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       `Circulation_L${q.f + 1}_${isLift ? 'Lift_' + (q.block + 1) : isHub ? 'Shared_' + P[q.pair[0]].id + '_' + P[q.pair[1]].id : kind}`,
       `${kind}_${q.f + 1}_${q.start.toFixed(3)}`
     );
-    if (isHub && q.layout) drawSharedLobbyFloor(b, q, y, 0.075, color);
+    if (isHub && q.layout) drawSharedLobbyFloor(b, q, y, 0.075);
     else sector(q.r, q.R, q.start, q.end, y, isLift ? floorH - 0.18 : 0.075, color);
+    if (!isHub && !isLift) drawInteriorFloorPattern(b, q, y + 0.075, color, true);
     if (isLift) {
       const a = q.end,
         rad = (q.r + q.R) / 2,
