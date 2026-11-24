@@ -475,8 +475,134 @@ function designAtriumBridges(r, lobby, liftHalf) {
   return bridges;
 }
 
+// Test each curved flight against the walking surfaces at both ends. Stairs inside
+// the atrium prefer existing public passages. A new lower passage is reserved only when needed.
+function designAtriumStairs(r, R, bridges, regions, lobby, pitch) {
+  if (!bridges.length) return [];
+  const width = 1.2,
+    radius = r - width / 2,
+    landing = 1.22,
+    risers = Math.ceil(pitch / 0.178),
+    half = landing / (2 * radius),
+    treadDepths = Array.from({ length: 13 }, (_, i) => 0.285 + i * 0.01),
+    offsets = [1, 0.88, 0.75, 0.62, 0.5, 0.38, 0.26],
+    flights = [],
+    columnPitch = TAU / slotCapacity(R),
+    columnClearance = (angle) =>
+      Math.abs(mod(angle, columnPitch) - columnPitch / 2) * (r + 0.42),
+    passages = (f) => regions.filter((q) =>
+      q.f === f && q.r <= r + 0.001 && ['link', 'bridgeAccess'].includes(q.kind)
+    );
+  if (radius < 3) return [];
+  const contains = (q, angle) =>
+    angDist(angle, (q.start + q.end) / 2) + half <= (q.end - q.start) / 2;
+  const overlapsDeck = (bridge, angle) => {
+    if (!bridge) return false;
+    const cos = Math.cos(angle - bridge.heading),
+      a = (r - width - 0.1) * cos,
+      b = (r + 0.03) * cos;
+    return Math.max(a, b) > bridge.offset - bridge.width / 2 - 0.09 &&
+      Math.min(a, b) < bridge.offset + bridge.width / 2 + 0.09;
+  };
+  for (const bridge of bridges) {
+    const { f } = bridge,
+      upper = passages(f).filter((q) => q.kind === 'bridgeAccess'),
+      lower = f === 1 ? [] : passages(f - 1),
+      lowerBridge = bridges.find((q) => q.f === f - 1),
+      previous = flights.find((flight) => flight.f === f - 1),
+      lowerReservations = [
+        ...lobbyHoles(lobby, f - 1),
+        ...regions.filter((q) =>
+          q.f === f - 1 && q.r <= r + 0.001 && ['elevator', 'link', 'bridgeAccess'].includes(q.kind)
+        ).map((q) => [(q.start + q.end) / 2, (q.end - q.start) / 2])
+      ];
+    let choice = null, bestScore = -Infinity;
+    for (const [side, q] of upper.entries()) {
+      const available = (q.end - q.start) / 2 - half;
+      if (available < 0) continue;
+      for (const sign of [-1, 1]) {
+        for (const share of offsets) {
+          const top = (q.start + q.end) / 2 + sign * available * share;
+          if (columnClearance(top) < 0.79) continue;
+          for (const going of treadDepths) {
+            const bottom = top + sign * (landing + (risers - 1) * going) / radius;
+            if (f > 1 && columnClearance(bottom) < 0.79) continue;
+            if (previous && angDist(bottom, previous.top) < 2.2 * half) continue;
+            const newPassage = f > 1 && !lower.some((passage) => contains(passage, bottom));
+            const passageHalf = 0.82 / r;
+            if (newPassage &&
+              lowerReservations.some(([angle, reserved]) =>
+                angDist(angle, bottom) < reserved + passageHalf + 0.17 / r)) continue;
+            // Clear adjacent decks at each platform and through the headroom zone.
+            let blocked = false;
+            for (let i = -1; i <= 17; i++) {
+              const t = i / 16, angle = top + t * (bottom - top);
+              if ((t < 0.64 && overlapsDeck(bridge, angle)) ||
+                  (t > 0.24 && overlapsDeck(lowerBridge, angle))) {
+                blocked = true;
+                break;
+              }
+              // Adjacent flights can stack only while the upper stringer and
+              // lower users have room to pass. Check the shared wall footprint.
+              if (previous && t > 0.36) {
+                const difference = angle - previous.top,
+                  delta = Math.atan2(Math.sin(difference), Math.cos(difference)),
+                  turn = previous.bottom - previous.top,
+                  below = delta / turn,
+                  tolerance = half / Math.abs(turn);
+                if (below >= -tolerance && below <= 1 + tolerance &&
+                    pitch * (1 - t + Math.max(0, below)) < 2.42) {
+                  blocked = true;
+                  break;
+                }
+              }
+            }
+            if (blocked) continue;
+            const separation = previous
+              ? Math.min(angDist(previous.top, top), angDist(previous.bottom, top)) +
+                (side !== previous.side ? 0.12 : 0)
+              : -side * 0.1;
+            const score = separation - going * 0.2 - (newPassage ? 0.32 : 0);
+            if (score > bestScore) {
+              choice = { f, top, bottom, side, width, radius, half, risers, going,
+                passageHalf: newPassage ? passageHalf : 0 };
+              bestScore = score;
+            }
+          }
+        }
+      }
+    }
+    if (choice) flights.push(choice);
+  }
+  return flights;
+}
+
+// The ends of reserved core links and bridge passages have room for a bench
+// alongside the aisle at wider radii. These lounges use existing circulation area.
+function designLandingLounges(regions, r) {
+  return regions.flatMap((q) => {
+    const type = q.kind === 'bridgeAccess' ? 'bridge' :
+      q.kind === 'link' && q.r <= r + 0.001 ? 'core' : null;
+    if (!type || q.R - q.r < 3.5) return [];
+    const radius = q.r + (q.R - q.r) * (type === 'bridge' ? 0.36 : 0.63),
+      span = q.end - q.start,
+      depth = 0.57,
+      length = Math.min(2.45, (q.R - radius) * 1.25),
+      edge = q.end,
+      available = (radius - length / 2) * Math.sin(span) - 0.18,
+      furnishingDepth = Math.min(1.46, available - 1.6),
+      paired = furnishingDepth >= 1.11 && length >= 2.2;
+    if (available - depth < 1.6) return [];
+    q.lounge = {
+      f: q.f, type, radius, length, depth, furnishingDepth, paired,
+      angle: edge - (depth / 2 + 0.18) / radius
+    };
+    return [q.lounge];
+  });
+}
+
 // Reserve the corridors, opposed lifts, and lobby voids before assigning room area.
-function circulationPlan(r, R, lobby) {
+function circulationPlan(r, R, lobby, floorHeight) {
   const width = R - r,
     cw = Math.min(state.corridorWidth, width * 0.38),
     dual = width >= 2 * cw + 8,
@@ -492,7 +618,7 @@ function circulationPlan(r, R, lobby) {
     half = Math.min(0.3, Math.max(0.045, 4.1 / Math.max(4, r + width * 0.32))),
     liftR = Math.min(outer, r + Math.min(4.2, Math.max(0.01, (outer - r) * 0.75))),
     bridges = designAtriumBridges(r, lobby, half),
-    bridgeArea = bridges.reduce((total, bridge) => total + bridge.area, 0),
+    deckArea = bridges.reduce((total, bridge) => total + bridge.area, 0),
     regions = [],
     floorPlans = [];
   const add = (f, kind, a, b, start, end, extra = {}) => {
@@ -533,12 +659,39 @@ function circulationPlan(r, R, lobby) {
     );
     floorPlans.push({ arcs, bands, area });
   }
+  const stairs = designAtriumStairs(r, R, bridges, regions, lobby, floorHeight);
+  for (const { f, bottom, passageHalf } of stairs) {
+    if (!passageHalf) continue;
+    const floor = f - 1;
+    // Reserve only the small radial link required by a lower landing that can't
+    // meet an existing bridge or core passage. Split both room bands before packing.
+    add(floor, 'stairAccess', r, outer, bottom - passageHalf, bottom + passageHalf);
+    const plan = floorPlans[floor],
+      remaining = openArcs([[bottom, passageHalf]]);
+    plan.arcs = plan.arcs.flatMap(([a, b]) => remaining
+      .map(([start, end]) => [Math.max(a, start), Math.min(b, end)])
+      .filter(([start, end]) => end - start > 1e-9));
+    plan.area = plan.bands.reduce((sum, band) => sum + plan.arcs.reduce((area, [a, b]) =>
+      area + ((band.R ** 2 - band.r ** 2) * (b - a)) / 2, 0), 0);
+    if (dual) {
+      for (let i = regions.length - 1; i >= 0; i--)
+        if (regions[i].f === floor && regions[i].kind === 'inner') regions.splice(i, 1);
+      for (const [a, b] of plan.arcs) add(floor, 'inner', mid - cw / 2, mid + cw / 2, a, b);
+    }
+  }
+  const stairArea = stairs.reduce((total, stair) =>
+      total + stair.width * stair.radius * (Math.abs(stair.bottom - stair.top) + 2 * stair.half), 0),
+    bridgeArea = deckArea + stairArea,
+    landingLounges = designLandingLounges(regions, r);
   return {
     width: cw,
     dual,
     axis,
     bridgeAngle: axis + half / 2,
     bridges,
+    stairs,
+    stairArea,
+    landingLounges,
     bridgeArea,
     half,
     regions,
@@ -1933,7 +2086,7 @@ function derive(dockVariant = state.dockVariant) {
         blocked: new Set()
       };
       lobby.volume = (l + lobby.voidArea) * floorHeight;
-      circulation = circulationPlan(geom.r, geom.R, lobby);
+      circulation = circulationPlan(geom.r, geom.R, lobby, floorHeight);
       roofPlan = designRoof(geom.R, geom.r, circulation, floorHeight);
       const need = roofPlan.area + 0.00002;
       const netVoid = lobby.voidArea - circulation.bridgeArea;

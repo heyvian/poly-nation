@@ -8,8 +8,11 @@ python tests/test_materials_editing.py
 python tests/test_site_and_plan.py
 python tests/test_connections.py
 python tests/test_shared_lobbies.py
+python tests/test_atrium_render.py
 ```
 
 Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve the real static app over localhost and use software rendering. Screenshots go to `tests/output/`. The suites cover workspace and drawing exports, storage, responsive layouts, ride boarding and unloading, outdoor encounters, area caps, topology rules, clustering, Materials and direct programming edits. `test_site_and_plan.py` checks overhead projection, PDF placement, the canal cut and Drawings inclusion with controlled elevation, map fallback and service failure responses. `test_connections.py` checks all six dock support systems, exterior fitting layers, and visibility behind a thin façade at 1:2000.
 
 `test_shared_lobbies.py` checks lobby fit for smaller programme pairs, aisle alignment on one- and two-corridor floors, stocked and wall-fitted shelves, furniture clearances, visitor routes, the lobby plan and section presets, lens stops, crop anchoring, black cut fills with open voids, and the contextual lobby drawing set with its local compass, scale, print pages and vector SVG export.
+
+`test_atrium_render.py` checks furnished landing lounges, reachable atrium stairs, bridge bearings, the daylight and interior-light controls, and Render workspace restoration.

@@ -1,5 +1,10 @@
 # Changelog
 
+## Atrium stairs, landing lounges and lighting study
+- Added furnished core and bridge landing lounges off the clear aisle. Shared through-lobbies use the continuous corridor floor under the rug, with fitted nook benches and occasional open timber canopies.
+- Deepened the bridge decks and added a schematic midspan bearing at the fixed mast sleeve. Curved down-stairs use clear landings with optional short corridor links. Their area and navigation are included in the model.
+- Added Render after Build with independent daylight and interior-light controls, assembled materials, and level cutaways.
+
 ## Vector PDFs and continuous floors
 - Print and Save as PDF now use the layered SVG artwork for single sheets and drawing sets.
 - Replaced the room tile hatch with a continuous exposed-aggregate finish and gave circulation a lighter, brushed surface.

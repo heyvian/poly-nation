@@ -38,10 +38,11 @@ requestAnimationFrame(animateSwingFrame);
       materials: { panel: $('materialsPhase'), button: $('openMaterials'), title: $('materialsTitle') },
       drawings: { panel: $('drawingsPhase'), button: $('openDrawings'), title: $('drawingsTitle') },
       build: { panel: $('buildPhase'), button: $('openBuild'), title: $('buildTitle') },
+      render: { panel: $('renderPhase'), button: $('openRender'), title: $('renderTitle') },
       site: { panel: $('sitePhase'), button: $('openSite'), title: $('siteTitle') },
       rationale: { panel: rationale, button: $('openRationale') }
     },
-    pageScroll = { massing: 0, materials: 0, drawings: 0, build: 0, site: 0, rationale: 0 };
+    pageScroll = { massing: 0, materials: 0, drawings: 0, build: 0, render: 0, site: 0, rationale: 0 };
   let activeWorkspace = 'massing',
     lastStudyWorkspace = 'massing';
 
@@ -58,6 +59,7 @@ requestAnimationFrame(animateSwingFrame);
     document.body.classList.toggle('dr-open', workspace === 'rationale');
     document.body.classList.toggle('drawings-open', workspace === 'drawings');
     document.body.classList.toggle('build-open', workspace === 'build');
+    document.body.classList.toggle('render-open', workspace === 'render');
     document.body.classList.toggle('site-open', workspace === 'site');
     activeWorkspace = workspace;
     if (workspace === 'materials') materialWorkspace.open();
@@ -68,6 +70,10 @@ requestAnimationFrame(animateSwingFrame);
     if (workspace === 'build') {
       if (pending) update();
       openBuildWorkspace(model, materialWorkspace.assignments());
+    }
+    if (workspace === 'render') {
+      if (pending) update();
+      openRenderWorkspace(model, materialWorkspace.assignments());
     }
     if (workspace === 'site') {
       if (pending) update();

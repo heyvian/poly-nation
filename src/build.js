@@ -637,6 +637,12 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       concrete
     );
   }
+  if (layers.slabs && model.greenhouse) {
+    const ground = buildStorey(model, 0, slabThickness).base;
+    mark('Assembly_Greenhouse_Ground');
+    sector(0, model.r, 0, TAU, 0.19, ground - 0.265, rgb('#c8d7c2'));
+    drawGreenhouseGround(mesh, model, ground);
+  }
   // The radial grid puts columns between docks and secondary beams on the dock axes.
   const bayCount = model.slotN;
   const girderDepth = buildGirderDepth(model);
@@ -812,8 +818,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     if (layers.slabs || layers.walls) for (const hub of model.circulation.hubs) {
       if (hub.f !== f || !hub.layout) continue;
       mark(`Circulation_L${f + 1}_Shared_Lobby`, `Lobby ${hub.start.toFixed(3)}`);
-      drawSharedLobbyFloor(mesh, hub, base, 0.018);
-      drawSharedLobby(mesh, hub, base + 0.018, preview.view?.seed, true);
+      drawSharedLobbyFloor(mesh, hub, base + 0.006);
+      drawSharedLobby(mesh, hub, base + 0.006, preview.view?.seed, true);
     }
     if (layers.slabs) {
       mark(`Core_L${f + 1}_Room_Floor_Pattern`);
@@ -830,9 +836,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
             ? `Circulation_L${f + 1}_Shared_Lobby_Approach`
             : `Circulation_L${f + 1}_Floor_Pattern`
         );
-        const finish = approach ? 0.018 : 0.006;
+        const finish = 0.006;
         sector(q.r, q.R, q.start, q.end, base, finish, CIRCULATION_FLOOR_FINISH);
         drawInteriorFloorPattern(mesh, q, base + finish, CIRCULATION_FLOOR_FINISH, true);
+        if (q.lounge) drawLandingLounge(mesh, q.lounge, base + finish);
       }
     }
   }
@@ -983,7 +990,18 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     for (const bridge of model.circulation.bridges ?? []) {
       if (bridge.f >= floors) continue;
       const { base } = buildStorey(model, bridge.f, slabThickness);
-      drawAtriumBridge(mesh, model.r, bridge, base, 0.23, concrete);
+      drawAtriumBridge(mesh, model.r, bridge, base, concrete);
+    }
+    mark('Assembly_Atrium_Bearings');
+    for (const bridge of model.circulation.bridges ?? []) {
+      if (bridge.f >= floors) continue;
+      drawAtriumBridgeBearing(mesh, model.r, bridge, buildStorey(model, bridge.f, slabThickness).base, coreFrame);
+    }
+    for (const stair of model.circulation.stairs ?? []) {
+      if (stair.f >= floors) continue;
+      mark(`Assembly_Atrium_Stair_L${stair.f + 1}`, `Bridge stair to level ${stair.f}`);
+      drawAtriumStair(mesh, model.r, stair, buildStorey(model, stair.f, slabThickness).base,
+        buildStorey(model, stair.f - 1, slabThickness).base, rgb('#c4ae87'));
     }
   }
   if (slide) {

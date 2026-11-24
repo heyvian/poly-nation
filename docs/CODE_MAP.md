@@ -10,6 +10,7 @@
 | `materials-catalog.js`, `materials.js` | Material assignments, estimates, snapshot controls and the Materials canvas |
 | `workspaces.js` | Startup and workspace navigation |
 | `build.js` | Experimental assembly, dock support and slab studies |
+| `render.js` | Render workspace, floor-by-floor interior fixture layout and light fields |
 | `drawing-geometry.js`, `drawing-documents.js`, `drawings.js` | Projected geometry, architectural and Illustrator exports, drawing controls |
 | `connection-details.js` | Scaled connection contexts, exterior fitting profiles and demand annotations shared by both drawing outputs |
 | `site-plan.js`, `site-maps.js`, `site.js` | West Village plan coordinates, optional bridge registration and vegetation, placement, study controls and persistence |

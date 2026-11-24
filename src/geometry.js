@@ -1490,6 +1490,10 @@ function atriumGuardSpans(model, floor) {
       half = (far - near) / 2 + 0.03 / model.r;
     for (const side of [-1, 1]) openings.push([bridge.heading + side * center, half]);
   }
+  for (const stair of model.circulation.stairs ?? []) {
+    if (stair.f === floor) openings.push([stair.top, stair.half + 0.002]);
+    if (stair.f - 1 === floor) openings.push([stair.bottom, stair.half + 0.002]);
+  }
   return openArcs([...occupied, ...openings]).filter(([a, z]) => (z - a) * model.r > 0.08);
 }
 
@@ -1628,12 +1632,45 @@ function glassGuards({ quad, glass, line, ringPoint }) {
   return { glassGuard, curvedGlassGuard };
 }
 
-// Both workspaces use the same chord, with curved ends that meet the ring slab.
-function drawAtriumBridge(mesh, radius, bridge, top, depth, deck) {
+// The ground promenade is the receiving level of the lowest public stair.
+// Use the same basin and crossing positions in both massing and assemblies.
+function drawGreenhouseGround(mesh, model, top) {
+  const { axis, points, approaches, ringRadius, width, beds } = model.greenhouse,
+    { box, mark, sector, quad } = mesh,
+    surface = top - 0.075;
+  mark('Infinite_Rinse_Greenhouse_Beds');
+  beds.forEach(({ x, z, width, depth }, i) =>
+    box(x, surface, z, width, 0.26, depth, axis, rgb(i % 2 ? '#8fb8a8' : '#91b6c4'))
+  );
+  mark('Infinite_Rinse_Perimeter_Walk');
+  sector(model.r - 1.25, model.r, 0, TAU, surface, 0.075, rgb('#d6dfce'));
+  mark('Infinite_Rinse_Atrium_Crossing');
+  const crossing = rgb('#e9d6ae');
+  const edge = ([x, z], side) => [
+    x - (Math.sin(axis) * side * width) / 2, top + 0.005,
+    z + (Math.cos(axis) * side * width) / 2
+  ];
+  if (ringRadius) sector(ringRadius - width / 2, ringRadius + width / 2, 0, TAU, surface, 0.08, crossing);
+  const paths = approaches ?? points.slice(1).map((point, i) => [points[i], point]);
+  for (const [a, b] of paths) {
+    const forward = (b[0] - a[0]) * Math.cos(axis) + (b[1] - a[1]) * Math.sin(axis),
+      first = forward > 0 ? b : a, last = forward > 0 ? a : b;
+    quad(edge(first, -1), edge(last, -1), edge(last, 1), edge(first, 1), crossing);
+  }
+}
+
+// Model the deep deck with two half-spans and a corbel on the fixed mast sleeve.
+function atriumBridgeDepth(radius, bridge) {
+  const halfSpan = Math.sqrt(radius ** 2 - bridge.offset ** 2);
+  return clamp(halfSpan / 25, 0.44, 1.24);
+}
+
+function drawAtriumBridge(mesh, radius, bridge, top, deck) {
   const { quad } = mesh,
     { glassGuard } = glassGuards(mesh),
     { heading, width, offset } = bridge,
-    bottom = top - depth,
+    boxGirder = rgb('#839089'),
+    bottom = top - atriumBridgeDepth(radius, bridge),
     left = offset - width / 2,
     right = offset + width / 2,
     cos = Math.cos(heading),
@@ -1646,17 +1683,127 @@ function drawAtriumBridge(mesh, radius, bridge, top, depth, deck) {
     const a = left + (width * i) / 8,
       b = left + (width * (i + 1)) / 8;
     quad(edge(a, -1, top), edge(a, 1, top), edge(b, 1, top), edge(b, -1, top), deck);
-    quad(edge(a, -1, bottom), edge(b, -1, bottom), edge(b, 1, bottom), edge(a, 1, bottom), deck);
+    quad(edge(a, -1, bottom), edge(b, -1, bottom), edge(b, 1, bottom), edge(a, 1, bottom), boxGirder);
   }
   for (const [side, start, end] of [
     [left, -1, 1],
     [right, 1, -1]
   ]) {
     const a = edge(side, start, top),
-      b = edge(side, end, top);
-    quad(edge(side, start, bottom), edge(side, end, bottom), b, a, deck);
+      b = edge(side, end, top),
+      shoulderA = edge(side, start, top - 0.16),
+      shoulderB = edge(side, end, top - 0.16);
+    quad(edge(side, start, bottom), edge(side, end, bottom), shoulderB, shoulderA, boxGirder);
+    quad(shoulderA, shoulderB, b, a, deck);
     glassGuard(a, b);
   }
+}
+
+// The brackets sit below deck level. The visible sleeve is fixed, separate from
+// the ride's moving assembly, and represents a connection for engineering study.
+function drawAtriumBridgeBearing(mesh, radius, bridge, top, color) {
+  const { heading, width, offset } = bridge,
+    mast = swingMastRadius(radius),
+    bottom = top - atriumBridgeDepth(radius, bridge),
+    support = offset - width / 2 + 0.57,
+    point = (r, along, y) => [
+      r * Math.cos(heading) - along * Math.sin(heading), y,
+      r * Math.sin(heading) + along * Math.cos(heading)
+    ];
+  mesh.sector(mast - 0.035, mast + 0.19, 0, TAU, bottom - 0.93, 1.12, color);
+  for (const along of [-0.33, 0.33]) {
+    const end = point(support, along, bottom - 0.12);
+    drawAssemblyMember(mesh, point(mast + 0.075, along, bottom - 0.76), end, 0.2, color);
+    drawAssemblyMember(mesh, point(mast + 0.070, along, bottom - 0.12), end, 0.22, color);
+  }
+  const [x, y, z] = point(support - 0.06, 0, bottom - 0.13);
+  mesh.box(x, y, z, 1.05, 0.15, 0.58, heading, color);
+}
+
+function atriumStairAngles(stair) {
+  const direction = Math.sign(stair.bottom - stair.top);
+  return {
+    direction,
+    start: stair.top + direction * stair.half,
+    end: stair.bottom - direction * stair.half
+  };
+}
+
+// Draw treads and closed risers above twin curved stringers. Only the landing
+// sectors touch the atrium wall so the stair follows the void without cutting rooms.
+function drawAtriumStair(mesh, r, stair, high, low, deck) {
+  const { sector, ringPoint, line } = mesh,
+    { glassGuard } = glassGuards(mesh),
+    { top, bottom, half, width, risers } = stair,
+    { direction, start, end } = atriumStairAngles(stair),
+    flightAngle = end - start,
+    rise = (high - low) / risers,
+    steel = rgb('#576c65'),
+    inner = r - width - 0.06,
+    outer = r - 0.06,
+    sectorSpan = (from, to, y, height, far = outer) =>
+      sector(inner, far, Math.min(from, to), Math.max(from, to), y - height, height, deck),
+    point = (rad, i, dy = 0) =>
+      ringPoint(rad, start + flightAngle * i / (risers - 1), high - rise * (i + 0.5) + dy);
+
+  for (const [angle, y] of [[top, high], [bottom, low]]) {
+    sectorSpan(angle - half, angle + half, y, 0.24, r + 0.012);
+    glassGuard(ringPoint(inner, angle - half, y), ringPoint(inner, angle + half, y));
+  }
+  for (let i = 0; i < risers - 1; i++) {
+    const a = start + flightAngle * i / (risers - 1),
+      b = start + flightAngle * (i + 1) / (risers - 1),
+      y = high - rise * (i + 1);
+    sectorSpan(a, b, y, 0.19);
+    line(ringPoint(inner + 0.045, a, y + 0.002), ringPoint(outer - 0.035, a, y + 0.002), steel);
+  }
+  for (const radius of [inner + 0.095, outer - 0.075]) {
+    for (let i = 0; i < risers - 1; i++) {
+      drawAssemblyMember(mesh, point(radius, i, -0.22), point(radius, i + 1, -0.22), 0.12, steel, 0.28);
+      if (i % 3 === 0) glassGuard(point(radius, i), point(radius, Math.min(risers - 1, i + 3)));
+    }
+    // Pick up the stringers at each ring landing, outside the clear stair width.
+    for (const [i, angle, y] of [[0, top, high], [risers - 1, bottom, low]])
+      drawAssemblyMember(mesh, point(radius, i, -0.22), ringPoint(radius, angle, y - 0.19),
+        0.12, steel, 0.28);
+  }
+  for (const [i, angle, y] of [[0, top - direction * half, high], [risers - 1, bottom + direction * half, low]])
+    line(point(outer - 0.075, i, 1.1), ringPoint(outer - 0.075, angle, y + 1.1), steel);
+}
+
+function drawLandingLounge(mesh, lounge, y) {
+  const { f, type, angle, radius, length, depth, furnishingDepth, paired } = lounge,
+    timber = rgb('#ad8762'),
+    upholstery = rgb('#629185'),
+    weave = rgb('#baafc4'),
+    part = (across, along, up, w, d, h, color) => {
+      const x = (radius + along) * Math.cos(angle) - across * Math.sin(angle),
+        z = (radius + along) * Math.sin(angle) + across * Math.cos(angle);
+      mesh.box(x, y + up, z, w, h, d, angle, color);
+    };
+  mesh.mark(`Circulation_L${f + 1}_Landing_Lounge`, `${type === 'bridge' ? 'Bridge' : 'Core'} landing ${angle.toFixed(3)}`);
+  // The floor is continuous. Only the small woven runner and bench sit above it.
+  if (paired) {
+    const width = furnishingDepth - 0.22,
+      center = (depth - furnishingDepth) / 2;
+    part(center, 0, 0.005, furnishingDepth - 0.04, length + 0.17, 0.009, weave);
+    for (const sign of [-1, 1]) {
+      const end = sign * (length / 2 - 0.32);
+      part(center, end, 0.04, width, 0.58, 0.34, timber);
+      part(center, end - sign * 0.033, 0.38, width - 0.09, 0.49, 0.108, upholstery);
+      part(center, end + sign * 0.22, 0.48, width, 0.14, 0.26, upholstery);
+    }
+    part(center, 0, 0.03, 0.09, 0.1, 0.46, timber);
+    part(center, 0, 0.49, Math.min(0.54, width - 0.08), 0.43, 0.04, rgb('#d9ba91'));
+    return;
+  }
+  part(-0.22, 0, 0.005, depth + 0.51, length + 0.19, 0.009, weave);
+  for (const offset of [-0.29, -0.4]) part(offset, 0, 0.015, 0.034, length + 0.1, 0.002, timber);
+  part(0, 0, 0.047, depth, length, 0.33, timber);
+  part(-0.026, 0, 0.377, depth - 0.056, length - 0.055, 0.105, upholstery);
+  part(depth / 2 - 0.09, 0, 0.482, 0.15, length - 0.04, 0.28, upholstery);
+  for (const sign of [-1, 1])
+    part(0, sign * (length / 2 - 0.13), 0.035, depth - 0.06, 0.17, 0.38, timber);
 }
 
 // The boarding deck closes the canopy at the mast, with stairs over the glazing.
@@ -2297,17 +2444,16 @@ const LOBBY_RUG_MARGIN = 0.03;
 
 // Give the lobby surface small faces so its flat panels also sort under the furniture
 // in the software renderer. The perimeter remains a single curved floor element.
-function drawSharedLobbyFloor(mesh, hub, y, height) {
+function drawSharedLobbyFloor(mesh, hub, top) {
   const { r, R, start, end } = hub;
   const color = CIRCULATION_FLOOR_FINISH;
-  mesh.sector(r, R, start, end, y, height, color, null, true);
   const columns = Math.max(1, Math.ceil(((end - start) * R) / 0.75)),
     rows = Math.ceil((R - r) / 0.75),
     point = (row, column) =>
       mesh.ringPoint(
         r + ((R - r) * row) / rows,
         start + ((end - start) * column) / columns,
-        y + height
+        top
       );
   for (let i = 0; i < rows; i++)
     for (let j = 0; j < columns; j++)
@@ -2316,12 +2462,11 @@ function drawSharedLobbyFloor(mesh, hub, y, height) {
   // Brush the short approaches up to the rug in the direction of the aisle.
   const length = arch - 0.065,
     rugEnd = shelfOuter + LOBBY_RUG_MARGIN,
-    top = y + height + 0.003,
     ink = materialTint(color, 0.89);
   if (length > rugEnd)
     for (const fraction of [-0.34, -0.17, 0, 0.17, 0.34]) {
       const across = passage * fraction,
-        at = (along, offset) => sharedLobbyPoint(hub, along, across + offset, top);
+        at = (along, offset) => sharedLobbyPoint(hub, along, across + offset, top + 0.003);
       for (const [start, end] of [
         [-length, -rugEnd],
         [rugEnd, length]
@@ -2732,6 +2877,16 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
         type = i % 4 === 1 || cabinetRandom() < 0.22 ? 'cupboard' : 'open';
       return { start, end, outer, height, type, extraShelves: 0 };
     });
+    // A leftover shallow end bay becomes an extension of the sofa. The seat
+    // turns into the casework without extending into the arch or the doorway.
+    for (const i of [0, 7]) {
+      const bay = bays[i],
+        depth = Math.min(bay.outer(bay.start), bay.outer(bay.end)) - shelfInner;
+      if (depth >= 0.21 && (bay.end - bay.start) * shelfInner >= 0.56) {
+        bay.type = 'seat';
+        bay.nook = true;
+      }
+    }
     const candidates = [2, 3, 4, 5].filter((i) => {
       const bay = bays[i];
       return Math.min(bay.outer(bay.start), bay.outer(bay.end)) - shelfInner >= 0.34;
@@ -2859,13 +3014,14 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       item(0.89, 0.09, 0.07, 0.09, 0, bookColors[1]);
     }
   }
+  const nookSeats = [];
   mark(
     `Circulation_L${hub.f + 1}_Shared_Shelving`,
     `Fitted timber casework ${hub.start.toFixed(3)}`
   );
   for (const [side, bays] of shelves.entries()) {
     const sign = side ? 1 : -1;
-    for (const { start, end, outer, height, type, extraShelves } of bays) {
+    for (const { start, end, outer, height, type, extraShelves, nook } of bays) {
       const low = type === 'seat',
         high = low ? 0.39 : height + extraShelves * shelfPitch,
         stile = 0.024 / shelfInner,
@@ -2893,17 +3049,10 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       }
       if (low) {
         // The matching sofa bay omits its back so the seat can be reached from the aisle.
-        strip(
-          sign,
-          couchOuter + 0.006,
-          (angle) => outer(angle) - 0.016,
-          high + 0.003,
-          seatTop - high - 0.003,
-          cushion,
-          left,
-          right,
-          0.036
-        );
+        const seat = () => strip(sign, couchOuter + 0.006, (angle) => outer(angle) - 0.016,
+          high + 0.003, seatTop - high - 0.003, cushion, left, right, 0.036);
+        if (nook) nookSeats.push(seat);
+        else seat();
         continue;
       }
       if (type === 'cupboard') {
@@ -2927,6 +3076,10 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       for (const shelf of openBoards) stockShelf(sign, left, right, shelf + board + 0.003);
     }
   }
+  if (nookSeats.length) {
+    mark(`Circulation_L${hub.f + 1}_Shared_Nook_Benches`, `Casework benches ${hub.start.toFixed(3)}`);
+    for (const drawSeat of nookSeats) drawSeat();
+  }
   for (const [i, along] of [-arch, arch].entries()) {
     // Each programme owns the arch at the end where its room door meets the lobby.
     const door = hub.doors?.find((door) => Math.sign(door.along) === Math.sign(along)),
@@ -2938,6 +3091,84 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       `${program?.name ?? 'Shared lobby'} arch ${hub.start.toFixed(3)}`
     );
     drawLobbyArch(mesh, point, heading, along, edge, program, seed, assembly);
+  }
+  // Try the little residual pockets beyond the casework. Keep both the threshold
+  // and the plant pots free, and skip a pocket if the whole seat doesn't fit.
+  if (hub.layout.axis) for (const end of [-1, 1]) for (const side of [-1, 1]) {
+    const width = 0.75, depth = 0.42;
+    const pocketFits = (along, across, turn) => {
+      const cos = Math.cos(turn), sin = Math.sin(turn);
+      return [-1, 0, 1].every((a) => [-1, 0, 1].every((b) => {
+        const l = along + a * width * cos / 2 + b * depth * sin / 2,
+          c = across - a * width * sin / 2 + b * depth * cos / 2,
+          [x, , z] = point(l, c, 0),
+          buffer = Math.hypot(l - end * arch, c - side * (edge + 0.42));
+        return Math.abs(c) > edge + 0.29 && buffer > 0.48 &&
+          sharedLobbyContains(hub, x, z, 0.08) &&
+          Math.hypot(l, Math.abs(c) - edge) >
+            shelfLimit(side, Math.atan2(Math.abs(c) - edge, l)) + 0.07;
+      }));
+    };
+    let place;
+    for (const inset of [-0.26, 0.05, 0.35, 0.66]) {
+      if (place) break;
+      for (const shoulder of [1.08, 1.32, 1.58, 1.81]) {
+        const along = end * (arch - inset), across = side * (edge + shoulder);
+        const turn = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2]
+          .find((angle) => pocketFits(along, across, angle));
+        if (turn === undefined) continue;
+        place = { along, across, turn };
+        break;
+      }
+    }
+    if (!place) continue;
+    const { along, across, turn } = place;
+    mark(`Circulation_L${hub.f + 1}_Shared_Nook_Benches`, `Threshold bench ${hub.start.toFixed(3)}`);
+    block(along, across, 0.035, width, 0.36, depth, timber, heading + turn);
+    block(along, across, 0.395, width - 0.075, 0.095, depth - 0.05, cushion, heading + turn);
+  }
+
+  // Seeded open timber shells shelter one seating bay. Fit the footprint before
+  // placing the ribs, and keep every support outside the clear aisle and threshold.
+  const canopyRandom = random(lobbySeed ^ 0x21bebc31);
+  if (hub.layout.axis && canopyRandom() < 0.46) {
+    const side = canopyRandom() < 0.5 ? -1 : 1,
+      alongRadius = Math.min(couchOuter * 0.95, arch - 0.59),
+      acrossRadius = Math.min(1.12, couchOuter * 0.38),
+      acrossCenter = side * (edge + acrossRadius + 0.25),
+      spring = 2.21,
+      rise = 1.05 + canopyRandom() * 0.25,
+      wood = rgb('#ab805b'),
+      at = (angle, pitch) => point(
+        alongRadius * Math.cos(angle) * Math.cos(pitch),
+        acrossCenter + acrossRadius * Math.sin(angle) * Math.cos(pitch),
+        spring + rise * Math.sin(pitch)
+      ),
+      sizeOK = alongRadius > 1.1 && acrossRadius > 0.7 &&
+        Array.from({ length: 20 }, (_, i) => {
+          const [x, , z] = at(i * TAU / 20, 0);
+          return sharedLobbyContains(hub, x, z, 0.12);
+        }).every(Boolean);
+    if (sizeOK) {
+      mark(`Circulation_L${hub.f + 1}_Shared_Lattice_Canopy`, `Timber canopy ${hub.start.toFixed(3)}`);
+      const batten = (a, b, width) => drawAssemblyMember(mesh, a, b, width, wood);
+      for (let i = 0; i < 10; i++) {
+        const angle = i * TAU / 10;
+        for (let j = 0; j < 8; j++)
+          batten(at(angle, j * Math.PI / 16), at(angle, (j + 1) * Math.PI / 16), 0.06);
+      }
+      for (const pitch of [0, 0.31, 0.62, 0.92, 1.22]) {
+        for (let i = 0; i < 24; i++) batten(at(i * TAU / 24, pitch), at((i + 1) * TAU / 24, pitch), 0.046);
+      }
+      const outerSide = point(0, acrossCenter + side * acrossRadius, spring);
+      const anchors = [-1, 1].map((end) => curved(side, couchOuter + 0.08,
+        end < 0 ? 2.25 : 0.89, 0.04));
+      for (const foot of anchors) {
+        const head = [foot[0], outerSide[1], foot[2]];
+        batten(foot, head, 0.075);
+        batten(head, outerSide, 0.068);
+      }
+    }
   }
   // Use a local random sequence so the same lobby keeps its plants in every workspace.
   const sample = random(lobbySeed);
@@ -2988,43 +3219,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   // Symbolic biofiltration beds and paths, all within the central courtyard.
   const rr = m.r;
   if (m.greenhouse) {
-    const { axis, points, approaches, ringRadius, width, beds } = m.greenhouse;
-    beds.forEach(({ x, z, width, depth }, i) =>
-      box(x, greenhouseLevel, z, width, 0.26, depth, axis, rgb(i % 2 ? '#8fb8a8' : '#91b6c4'))
-    );
-    mark('Infinite_Rinse_Perimeter_Walk');
-    sector(rr - 1.25, rr, 0, TAU, 0.46, 0.075, rgb('#d6dfce'));
-    mark('Infinite_Rinse_Atrium_Crossing');
-    const crossingColor = rgb('#e9d6ae');
-    const edge = ([x, z], side) => [
-      x - (Math.sin(axis) * side * width) / 2,
-      0.54,
-      z + (Math.cos(axis) * side * width) / 2
-    ];
-    if (ringRadius) {
-      sector(ringRadius - width / 2, ringRadius + width / 2, 0, TAU, 0.46, 0.081, crossingColor);
-      quad(
-        edge(approaches[0][0], -1),
-        edge(approaches[0][1], -1),
-        edge(approaches[0][1], 1),
-        edge(approaches[0][0], 1),
-        crossingColor
-      );
-      quad(
-        edge(approaches[1][1], -1),
-        edge(approaches[1][0], -1),
-        edge(approaches[1][0], 1),
-        edge(approaches[1][1], 1),
-        crossingColor
-      );
-    } else {
-      // Previously saved material studies retain the original crossing geometry.
-      for (let i = 1; i < points.length; i++) {
-        const a = points[i - 1],
-          b = points[i];
-        quad(edge(a, -1), edge(b, -1), edge(b, 1), edge(a, 1), crossingColor);
-      }
-    }
+    drawGreenhouseGround(b, m, 0.535);
   } else {
     // Preserve the original bed layout for saved studies and layouts without lobby atriums.
     const num = Math.max(2, Math.min(6, Math.floor(rr / 5))),
@@ -3152,9 +3347,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       `Circulation_L${q.f + 1}_${isLift ? 'Lift_' + (q.block + 1) : isHub ? 'Shared_' + P[q.pair[0]].id + '_' + P[q.pair[1]].id : kind}`,
       `${kind}_${q.f + 1}_${q.start.toFixed(3)}`
     );
-    if (isHub && q.layout) drawSharedLobbyFloor(b, q, y, 0.075);
+    if (isHub && q.layout) drawSharedLobbyFloor(b, q, y + 0.075);
     else sector(q.r, q.R, q.start, q.end, y, isLift ? floorH - 0.18 : 0.075, color);
     if (!isHub && !isLift) drawInteriorFloorPattern(b, q, y + 0.075, color, true);
+    if (q.lounge) drawLandingLounge(b, q.lounge, y + 0.075);
     if (isLift) {
       const a = q.end,
         rad = (q.r + q.R) / 2,
@@ -3189,7 +3385,15 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     if (!visible(bridge.f)) continue;
     const top = bridge.f * floorH + 0.535;
     mark(`Atrium_Bridge_L${bridge.f + 1}`);
-    drawAtriumBridge(b, rr, bridge, top, 0.23, rgb('#d9bb87'));
+    drawAtriumBridge(b, rr, bridge, top, rgb('#d9bb87'));
+    mark(`Atrium_Bridge_Bearing_L${bridge.f + 1}`);
+    drawAtriumBridgeBearing(b, rr, bridge, top, rgb('#69796d'));
+  }
+  for (const stair of circulation.stairs ?? []) {
+    if (!visible(stair.f) || !visible(stair.f - 1)) continue;
+    mark(`Atrium_Stair_L${stair.f + 1}`, `Bridge stair to level ${stair.f}`);
+    drawAtriumStair(b, rr, stair, stair.f * floorH + 0.535,
+      (stair.f - 1) * floorH + 0.535, rgb('#d9bb87'));
   }
   for (let floor = 1; floor < view.floors; floor++) {
     if (!visible(floor)) continue;

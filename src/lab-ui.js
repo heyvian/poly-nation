@@ -150,7 +150,8 @@ function paintSoftware(
     c.width = w;
     c.height = h;
   }
-  ctx.fillStyle = '#e4e8df';
+  const sky = m.renderLighting && Math.round(43 + 191 * m.renderLighting.daylight);
+  ctx.fillStyle = m.renderLighting ? `rgb(${sky * 0.97},${sky},${sky * 1.03})` : '#e4e8df';
   ctx.fillRect(0, 0, w, h);
   const { back, right, up, target, half } = modelProjection(m, camera, w / h),
     scale = h / (half * 2);
@@ -191,10 +192,16 @@ function paintSoftware(
       const shade = 0.74 + 0.26 * Math.abs(dot(normal, sun));
       const highlight =
         a[i + 9] > 1 ? (a[i + 9] - 1) * Math.max(0, dot(normal, reflection)) ** 14 : 0;
+      let fill = color(a, i, shade, highlight);
+      if (m.renderLighting) {
+        const center = [0, 1, 2].map(axis => (a[i + axis] + a[i + 10 + axis] + a[i + 20 + axis]) / 3),
+          light = renderSurfaceLight(m.renderLighting, ...center);
+        fill = fill.map((channel, index) => Math.round(clamp(channel * light[index], 0, 255)));
+      }
       paint.push({
         z: (p[2] + q[2] + r[2]) / 3,
         pts: [p, q, r],
-        fill: color(a, i, shade, highlight),
+        fill,
         alpha: Math.min(1, a[i + 9])
       });
     }
@@ -266,7 +273,9 @@ function createWebGLRenderer(gl) {
     uniform float uDepth;
     uniform vec4 uTint;
     varying vec4 vColor;
+    varying mediump vec3 vWorld;
     void main() {
+      vWorld = aPosition;
       vec3 p = aPosition - uTarget;
       gl_Position = vec4(dot(p,uRight)*uScale.x, dot(p,uUp)*uScale.y, -dot(p,uBack)/uDepth, 1.0);
       vec3 n = normalize(aNormal + vec3(.00001));
@@ -278,7 +287,38 @@ function createWebGLRenderer(gl) {
       float highlight = gloss * pow(max(0., dot(n, normalize(sun + uBack))), 14.);
       vColor = vec4(mix(mix(base, vec3(1.), highlight), uTint.rgb, uTint.a), min(aColor.a, 1.));
     }`;
-  const f = `precision mediump float;varying vec4 vColor;void main(){gl_FragColor=vColor;}`;
+  const f = `
+    precision mediump float;
+    varying vec4 vColor;
+    varying mediump vec3 vWorld;
+    uniform sampler2D uLightField;
+    uniform vec4 uLightGeometry, uLightData, uLightControls;
+    void main() {
+      vec3 ink = vColor.rgb;
+      if (uLightControls.x > 0.) {
+        float r = length(vWorld.xz);
+        float y = vWorld.y;
+        float base = uLightGeometry.z;
+        float top = uLightGeometry.w;
+        float depth = clamp((y - base) / (top - base), 0., 1.);
+        float rim = clamp((r - uLightGeometry.x + 1.) / 9., 0., 1.);
+        bool outside = r > uLightGeometry.y + .06;
+        float sky = (y < base - .12 || y > top - .03 || outside)
+          ? 1. : (.44 + .49 * depth) * (1. - .86 * rim);
+        float level = floor((y - base + .045) / uLightData.y);
+        vec2 uv = .5 + vWorld.xz / (2. * uLightData.x);
+        float pool = 0.;
+        if (!outside && level >= 0. && level < uLightData.z && y < top - .05) {
+          float edge = .5 / uLightData.w;
+          uv.y = (clamp(uv.y, edge, 1. - edge) + level) / uLightData.z;
+          pool = texture2D(uLightField, uv).r;
+        }
+        float daylight = uLightControls.y;
+        float natural = .14 + daylight * (.11 + (.89 + .19 * depth) * sky);
+        ink *= vec3(natural) + vec3(.86, .58, .32) * pool * uLightControls.z;
+      }
+      gl_FragColor = vec4(ink, vColor.a);
+    }`;
   function shader(type, src) {
     const s = gl.createShader(type);
     gl.shaderSource(s, src);
@@ -296,15 +336,21 @@ function createWebGLRenderer(gl) {
     const at = {};
     for (const name of ['aPosition', 'aNormal', 'aColor']) at[name] = gl.getAttribLocation(p, name);
     const u = {};
-    for (const name of ['uTarget', 'uRight', 'uUp', 'uBack', 'uScale', 'uDepth', 'uTint'])
+    for (const name of ['uTarget', 'uRight', 'uUp', 'uBack', 'uScale', 'uDepth', 'uTint',
+      'uLightField', 'uLightGeometry', 'uLightData', 'uLightControls'])
       u[name] = gl.getUniformLocation(p, name);
     const renderer = {
       p,
       at,
       u,
       buffers: { solid: gl.createBuffer(), lines: gl.createBuffer(), glass: gl.createBuffer() },
-      lengths: {}
+      lengths: {},
+      lightField: gl.createTexture()
     };
+    gl.bindTexture(gl.TEXTURE_2D, renderer.lightField);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+      new Uint8Array([0, 0, 0, 255]));
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.clearColor(0.914, 0.932, 0.908, 1);
@@ -324,6 +370,17 @@ function initGL() {
 
 function uploadWebGLMesh(gl, renderer, mesh) {
   renderer.mesh = mesh;
+  const light = mesh.renderLighting;
+  if (light && renderer.lightSource !== light) {
+    renderer.lightSource = light;
+    gl.bindTexture(gl.TEXTURE_2D, renderer.lightField);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, light.size, light.size * light.levels,
+      0, gl.LUMINANCE, gl.UNSIGNED_BYTE, light.field);
+  }
   for (const kind of ['solid', 'lines', 'glass']) {
     gl.bindBuffer(gl.ARRAY_BUFFER, renderer.buffers[kind]);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh[kind]), gl.STATIC_DRAW);
@@ -384,7 +441,8 @@ function animateSwingFrame(now) {
     !document.body.classList.contains('dr-open') &&
     !document.body.classList.contains('materials-open') &&
     !document.body.classList.contains('drawings-open') &&
-    !document.body.classList.contains('build-open');
+    !document.body.classList.contains('build-open') &&
+    !document.body.classList.contains('render-open');
   if (mesh && !document.hidden) {
     let changed = false;
     // Keep simulation time running in the auxiliary views without drawing the hidden model.
@@ -781,12 +839,25 @@ function paintWebGL(
     canvas.width = w;
     canvas.height = h;
   }
+  const light = gpu.mesh.renderLighting;
+  if (light) {
+    const sky = 0.17 + 0.75 * light.daylight;
+    gl.clearColor(sky * 0.97, sky, sky * 1.03, 1);
+  }
   gl.viewport(0, 0, w, h);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.useProgram(gpu.p);
   const aspect = w / h,
     { back, right, up, target, half } = modelProjection(gpu.mesh, camera, aspect);
   const u = gpu.u;
+  if (light) {
+    gl.uniform4f(u.uLightControls, 1, light.daylight, light.interior, 0);
+    gl.uniform4f(u.uLightGeometry, light.radius, light.outer, light.base, light.top);
+    gl.uniform4f(u.uLightData, light.extent, light.pitch, light.levels, light.size);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, gpu.lightField);
+    gl.uniform1i(u.uLightField, 0);
+  }
   gl.uniform3fv(u.uTarget, target);
   gl.uniform3fv(u.uRight, right);
   gl.uniform3fv(u.uUp, up);
@@ -994,15 +1065,17 @@ function update() {
   $('wallThickness').textContent = Math.round(facadeThickness(m) * 1000) + ' mm';
   $('corridorActual').textContent = m.circulation.width.toFixed(2) + ' m';
   const bridgeInfo = $('bridgeInfo');
-  const missedBridges = state.floors - 1 - m.circulation.bridges.length;
-  bridgeInfo.hidden = state.atriumBridges === 'off' || (state.floors > 1 && !missedBridges);
+  const bridges = m.circulation.bridges.length,
+    stairCount = m.circulation.stairs?.length ?? 0;
+  bridgeInfo.hidden = state.atriumBridges === 'off';
   bridgeInfo.textContent = state.floors === 1
     ? 'Atrium bridges need an upper floor.'
-    : 'Some upper floors lack room for bridge landings.';
+    : `${bridges} of ${state.floors - 1} upper floors bridged · ${stairCount} down ${stairCount === 1 ? 'stair' : 'stairs'}`;
   $('corridorArea').textContent = fmt(m.circulation.corridorArea) + ' m²';
   $('elevatorArea').textContent = fmt(m.circulation.elevatorArea) + ' m²';
   $('hubArea').textContent = fmt(m.circulation.hubArea) + ' m²';
   $('hubCount').textContent = m.circulation.hubs.length;
+  $('landingLoungeCount').textContent = m.circulation.landingLounges?.length ?? 0;
   const hubPairs = [];
   for (let i = 0; i < 5; i++)
     for (let j = i + 1; j < 5; j++)
@@ -1127,7 +1200,7 @@ function update() {
   if (m.circulation.total) {
     for (const [name, value, color] of [
       ['Corridors / links', m.circulation.corridorArea - m.circulation.bridgeArea, '#eee9da'],
-      ['Atrium bridges', m.circulation.bridgeArea, '#d9bb87'],
+      ['Atrium bridges / stairs', m.circulation.bridgeArea, '#d9bb87'],
       ['Elevator blocks', m.circulation.elevatorArea, '#777a91'],
       ['Shared lobbies', m.circulation.hubArea, '#80509e']
     ]) {
@@ -1267,6 +1340,9 @@ $('export').onclick = () => {
         elevatorArea: m.circulation.elevatorArea,
         sharedLobbyArea: m.circulation.hubArea,
         bridgeArea: m.circulation.bridgeArea,
+        stairArea: m.circulation.stairArea,
+        stairs: m.circulation.stairs,
+        landingLounges: m.circulation.landingLounges,
         bridges: m.circulation.bridges,
         roomPacking: m.circulation.roomPacking,
         regions: m.circulation.regions,

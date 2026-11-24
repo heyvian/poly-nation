@@ -48,7 +48,7 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
         region.route === 'outerLanding'
           ? 'Corridor'
           : '';
-      contextSector(region, CIRCULATION_FLOOR_FINISH, -0.015, true, label);
+      contextSector(region, CIRCULATION_FLOOR_FINISH, 0, true, label);
     }
     mesh.mark('Core_Lobby_Context');
     for (const room of model.rooms) {
@@ -67,7 +67,7 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
     }
   }
   mesh.mark(`Circulation_L${hub.f + 1}_Shared_Lobby`);
-  drawSharedLobbyFloor(mesh, hub, -0.08, 0.08);
+  drawSharedLobbyFloor(mesh, hub, 0);
   drawSharedLobby(mesh, hub, 0, seed, true);
   return { geometry: drawingGeometry(mesh), labels };
 }
@@ -204,8 +204,18 @@ function studyFloor(model, floor, kind) {
         CIRCULATION_COLOURS[key],
         key === 'lift' ? 1.4 : 0.04
       );
+      if (q.lounge) {
+        const { angle, radius, length, depth } = q.lounge;
+        put(studyRectangle(angle, radius, depth, length), CIRCULATION_COLOURS.lobby, 0.35);
+      }
       for (const { radius, start, end } of q.layout?.corridorScreens ?? [])
         put(studyArc(radius - 0.08, radius + 0.08, start, end), '#536157');
+    }
+    const stair = model.circulation.stairs?.find((q) => q.f === floor);
+    if (stair) {
+      const { start, end } = atriumStairAngles(stair);
+      put(studyArc(model.r - stair.width - 0.06, model.r - 0.06,
+        Math.min(start, end), Math.max(start, end)), CIRCULATION_COLOURS.bridge, 0.34, 'ST');
     }
     const bridge = model.circulation.bridges.find((q) => q.f === floor);
     if (bridge) {
