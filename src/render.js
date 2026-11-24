@@ -2,7 +2,7 @@
 
 // Distribute light pools along occupied circulation, over the lobby seating, and
 // in room bays. Store a plan of the pools per storey for interactive rendering.
-function makeRenderLighting(model) {
+function makeRenderLighting(model, seed = 0) {
   const size = 128,
     levels = model.layers.length,
     extent = model.R + 2,
@@ -11,8 +11,8 @@ function makeRenderLighting(model) {
     lamps = Array.from({ length: levels }, () => []),
     field = new Uint8Array(size * size * levels),
     top = model.roofPlan.y;
-  function lamp(f, r, angle, reach, intensity, pendant = false) {
-    lamps[f].push({ x: r * Math.cos(angle), z: r * Math.sin(angle), reach, intensity, pendant });
+  function lamp(f, r, angle, reach, intensity, fixture = 'downlight') {
+    lamps[f].push({ x: r * Math.cos(angle), z: r * Math.sin(angle), reach, intensity, fixture });
   }
   for (const q of [...model.circulation.regions, ...model.rooms]) {
     if (['elevator', 'lobbyDivider'].includes(q.kind) || q.R - q.r < 0.76) continue;
@@ -25,9 +25,12 @@ function makeRenderLighting(model) {
   }
   for (const hub of model.circulation.hubs) {
     if (!hub.layout) continue;
+    const canopy = lobbyCanopyPattern(hub, seed);
     for (const side of [-1, 1]) {
-      const [x, , z] = sharedLobbyPoint(hub, 0, side * (hub.layout.passage / 2 + 0.86), 0);
-      lamp(hub.f, Math.hypot(x, z), Math.atan2(z, x), 4.2, 0.75, true);
+      const paper = canopy?.sign === side;
+      const [x, , z] = paper ? canopy.center :
+        sharedLobbyPoint(hub, 0, side * (hub.layout.passage / 2 + 0.86), 0);
+      lamp(hub.f, Math.hypot(x, z), Math.atan2(z, x), 4.2, 0.75, paper ? 'paper' : 'pendant');
     }
   }
   // Downlights at the ground promenade make the glazed atrium legible after dark.
@@ -74,9 +77,11 @@ function drawRenderFixtures(mesh, model, lighting, visibleLevels) {
   mesh.mark('Render_Downlights');
   for (let f = 0; f < limit; f++) {
     const ceiling = buildStorey(model, f).soffit - 0.032;
-    for (const { x, z, pendant, intensity } of lighting.lamps[f]) {
-      if (intensity < 0.36) continue; // Promenade uplighting is recessed into the ground.
-      const drop = pendant ? 0.31 : 0.07, width = pendant ? 0.31 : 0.17;
+    for (const { x, z, fixture, intensity } of lighting.lamps[f]) {
+      // The paper pendant is already part of the assembly. Ground uplights are recessed.
+      if (fixture === 'paper' || intensity < 0.36) continue;
+      const pendant = fixture === 'pendant',
+        drop = pendant ? 0.31 : 0.07, width = pendant ? 0.31 : 0.17;
       mesh.box(x, ceiling - drop, z, 0.045, drop, 0.045, 0, stem);
       mesh.box(x, ceiling - drop - 0.05, z, width, 0.049, width, 0, color);
     }
@@ -140,7 +145,7 @@ const openRenderWorkspace = (() => {
     assignments = materials;
     signature = next;
     if (changed) {
-      lighting = makeRenderLighting(model);
+      lighting = makeRenderLighting(model, state.seed);
       level.replaceChildren(
         new Option('Whole building', '0'),
         ...model.layers.map((_, i) => new Option(

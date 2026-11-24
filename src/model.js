@@ -1183,7 +1183,7 @@ function alignSharedLobby(fit, a, b, approaches) {
         ...entry,
         along: Math.sign(entry.along) * arch
       }));
-      return { layout: { ...layout, publicEntries }, doors };
+      return { layout: { ...layout, publicEntries, roomWalls: roomDoors }, doors };
     }
   }
   return null;

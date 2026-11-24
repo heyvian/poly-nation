@@ -1,5 +1,9 @@
 # Changelog
 
+## Fitted lobby benches and paper lights
+- Filled the clear gaps between the curved casework and programme walls with continuous, wall-scribed upholstered benches. The fit respects the planters and routes through each arch.
+- Densified the overhead timber lattice while keeping the same support locations. Hung a paper ring pendant above the table, with coloured tabs inspired by the building's docking bays.
+
 ## Shared lobby locations and quarter domes
 - Prioritized fitting a full shared lobby near a lift core or bridge approach, with a preference for connecting its corridor return directly to the junction. Removed the earlier freestanding landing furniture.
 - Rebuilt the timber lattice as a quarter dome over one semicircular seating bay, with uprights that extend the generated casework and two intermediate supports.

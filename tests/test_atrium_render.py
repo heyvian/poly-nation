@@ -44,12 +44,36 @@ with serve_lab(root) as url, sync_playwright() as p:
           });
       }
       Object.assign(state, { atriumBridges: 'aligned', seed: 606 });
+      const paperLamps = makeRenderLighting(model, state.seed).lamps.flat()
+        .filter(lamp => lamp.fixture === 'paper');
+      const benchFitsWalls = hubs.every(hub => {
+        const mesh = meshBuilder();
+        drawSharedLobby(mesh, hub, 0, state.seed, true);
+        const benches = mesh.groups.flatMap((group, i) => group.name.startsWith('Wall-scribed bench') ?
+          [mesh.solid.slice(group.solid, mesh.groups[i + 1].solid)] : []);
+        return benches.length >= 1 && benches.every(vertices =>
+          hub.layout.roomWalls.some(({ angle, r, R }) =>
+            vertices.some((x, i) => {
+              if (i % 10 !== 0) return false;
+              const z = vertices[i + 2], radius = x * Math.cos(angle) + z * Math.sin(angle);
+              return Math.abs(vertices[i + 1] - 0.4) < 1e-6 &&
+                Math.abs(z * Math.cos(angle) - x * Math.sin(angle)) < 0.075 &&
+                radius >= r && radius <= R;
+            })
+          )
+        );
+      });
       const canopyFollowsCabinets = hubs.some(hub => {
         const mesh = meshBuilder();
         drawSharedLobby(mesh, hub, 0, state.seed, true);
         const i = mesh.groups.findIndex(g => g.layer.endsWith('_Shared_Lattice_Canopy'));
         if (i < 0) return false;
         const vertices = mesh.solid.slice(mesh.groups[i].solid, mesh.groups[i + 1].solid);
+        const lampIndex = mesh.groups.findIndex(g => g.layer.endsWith('_Shared_Paper_Pendant'));
+        const paper = mesh.solid.slice(mesh.groups[lampIndex].solid, mesh.groups[lampIndex + 1].solid);
+        const { center: [x, , z] } = lobbyCanopyPattern(hub, state.seed);
+        const fixtureFits = paper.length > 360 && paper.every((height, k) => k % 10 !== 1 || height > 2.5) &&
+          paperLamps.some(lamp => Math.hypot(lamp.x - x, lamp.z - z) < 1e-6);
         const { axis, origin, passage, couchOuter } = hub.layout;
         const locations = [];
         for (let j = 0; j < vertices.length; j += 10) {
@@ -60,7 +84,8 @@ with serve_lab(root) as url, sync_playwright() as p:
         const support = mesh.groups.findIndex(g => g.layer.endsWith('_Shared_Lattice_Intermediate_Supports'));
         const uprights = mesh.solid.slice(mesh.groups[support].solid, mesh.groups[support + 1].solid);
         // The two added uprights stand on taller cabinet tops, leaving the low reading seats open.
-        return uprights.length === 2 * 360 && uprights.every((value, k) => k % 10 !== 1 || value > 0.95) &&
+        return fixtureFits && vertices.length > 650 * 360 &&
+          uprights.length === 2 * 360 && uprights.every((value, k) => k % 10 !== 1 || value > 0.95) &&
           locations.every(p => sign*p.across >= passage/2 - 0.05 && p.y < 3.72 && p.y > 0.32) &&
           locations.some(p => p.y > 3.3 && Math.abs(p.along) < 0.06) &&
           locations.filter(p => p.y < 1.8).every(p =>
@@ -77,6 +102,7 @@ with serve_lab(root) as url, sync_playwright() as p:
           nodes.filter(n => n.kind === 'hub' && reachable.has(n.id)).length === hubs.length &&
           assembly.groups.every(group => !group.layer.includes('_Landing_Lounge')),
         canopyFollowsCabinets,
+        benchFitsWalls,
         furniture: ['_Shared_Nook_Benches', '_Shared_Lattice_Canopy', 'Assembly_Atrium_Bearings',
           'Infinite_Rinse_Perimeter_Walk'].every(hasLayer)
       };

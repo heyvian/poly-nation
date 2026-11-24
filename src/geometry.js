@@ -2625,6 +2625,131 @@ function drawLobbyArch(mesh, point, heading, along, edge, program, seed, assembl
   }
 }
 
+function sharedLobbySeed(hub, seed) {
+  return seed ^ Math.imul(hub.f + 1, 0x9e3779b1) ^ Math.round(hub.start * 1e5);
+}
+
+// Render and the model use the same seeded canopy side and pendant centre.
+function lobbyCanopyPattern(hub, seed) {
+  const { axis, couchOuter, passage, tableRadius } = hub.layout,
+    sample = random(sharedLobbySeed(hub, seed) ^ 0x21bebc31);
+  if (!axis || sample() >= 0.46) return null;
+  const sign = sample() < 0.5 ? -1 : 1,
+    radius = couchOuter + 0.123,
+    angle = Math.PI / 2 + 0.005 + 0.012 / (couchOuter + 0.018),
+    spread = tableRadius * 0.72,
+    center = sharedLobbyPoint(hub, spread * Math.cos(angle), sign * (passage / 2 + spread * Math.sin(angle)), 0);
+  return { sign, radius, angle, pitch: Math.acos(spread / radius), rise: 1.35 + sample() * 0.17, center };
+}
+
+// A shallow paper ring echoes the central courtyard and the coloured docking bays.
+function drawLobbyPendant(mesh, center, anchor) {
+  const [x, , z] = center,
+    y = anchor - 0.61,
+    paper = rgb('#f3e4c4'),
+    frame = rgb('#9e774a'),
+    profile = [
+      [0.115, -0.27], [0.228, -0.22], [0.255, -0.127], [0.227, -0.044], [0.105, 0]
+    ],
+    divisions = 32;
+  const rim = (radius, height, angle) =>
+    [x + radius * Math.cos(angle), y + height, z + radius * Math.sin(angle)];
+  drawAssemblyMember(mesh, [x, y - 0.007, z], [x, anchor + 0.012, z], 0.014, frame);
+  for (let i = 0; i < divisions; i++) {
+    const a = i * TAU / divisions, b = (i + 1) * TAU / divisions;
+    for (let j = 0; j < profile.length - 1; j++) {
+      const [r, h] = profile[j], [R, H] = profile[j + 1];
+      mesh.quad(rim(r, h, a), rim(R, H, a), rim(R, H, b), rim(r, h, b),
+        i % 2 ? paper : rgb('#ead7b1'));
+    }
+    mesh.quad(rim(0.055, -0.265, a), rim(0.117, -0.27, a), rim(0.117, -0.27, b),
+      rim(0.055, -0.265, b), rgb('#e0b96f'));
+    mesh.tri([x, y - 0.237, z], rim(0.055, -0.265, a), rim(0.055, -0.265, b), rgb('#fff0ce'));
+    mesh.tri([x, y, z], rim(0.105, 0, b), rim(0.105, 0, a), frame);
+    if (i % 2 === 0) {
+      const angle = (a + b) / 2, [px, , pz] = rim(0.248, 0, angle);
+      const color = rgb(PROGRAMS[(i / 2) % 5].color);
+      mesh.box(px, y - 0.158, pz, 0.029, 0.069, 0.028, angle, color);
+    }
+  }
+}
+
+// Scribe seat depths from the actual casework outline to a programme wall.
+// Sampling turns irregular leftover pockets into continuous, fitted seat runs.
+function lobbyWallBenchRuns(hub, shelfLimit) {
+  const { axis, passage, arch, roomWalls, publicEntries = [] } = hub.layout;
+  if (!axis) return [];
+  const edge = passage / 2,
+    walls = roomWalls ?? [-1, 1].map((side) => ({
+      side, angle: side < 0 ? hub.start : hub.end, r: hub.r, R: hub.R
+    })),
+    routes = [...publicEntries, ...(hub.doors ?? [])]
+      .filter(({ angle, radius, r, along }) => [angle, radius ?? r, along].every(Number.isFinite))
+      .map(({ angle, radius, r, along, width }) => {
+        const [x, , z] = sharedLobbyPoint(hub, along, 0, 0);
+        return {
+          start: [x, z],
+          end: [(radius ?? r) * Math.cos(angle), (radius ?? r) * Math.sin(angle)],
+          clear: (width ?? passage) / 2 + 0.075
+        };
+      });
+  function distanceToRoute([x, , z], { start, end }) {
+    const dx = end[0] - start[0], dz = end[1] - start[1],
+      lengthSquared = dx ** 2 + dz ** 2,
+      t = lengthSquared ? clamp(((x - start[0]) * dx + (z - start[1]) * dz) / lengthSquared, 0, 1) : 0;
+    return Math.hypot(x - start[0] - t * dx, z - start[1] - t * dz);
+  }
+  const runs = [];
+  for (const wall of walls) for (const sign of [-1, 1]) {
+    const [ox, , oz] = sharedLobbyPoint(hub, 0, sign * edge, 0),
+      u = Math.cos(wall.angle), v = Math.sin(wall.angle),
+      at = (angle, radius) =>
+        sharedLobbyPoint(hub, radius * Math.cos(angle), sign * (edge + radius * Math.sin(angle)), 0);
+    function sample(angle) {
+      const [x, , z] = at(angle, 1),
+        dx = x - ox, dz = z - oz,
+        perpendicular = u * dz - v * dx;
+      if (Math.abs(perpendicular) < 0.02) return null;
+      const wallDepth = (v * ox - u * oz) / perpendicular,
+        wallRadius = (ox + wallDepth * dx) * u + (oz + wallDepth * dz) * v,
+        inner = shelfLimit(sign, angle) + 0.004,
+        outer = wallDepth - 0.067 / Math.abs(perpendicular);
+      const sin = Math.sin(angle), cos = Math.cos(angle);
+      if (wallRadius < wall.r + 0.045 || wallRadius > wall.R - 0.045 ||
+          outer - inner < 0.33 || inner * sin < 0.32) return null;
+      // Intersect the radial seat slice with the planter's actual rectangular
+      // footprint and a small shadow gap, both in the furniture frame.
+      const potStart = (arch - 0.26) / Math.abs(cos),
+        potEnd = (arch + 0.26) / Math.abs(cos);
+      if (Math.max(inner, potStart, (0.42 - 0.255) / sin) <
+          Math.min(outer, potEnd, (0.42 + 0.255) / sin)) return null;
+      for (let i = 0; i <= 8; i++) {
+        const point = at(angle, inner + (outer - inner) * i / 8);
+        if (!sharedLobbyContains(hub, point[0], point[2], 0.009) ||
+            routes.some((route) => distanceToRoute(point, route) < route.clear)) return null;
+      }
+      return { angle, inner, outer };
+    }
+    let strip = [], widest = [];
+    // Scan toward the back of the casework so each corner picks its largest clear seat.
+    for (let i = 0; i <= 70; i++) {
+      const corner = 0.075 + i * 0.017,
+        ray = sample(wall.side > 0 ? corner : Math.PI - corner);
+      if (ray) {
+        strip.push(ray);
+        if (strip.length > widest.length) widest = strip;
+      } else strip = [];
+    }
+    if (widest.length < 2) continue;
+    const first = widest[0], last = widest.at(-1);
+    const mid = ({ angle, inner, outer }) => at(angle, (inner + outer) / 2);
+    if (Math.hypot(...sub(mid(first), mid(last))) < 0.42) continue;
+    if (first.angle > last.angle) widest.reverse();
+    runs.push({ sign, slices: widest });
+  }
+  return runs;
+}
+
 // Split the circular furniture into two halves around the clear strip used by the occupancy graph.
 function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
   const { mark, box, quad, tri, textureLine } = mesh,
@@ -2636,7 +2761,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     back = rgb('#3f655d'),
     base = rgb('#374b43'),
     tabletop = rgb('#d9ba91'),
-    lobbySeed = seed ^ Math.imul(hub.f + 1, 0x9e3779b1) ^ Math.round(hub.start * 1e5),
+    lobbySeed = sharedLobbySeed(hub, seed),
     cabinetRandom = random(lobbySeed ^ 0x546b2829),
     contentsRandom = random(lobbySeed ^ 0x3c6ef372);
   const point = (along, across, up) => sharedLobbyPoint(hub, along, across, y + up);
@@ -2646,23 +2771,24 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     const steps = Math.max(1, Math.ceil((end - start) / 0.105)),
       top = bottom + height;
     const profile = (angle) => {
-      const outside = typeof outer === 'function' ? outer(angle) : outer;
+      const outside = typeof outer === 'function' ? outer(angle) : outer,
+        inside = typeof inner === 'function' ? inner(angle) : inner;
       return bevel
         ? [
-            [inner + bevel, bottom],
+            [inside + bevel, bottom],
             [outside - bevel, bottom],
             [outside, bottom + bevel],
             [outside, top - bevel],
             [outside - bevel, top],
-            [inner + bevel, top],
-            [inner, top - bevel],
-            [inner, bottom + bevel]
+            [inside + bevel, top],
+            [inside, top - bevel],
+            [inside, bottom + bevel]
           ]
         : [
-            [inner, bottom],
+            [inside, bottom],
             [outside, bottom],
             [outside, top],
-            [inner, top]
+            [inside, top]
           ];
     };
     // Reflection reverses the winding. Keep the mirrored faces outward in both renderers.
@@ -3059,51 +3185,29 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     );
     drawLobbyArch(mesh, point, heading, along, edge, program, seed, assembly);
   }
-  // Try the little residual pockets beyond the casework. Keep both the threshold
-  // and the plant pots free, and skip a pocket if the whole seat doesn't fit.
-  if (hub.layout.axis) for (const end of [-1, 1]) for (const side of [-1, 1]) {
-    const width = 0.75, depth = 0.42;
-    const pocketFits = (along, across, turn) => {
-      const cos = Math.cos(turn), sin = Math.sin(turn);
-      return [-1, 0, 1].every((a) => [-1, 0, 1].every((b) => {
-        const l = along + a * width * cos / 2 + b * depth * sin / 2,
-          c = across - a * width * sin / 2 + b * depth * cos / 2,
-          [x, , z] = point(l, c, 0),
-          buffer = Math.hypot(l - end * arch, c - side * (edge + 0.42));
-        return Math.abs(c) > edge + 0.29 && buffer > 0.48 &&
-          sharedLobbyContains(hub, x, z, 0.08) &&
-          Math.hypot(l, Math.abs(c) - edge) >
-            shelfLimit(side, Math.atan2(Math.abs(c) - edge, l)) + 0.07;
-      }));
+  // The cabinet shoulder and the room wall define the full depth of each built-in seat.
+  for (const { sign, slices } of lobbyWallBenchRuns(hub, shelfLimit)) {
+    const first = slices[0].angle, last = slices.at(-1).angle;
+    const edgeAt = (angle, edge) => {
+      const index = clamp((slices.length - 1) * (angle - first) / (last - first), 0, slices.length - 1),
+        a = slices[Math.floor(index)][edge], b = slices[Math.ceil(index)][edge];
+      return a + (b - a) * (index % 1);
     };
-    let place;
-    for (const inset of [-0.26, 0.05, 0.35, 0.66]) {
-      if (place) break;
-      for (const shoulder of [1.08, 1.32, 1.58, 1.81]) {
-        const along = end * (arch - inset), across = side * (edge + shoulder);
-        const turn = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2]
-          .find((angle) => pocketFits(along, across, angle));
-        if (turn === undefined) continue;
-        place = { along, across, turn };
-        break;
-      }
-    }
-    if (!place) continue;
-    const { along, across, turn } = place;
-    mark(`Circulation_L${hub.f + 1}_Shared_Nook_Benches`, `Threshold bench ${hub.start.toFixed(3)}`);
-    block(along, across, 0.035, width, 0.36, depth, timber, heading + turn);
-    block(along, across, 0.395, width - 0.075, 0.095, depth - 0.05, cushion, heading + turn);
+    mark(`Circulation_L${hub.f + 1}_Shared_Nook_Benches`, `Wall-scribed bench ${hub.start.toFixed(3)}`);
+    strip(sign, (angle) => edgeAt(angle, 'inner'), (angle) => edgeAt(angle, 'outer'),
+      0.025, 0.375, timber, first, last);
+    strip(sign, (angle) => edgeAt(angle, 'inner') + 0.02, (angle) => edgeAt(angle, 'outer') - 0.014,
+      0.40, 0.105, cushion, first + 0.009, last - 0.009, 0.025);
   }
 
   // A quarter dome springs from the semicircular cabinet backs. Each upright
   // extends an actual cabinet stile, including the low reading-seat bays.
-  const canopyRandom = random(lobbySeed ^ 0x21bebc31);
-  if (hub.layout.axis && canopyRandom() < 0.46) {
-    const sign = canopyRandom() < 0.5 ? -1 : 1,
+  const canopy = lobbyCanopyPattern(hub, seed);
+  if (canopy) {
+    const { sign, radius } = canopy,
       bays = shelves[sign < 0 ? 0 : 1],
-      radius = shelfInner + 0.105,
       spring = Math.max(2.13, ...bays.map((bay) => cabinetTop(bay) + 0.06)),
-      rise = Math.min(3.64 - spring, 1.35 + canopyRandom() * 0.17),
+      rise = Math.min(3.64 - spring, canopy.rise),
       ribs = [
         ...bays.map((bay) => ({ bay, angle: bay.start + cabinetStile / 2 })),
         { bay: bays.at(-1), angle: bays.at(-1).end - cabinetStile / 2 }
@@ -3121,10 +3225,19 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       for (let j = 0; j < 12; j++)
         batten(at(angle, j * Math.PI / 24), at(angle, (j + 1) * Math.PI / 24), gauge);
     }
-    const ringAngle = (i) => first + (last - first) * i / 24;
-    for (const pitch of [0, 0.32, 0.63, 0.93, 1.19])
-      for (let i = 0; i < 24; i++)
-        batten(at(ringAngle(i), pitch), at(ringAngle(i + 1), pitch), pitch === 0 ? 0.088 : 0.038);
+    // Three thin battens fill each principal rib bay. They stop at the crown
+    // rings, avoiding a clump of timber where the principal ribs converge.
+    for (let i = 1; i < ribs.length; i++) {
+      for (const fraction of [0.25, 0.5, 0.75]) {
+        const angle = ribs[i - 1].angle + (ribs[i].angle - ribs[i - 1].angle) * fraction;
+        for (let j = 0; j < 9; j++)
+          batten(at(angle, j * 1.28 / 9), at(angle, (j + 1) * 1.28 / 9), 0.021);
+      }
+    }
+    const ringAngle = (i) => first + (last - first) * i / 32;
+    for (const pitch of [0, 0.13, 0.26, 0.39, 0.52, 0.65, 0.78, 0.91, 1.04, 1.16, 1.28, 1.4])
+      for (let i = 0; i < 32; i++)
+        batten(at(ringAngle(i), pitch), at(ringAngle(i + 1), pitch), pitch === 0 ? 0.088 : 0.022);
     // Two intermediate uprights pick up the springing rail between the main
     // ribs. Use the flanking full-height cabinet bays to keep reading seats open.
     const flankingBays = [
@@ -3137,6 +3250,8 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       const angle = (bay.start + bay.end) / 2;
       batten(curved(sign, radius, angle, cabinetTop(bay) - 0.012), at(angle, 0), 0.044);
     }
+    mark(`Circulation_L${hub.f + 1}_Shared_Paper_Pendant`, `Poly Nation paper lantern ${hub.start.toFixed(3)}`);
+    drawLobbyPendant(mesh, canopy.center, at(canopy.angle, canopy.pitch)[1]);
   }
   // Use a local random sequence so the same lobby keeps its plants in every workspace.
   const sample = random(lobbySeed);
