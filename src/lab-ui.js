@@ -91,7 +91,59 @@ function drawSoftware() {
 }
 
 const PROGRAM_PREVIEW_TINT = [0.99, 0.76, 0.22, 0.82];
-function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.min(2, window.devicePixelRatio || 1)) {
+const softwareInk = (color, opacity = 1) => `rgba(${color.join(',')},${opacity})`;
+
+// Detailed furniture needs per-pixel depth in the canvas fallback. A triangle's
+// centre can otherwise sort in front of the adjacent cushion, shelving or rug.
+function paintSoftwareWithDepth(ctx, paint, width, height, scale, lineDraw) {
+  const depth = new Float32Array(width * height).fill(-Infinity);
+  let pixels = ctx.getImageData(0, 0, width, height);
+  const face = ({ pts: [a, b, c], fill, alpha }) =>
+    rasterDrawingFace(depth, width, height, a, b, c, pixels.data, fill, null, 0, null, alpha);
+  for (const triangle of paint) if (triangle.alpha === 1) face(triangle);
+  ctx.putImageData(pixels, 0, 0);
+
+  for (const {
+    pts: [a, b],
+    stroke
+  } of paint) {
+    if (!stroke) continue;
+    const steps = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
+    let start = null;
+    for (let i = 0; i <= steps; i++) {
+      const point = a.map((value, j) => value + ((b[j] - value) * i) / steps),
+        [x, y, z] = point,
+        col = Math.floor(x),
+        row = Math.floor(y),
+        visible =
+          col >= 0 &&
+          col < width &&
+          row >= 0 &&
+          row < height &&
+          z + 0.7 / scale >= depth[row * width + col];
+      if (visible && !start) start = point;
+      if (start && (!visible || i === steps)) {
+        lineDraw(start, point, softwareInk(stroke));
+        start = null;
+      }
+    }
+  }
+
+  const glass = paint.filter(({ alpha }) => alpha > 0 && alpha < 1);
+  if (!glass.length) return;
+  // Blend glazing from far to near against the opaque depth. Glass leaves that depth intact.
+  pixels = ctx.getImageData(0, 0, width, height);
+  for (const triangle of glass) face(triangle);
+  ctx.putImageData(pixels, 0, 0);
+}
+
+function paintSoftware(
+  m,
+  { canvas: c, ctx },
+  camera,
+  viewport = c,
+  dpr = Math.min(2, window.devicePixelRatio || 1)
+) {
   const w = Math.max(1, Math.round(viewport.clientWidth * dpr)),
     h = Math.max(1, Math.round(viewport.clientHeight * dpr));
   if (c.width !== w || c.height !== h) {
@@ -116,16 +168,15 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.m
     const preview = m.programPreview;
     if (a === m.solid && preview && i >= preview.start && i < preview.end) {
       const tint = PROGRAM_PREVIEW_TINT;
-      const rgb = tint
+      return tint
         .slice(0, 3)
         .map((channel, j) =>
           Math.round(255 * (a[i + 6 + j] * shade * (1 - tint[3]) + channel * tint[3]))
         );
-      return 'rgb(' + rgb.join(',') + ')';
     }
     const channel = (offset) =>
       Math.round(255 * (a[i + offset] * shade * (1 - highlight) + highlight));
-    return `rgba(${channel(6)},${channel(7)},${channel(8)},${Math.min(1, a[i + 9])})`;
+    return [channel(6), channel(7), channel(8)];
   }
   const paint = [],
     sun = unit([-0.4, 1, 0.65]),
@@ -159,7 +210,7 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.m
   // ground plane first, ground grid behind the model
   for (let i = 0; i < m.lines.length; i += 20) {
     if (m.lines[i + 1] < 0) {
-      lineDraw(point(m.lines, i), point(m.lines, i + 10), color(m.lines, i));
+      lineDraw(point(m.lines, i), point(m.lines, i + 10), softwareInk(color(m.lines, i)));
     } else {
       const p = point(m.lines, i),
         q = point(m.lines, i + 10);
@@ -178,9 +229,13 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.m
     }
   }
   paint.sort((a, b) => a.z - b.z);
+  if (m.groups.some(({ layer }) => layer.endsWith('_Shared_Furniture'))) {
+    paintSoftwareWithDepth(ctx, paint, w, h, scale, lineDraw);
+    return;
+  }
   for (const t of paint) {
     if (t.stroke) {
-      lineDraw(t.pts[0], t.pts[1], t.stroke);
+      lineDraw(t.pts[0], t.pts[1], softwareInk(t.stroke));
       continue;
     }
     ctx.beginPath();
@@ -188,10 +243,11 @@ function paintSoftware(m, { canvas: c, ctx }, camera, viewport = c, dpr = Math.m
     ctx.lineTo(t.pts[1][0], t.pts[1][1]);
     ctx.lineTo(t.pts[2][0], t.pts[2][1]);
     ctx.closePath();
-    ctx.fillStyle = t.fill;
+    const fill = softwareInk(t.fill, t.alpha);
+    ctx.fillStyle = fill;
     ctx.fill();
     if (t.alpha === 1) {
-      ctx.strokeStyle = t.fill;
+      ctx.strokeStyle = fill;
       ctx.lineWidth = 0.65 * dpr;
       ctx.stroke();
     }

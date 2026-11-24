@@ -287,6 +287,73 @@ function drawAssemblyMember({ quad }, start, end, width, color, depth = width, a
   for (let i = 0; i < 4; i++) quad(a[i], a[(i + 1) % 4], b[(i + 1) % 4], b[i], color);
 }
 
+// The stair spans clear of the panes. Side trusses take the stair loads to bearings at
+// the public roof edge and the solid boarding rim. No stair post bears on the glass.
+function drawBuildBoardingStairs(mesh, model) {
+  const ride = model.feature.ride,
+    { stairs, eaveY, stairHalfAngle } = ride.roofPitch,
+    heading = model.circulation.bridgeAngle,
+    cos = Math.cos(heading),
+    sin = Math.sin(heading),
+    half = ride.platformRadius * Math.sin(stairHalfAngle),
+    start = model.r + 0.85,
+    finish = ride.platformRadius - 0.22,
+    top = stairs.at(-1).y,
+    tread = rgb('#b7b9ad'),
+    edge = rgb('#727d75'),
+    steel = rgb('#465d56');
+  const point = (r, x, y) => [r * cos - x * sin, y, r * sin + x * cos];
+  const plate = (outer, inner, bottom, width, depth, color, x = 0) =>
+    mesh.box(...point((outer + inner) / 2, x, bottom), width, depth, outer - inner, heading, color);
+  mesh.mark('Swing_Boarding_Stairs', 'Folded treads, risers and landings');
+  plate(start, model.r, eaveY - 0.065, 2 * half, 0.065, tread);
+  const profile = [
+    { r: start, y: eaveY },
+    { r: model.r, y: eaveY }
+  ];
+  let previousY = eaveY;
+  for (const [i, step] of stairs.entries()) {
+    const last = i === stairs.length - 1,
+      inner = last ? finish : step.r,
+      thickness = step.landing ? 0.085 : 0.055;
+    plate(step.R, inner, step.y - thickness, 2 * half, thickness, tread);
+    plate(step.R, step.R - 0.025, previousY, 2 * half, step.y - previousY, edge);
+    mesh.line(
+      point(step.R - 0.035, -half, step.y + 0.002),
+      point(step.R - 0.035, half, step.y + 0.002),
+      edge
+    );
+    if (step.landing || i % 5 === 4 || last) profile.push({ r: step.R, y: step.y });
+    if (step.landing || last) profile.push({ r: inner, y: step.y });
+    previousY = step.y;
+  }
+  mesh.mark('Swing_Boarding_Stair_Bearings', 'Bearings at roof edge and boarding ring');
+  for (const side of [-1, 1]) {
+    plate(start, start - 0.42, model.roofPlan.y, 0.28, 0.17, steel, side * half);
+    plate(finish + 0.19, finish - 0.2, top - 0.16, 0.28, 0.23, steel, side * half);
+  }
+  mesh.mark('Swing_Boarding_Stair_Trusses', 'Steel side trusses and guards');
+  for (const side of [-1, 1]) {
+    const foot = ({ r, y }) => point(r, half * side, y + 0.07),
+      rail = ({ r, y }) => point(r, half * side, y + 1.1),
+      member = (a, b, width) => drawAssemblyMember(mesh, a, b, width, steel, width, heading);
+    for (const [i, a] of profile.entries()) {
+      member(foot(a), rail(a), 0.065);
+      const b = profile[i + 1];
+      if (!b || Math.abs(b.r - a.r) < 1e-7) continue;
+      member(foot(a), foot(b), 0.12);
+      member(rail(a), rail(b), 0.065);
+      member(i % 2 ? rail(a) : foot(a), i % 2 ? foot(b) : rail(b), 0.06);
+      const infill = Math.ceil((a.r - b.r) / 0.14);
+      for (let j = 1; j < infill; j++) {
+        const share = j / infill,
+          point = { r: a.r + (b.r - a.r) * share, y: a.y + (b.y - a.y) * share };
+        member(foot(point), rail(point), 0.017);
+      }
+    }
+  }
+}
+
 // The removable module sits between permanent side trusses, clear of the bay below.
 function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, openPanels = false) {
   const { dockGap, chordWidth, chordDepth } = BUILD_SECTION,
@@ -719,7 +786,13 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       if (hub.f !== f || !hub.layout) continue;
       mark(`Circulation_L${f + 1}_Shared_Lobby`, `Lobby ${hub.start.toFixed(3)}`);
       drawSharedLobbyFloor(mesh, hub, base, 0.018, rgb('#a889bc'));
-      drawSharedLobby(mesh, hub, base + 0.018);
+      drawSharedLobby(mesh, hub, base + 0.018, preview.view?.seed, true);
+      if (layers.walls) drawSharedLobbyScreens(mesh, hub, base, clearHeight, partition);
+    }
+    if (layers.walls) for (const q of model.circulation.regions) {
+      if (q.f !== f || q.kind !== 'lobbyDivider') continue;
+      mark(`Circulation_L${f + 1}_Shared_Lobby_Divider`);
+      sector(q.r, q.R, q.start, q.end, base, clearHeight, partition);
     }
   }
   if (full && layers.slabs) {
@@ -732,7 +805,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   }
   if (layers.swings) {
     drawSwingMast(mesh, ride, Math.min(cutY, ride.height), preview);
-    if (full) drawSwingAboveRoof(mesh, model);
+    if (full) drawSwingAboveRoof(mesh, model, true);
   }
   // The boarding deck closes the inner ring when visible. Otherwise the roof shows its glazed cap.
   const pitch = ride.roofPitch;
@@ -740,7 +813,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     const inner = ride.platformRadius,
       outer = model.r,
       low = pitch.canopyEaveY ?? pitch.eaveY - 0.045,
-      high = pitch.canopyRidgeY ?? low + pitch.rise;
+      high = pitch.ridgeGlazingY ?? pitch.canopyRidgeY ?? low + pitch.rise;
     if (layers.frame) {
       mark('Assembly_Greenhouse_Frame');
       for (const [radius, height] of [
@@ -778,6 +851,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
         );
         if (!layers.swings) mesh.tri(cap, innerD, innerA, tint, mesh.glass, 0.38);
       }
+    }
+    if (layers.swings && pitch.ridgeGlazingY != null) {
+      mark('Assembly_Greenhouse_Ridge_Curb', 'Sealed upstand below the boarding deck');
+      sector(inner - 0.19, inner + 0.12, 0, TAU, high - 0.08, pitch.canopyRidgeY - high + 0.08, coreFrame);
     }
   }
   if (full && layers.roofRetail) drawCommercialPavilions(mesh, model.roofPlan, preview);

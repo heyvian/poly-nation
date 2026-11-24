@@ -55,6 +55,7 @@ function buildNavigation(m) {
   }
   const bridgeLandings = new Map();
   for (const q of m.circulation.regions) {
+    if (q.kind === 'lobbyDivider') continue;
     const kind = q.kind === 'elevator' ? 'lift' : 'corridor',
       ids = addCell(q, kind, kind === 'corridor' && q.kind !== 'bridgeAccess');
     if (kind === 'lift' && ids.length) liftNodes[q.block].push({ f: q.f, id: ids[0] });
@@ -221,8 +222,8 @@ function buildNavigation(m) {
       const c = cells[i],
         d = cells[j];
       if (c.f !== d.f) continue;
-      // A furnished lobby has three explicit connections. Generic sector adjacency
-      // would leave corridor shortcuts into the rooms or paths across the couches.
+      // Lobby connections follow the clear aisle and its approaches. Generic sector
+      // adjacency would leave corridor shortcuts into the rooms or across the couches.
       if (c.sharedLobby || d.sharedLobby || (c.kind === 'hub' && c.layout) || (d.kind === 'hub' && d.layout)) continue;
       // Room-to-room connections are prohibited: shared hubs create a separate intermediary.
       if (c.kind === 'room' && d.kind === 'room') continue;
@@ -269,12 +270,15 @@ function buildNavigation(m) {
     connect(c.node, hub.node, [...pathWithin(c, angle, r), nodes[hub.node].p]);
   }
   for (const hub of servicedHubs.values()) {
-    const { angle, along } = hub.layout.publicEntry, y = yFor(hub.f);
-    const access = cells.find((c) => c.f === hub.f && c.kind === 'corridor' &&
-      Math.abs(c.r - hub.R) < eps && [angle, angle + TAU, angle - TAU]
-        .some((value) => value >= c.start - eps && value <= c.end + eps));
-    if (access) connect(access.node, hub.node, [...pathWithin(access, angle, hub.R),
-      sharedLobbyPoint(hub, along, 0, y), nodes[hub.node].p]);
+    const entries = hub.layout.publicEntries ?? [{ ...hub.layout.publicEntry, radius: hub.R }],
+      y = yFor(hub.f);
+    for (const { angle, along, radius, inside } of entries) {
+      const access = cells.find((c) => c.f === hub.f && c.kind === 'corridor' &&
+        Math.abs((inside ? c.R : c.r) - radius) < eps && [angle, angle + TAU, angle - TAU]
+          .some((value) => value >= c.start - eps && value <= c.end + eps));
+      if (access) connect(access.node, hub.node, [...pathWithin(access, angle, radius),
+        sharedLobbyPoint(hub, along, 0, y), nodes[hub.node].p]);
+    }
   }
   for (const list of liftNodes) {
     list.sort((a, b) => a.f - b.f);

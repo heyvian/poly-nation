@@ -36,7 +36,7 @@ Optional bridges pass close to the mast and connect the upper corridors. They le
 
 ### Pitched glass roof and two-storey pavilions
 
-The designer raised the greenhouse ridge by up to about two storeys and used occasional second storeys on the rooftop shops to vary the skyline. The swing boarding platform completes the glazed roof at the mast. Both storeys of an enclosed shop count toward the area cap.
+The designer raised the greenhouse ridge by up to about two storeys and used occasional second storeys on the rooftop shops to vary the skyline. The swing boarding platform completes the glazed roof at the mast. Steel side trusses bear at the public roof and boarding rim, carrying the stair above the panes. A sealed curb meets the glass below the platform. Both storeys of an enclosed shop count toward the area cap.
 
 ## A stable core. A changing periphery.
 
@@ -90,7 +90,7 @@ The corridor, lobbies and shortcuts shape who passes through, who stops and who 
 
 ### Two kinds of threshold
 
-Where two attracted rooms have enough space, their shared lobby becomes the route between them. Planted arches frame a passage 80% as wide as the main corridor. Split half-round couches and tables leave that passage clear, while shelves behind the couches hold books and games. Separate thresholds for repelling programmes connect to the common route. The outer corridor reaches each active dock, and two opposing lift cores connect the levels.
+Where two attracted rooms have enough space, their shared lobby becomes the route between them and carries traffic from the main corridor. A divider turns the local corridor through both planted arches and their passage, which is 80% as wide as the main corridor. The foliage varies from planter to planter and rises to about the height of the arch. Split half-round couches and tables leave the passage clear. The timber shelf bays step up above the upholstered backs so people can reach books and games from their seats. Laminated timber arches mark the entrances. Separate thresholds for repelling programmes connect to the common route. The outer corridor reaches each active dock, and two opposing lift cores connect the levels.
 
 ### A local bypass
 

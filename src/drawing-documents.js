@@ -131,12 +131,18 @@ function studyFloor(model, floor, kind) {
   if (!programme) {
     for (const q of [...model.circulation.regions, ...model.circulation.hubs]) {
       if (q.f !== floor) continue;
+      if (q.kind === 'lobbyDivider') {
+        put(studyArc(q.r, q.R, q.start, q.end), '#536157');
+        continue;
+      }
       const key = q.kind === 'elevator' ? 'lift' : q.kind === 'hub' ? 'lobby' : 'corridor';
       put(
         studyArc(q.r, q.R, q.start, q.end),
         CIRCULATION_COLOURS[key],
         key === 'lift' ? 1.4 : 0.04
       );
+      for (const { radius, start, end } of q.layout?.corridorScreens ?? [])
+        put(studyArc(radius - 0.08, radius + 0.08, start, end), '#536157');
     }
     const bridge = model.circulation.bridges.find((q) => q.f === floor);
     if (bridge) {

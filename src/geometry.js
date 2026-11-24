@@ -1629,7 +1629,7 @@ function glassGuards({ quad, glass, line, ringPoint }) {
 }
 
 // The boarding deck closes the canopy at the mast, with stairs over the glazing.
-function drawSwingAboveRoof(b, m) {
+function drawSwingAboveRoof(b, m, assembly = false) {
   const { mark, sector, ringPoint, quad, line, glass, box } = b,
     { glassGuard, curvedGlassGuard } = glassGuards(b),
     ride = m.feature.ride,
@@ -1657,13 +1657,16 @@ function drawSwingAboveRoof(b, m) {
     mark('Swing_Boarding_Platform_Railing');
     for (const [a, z] of openArcs([[aBridge, stairHalfAngle]]))
       curvedGlassGuard(ride.platformRadius, ride.roofLevel + 0.16, a, z);
-    mark('Swing_Boarding_Stairs');
-    let lower = eaveY;
-    for (const step of stairs) {
-      sector(step.r, step.R, start, end, lower - 0.025, step.y - lower + 0.025, platform);
-      for (const angle of [start, end])
-        glassGuard(ringPoint(step.R, angle, lower), ringPoint(step.r, angle, step.y));
-      lower = step.y;
+    if (assembly) drawBuildBoardingStairs(b, m);
+    else {
+      mark('Swing_Boarding_Stairs');
+      let lower = eaveY;
+      for (const step of stairs) {
+        sector(step.r, step.R, start, end, lower - 0.025, step.y - lower + 0.025, platform);
+        for (const angle of [start, end])
+          glassGuard(ringPoint(step.R, angle, lower), ringPoint(step.r, angle, step.y));
+        lower = step.y;
+      }
     }
   } else if (pitch) {
     // Earlier material snapshots can retain their original ramp followed by the glass.
@@ -2208,6 +2211,15 @@ function drawSharedLobbyFloor(mesh, hub, y, height, color) {
       mesh.quad(point(i, j), point(i, j + 1), point(i + 1, j + 1), point(i + 1, j), color);
 }
 
+// Join the radial divider to the screen along the lobby edge. The only openings
+// from the corridor are beside the two arches, beyond the ends of the furnishings.
+function drawSharedLobbyScreens(mesh, hub, y, height, color) {
+  for (const { radius, start, end } of hub.layout.corridorScreens ?? []) {
+    mesh.mark(`Circulation_L${hub.f + 1}_Shared_Lobby_Screen`);
+    mesh.sector(radius - 0.08, radius + 0.08, start, end, y, height, color);
+  }
+}
+
 // Retain the arrangement stored by Material snapshots from before the walk-through lobby.
 function drawSavedSharedLobby(mesh, hub, y) {
   const angle = (hub.start + hub.end) / 2,
@@ -2231,10 +2243,59 @@ function drawSavedSharedLobby(mesh, hub, y) {
   }
 }
 
+// Grow two offset canes with alternating folded leaves. Their horizontal reach stays
+// under 0.4 m from the planter centre, keeping the foliage outside the clear aisle.
+function drawLobbyPlant(mesh, point, along, across, crownHeight, sample) {
+  const potTop = 0.335,
+    height = crownHeight * (0.86 + 0.21 * sample()),
+    broadness = 0.048 + 0.052 * sample(),
+    foliage = ['#41664b', '#547c54', '#709464', '#7c9a68'].map(rgb),
+    stem = rgb('#6a7150'),
+    turn = sample() * TAU;
+  for (const cane of [0, 1]) {
+    const top = cane ? height * (0.68 + 0.15 * sample()) : height,
+      direction = turn + cane * Math.PI,
+      lean = 0.045 + 0.04 * sample(),
+      leanAlong = Math.cos(direction) * lean,
+      leanAcross = Math.sin(direction) * lean,
+      stemTip = top - 0.1,
+      heightAt = (t) => potTop + (stemTip - potTop) * t,
+      rootAt = (t, a = 0, b = 0, rise = 0) =>
+        point(along + leanAlong * t * t + a, across + leanAcross * t * t + b, heightAt(t) + rise),
+      thickness = cane ? 0.023 : 0.033,
+      leaves = (cane ? 4 : 6) + Math.floor(sample() * 3);
+    drawAssemblyMember(mesh, rootAt(0), rootAt(0.55), thickness, stem);
+    drawAssemblyMember(mesh, rootAt(0.55), rootAt(1), thickness, stem);
+    for (let i = 0; i < leaves; i++) {
+      const level = 0.3 + (0.7 * (i + 1)) / leaves,
+        azimuth = direction + i * 2.4 + (sample() - 0.5) * 0.75,
+        spread = (0.18 + 0.13 * sample()) * (1 - 0.14 * level),
+        lengthAlong = Math.cos(azimuth) * spread,
+        lengthAcross = Math.sin(azimuth) * spread,
+        width = broadness * (0.68 + 0.32 * sample()),
+        sideAlong = -Math.sin(azimuth) * width,
+        sideAcross = Math.cos(azimuth) * width,
+        rise = Math.min(0.13 + 0.19 * sample(), top - heightAt(level)),
+        base = rootAt(level),
+        tip = rootAt(level, lengthAlong, lengthAcross, rise),
+        middleAlong = lengthAlong * 0.56,
+        middleAcross = lengthAcross * 0.56,
+        fold = rootAt(level, middleAlong, middleAcross, rise * 0.56 + 0.026),
+        left = rootAt(level, middleAlong + sideAlong, middleAcross + sideAcross, rise * 0.43),
+        right = rootAt(level, middleAlong - sideAlong, middleAcross - sideAcross, rise * 0.43),
+        tint = Math.floor(sample() * (foliage.length - 1));
+      mesh.tri(base, fold, left, foliage[tint]);
+      mesh.tri(fold, tip, left, foliage[tint]);
+      mesh.tri(base, right, fold, foliage[tint + 1]);
+      mesh.tri(fold, right, tip, foliage[tint + 1]);
+    }
+  }
+}
+
 // Split the circular furniture into two halves. The straight edges stay outside the
 // same clear strip used by the occupancy graph.
-function drawSharedLobby(mesh, hub, y) {
-  const { mark, box, quad, tri } = mesh,
+function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
+  const { mark, box, quad, tri, textureLine } = mesh,
     { heading, passage, tableRadius, couchInner, couchOuter, shelfOuter, arch } = hub.layout,
     edge = passage / 2,
     timber = rgb('#b18a64'),
@@ -2243,65 +2304,148 @@ function drawSharedLobby(mesh, hub, y) {
     base = rgb('#4f3c57'),
     tabletop = rgb('#d9ba91'),
     rug = rgb('#b8a0ca'),
-    leaf = [rgb('#497253'), rgb('#709167'), rgb('#587e55')];
+    lobbySeed = seed ^ Math.imul(hub.f + 1, 0x9e3779b1) ^ Math.round(hub.start * 1e5),
+    cabinetRandom = random(lobbySeed ^ 0x546b2829);
   const point = (along, across, up) => sharedLobbyPoint(hub, along, across, y + up);
   const curved = (sign, radius, angle, up) =>
     point(radius * Math.cos(angle), sign * (edge + radius * Math.sin(angle)), up);
-  function strip(sign, inner, outer, bottom, height, color, start = 0, end = Math.PI) {
-    const steps = Math.max(1, Math.ceil((end - start) / 0.13)),
-      rows = Math.ceil((outer - inner) / 0.34);
+  function strip(sign, inner, outer, bottom, height, color, start = 0, end = Math.PI, bevel = 0) {
+    const steps = Math.max(1, Math.ceil((end - start) / 0.105)),
+      top = bottom + height,
+      section = bevel
+        ? [
+            [inner + bevel, bottom],
+            [outer - bevel, bottom],
+            [outer, bottom + bevel],
+            [outer, top - bevel],
+            [outer - bevel, top],
+            [inner + bevel, top],
+            [inner, top - bevel],
+            [inner, bottom + bevel]
+          ]
+        : [
+            [inner, bottom],
+            [outer, bottom],
+            [outer, top],
+            [inner, top]
+          ];
     // Reflection reverses the winding. Keep the mirrored faces outward in both renderers.
     const face = (a, b, c, d) => (sign > 0 ? quad(a, b, c, d, color) : quad(d, c, b, a, color));
     for (let i = 0; i < steps; i++) {
       const a = start + ((end - start) * i) / steps,
-        b = start + ((end - start) * (i + 1)) / steps,
-        at = (radius, angle, cap = false) =>
-          curved(sign, radius, angle, bottom + (cap ? height : 0));
-      for (let j = 0; j < rows; j++) {
-        const first = inner + ((outer - inner) * j) / rows,
-          last = inner + ((outer - inner) * (j + 1)) / rows;
-        face(at(first, a, true), at(last, a, true), at(last, b, true), at(first, b, true));
-        face(at(first, b), at(last, b), at(last, a), at(first, a));
+        b = start + ((end - start) * (i + 1)) / steps;
+      for (const [j, [r, h]] of section.entries()) {
+        const [nextR, nextH] = section[(j + 1) % section.length],
+          divisions = Math.max(1, Math.ceil(Math.abs(nextR - r) / 0.24)),
+          at = (angle, t) => curved(sign, r + (nextR - r) * t, angle, h + (nextH - h) * t);
+        for (let k = 0; k < divisions; k++)
+          face(
+            at(b, k / divisions),
+            at(b, (k + 1) / divisions),
+            at(a, (k + 1) / divisions),
+            at(a, k / divisions)
+          );
       }
-      face(at(inner, a, true), at(inner, b, true), at(inner, b), at(inner, a));
-      face(at(outer, a, true), at(outer, a), at(outer, b), at(outer, b, true));
-      if (i === 0) face(at(inner, a, true), at(inner, a), at(outer, a), at(outer, a, true));
-      if (i === steps - 1) face(at(inner, b, true), at(outer, b, true), at(outer, b), at(inner, b));
+    }
+    for (const [angle, reverse] of [
+      [start, sign < 0],
+      [end, sign > 0]
+    ]) {
+      const cap = section.map(([r, h]) => curved(sign, r, angle, h));
+      for (let i = 1; i < cap.length - 1; i++) {
+        if (reverse) tri(cap[0], cap[i + 1], cap[i], color);
+        else tri(cap[0], cap[i], cap[i + 1], color);
+      }
     }
   }
   function block(along, across, up, width, height, depth, color, angle = heading) {
     box(...point(along, across, up), width, height, depth, angle, color);
+  }
+  function surfaceDetail(sign, radius, height, start, end, color) {
+    const steps = Math.max(1, Math.ceil((end - start) / 0.105));
+    for (let i = 0; i < steps; i++)
+      textureLine(
+        curved(sign, radius, start + ((end - start) * i) / steps, height),
+        curved(sign, radius, start + ((end - start) * (i + 1)) / steps, height),
+        color
+      );
   }
   mark(`Circulation_L${hub.f + 1}_Shared_Furniture`, `Shared gathering ${hub.start.toFixed(3)}`);
   for (const sign of [-1, 1]) {
     // A broad half-round table and a regular-depth upholstered seat face each other.
     strip(sign, 0.006, shelfOuter + 0.03, 0.012, 0.022, rug);
     strip(sign, 0.005, tableRadius, 0.69, 0.075, tabletop);
-    block(0, sign * (edge + tableRadius * 0.48), 0.035, 0.29, 0.66, 0.32, base);
-    strip(sign, couchInner + 0.04, couchOuter, 0.04, 0.35, base);
+    block(0, sign * (edge + tableRadius * 0.48), 0.037, 0.29, 0.65, 0.32, base);
+    const backInner = couchOuter - 0.17;
+    strip(sign, couchInner + 0.04, couchOuter, 0.038, 0.318, base);
     for (let i = 0; i < 7; i++) {
       const a = (i * Math.PI) / 7,
         b = ((i + 1) * Math.PI) / 7;
-      strip(sign, couchInner, couchOuter - 0.075, 0.36, 0.105, cushion, a + 0.009, b - 0.009);
-      strip(sign, couchOuter - 0.17, couchOuter, 0.46, 0.42, back, a + 0.01, b - 0.01);
+      // Open seams between the base, seat pads and back cushions keep their faces distinct.
+      strip(
+        sign,
+        couchInner,
+        backInner - 0.014,
+        0.36,
+        0.105,
+        cushion,
+        a + 0.009,
+        b - 0.009,
+        assembly ? 0.018 : 0
+      );
+      strip(
+        sign,
+        backInner,
+        couchOuter,
+        0.36,
+        0.52,
+        back,
+        a + 0.01,
+        b - 0.01,
+        assembly ? 0.024 : 0
+      );
+      if (assembly)
+        surfaceDetail(sign, couchInner + 0.03, 0.468, a + 0.02, b - 0.02, rgb('#c4b1cc'));
     }
-    // Two open shelves and spaced dividers follow the couch back.
-    for (const h of [0.09, 0.43, 0.78]) strip(sign, couchOuter, shelfOuter, h, 0.045, timber);
-    for (let i = 0; i <= 8; i++) {
-      const a = clamp((i * Math.PI) / 8 - 0.009, 0, Math.PI - 0.018);
-      strip(sign, couchOuter, shelfOuter, 0.1, 0.68, timber, a, a + 0.018);
-      if (i === 8) continue;
-      const books = a + 0.085,
-        radius = couchOuter + 0.12;
+  }
+  mark(`Circulation_L${hub.f + 1}_Shared_Shelving`, `Open timber bays ${hub.start.toFixed(3)}`);
+  const shelfInner = couchOuter + 0.018,
+    board = 0.038;
+  for (const sign of [-1, 1]) {
+    for (let i = 0; i < 8; i++) {
+      const start = (i * Math.PI) / 8 + 0.005,
+        end = ((i + 1) * Math.PI) / 8 - 0.005,
+        stile = 0.024 / shelfInner,
+        left = start + stile + 0.002,
+        right = end - stile - 0.002,
+        high = 0.98 + Math.floor(cabinetRandom() * 8) * 0.044;
+      // Each open bay has its own height, with upper books within reach over the couch back.
+      strip(sign, shelfInner, shelfOuter, 0.038, high - 0.038, timber, start, start + stile);
+      strip(sign, shelfInner, shelfOuter, 0.038, high - 0.038, timber, end - stile, end);
+      for (const baseHeight of [0.12, 0.47, high - board]) {
+        strip(sign, shelfInner, shelfOuter, baseHeight, board, timber, left, right);
+        if (assembly)
+          for (const depth of [0.035, 0.085, 0.15])
+            surfaceDetail(
+              sign,
+              shelfInner + depth,
+              baseHeight + board + 0.003,
+              left,
+              right,
+              rgb('#9f7954')
+            );
+      }
+      const bookLevel = i % 3 === 0 ? 0.47 + board : high,
+        radius = shelfInner + 0.08;
       for (const [j, color] of ['#e7d6b9', '#a46b5a', '#6e867e'].entries()) {
-        const angle = books + 0.026 * j;
+        const angle = (left + right) / 2 + (j - 1) * 0.027;
         block(
           radius * Math.cos(angle),
           sign * (edge + radius * Math.sin(angle)),
-          0.48,
-          0.047,
-          0.15 + 0.025 * j,
-          0.14,
+          bookLevel + 0.003,
+          0.045,
+          0.13 + 0.028 * j,
+          0.12,
           rgb(color),
           heading - sign * (angle - Math.PI / 2)
         );
@@ -2309,38 +2453,53 @@ function drawSharedLobby(mesh, hub, y) {
     }
   }
   mark(`Circulation_L${hub.f + 1}_Shared_Thresholds`, `Planted arches ${hub.start.toFixed(3)}`);
+  const spring = 2.16,
+    archRise = 0.41,
+    post = edge + 0.06,
+    archColor = rgb('#9a7957');
   for (const along of [-arch, arch]) {
-    const spring = 2.16,
-      post = edge + 0.06,
-      archColor = rgb('#9a7957');
     for (const sign of [-1, 1]) {
-      block(along, sign * post, 0, 0.17, spring, 0.12, archColor);
-      const across = sign * (edge + 0.42);
-      block(along, across, 0.015, 0.42, 0.32, 0.41, rgb('#986f59'));
-      for (let i = 0; i < 5; i++) {
-        const theta = (i * TAU) / 5,
-          a = 0.24 * Math.cos(theta),
-          b = 0.15 * Math.sin(theta);
-        const tip = point(along + a, across + b, 0.88 + 0.11 * (i % 3));
-        tri(
-          point(along, across, 0.31),
-          point(along + a * 0.38 - 0.13, across + b * 0.4, 0.75),
-          tip,
-          leaf[i % leaf.length]
-        );
-        tri(
-          point(along, across, 0.31),
-          tip,
-          point(along + a * 0.38 + 0.13, across + b * 0.4, 0.75),
-          leaf[(i + 1) % leaf.length]
-        );
-      }
+      const shoe = assembly ? 0.08 : 0;
+      block(along, sign * post, shoe, 0.17, spring - shoe, 0.12, archColor);
+      if (assembly) block(along, sign * post, 0, 0.2, shoe - 0.002, 0.12, rgb('#545c55'));
     }
-    const archPoint = (a) => point(along, post * Math.cos(a), spring + 0.41 * Math.sin(a));
-    for (let i = 0; i < 16; i++) {
-      const a = (Math.PI * i) / 16,
-        b = (Math.PI * (i + 1)) / 16;
-      drawAssemblyMember(mesh, archPoint(a), archPoint(b), 0.17, archColor, 0.12, heading);
+    // Sweep a single laminated beam above the posts. There are no overlapping segment caps.
+    const archPoint = (angle, face, offset) =>
+      point(
+        along + face,
+        (post + offset) * Math.cos(angle),
+        spring + (archRise + offset) * Math.sin(angle)
+      );
+    const sectionAt = (angle) => [
+      archPoint(angle, -0.085, -0.06),
+      archPoint(angle, -0.085, 0.06),
+      archPoint(angle, 0.085, 0.06),
+      archPoint(angle, 0.085, -0.06)
+    ];
+    for (let i = 0; i < 24; i++) {
+      const a = (Math.PI * i) / 24,
+        b = (Math.PI * (i + 1)) / 24,
+        first = sectionAt(a),
+        last = sectionAt(b);
+      for (let j = 0; j < first.length; j++) {
+        const next = (j + 1) % first.length;
+        quad(first[j], last[j], last[next], first[next], archColor);
+      }
+      if (assembly)
+        for (const face of [-0.088, 0.088]) {
+          for (const layer of [-0.022, 0.02])
+            textureLine(archPoint(a, face, layer), archPoint(b, face, layer), rgb('#785a42'));
+        }
+    }
+  }
+  // Use a local random sequence so the same lobby keeps its plants in every workspace.
+  const sample = random(lobbySeed);
+  mark(`Circulation_L${hub.f + 1}_Shared_Planting`, `Lobby plants ${hub.start.toFixed(3)}`);
+  for (const along of [-arch, arch]) {
+    for (const side of [-1, 1]) {
+      const across = side * (edge + 0.42);
+      block(along, across, 0.015, 0.45, 0.32, 0.44, rgb('#986f59'));
+      drawLobbyPlant(mesh, point, along, across, spring + archRise, sample);
     }
   }
 }
@@ -2516,6 +2675,12 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   const circulation = m.circulation;
   for (const q of [...circulation.regions, ...circulation.hubs]) {
     if (!visible(q.f)) continue;
+    if (q.kind === 'lobbyDivider') {
+      const { base, soffit } = buildStorey(m, q.f);
+      mark(`Circulation_L${q.f + 1}_Shared_Lobby_Divider`);
+      sector(q.r, q.R, q.start, q.end, base, !exporting && view.xray ? 0.2 : soffit - base, rgb('#a89e8e'));
+      continue;
+    }
     const y = q.f * floorH + 0.46,
       kind = q.kind,
       isLift = kind === 'elevator',
@@ -2538,7 +2703,11 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         quad(v0, v1, [v1[0], y + 2.25, v1[2]], [v0[0], y + 2.25, v0[2]], dc);
       }
     } else {
-      if (isHub && q.layout) drawSharedLobby(b, q, y + 0.075);
+      if (isHub && q.layout) {
+        drawSharedLobby(b, q, y + 0.075, view.seed);
+        const { base, soffit } = buildStorey(m, q.f);
+        drawSharedLobbyScreens(b, q, base, !exporting && view.xray ? 0.2 : soffit - base, rgb('#a89e8e'));
+      }
       else if (isHub) drawSavedSharedLobby(b, q, y);
       const col = rgb(isHub ? '#5e3c77' : '#bfc3b9');
       for (const radius of [q.r, q.R]) {
@@ -3171,7 +3340,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         inner = ride.platformRadius,
         outer = pitch?.stairs ? rr + 0.06 : rr,
         outerY = pitch?.canopyEaveY ?? (pitch ? pitch.eaveY - 0.045 : H + 0.07),
-        innerY = pitch?.canopyRidgeY ?? (outerY + (pitch?.rise ?? 0)),
+        innerY = pitch?.ridgeGlazingY ?? pitch?.canopyRidgeY ?? (outerY + (pitch?.rise ?? 0)),
         roofY = (radius) => outerY + (innerY - outerY) * (rr - radius) / (rr - inner),
         roofPoint = (radius, angle, frameOffset = 0) =>
           ringPoint(radius, angle, roofY(radius) + frameOffset);
@@ -3204,7 +3373,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           );
       if (raisedCanopy) {
         mark('Atrium_Roof_Ridge', 'Glazing to boarding platform joint');
-        sector(inner, inner + 0.12, 0, TAU, innerY - 0.08, 0.08, frame);
+        sector(inner - 0.11, inner + 0.12, 0, TAU, innerY - 0.08,
+          pitch.canopyRidgeY - innerY + 0.08, frame);
       }
       if (raisedCanopy && !pitch.stairs) {
         // The glazed outer band meets the public deck. Leave a doorway in line with the ramp.

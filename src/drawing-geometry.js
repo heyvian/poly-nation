@@ -157,7 +157,7 @@ function clipDrawingLine(start, end, planes) {
 }
 
 // The depth buffer hides linework behind the geometry while the strokes remain vector paths.
-function rasterDrawingFace(depth, width, height, a, b, c, pixels, color, outline, body, gradient) {
+function rasterDrawingFace(depth, width, height, a, b, c, pixels, color, outline, body, gradient, alpha = 1) {
   const bx = b[0] - a[0],
     by = b[1] - a[1],
     cx = c[0] - a[0],
@@ -188,16 +188,23 @@ function rasterDrawingFace(depth, width, height, a, b, c, pixels, color, outline
         outline.owner[i] = body;
       }
       if (z <= depth[i]) continue;
-      depth[i] = z;
+      if (alpha === 1) depth[i] = z;
       if (gradient) {
         gradient.x[i] = dzDx;
         gradient.y[i] = dzDy;
       }
       if (pixels) {
         const offset = i * 4;
-        pixels[offset] = color[0];
-        pixels[offset + 1] = color[1];
-        pixels[offset + 2] = color[2];
+        if (alpha === 1) {
+          pixels[offset] = color[0];
+          pixels[offset + 1] = color[1];
+          pixels[offset + 2] = color[2];
+        } else {
+          const remaining = 1 - alpha;
+          pixels[offset] = alpha * color[0] + remaining * pixels[offset];
+          pixels[offset + 1] = alpha * color[1] + remaining * pixels[offset + 1];
+          pixels[offset + 2] = alpha * color[2] + remaining * pixels[offset + 2];
+        }
         pixels[offset + 3] = 255;
       }
     }

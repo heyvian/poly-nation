@@ -302,6 +302,21 @@ with serve_lab(root) as url, sync_playwright() as p:
    });
    const roof = base.roofPlan;
    const geometry = exportGeometry(base).objects;
+   const assembly = buildAssemblyMesh(base, {frame:true, facade:true, swings:true, slabs:true}, 0,
+     { assignments:{}, view:state, programColors:true });
+   const layers = (name) => {
+     const index = assembly.groups.findIndex(group => group.layer === name);
+     const first = assembly.groups[index], next = assembly.groups[index + 1];
+     return { solid: assembly.solid.slice(first.solid, next?.solid),
+       glass: assembly.glass.slice(first.glass, next?.glass) };
+   };
+   const pitch = ride.roofPitch, canopyAt = (r) => pitch.canopyEaveY +
+      (pitch.ridgeGlazingY - pitch.canopyEaveY) * (base.r - r) / (base.r - ride.platformRadius);
+   const clearsGlazing = (positions) => positions.every((x, i) => {
+     if (i % 10) return true;
+     const radius = Math.hypot(x, positions[i + 2]);
+     return radius < ride.platformRadius || radius > base.r || positions[i + 1] > canopyAt(radius) + 0.005;
+   });
    const upper = roof.pavilions.filter(pavilion => pavilion.upper);
    const retail = roof.pavilions.reduce((sum, p) => sum + p.area + (p.upper?.area ?? 0), 0);
    return {
@@ -320,6 +335,11 @@ with serve_lab(root) as url, sync_playwright() as p:
        Math.abs(swinging.p[1] - ride.roofPitch.canopyRidgeY) < 1e-8 &&
        ride.roofPitch.canopyEaveY === base.roofPlan.y &&
        geometry.some(object => object.layer === 'Swing_Boarding_Stairs'),
+     assemblyStair: clearsGlazing(layers('Swing_Boarding_Stairs').solid) &&
+       clearsGlazing(layers('Swing_Boarding_Stair_Trusses').solid) &&
+       layers('Swing_Boarding_Stair_Bearings').solid.length > 0 &&
+       layers('Assembly_Greenhouse_Ridge_Curb').solid.length > 0 &&
+       layers('Assembly_Greenhouse_Glazing').glass.length === 96 * 6 * 10,
      boardingDeck: Math.abs(ride.platformRadius -
        Math.hypot(ride.boardingRadius + SWING_SEAT_WIDTH / 2, SWING_SEAT_DEPTH / 2) - 1) < 1e-8 &&
        geometry.some(object => object.layer === 'Swing_Boarding_Platform_Railing_Glazing'),
@@ -329,7 +349,7 @@ with serve_lab(root) as url, sync_playwright() as p:
      modes
    };
  }''')
- assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'crossingRing', 'outside', 'stairs', 'canopy', 'boardingDeck', 'roofArea', 'off']), atrium
+ assert all(atrium[key] for key in ['opposite', 'perpendicular', 'crossing', 'crossingRing', 'outside', 'stairs', 'canopy', 'assemblyStair', 'boardingDeck', 'roofArea', 'off']), atrium
  aligned, radial = atrium['modes']
  assert len(set(aligned['headings'])) == 1 and len(radial['headings']) == 3, atrium
  assert abs(radial['headings'][1] - radial['headings'][0] - 2 * 3.141592653589793 / 3) < 1e-8, atrium

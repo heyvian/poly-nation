@@ -30,7 +30,7 @@ with serve_lab(root) as url, sync_playwright() as p:
       const hubs = model.circulation.hubs;
       const geometryChecks = hubs.map(hub => {
         const mesh = meshBuilder();
-        drawSharedLobby(mesh, hub, 0);
+        drawSharedLobby(mesh, hub, 0, state.seed);
         const { heading, radius, passage, arch, tableRadius, couchDepth } = hub.layout;
         const clear = (x, z) => Math.abs(x * Math.cos(heading) + z * Math.sin(heading) - radius);
         const tight = mesh.solid.some((x, i) => i % 10 === 0 && mesh.solid[i+1] < 1.9 &&
@@ -45,22 +45,89 @@ with serve_lab(root) as url, sync_playwright() as p:
         const neighbors = g.edges[n.id].map(e => g.nodes[e.to]);
         const rooms = neighbors.filter(node => node.kind === 'room');
         const route = rooms.length === 2 && shortestPath(g, rooms[0].id, rooms[1].id, 'human');
-        const fromPublic = neighbors.find(node => node.kind === 'corridor');
+        const publicApproaches = neighbors.filter(node => node.kind === 'corridor');
+        const throughLobby = publicApproaches.length === 2 &&
+          shortestPath(g, publicApproaches[0].id, publicApproaches[1].id, 'human');
+        const shelfIndex = mesh.groups.findIndex(group => group.layer.endsWith('Shared_Shelving'));
+        const shelving = mesh.solid.slice(mesh.groups[shelfIndex].solid, mesh.groups[shelfIndex+1].solid);
+        const wood = rgb('#b18a64'), shelfTops = new Set();
+        for (let i = 0; i < shelving.length; i += 10) {
+          if (wood.every((color, j) => shelving[i+6+j] === color) && shelving[i+1] >= 0.97)
+            shelfTops.add(shelving[i+1]);
+        }
+        const planting = (mesh) => mesh.solid.slice(
+          mesh.groups.find(group => group.layer.endsWith('Shared_Planting')).solid);
+        const plants = planting(mesh), tops = [0, 0, 0, 0];
+        let foliageClear = true;
+        for (let i = 0; i < plants.length; i += 10) {
+          const x = plants[i], z = plants[i+2],
+            across = x * Math.cos(heading) + z * Math.sin(heading) - radius,
+            along = -x * Math.sin(heading) + z * Math.cos(heading),
+            side = (along > 0 ? 2 : 0) + (across > 0 ? 1 : 0);
+          tops[side] = Math.max(tops[side], plants[i+1]);
+          foliageClear &&= Math.abs(across) >= passage / 2;
+        }
+        const plantedWithSeed = (seed) => {
+          const replay = meshBuilder();
+          drawSharedLobby(replay, hub, 0, seed);
+          return planting(replay).join();
+        };
         return {
           cleared: !tight && !outside && Math.abs(passage - model.circulation.width * 0.8) < 1e-8,
           scale: couchDepth === 0.88 && 2*tableRadius >= 1.8 && arch > tableRadius,
           route: route?.length === 2 && route[0].to === n.id && rooms.every(room => g.edges[room.id].length === 1),
-          public: Boolean(fromPublic && shortestPath(g, fromPublic.id, rooms[0].id, 'human')),
-          plants: mesh.groups.some(group => group.layer.endsWith('Shared_Thresholds'))
+          public: throughLobby?.length === 2 && throughLobby[0].to === n.id &&
+            g.edges[n.id].filter(edge => g.nodes[edge.to].kind === 'corridor').every(edge =>
+              edge.path.some(([x, , z]) => Math.abs(-x * Math.sin(heading) + z * Math.cos(heading)) > arch)),
+          varyingShelves: shelfTops.size >= 4 && Math.max(...shelfTops) <= 1.29,
+          plants: foliageClear && tops.every(height => height >= 2.2 && height < 2.76) &&
+            new Set(tops).size === 4 && plantedWithSeed(state.seed) === plants.join() &&
+            plantedWithSeed(state.seed + 1) !== plants.join()
         };
       });
       const build = buildAssemblyMesh(model, {walls:true, slabs:true, slabThickness: state.slabThickness}, 0,
         {assignments:{}, view:state, programColors: true});
       return { recovered, checks: geometryChecks, minimums: model.rooms.every(r => r.area >= state.minRoomArea - 1e-6),
-        furnishedInBuild: build.groups.filter(group => group.layer.endsWith('Shared_Thresholds')).length === hubs.length };
+        separateCorridors: model.circulation.regions.filter(q => q.kind === 'lobbyDivider').length === hubs.length,
+        furnishedInBuild: build.groups.filter(group => group.layer.endsWith('Shared_Planting')).length === hubs.length &&
+          build.groups.filter(group => group.layer.endsWith('Shared_Lobby_Divider')).length === hubs.length &&
+          build.groups.filter(group => group.layer.endsWith('Shared_Lobby_Screen')).length === hubs.length &&
+          build.groups.filter(group => group.layer.endsWith('Shared_Shelving'))
+            .every(group => build.textureStrokes.has(group.lines)) };
     }''')
-    assert result['recovered'] and result['checks'] and result['minimums'] and result['furnishedInBuild'], result
+    assert result['recovered'] and result['checks'] and result['minimums'] and result['separateCorridors'] and result['furnishedInBuild'], result
     assert all(all(check.values()) for check in result['checks']), result
+
+    assert page.evaluate('''() => {
+      // Overlapping triangles swap depth across their area. A centroid sort cannot depict this.
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 8;
+      const ctx = canvas.getContext('2d');
+      paintSoftwareWithDepth(ctx, [
+        { pts: [[0,0,0], [8,0,4], [0,8,0]], fill: [255,0,0], alpha: 1 },
+        { pts: [[0,0,2], [8,0,2], [0,8,2]], fill: [0,0,255], alpha: 1 }
+      ], 8, 8, 1, () => {});
+      return ctx.getImageData(1,1,1,1).data[2] === 255 && ctx.getImageData(5,1,1,1).data[0] === 255;
+    }''')
+
+    assert page.evaluate('''() => {
+      const previous = state;
+      state = { ...defaults(), ringWidth: 22, areaCap: 42000, relations: {'0-1':'attract', '0-4':'attract'} };
+      try {
+        const wide = derive(), graph = buildNavigation(wide);
+        const hubs = graph.nodes.filter(node => node.kind === 'hub');
+        const availableDocks = wide.slots.filter(slot => !slot.blocked && (slot.p !== EMPTY || slot.use !== 'empty'));
+        const accessibleDocks = graph.nodes.filter(node => node.slot != null && graph.reachable.has(node.id));
+        return wide.circulation.dual && hubs.length > 0 && availableDocks.length === accessibleDocks.length &&
+          hubs.every(hub => {
+            const approaches = graph.edges[hub.id].map(edge => graph.nodes[edge.to]).filter(node => node.kind === 'corridor');
+            return approaches.length === 4 && [0, 2].every(i =>
+              shortestPath(graph, approaches[i].id, approaches[i+1].id, 'human')[0].to === hub.id);
+          });
+      } finally {
+        state = previous;
+      }
+    }''')
 
     assert page.evaluate('''() => {
       // The cut through a ring must keep its opening, and an isolated sheet has no solid cap.

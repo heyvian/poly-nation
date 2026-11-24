@@ -1,5 +1,11 @@
 # Changelog
 
+## Lobby circulation, planting and ride stairs
+- Shared lobby planters now grow varied, seeded foliage about 2.2–2.75 m tall near the arch crowns. The foliage stays outside the clear passage and matches across Massing, Build and Drawings.
+- Local main-corridor routes pass through both lobby arches. A divider closes the straight bypass while preserving access to docks on both sides.
+- Lobby casework rises above the couch backs in varied open bays. Build adds fabric seams, timber grain and laminated arches. Per-pixel depth corrects overlapping triangles in the software canvas.
+- Build shows folded stair treads, side trusses and end bearings above the glazed greenhouse roof. A solid sealed curb meets the boarding deck.
+
 ## Shared lobby plans and cut fills
 - Added a focused horizontal cut at the selected shared lobby, with an adjustable height, an orthographic or perspective view, and a crop that stays anchored through scale changes.
 - Added optional solid black fill at clipping planes. Closed cut contours retain their holes, respect visibility and export on a separate SVG layer.

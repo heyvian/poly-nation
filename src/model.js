@@ -611,7 +611,7 @@ function refineRoomPlacement(layers, corridorWidth) {
             b = rooms[j];
           if (relationMode(a.id, b.id) === 'attract' && roomsAreNeighbors(a, b)) {
             const [left, right] = angDist(a.end, b.start) < 1e-7 ? [a, b] : [b, a];
-            const lobby = a.band === b.band && angDist(left.end, right.start) < 1e-7
+            const lobby = a.band === layer.length - 1 && a.band === b.band && angDist(left.end, right.start) < 1e-7
               ? sharedLobbyFit(left, right, corridorWidth) : null;
             const weight = RELATIONSHIP_WEIGHT * relationMagnitude(a.id, b.id);
             cost -= weight * (Math.min(a.area, b.area) + (lobby ? 180 : 0));
@@ -940,8 +940,53 @@ function sharedLobbyPoint(q, along, across, y) {
   return [(radius + across) * cos - along * sin, y, (radius + across) * sin + along * cos];
 }
 
+// Interrupt an adjacent corridor between the two lobby entrances. At the façade, the divider
+// lands between docking doors. Each half of the corridor still serves its own docks.
+function lobbyCorridorBend(regions, room, fit, kind, slotN) {
+  const inside = kind === 'inner',
+    radius = inside ? room.r : room.R,
+    candidates = regions.filter(
+      (q) => q.f === room.f && q.kind === kind && Math.abs((inside ? q.R : q.r) - radius) < 1e-7
+    ),
+    opening = Math.min(fit.passage / radius, (fit.end - fit.start) * 0.42),
+    screen = { radius, start: fit.start + opening, end: fit.end - opening },
+    entries = [
+      { along: -fit.approach, angle: fit.start + opening * 0.4, radius, inside },
+      { along: fit.approach, angle: fit.end - opening * 0.4, radius, inside }
+    ],
+    half = 0.1 / radius,
+    pitch = TAU / slotN,
+    betweenDocks = (Math.floor(fit.heading / pitch) + 0.5) * pitch;
+  const contains = (q, angle, margin = 1e-7) =>
+    [angle, angle - TAU, angle + TAU].some((a) => a >= q.start + margin && a <= q.end - margin);
+  if (!entries.every(({ angle }) => candidates.some((q) => contains(q, angle)))) return null;
+  for (const angle of inside ? [fit.heading, betweenDocks] : [betweenDocks]) {
+    if (angle - half < screen.start || angle + half > screen.end) continue;
+    const corridor = candidates.find((q) => contains(q, angle, half));
+    if (corridor) return { entries, screen, corridor, angle: mod(angle, TAU), half };
+  }
+  return null;
+}
+
+function splitLobbyCorridor(regions, { corridor, angle, half }) {
+  const pieces = [
+    [corridor.start, angle - half, corridor.kind],
+    [angle - half, angle + half, 'lobbyDivider'],
+    [angle + half, corridor.end, corridor.kind]
+  ]
+    .filter(([start, end]) => end - start > 1e-9)
+    .map(([start, end, kind]) => ({
+      ...corridor,
+      kind,
+      start,
+      end,
+      area: ((corridor.R ** 2 - corridor.r ** 2) * (end - start)) / 2
+    }));
+  regions.splice(regions.indexOf(corridor), 1, ...pieces);
+}
+
 // Carve lobbies after the slide has reserved its landing rooms and façade bypasses.
-function formSharedLobbies(layout) {
+function formSharedLobbies(layout, slotN) {
   const { circulation, rooms } = layout;
   const hubs = [];
   for (const layer of layout.layers)
@@ -967,23 +1012,13 @@ function formSharedLobbies(layout) {
       pairs.sort((a, b) => b.weight - a.weight);
       for (const { a, b, fit, weight } of pairs) {
         if (a.sharedLobby || b.sharedLobby) continue;
-        const publicEntry = [-fit.approach, fit.approach]
-          .map((along) => ({
-            along,
-            angle: fit.heading + Math.asin(along / a.R)
-          }))
-          .find(({ angle }) =>
-            circulation.regions.some(
-              (region) =>
-                region.f === a.f &&
-                region.kind !== 'elevator' &&
-                Math.abs(region.r - a.R) < 1e-7 &&
-                [angle - TAU, angle, angle + TAU].some(
-                  (value) => value >= region.start - 1e-7 && value <= region.end + 1e-7
-                )
-            )
-          );
-        if (!publicEntry) continue;
+        const outer = lobbyCorridorBend(circulation.regions, a, fit, 'outer', slotN);
+        if (!outer) continue;
+        const inner = circulation.dual
+          ? lobbyCorridorBend(circulation.regions, a, fit, 'inner', slotN)
+          : null;
+        if (circulation.dual && !inner) continue;
+        const bends = inner ? [outer, inner] : [outer];
         const boundary = a.end,
           scale = (a.R ** 2 - a.r ** 2) / 2,
           id = hubs.length;
@@ -1022,8 +1057,13 @@ function formSharedLobbies(layout) {
           strength: weight,
           lobbyId: id,
           doors,
-          layout: { ...fit, publicEntry }
+          layout: {
+            ...fit,
+            publicEntries: bends.flatMap((bend) => bend.entries),
+            corridorScreens: bends.map((bend) => bend.screen)
+          }
         });
+        for (const bend of bends) splitLobbyCorridor(circulation.regions, bend);
       }
     }
   circulation.hubs = hubs;
@@ -1379,7 +1419,12 @@ function designSwingRoof(ride, radius, publicDeckY) {
     let outer = radius - (run * start) / stepCount;
     for (let step = start; step < end; step++) {
       const inner = step + 1 === end ? radius - (run * end) / stepCount : outer - going;
-      stairs.push({ r: inner, R: outer, y: eaveY + (rise * (step + 1)) / stepCount });
+      stairs.push({
+        r: inner,
+        R: outer,
+        y: eaveY + (rise * (step + 1)) / stepCount,
+        landing: step === end - 1 && flight + 1 < flights
+      });
       outer = inner;
     }
   }
@@ -1388,10 +1433,13 @@ function designSwingRoof(ride, radius, publicDeckY) {
     rise,
     canopyEaveY: publicDeckY,
     canopyRidgeY: eaveY + rise,
+    // The sealed ridge curb reaches the boarding deck above the glazing line.
+    ridgeGlazingY: eaveY + rise - 0.34,
     stairHalfAngle: Math.min(0.22, 0.95 / ride.platformRadius),
     stairs
   };
 }
+
 // Reconfigure the outer corridor at each slide landing. The original room's angular
 // extent becomes a facade room with an inner bypass and two radial returns. No overlapping floor area.
 function connectSlide(layout, feature, R, slotN) {
@@ -1751,7 +1799,7 @@ function derive(dockVariant = state.dockVariant) {
     ride.roofPitch = designSwingRoof(ride, r, roofPlan.y);
     ride.roofLevel = ride.roofPitch.canopyRidgeY - 0.16;
     connectSlide(layout, feature, R, slotN);
-    formSharedLobbies(layout);
+    formSharedLobbies(layout, slotN);
     const actualRing = P.map((p, i) =>
         sum(layout.rooms.filter((q) => q.id === i).map((q) => q.area))
       ),
