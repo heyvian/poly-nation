@@ -787,12 +787,11 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       mark(`Circulation_L${f + 1}_Shared_Lobby`, `Lobby ${hub.start.toFixed(3)}`);
       drawSharedLobbyFloor(mesh, hub, base, 0.018, rgb('#a889bc'));
       drawSharedLobby(mesh, hub, base + 0.018, preview.view?.seed, true);
-      if (layers.walls) drawSharedLobbyScreens(mesh, hub, base, clearHeight, partition);
     }
-    if (layers.walls) for (const q of model.circulation.regions) {
-      if (q.f !== f || q.kind !== 'lobbyDivider') continue;
-      mark(`Circulation_L${f + 1}_Shared_Lobby_Divider`);
-      sector(q.r, q.R, q.start, q.end, base, clearHeight, partition);
+    if (layers.slabs) for (const q of model.circulation.regions) {
+      if (q.f !== f || !['lobbyLanding', 'lobbyShoulder', 'lobbyReturn'].includes(q.kind)) continue;
+      mark(`Circulation_L${f + 1}_Shared_Lobby_Approach`);
+      sector(q.r, q.R, q.start, q.end, base, 0.018, rgb('#e5d9c0'));
     }
   }
   if (full && layers.slabs) {

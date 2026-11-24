@@ -2311,39 +2311,58 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     point(radius * Math.cos(angle), sign * (edge + radius * Math.sin(angle)), up);
   function strip(sign, inner, outer, bottom, height, color, start = 0, end = Math.PI, bevel = 0) {
     const steps = Math.max(1, Math.ceil((end - start) / 0.105)),
-      top = bottom + height,
-      section = bevel
+      top = bottom + height;
+    const profile = (angle) => {
+      const outside = typeof outer === 'function' ? outer(angle) : outer;
+      return bevel
         ? [
             [inner + bevel, bottom],
-            [outer - bevel, bottom],
-            [outer, bottom + bevel],
-            [outer, top - bevel],
-            [outer - bevel, top],
+            [outside - bevel, bottom],
+            [outside, bottom + bevel],
+            [outside, top - bevel],
+            [outside - bevel, top],
             [inner + bevel, top],
             [inner, top - bevel],
             [inner, bottom + bevel]
           ]
         : [
             [inner, bottom],
-            [outer, bottom],
-            [outer, top],
+            [outside, bottom],
+            [outside, top],
             [inner, top]
           ];
+    };
     // Reflection reverses the winding. Keep the mirrored faces outward in both renderers.
     const face = (a, b, c, d) => (sign > 0 ? quad(a, b, c, d, color) : quad(d, c, b, a, color));
     for (let i = 0; i < steps; i++) {
       const a = start + ((end - start) * i) / steps,
-        b = start + ((end - start) * (i + 1)) / steps;
-      for (const [j, [r, h]] of section.entries()) {
-        const [nextR, nextH] = section[(j + 1) % section.length],
-          divisions = Math.max(1, Math.ceil(Math.abs(nextR - r) / 0.24)),
-          at = (angle, t) => curved(sign, r + (nextR - r) * t, angle, h + (nextH - h) * t);
+        b = start + ((end - start) * (i + 1)) / steps,
+        first = profile(a),
+        last = profile(b);
+      for (let j = 0; j < first.length; j++) {
+        const next = (j + 1) % first.length,
+          divisions = Math.max(
+            1,
+            Math.ceil(
+              Math.max(
+                Math.abs(first[next][0] - first[j][0]),
+                Math.abs(last[next][0] - last[j][0])
+              ) / 0.24
+            )
+          );
+        const at = (angle, edge, t) =>
+          curved(
+            sign,
+            edge[j][0] + (edge[next][0] - edge[j][0]) * t,
+            angle,
+            edge[j][1] + (edge[next][1] - edge[j][1]) * t
+          );
         for (let k = 0; k < divisions; k++)
           face(
-            at(b, k / divisions),
-            at(b, (k + 1) / divisions),
-            at(a, (k + 1) / divisions),
-            at(a, k / divisions)
+            at(b, last, k / divisions),
+            at(b, last, (k + 1) / divisions),
+            at(a, first, (k + 1) / divisions),
+            at(a, first, k / divisions)
           );
       }
     }
@@ -2351,7 +2370,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       [start, sign < 0],
       [end, sign > 0]
     ]) {
-      const cap = section.map(([r, h]) => curved(sign, r, angle, h));
+      const cap = profile(angle).map(([r, h]) => curved(sign, r, angle, h));
       for (let i = 1; i < cap.length - 1; i++) {
         if (reverse) tri(cap[0], cap[i + 1], cap[i], color);
         else tri(cap[0], cap[i], cap[i + 1], color);
@@ -2370,6 +2389,49 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
         color
       );
   }
+  const shelfInner = couchOuter + 0.018,
+    board = 0.038,
+    bayCount = 8;
+  // Scribe each back to the radial or angular room edge. Keep the ends of the
+  // lounge free so the public approaches can turn past the planted arches.
+  function shelfLimit(sign, angle) {
+    let low = shelfOuter,
+      high = shelfOuter + 0.85;
+    for (let i = 0; i < 12; i++) {
+      const at = (low + high) / 2,
+        along = at * Math.cos(angle),
+        radial = hub.layout.radius + sign * (edge + at * Math.sin(angle)),
+        distance = Math.hypot(radial, along),
+        heading = Math.atan2(along, radial);
+      if (
+        Math.abs(along) <= arch - 0.15 &&
+        distance > hub.r + 0.045 &&
+        distance < hub.R - 0.045 &&
+        Math.abs(heading) < (hub.end - hub.start) / 2 - 0.04 / radial
+      )
+        low = at;
+      else high = at;
+    }
+    return low;
+  }
+  const shelves = [-1, 1].map((sign) => {
+    const bays = Array.from({ length: bayCount }, (_, i) => {
+      const start = (i * Math.PI) / bayCount + 0.005,
+        end = ((i + 1) * Math.PI) / bayCount - 0.005,
+        depthShare = i >= 2 && i <= 5 ? 1 : 0.35 + 0.55 * cabinetRandom(),
+        outer = (angle) => shelfOuter + (shelfLimit(sign, angle) - shelfOuter) * depthShare,
+        height = 0.98 + Math.floor(cabinetRandom() * 8) * 0.044,
+        type = i % 4 === 1 || cabinetRandom() < 0.22 ? 'cupboard' : 'open';
+      return { start, end, outer, height, type };
+    });
+    const candidates = [2, 3, 4, 5].filter((i) => {
+      const bay = bays[i];
+      return Math.min(bay.outer(bay.start), bay.outer(bay.end)) - shelfInner >= 0.34;
+    });
+    if (candidates.length)
+      bays[candidates[Math.floor(cabinetRandom() * candidates.length)]].type = 'seat';
+    return bays;
+  });
   mark(`Circulation_L${hub.f + 1}_Shared_Furniture`, `Shared gathering ${hub.start.toFixed(3)}`);
   for (const sign of [-1, 1]) {
     // A broad half-round table and a regular-depth upholstered seat face each other.
@@ -2378,14 +2440,15 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     block(0, sign * (edge + tableRadius * 0.48), 0.037, 0.29, 0.65, 0.32, base);
     const backInner = couchOuter - 0.17;
     strip(sign, couchInner + 0.04, couchOuter, 0.038, 0.318, base);
-    for (let i = 0; i < 7; i++) {
-      const a = (i * Math.PI) / 7,
-        b = ((i + 1) * Math.PI) / 7;
+    for (let i = 0; i < bayCount; i++) {
+      const a = (i * Math.PI) / bayCount,
+        b = ((i + 1) * Math.PI) / bayCount,
+        seat = shelves[sign < 0 ? 0 : 1][i].type === 'seat';
       // Open seams between the base, seat pads and back cushions keep their faces distinct.
       strip(
         sign,
         couchInner,
-        backInner - 0.014,
+        seat ? couchOuter - 0.006 : backInner - 0.014,
         0.36,
         0.105,
         cushion,
@@ -2393,37 +2456,38 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
         b - 0.009,
         assembly ? 0.018 : 0
       );
-      strip(
-        sign,
-        backInner,
-        couchOuter,
-        0.36,
-        0.52,
-        back,
-        a + 0.01,
-        b - 0.01,
-        assembly ? 0.024 : 0
-      );
+      if (!seat)
+        strip(
+          sign,
+          backInner,
+          couchOuter,
+          0.36,
+          0.52,
+          back,
+          a + 0.01,
+          b - 0.01,
+          assembly ? 0.024 : 0
+        );
       if (assembly)
         surfaceDetail(sign, couchInner + 0.03, 0.468, a + 0.02, b - 0.02, rgb('#c4b1cc'));
     }
   }
-  mark(`Circulation_L${hub.f + 1}_Shared_Shelving`, `Open timber bays ${hub.start.toFixed(3)}`);
-  const shelfInner = couchOuter + 0.018,
-    board = 0.038;
-  for (const sign of [-1, 1]) {
-    for (let i = 0; i < 8; i++) {
-      const start = (i * Math.PI) / 8 + 0.005,
-        end = ((i + 1) * Math.PI) / 8 - 0.005,
+  mark(
+    `Circulation_L${hub.f + 1}_Shared_Shelving`,
+    `Fitted timber casework ${hub.start.toFixed(3)}`
+  );
+  for (const [side, bays] of shelves.entries()) {
+    const sign = side ? 1 : -1;
+    for (const { start, end, outer, height, type } of bays) {
+      const low = type === 'seat',
+        high = low ? 0.39 : height,
         stile = 0.024 / shelfInner,
         left = start + stile + 0.002,
-        right = end - stile - 0.002,
-        high = 0.98 + Math.floor(cabinetRandom() * 8) * 0.044;
-      // Each open bay has its own height, with upper books within reach over the couch back.
-      strip(sign, shelfInner, shelfOuter, 0.038, high - 0.038, timber, start, start + stile);
-      strip(sign, shelfInner, shelfOuter, 0.038, high - 0.038, timber, end - stile, end);
-      for (const baseHeight of [0.12, 0.47, high - board]) {
-        strip(sign, shelfInner, shelfOuter, baseHeight, board, timber, left, right);
+        right = end - stile - 0.002;
+      strip(sign, shelfInner, outer, 0.038, high - 0.038, timber, start, start + stile);
+      strip(sign, shelfInner, outer, 0.038, high - 0.038, timber, end - stile, end);
+      for (const baseHeight of low ? [0.08, high - board] : [0.12, 0.47, high - board]) {
+        strip(sign, shelfInner, outer, baseHeight, board, timber, left, right);
         if (assembly)
           for (const depth of [0.035, 0.085, 0.15])
             surfaceDetail(
@@ -2435,14 +2499,45 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
               rgb('#9f7954')
             );
       }
-      const bookLevel = i % 3 === 0 ? 0.47 + board : high,
-        radius = shelfInner + 0.08;
+      if (low) {
+        // The matching sofa bay omits its back so the seat can be reached from the aisle.
+        strip(
+          sign,
+          couchOuter + 0.006,
+          (angle) => outer(angle) - 0.016,
+          high + 0.003,
+          0.072,
+          cushion,
+          left,
+          right,
+          assembly ? 0.014 : 0
+        );
+        continue;
+      }
+      if (type === 'cupboard') {
+        const door = rgb('#9e7956'),
+          handle = rgb('#605e54');
+        strip(sign, shelfInner + 0.004, shelfInner + 0.03, 0.163, high - 0.215, door, left, right);
+        const mid = right - 0.038,
+          radius = shelfInner - 0.012;
+        block(
+          radius * Math.cos(mid),
+          sign * (edge + radius * Math.sin(mid)),
+          high - 0.17,
+          0.09,
+          0.026,
+          0.027,
+          handle,
+          heading - sign * (mid - Math.PI / 2)
+        );
+      }
+      const radius = shelfInner + 0.08;
       for (const [j, color] of ['#e7d6b9', '#a46b5a', '#6e867e'].entries()) {
         const angle = (left + right) / 2 + (j - 1) * 0.027;
         block(
           radius * Math.cos(angle),
           sign * (edge + radius * Math.sin(angle)),
-          bookLevel + 0.003,
+          high + 0.003,
           0.045,
           0.13 + 0.028 * j,
           0.12,

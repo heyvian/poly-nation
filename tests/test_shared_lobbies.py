@@ -79,7 +79,9 @@ with serve_lab(root) as url, sync_playwright() as p:
           public: throughLobby?.length === 2 && throughLobby[0].to === n.id &&
             g.edges[n.id].filter(edge => g.nodes[edge.to].kind === 'corridor').every(edge =>
               edge.path.some(([x, , z]) => Math.abs(-x * Math.sin(heading) + z * Math.cos(heading)) > arch)),
-          varyingShelves: shelfTops.size >= 4 && Math.max(...shelfTops) <= 1.29,
+          varyingShelves: shelfTops.size >= 4 && Math.max(...shelfTops) <= 1.29 &&
+            shelving.some((height, i) => i % 10 === 1 && Math.abs(height - 0.465) < 1e-8) &&
+            shelving.some((color, i) => i % 10 === 6 && color === rgb('#9e7956')[0]),
           plants: foliageClear && tops.every(height => height >= 2.2 && height < 2.76) &&
             new Set(tops).size === 4 && plantedWithSeed(state.seed) === plants.join() &&
             plantedWithSeed(state.seed + 1) !== plants.join()
@@ -87,15 +89,20 @@ with serve_lab(root) as url, sync_playwright() as p:
       });
       const build = buildAssemblyMesh(model, {walls:true, slabs:true, slabThickness: state.slabThickness}, 0,
         {assignments:{}, view:state, programColors: true});
-      return { recovered, checks: geometryChecks, minimums: model.rooms.every(r => r.area >= state.minRoomArea - 1e-6),
-        separateCorridors: model.circulation.regions.filter(q => q.kind === 'lobbyDivider').length === hubs.length,
+      const accounted = model.core.reduce((sum, area) => sum + area, 0) + model.count * MODULE.area +
+        model.lobby.area + model.circulation.total + model.retail + model.roofPlan.area;
+      return { recovered, checks: geometryChecks, accounted: Math.abs(model.total - accounted) < 1e-5,
+        minimums: model.rooms.every(r => r.area >= state.minRoomArea - 1e-6),
+        integrated: !model.circulation.regions.some(q => q.kind === 'lobbyDivider') &&
+          model.rooms.filter(r => r.lobbyShoulder && r.facadeFacing && r.R === model.R).length === hubs.length &&
+          model.circulation.regions.filter(q => q.kind === 'lobbyShoulder').length === hubs.length,
         furnishedInBuild: build.groups.filter(group => group.layer.endsWith('Shared_Planting')).length === hubs.length &&
-          build.groups.filter(group => group.layer.endsWith('Shared_Lobby_Divider')).length === hubs.length &&
-          build.groups.filter(group => group.layer.endsWith('Shared_Lobby_Screen')).length === hubs.length &&
+          !build.groups.some(group => /Shared_Lobby_(Divider|Screen)$/.test(group.layer)) &&
+          build.groups.filter(group => group.layer.endsWith('Shared_Lobby_Approach')).length === 3 * hubs.length &&
           build.groups.filter(group => group.layer.endsWith('Shared_Shelving'))
             .every(group => build.textureStrokes.has(group.lines)) };
     }''')
-    assert result['recovered'] and result['checks'] and result['minimums'] and result['separateCorridors'] and result['furnishedInBuild'], result
+    assert result['recovered'] and result['checks'] and result['accounted'] and result['minimums'] and result['integrated'] and result['furnishedInBuild'], result
     assert all(all(check.values()) for check in result['checks']), result
 
     assert page.evaluate('''() => {

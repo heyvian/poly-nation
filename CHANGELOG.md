@@ -1,5 +1,9 @@
 # Changelog
 
+## Shared lobbies integrated into the plan
+- Reshaped neighbouring programme rooms and public corridor strips to route visitors through the furnished lobby. Removed the former divider and screens from new layouts.
+- Fitted mixed-height timber shelves and cupboards to the space behind the couches, with cushioned reading seats in deeper bays.
+
 ## Lobby circulation, planting and ride stairs
 - Shared lobby planters now grow varied, seeded foliage about 2.2–2.75 m tall near the arch crowns. The foliage stays outside the clear passage and matches across Massing, Build and Drawings.
 - Local main-corridor routes pass through both lobby arches. A divider closes the straight bypass while preserving access to docks on both sides.

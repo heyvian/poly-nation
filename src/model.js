@@ -940,55 +940,156 @@ function sharedLobbyPoint(q, along, across, y) {
   return [(radius + across) * cos - along * sin, y, (radius + across) * sin + along * cos];
 }
 
-// Interrupt an adjacent corridor between the two lobby entrances. At the façade, the divider
-// lands between docking doors. Each half of the corridor still serves its own docks.
-function lobbyCorridorBend(regions, room, fit, kind, slotN) {
-  const inside = kind === 'inner',
-    radius = inside ? room.r : room.R,
-    candidates = regions.filter(
-      (q) => q.f === room.f && q.kind === kind && Math.abs((inside ? q.R : q.r) - radius) < 1e-7
-    ),
-    opening = Math.min(fit.passage / radius, (fit.end - fit.start) * 0.42),
-    screen = { radius, start: fit.start + opening, end: fit.end - opening },
-    entries = [
-      { along: -fit.approach, angle: fit.start + opening * 0.4, radius, inside },
-      { along: fit.approach, angle: fit.end - opening * 0.4, radius, inside }
-    ],
-    half = 0.1 / radius,
-    pitch = TAU / slotN,
-    betweenDocks = (Math.floor(fit.heading / pitch) + 0.5) * pitch;
-  const contains = (q, angle, margin = 1e-7) =>
-    [angle, angle - TAU, angle + TAU].some((a) => a >= q.start + margin && a <= q.end - margin);
-  if (!entries.every(({ angle }) => candidates.some((q) => contains(q, angle)))) return null;
-  for (const angle of inside ? [fit.heading, betweenDocks] : [betweenDocks]) {
-    if (angle - half < screen.start || angle + half > screen.end) continue;
-    const corridor = candidates.find((q) => contains(q, angle, half));
-    if (corridor) return { entries, screen, corridor, angle: mod(angle, TAU), half };
+// Trade a corridor strip with one programme room, with a return at the far end.
+function planLobbyShoulder(regions, room, fit, side, inside, lobbyId) {
+  const left = side < 0,
+    kind = inside ? 'inner' : 'outer',
+    edge = inside ? room.r : room.R,
+    start = left ? room.start : fit.end,
+    end = left ? fit.start : room.end,
+    first = Math.min(start, fit.start),
+    last = Math.max(end, fit.end);
+  const corridor = regions.find(
+    (q) =>
+      q.f === room.f &&
+      q.kind === kind &&
+      Math.abs((inside ? q.R : q.r) - edge) < 1e-7 &&
+      q.start <= first + 1e-7 &&
+      q.end >= last - 1e-7
+  );
+  if (!corridor) return null;
+
+  const low = inside ? corridor.r : room.r,
+    high = inside ? room.R : corridor.R,
+    returnAngle = fit.passage / low,
+    doorwayAngle = left ? fit.start : fit.end,
+    movedStart = left ? start + returnAngle : start,
+    movedEnd = left ? end : end - returnAngle,
+    movedInner = inside ? low : room.r + fit.passage,
+    movedOuter = inside ? room.R - fit.passage : high,
+    area = ((movedOuter ** 2 - movedInner ** 2) * (movedEnd - movedStart)) / 2;
+  if (movedEnd <= movedStart || area < state.minRoomArea - 1e-7) return null;
+  // The room threshold keeps the full aisle width at the end of the lounge.
+  const skew = Math.cos(doorwayAngle - fit.heading);
+  if (
+    (fit.radius - fit.passage / 2) / skew < movedInner + 0.04 ||
+    (fit.radius + fit.passage / 2) / skew > movedOuter - 0.04
+  )
+    return null;
+
+  const landing = kind + 'Landing',
+    shoulder = kind + 'Shoulder',
+    walkingInner = inside ? movedOuter : low,
+    walkingOuter = inside ? high : movedInner,
+    landingAngle = left ? fit.end : fit.start;
+  const sections = [];
+  function add(kind, r, R, start, end, route) {
+    if (end - start > 1e-8)
+      sections.push({
+        f: room.f,
+        kind,
+        r,
+        R,
+        start,
+        end,
+        area: ((R ** 2 - r ** 2) * (end - start)) / 2,
+        ...(route ? { lobbyRouteId: lobbyId, route } : {})
+      });
+  }
+  add(kind, corridor.r, corridor.R, corridor.start, first);
+  add('lobbyReturn', low, high, left ? start : movedEnd, left ? movedStart : end);
+  add('lobbyShoulder', walkingInner, walkingOuter, movedStart, movedEnd, shoulder);
+  add('lobbyLanding', corridor.r, corridor.R, fit.start, fit.end, landing);
+  add(kind, corridor.r, corridor.R, last, corridor.end);
+  const entries = [
+    {
+      route: landing,
+      angle: landingAngle + side * Math.min(0.5 / edge, (fit.end - fit.start) / 4),
+      radius: edge,
+      along: -side * fit.approach
+    },
+    {
+      route: shoulder,
+      angle: doorwayAngle,
+      radius: (walkingInner + walkingOuter) / 2,
+      along: side * fit.approach
+    }
+  ];
+  return {
+    room,
+    corridor,
+    sections,
+    entries,
+    moved: {
+      r: movedInner,
+      R: movedOuter,
+      start: movedStart,
+      end: movedEnd,
+      area,
+      facadeFacing: !inside,
+      lobbyShoulder: true
+    }
+  };
+}
+
+function lobbyApproaches(layout, a, b, fit, lobbyId, slotN, blocked, pinned) {
+  const { regions, dual } = layout.circulation;
+  let best = null;
+  for (const side of [1, -1]) {
+    const outer = planLobbyShoulder(regions, side > 0 ? b : a, fit, side, false, lobbyId);
+    if (!outer) continue;
+    const inner = dual
+      ? planLobbyShoulder(regions, side > 0 ? a : b, fit, -side, true, lobbyId)
+      : null;
+    if (dual && !inner) continue;
+    const clearance = Math.atan(0.8 / outer.moved.R),
+      docks = [];
+    for (let dock = 0; dock < slotN; dock++) {
+      const angle = (dock * TAU) / slotN,
+        id = outer.room.f * slotN + dock;
+      if (
+        !blocked.has(id) &&
+        mod(angle - outer.moved.start + clearance, TAU) <
+          outer.moved.end - outer.moved.start + 2 * clearance
+      )
+        docks.push(id);
+    }
+    if (docks.some((id) => pinned.has(id))) continue;
+    if (!best || docks.length < best.docks.length)
+      best = { approaches: inner ? [outer, inner] : [outer], docks };
+  }
+  return best;
+}
+
+// Slide the lounge within the available room surplus to find a genuine corner
+// without taking a manually assigned dock or reducing a room below its minimum.
+function placeLobbyApproaches(layout, a, b, fit, lobbyId, slotN, blocked, pinned, dockBudget) {
+  const areaPerRadian = (a.R ** 2 - a.r ** 2) / 2,
+    minimum = a.end - Math.min(fit.area, a.area - state.minRoomArea) / areaPerRadian,
+    maximum = a.end - Math.max(0, fit.area - (b.area - state.minRoomArea)) / areaPerRadian;
+  const choices = [
+    fit.start,
+    ...Array.from({ length: 9 }, (_, i) => minimum + ((maximum - minimum) * i) / 8)
+  ].sort((x, y) => Math.abs(x - fit.start) - Math.abs(y - fit.start));
+  for (const start of choices) {
+    const offset = start - fit.start,
+      shifted = { ...fit, start, end: fit.end + offset, heading: fit.heading + offset },
+      plan = lobbyApproaches(layout, a, b, shifted, lobbyId, slotN, blocked, pinned);
+    if (plan && plan.docks.length <= dockBudget) return { ...plan, fit: shifted };
   }
   return null;
 }
 
-function splitLobbyCorridor(regions, { corridor, angle, half }) {
-  const pieces = [
-    [corridor.start, angle - half, corridor.kind],
-    [angle - half, angle + half, 'lobbyDivider'],
-    [angle + half, corridor.end, corridor.kind]
-  ]
-    .filter(([start, end]) => end - start > 1e-9)
-    .map(([start, end, kind]) => ({
-      ...corridor,
-      kind,
-      start,
-      end,
-      area: ((corridor.R ** 2 - corridor.r ** 2) * (end - start)) / 2
-    }));
-  regions.splice(regions.indexOf(corridor), 1, ...pieces);
-}
-
 // Carve lobbies after the slide has reserved its landing rooms and façade bypasses.
-function formSharedLobbies(layout, slotN) {
+function formSharedLobbies(layout, slotN, blocked, blockedLimit) {
   const { circulation, rooms } = layout;
-  const hubs = [];
+  const hubs = [],
+    pinned = new Set(
+      Object.keys(state.modulePrograms).map((key) => {
+        const [columns, floor, dock] = key.split(':').map(Number);
+        return floor * slotN + (Math.round((dock / columns) * slotN) % slotN);
+      })
+    );
   for (const layer of layout.layers)
     for (const list of layer) {
       const pairs = [];
@@ -999,6 +1100,8 @@ function formSharedLobbies(layout, slotN) {
           a === b ||
           a.facadeFacing ||
           b.facadeFacing ||
+          a.lobbyShoulder ||
+          b.lobbyShoulder ||
           !PROGRAMS[a.id] ||
           !PROGRAMS[b.id] ||
           angDist(a.end, b.start) > 1e-7 ||
@@ -1010,22 +1113,36 @@ function formSharedLobbies(layout, slotN) {
           pairs.push({ a, b, fit, weight: RELATIONSHIP_WEIGHT * relationMagnitude(a.id, b.id) });
       }
       pairs.sort((a, b) => b.weight - a.weight);
-      for (const { a, b, fit, weight } of pairs) {
+      for (const { a, b, fit: initialFit, weight } of pairs) {
         if (a.sharedLobby || b.sharedLobby) continue;
-        const outer = lobbyCorridorBend(circulation.regions, a, fit, 'outer', slotN);
-        if (!outer) continue;
-        const inner = circulation.dual
-          ? lobbyCorridorBend(circulation.regions, a, fit, 'inner', slotN)
-          : null;
-        if (circulation.dual && !inner) continue;
-        const bends = inner ? [outer, inner] : [outer];
         const boundary = a.end,
           scale = (a.R ** 2 - a.r ** 2) / 2,
-          id = hubs.length;
+          id = hubs.length,
+          plan = placeLobbyApproaches(
+            layout,
+            a,
+            b,
+            initialFit,
+            id,
+            slotN,
+            blocked,
+            pinned,
+            blockedLimit - blocked.size
+          );
+        if (!plan) continue;
+        const { approaches, docks, fit } = plan;
+        const hubInner = a.r,
+          hubOuter = a.R;
         a.end = fit.start;
         b.start = fit.end - (b.start < boundary - Math.PI ? TAU : 0);
         a.area -= (boundary - fit.start) * scale;
         b.area -= (fit.end - boundary) * scale;
+        for (const { room, corridor, moved, sections } of approaches) {
+          circulation.area += sections.reduce((sum, q) => sum + q.area, 0) - corridor.area;
+          circulation.regions.splice(circulation.regions.indexOf(corridor), 1, ...sections);
+          Object.assign(room, moved);
+        }
+        for (const dock of docks) blocked.add(dock);
         const doors = [a, b].map((room, side) => {
           const angle = side ? b.start : a.end,
             skew = Math.cos(angle - fit.heading);
@@ -1047,8 +1164,8 @@ function formSharedLobbies(layout, slotN) {
           kind: 'hub',
           f: a.f,
           band: a.band,
-          r: a.r,
-          R: a.R,
+          r: hubInner,
+          R: hubOuter,
           start: fit.start,
           end: fit.end,
           area: fit.area,
@@ -1059,14 +1176,13 @@ function formSharedLobbies(layout, slotN) {
           doors,
           layout: {
             ...fit,
-            publicEntries: bends.flatMap((bend) => bend.entries),
-            corridorScreens: bends.map((bend) => bend.screen)
+            publicEntries: approaches.flatMap((approach) => approach.entries)
           }
         });
-        for (const bend of bends) splitLobbyCorridor(circulation.regions, bend);
       }
     }
   circulation.hubs = hubs;
+  circulation.corridorArea = circulation.area - circulation.elevatorArea;
   circulation.hubArea = hubs.reduce((total, hub) => total + hub.area, 0);
   circulation.total = circulation.area + circulation.hubArea;
   circulation.doors = [
@@ -1799,7 +1915,12 @@ function derive(dockVariant = state.dockVariant) {
     ride.roofPitch = designSwingRoof(ride, r, roofPlan.y);
     ride.roofLevel = ride.roofPitch.canopyRidgeY - 0.16;
     connectSlide(layout, feature, R, slotN);
-    formSharedLobbies(layout, slotN);
+    const blocked = new Set([
+        ...feature.blocked,
+        ...lobby.blocked,
+        ...(feature.climbing?.blocked || [])
+      ]);
+    formSharedLobbies(layout, slotN, blocked, rawMax - count - k);
     const actualRing = P.map((p, i) =>
         sum(layout.rooms.filter((q) => q.id === i).map((q) => q.area))
       ),
@@ -1829,12 +1950,7 @@ function derive(dockVariant = state.dockVariant) {
       circulation,
       roofPlan
     };
-    const blocked = new Set([
-        ...feature.blocked,
-        ...lobby.blocked,
-        ...(feature.climbing?.blocked || [])
-      ]),
-      max = rawMax - blocked.size;
+    const max = rawMax - blocked.size;
     if (count + k > max) return null;
     return { ...result, ...layout, feature, blocked, max };
   }
@@ -1844,8 +1960,8 @@ function derive(dockVariant = state.dockVariant) {
     if (best) break;
   }
   if (!best) throw Error('No feasible core geometry');
-  const base = best,
-    upper = Math.min(
+  function addRetail(base) {
+    const upper = Math.min(
       retailWant(base.max - base.count),
       Math.max(
         0,
@@ -1855,13 +1971,34 @@ function derive(dockVariant = state.dockVariant) {
         )
       )
     );
-  for (let k = upper; k > 0; k--) {
-    const c = candidate(base.count, k, true);
-    if (c && c.count === base.count && k <= retailWant(c.max - c.count)) {
-      best = c;
-      break;
+    for (let k = upper; k > 0; k--) {
+      const c = candidate(base.count, k, true);
+      if (
+        c &&
+        c.count === base.count &&
+        k <= retailWant(c.max - c.count) &&
+        (!base.circulation.hubs.length || c.circulation.hubs.length)
+      )
+        return c;
+    }
+    return base;
+  }
+  best = addRetail(best);
+  // Try one fewer requested module when that can make room for an explicit Attract lobby.
+  // Keep the higher count if the extra floor area does not actually produce a through route.
+  if (
+    !best.circulation.hubs.length &&
+    Object.values(state.relations).includes('attract') &&
+    best.count > Object.keys(state.modulePrograms).length
+  ) {
+    const alternative = candidate(best.count - 1, 0, true);
+    if (alternative) {
+      const integrated = addRetail(alternative);
+      if (integrated.count === best.count - 1 && integrated.circulation.hubs.length)
+        best = integrated;
     }
   }
+
   const {
     R,
     r,

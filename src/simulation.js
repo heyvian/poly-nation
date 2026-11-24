@@ -272,10 +272,11 @@ function buildNavigation(m) {
   for (const hub of servicedHubs.values()) {
     const entries = hub.layout.publicEntries ?? [{ ...hub.layout.publicEntry, radius: hub.R }],
       y = yFor(hub.f);
-    for (const { angle, along, radius, inside } of entries) {
+    for (const { angle, along, radius, inside, route } of entries) {
       const access = cells.find((c) => c.f === hub.f && c.kind === 'corridor' &&
-        Math.abs((inside ? c.R : c.r) - radius) < eps && [angle, angle + TAU, angle - TAU]
-          .some((value) => value >= c.start - eps && value <= c.end + eps));
+        (route ? c.lobbyRouteId === hub.lobbyId && c.route === route :
+          Math.abs((inside ? c.R : c.r) - radius) < eps) &&
+        [angle, angle + TAU, angle - TAU].some((value) => value >= c.start - eps && value <= c.end + eps));
       if (access) connect(access.node, hub.node, [...pathWithin(access, angle, radius),
         sharedLobbyPoint(hub, along, 0, y), nodes[hub.node].p]);
     }
