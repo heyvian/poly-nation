@@ -21,31 +21,26 @@ with serve_lab(root) as url, sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(url + '/')
     assert page.evaluate('''() => {
-      const floor = {r: 12, R: 18, start: 0.4, end: 0.65};
-      const mesh = meshBuilder();
-      drawInteriorFloorPattern(mesh, floor, 0, [0.7, 0.7, 0.7], false);
-      // Measure whole tiles from the generated joints on both sides of the curved floor.
-      const courses = new Map();
-      for (let i = 0; i < mesh.solid.length; i += 60) {
-        const data = mesh.solid;
-        const inner = Math.hypot(data[i], data[i + 2]);
-        const outer = Math.hypot(data[i + 20], data[i + 22]);
-        if (outer - inner < 0.4) continue;
-        const radius = (inner + outer) / 2;
-        const key = radius.toFixed(5);
-        const angle = (Math.atan2(data[i + 2], data[i]) +
-          Math.atan2(data[i + 12], data[i + 10])) / 2;
-        if (!courses.has(key)) courses.set(key, []);
-        courses.get(key).push(radius * (angle - floor.start));
-      }
-      const rows = [...courses.entries()].filter(([, joints]) => joints.length >= 2);
-      const [inner, outer] = [rows[0], rows.at(-1)];
-      if (!inner || !outer || rows.length < 10) return false;
-      const [firstRadius, firstJoints] = inner;
-      const [nextRadius, nextJoints] = rows[1];
-      return Math.abs(nextRadius - firstRadius - 0.45) < 1e-5 &&
-        Math.abs(firstJoints[0] - nextJoints[0] - 0.3) < 1e-5 &&
-        [firstJoints, outer[1]].every(joints => Math.abs(joints[1] - joints[0] - 0.6) < 1e-5);
+      const room = {r: 12, R: 18, start: 0.4, end: 0.65};
+      const section = {r: 13, R: 17, start: 0.425, end: 0.625};
+      const finish = (patch, color, circulation) => {
+        const mesh = meshBuilder();
+        drawInteriorFloorPattern(mesh, patch, 0, color, circulation, room);
+        const marks = [];
+        for (let i = 0; i < mesh.solid.length; i += 60) {
+          const vertices = [0, 1, 2, 5].map(j => mesh.solid.slice(i + j * 10, i + j * 10 + 3));
+          marks.push({key: vertices.flat().join(), size: Math.max(...vertices.flatMap(a =>
+            vertices.map(b => Math.hypot(a[0] - b[0], a[2] - b[2]))))});
+        }
+        return marks;
+      };
+      const flecks = finish(room, ROOM_FLOOR_FINISH, false);
+      const crop = finish(section, ROOM_FLOOR_FINISH, false);
+      const brushwork = finish(section, CIRCULATION_FLOOR_FINISH, true);
+      const roomKeys = new Set(flecks.map(mark => mark.key));
+      return crop.length > 6 && crop.every(mark => roomKeys.has(mark.key) && mark.size < 0.17) &&
+        brushwork.some(mark => mark.size > 0.3) &&
+        CIRCULATION_FLOOR_FINISH.every((value, i) => value > ROOM_FLOOR_FINISH[i]);
     }''')
     result = page.evaluate('''() => {
       state = defaults();
@@ -429,6 +424,20 @@ with serve_lab(root) as url, sync_playwright() as p:
     plan_svg = ET.parse(result.value.path()).getroot()
     fill = next(node for node in plan_svg if node.get('data-layer') == 'Cut fill')
     assert fill.get('fill') == '#000000' and fill.find('.//{*}path').get('fill-rule') == 'nonzero'
+    expect(sheet.locator('image')).to_have_count(1)
+    page.evaluate('window.print = () => {}')
+    page.locator('#printDrawing').click()
+    printed = page.locator('#floorPrintPages > svg')
+    expect(printed).to_have_count(1)
+    expect(printed.locator('image')).to_have_count(0)
+    printed_paths = printed.locator('[data-layer="Colour fills"] path').evaluate_all(
+        "(paths) => paths.map(path => [path.getAttribute('fill'), path.getAttribute('d')])"
+    )
+    svg_colours = next(node for node in plan_svg if node.get('data-layer') == 'Colour fills')
+    assert printed_paths == [[p.get('fill'), p.get('d')] for p in svg_colours.findall('.//{*}path')]
+    pdf = page.pdf(prefer_css_page_size=True, print_background=True)
+    assert b'/Subtype /Image' not in pdf
+    page.evaluate("window.dispatchEvent(new Event('afterprint'))")
     page.locator('#drawingPlaneOffset').fill('1.9')
     page.locator('#drawingPlaneOffset').press('Tab')
     expect(lobby_plan).not_to_have_value('')
@@ -492,6 +501,11 @@ with serve_lab(root) as url, sync_playwright() as p:
     page.locator('#printDocument').click()
     page.wait_for_function('window.printedLobbySheets')
     assert page.evaluate('window.printedLobbySheets') == [['17in', '11in']] * (2 * count)
+    assert page.evaluate('''() => {
+      const roots = [...document.querySelectorAll('#floorPrintPages > svg')];
+      const ids = roots.flatMap(root => [...root.querySelectorAll('[id]')].map(node => node.id));
+      return ids.length === new Set(ids).size && roots.every(root => !root.querySelector('image'));
+    }''')
     page.reload()
     expect(page.locator('#drawingDocument')).to_have_value('lobbies')
     expect(page.get_by_role('button', name='Lobby view from east')).to_have_attribute('aria-pressed', 'true')

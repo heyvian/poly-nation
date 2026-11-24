@@ -48,7 +48,7 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
         region.route === 'outerLanding'
           ? 'Corridor'
           : '';
-      contextSector(region, rgb('#e5d9c0'), -0.015, true, label);
+      contextSector(region, CIRCULATION_FLOOR_FINISH, -0.015, true, label);
     }
     mesh.mark('Core_Lobby_Context');
     for (const room of model.rooms) {
@@ -59,7 +59,7 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
       // Keep the edges of the cutaway shallow so every compass direction sees the furniture.
       contextSector(
         room,
-        color.map((part) => part + (1 - part) * (neighbour ? 0.18 : 0.46)),
+        ROOM_FLOOR_FINISH.map((part, i) => part + (color[i] - part) * (neighbour ? 0.56 : 0.32)),
         0.085,
         false,
         neighbour ? program?.short : ''

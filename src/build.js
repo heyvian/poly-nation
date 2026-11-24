@@ -817,8 +817,11 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     }
     if (layers.slabs) {
       mark(`Core_L${f + 1}_Room_Floor_Pattern`);
-      for (const room of model.rooms)
-        if (room.f === f) drawInteriorFloorPattern(mesh, room, base, concrete, false);
+      for (const room of model.rooms) {
+        if (room.f !== f) continue;
+        sector(room.r, room.R, room.start, room.end, base, 0.006, ROOM_FLOOR_FINISH);
+        drawInteriorFloorPattern(mesh, room, base + 0.006, ROOM_FLOOR_FINISH, false);
+      }
       for (const q of model.circulation.regions) {
         if (q.f !== f || q.kind === 'elevator' || q.kind === 'lobbyDivider') continue;
         const approach = ['lobbyLanding', 'lobbyShoulder', 'lobbyReturn'].includes(q.kind);
@@ -827,9 +830,9 @@ function buildAssemblyMesh(model, layers, levels, preview) {
             ? `Circulation_L${f + 1}_Shared_Lobby_Approach`
             : `Circulation_L${f + 1}_Floor_Pattern`
         );
-        const color = approach ? rgb('#e5d9c0') : concrete;
-        if (approach) sector(q.r, q.R, q.start, q.end, base, 0.018, color);
-        drawInteriorFloorPattern(mesh, q, base + (approach ? 0.018 : 0), color, true);
+        const finish = approach ? 0.018 : 0.006;
+        sector(q.r, q.R, q.start, q.end, base, finish, CIRCULATION_FLOOR_FINISH);
+        drawInteriorFloorPattern(mesh, q, base + finish, CIRCULATION_FLOOR_FINISH, true);
       }
     }
   }

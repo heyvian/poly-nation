@@ -813,7 +813,7 @@ const openDrawingWorkspace = (() => {
             { washLightness: colourOnly ? 0.08 : 0.49 }
           ),
           tile = floorView(frame, title, 0, 0, true, { colourOnly, mapBasis: null }),
-          [background, area, name, indicator] = tile.children;
+          [, area, , indicator] = tile.children;
         tile.classList.add('drawing-sheet');
         tile.setAttribute('width', paper.width + 'in');
         tile.setAttribute('height', paper.height + 'in');
@@ -822,7 +822,7 @@ const openDrawingWorkspace = (() => {
         tile.dataset.lobbyView = view;
         tile.dataset.lobbyDirection = caption;
         tile.dataset.lobbyAzimuth = az;
-        const { width, height, margin, drawingHeight, denominator, exportFills } = frame,
+        const { width, height, margin, denominator } = frame,
           ink = sheetInk(frame.pens.paper),
           header = svgElement('text', {
             x: margin,
@@ -860,25 +860,10 @@ const openDrawingWorkspace = (() => {
         }
         if (roomLabels.hasChildNodes()) area.append(roomLabels);
         tile.append(header);
-        const footerGroup = markSvgLayer(svgElement('g', {}), 'Title and scale');
-        footerGroup.append(name.cloneNode(true), indicator.cloneNode(true), header.cloneNode(true));
-        const crop = svgElement('rect', {
-          x: margin,
-          y: margin,
-          width: width - 2 * margin,
-          height: drawingHeight
-        });
         const filename = () =>
           `poly-nation-${state.seed}-lobby-${index + 1}-${view}-${caption.toLowerCase()}-1-${denominator}.svg`;
         function vector() {
-          return vectorPage(
-            paper,
-            { width, height, denominator },
-            title + ' · ' + label,
-            background.getAttribute('fill'),
-            footerGroup,
-            [{ source: area, crop, makeFills: exportFills }]
-          );
+          return vectorFloorPage(paper, frame, title + ' · ' + label, tile);
         }
         const preview = document.createElement('figure'),
           button = document.createElement('button');
@@ -1769,6 +1754,46 @@ const openDrawingWorkspace = (() => {
     );
   }
 
+  function vectorFloorPage(paper, frame, label, tile = floorView(frame, label, 0, 0, true)) {
+    const [, area, ...labels] = tile.children,
+      { width, margin, drawingHeight } = frame,
+      footer = markSvgLayer(svgElement('g', {}), 'Title and scale'),
+      crop = svgElement('rect', {
+        x: margin,
+        y: margin,
+        width: width - 2 * margin,
+        height: drawingHeight
+      });
+    footer.append(...labels.map((node) => node.cloneNode(true)));
+    return vectorPage(paper, frame, label, frame.pens.paper, footer, [
+      { source: area, crop, makeFills: frame.exportFills }
+    ]);
+  }
+
+  // Inline SVG is printed at the same physical size as the downloaded sheets.
+  function prepareVectorPrint(sheets, { width, height }) {
+    for (const [page, sheet] of sheets.entries()) {
+      // All printed pages live in one document, so their clip IDs must be unique.
+      const prefix = `print-${page + 1}-`;
+      for (const node of sheet.querySelectorAll('[id]')) node.id = prefix + node.id;
+      for (const node of sheet.querySelectorAll('[clip-path]')) {
+        const clip = node.getAttribute('clip-path');
+        node.setAttribute('clip-path', clip.replace('url(#', `url(#${prefix}`));
+      }
+    }
+    $('floorPrintPages').replaceChildren(...sheets);
+    document.body.classList.add('printing-floor-set');
+    pageStyle.textContent = `@page { size: ${width}in ${height}in; margin: 0; }`;
+  }
+
+  function prepareDocumentPrint(pages) {
+    $('documentPrintPages').replaceChildren(
+      ...[...pages.children].map((page) => page.cloneNode(true))
+    );
+    document.body.classList.add('printing-document-set');
+    pageStyle.textContent = '@page { size: letter landscape; margin: 0; }';
+  }
+
   exportButton.onclick = () => {
     const lobby = focusedLobbyPlan();
     const view = settings.detail
@@ -1784,8 +1809,7 @@ const openDrawingWorkspace = (() => {
     );
   };
   printButton.onclick = () => {
-    const { width, height } = paperDimensions();
-    pageStyle.textContent = `@page { size: ${width}in ${height}in; margin: 0; }`;
+    prepareVectorPrint([vectorDrawingSheet()], paperDimensions());
     window.print();
   };
   $('printDocument').onclick = async () => {
@@ -1794,7 +1818,7 @@ const openDrawingWorkspace = (() => {
     if (settings.document === 'lobbies') {
       const button = $('printDocument'),
         prepared = lobbyPages,
-        { width, height } = paperDimensions();
+        paper = paperDimensions();
       button.disabled = true;
       button.textContent = 'Preparing lobby sheets…';
       try {
@@ -1805,10 +1829,7 @@ const openDrawingWorkspace = (() => {
           sheets.push(vector());
         }
         if (!sheets.length) return;
-        // Print the editable fills at the exact dimensions used to choose the scale.
-        $('floorPrintPages').replaceChildren(...sheets);
-        document.body.classList.add('printing-floor-set');
-        pageStyle.textContent = `@page { size: ${width}in ${height}in; margin: 0; }`;
+        prepareVectorPrint(sheets, paper);
         window.print();
       } catch (error) {
         console.error('Lobby set print failed', error);
@@ -1818,17 +1839,12 @@ const openDrawingWorkspace = (() => {
       }
       return;
     }
-    $('documentPrintPages').replaceChildren(
-      ...[...pages.children].map((page) => page.cloneNode(true))
-    );
-    document.body.classList.add('printing-document-set');
-    pageStyle.textContent = '@page { size: letter landscape; margin: 0; }';
+    prepareDocumentPrint(pages);
     window.print();
   };
   $('printFloorSet').onclick = async () => {
     if (!geometry || settings.detail || settings.view !== 'plan') return;
     const button = $('printFloorSet'),
-      pages = $('floorPrintPages'),
       paper = paperDimensions(),
       plans = floorPlans(),
       model = geometry,
@@ -1852,15 +1868,10 @@ const openDrawingWorkspace = (() => {
           pens,
           { floorSet: true, cutFill }
         );
-        const page = floorView(frame, 'Poly Nation · ' + label, 0, 0, true);
-        page.setAttribute('width', paper.width + 'in');
-        page.setAttribute('height', paper.height + 'in');
-        sheets.push(page);
+        sheets.push(vectorFloorPage(paper, frame, 'Poly Nation · ' + label));
       }
       if (panel.hidden) return;
-      pages.replaceChildren(...sheets);
-      document.body.classList.add('printing-floor-set');
-      pageStyle.textContent = `@page { size: ${paper.width}in ${paper.height}in; margin: 0; }`;
+      prepareVectorPrint(sheets, paper);
       window.print();
     } catch (error) {
       console.error('Floor set failed', error);
@@ -1871,6 +1882,26 @@ const openDrawingWorkspace = (() => {
       button.textContent = 'Print floor set';
     }
   };
+  window.addEventListener('beforeprint', () => {
+    const { classList } = document.body;
+    if (
+      panel.hidden ||
+      classList.contains('printing-floor-set') ||
+      classList.contains('printing-document-set')
+    )
+      return;
+    if (timer) {
+      clearTimeout(timer);
+      render();
+    }
+    if (settings.document === 'lobbies' && lobbyPages.length)
+      prepareVectorPrint(
+        lobbyPages.map(({ vector }) => vector()),
+        paperDimensions()
+      );
+    else if (settings.document) prepareDocumentPrint($('documentPages'));
+    else if (rendered?.populated) prepareVectorPrint([vectorDrawingSheet()], paperDimensions());
+  });
   window.addEventListener('afterprint', () => {
     pageStyle.textContent = '';
     document.body.classList.remove('printing-floor-set');

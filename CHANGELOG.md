@@ -1,5 +1,9 @@
 # Changelog
 
+## Vector PDFs and continuous floors
+- Print and Save as PDF now use the layered SVG artwork for single sheets and drawing sets.
+- Replaced the room tile hatch with a continuous exposed-aggregate finish and gave circulation a lighter, brushed surface.
+
 ## Room tiles and lobby details
 - Rescaled the staggered room hatch to nominal 450 × 600 mm tiles and softened the joints. Paired paving bands continue to identify circulation.
 - Extended one patterned rug beneath both lobby seating areas and across the aisle.

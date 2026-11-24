@@ -2228,17 +2228,33 @@ function drawSlideJoints({ mark, quad, tri }, points, radius, color, maxY, minRa
   }
 }
 
-// Lay paired paving bands along the corridor and stagger the joints of room tiles.
+const ROOM_FLOOR_FINISH = rgb('#c9bdb0');
+const CIRCULATION_FLOOR_FINISH = rgb('#f0eadc');
+
+// Brush the circulation finish along the route. Scatter aggregate in the poured room floors.
 function drawInteriorFloorPattern(mesh, patch, y, color, circulation, region = patch) {
   const { r, R, start, end } = patch;
-  const top = y + 0.003,
-    ink = color.map((part) => part * (circulation ? 0.68 : 0.88)),
-    ring = (low, high, a, b) => {
-      if (high - low < 0.009 || (b - a) * high < 0.009) return;
+  const top = y + 0.003;
+  if (circulation) {
+    // The returns cross the ring, so their bands run radially into the next corridor.
+    const radial =
+        /return/i.test(region.kind ?? '') || ['link', 'bridgeAccess'].includes(region.kind),
+      radius = (region.r + region.R) / 2,
+      width = radial ? (region.end - region.start) * radius : region.R - region.r,
+      stripes = Math.max(1, Math.floor(width / 0.42)),
+      half = 0.016,
+      ink = materialTint(color, 0.89);
+    for (let i = 0; i < stripes; i++) {
+      const offset = ((i + 0.5) * width) / stripes,
+        low = radial ? r : Math.max(r, region.r + offset - half),
+        high = radial ? R : Math.min(R, region.r + offset + half),
+        a = radial ? Math.max(start, region.start + (offset - half) / radius) : start,
+        b = radial ? Math.min(end, region.start + (offset + half) / radius) : end;
+      if (high - low < 0.009 || (b - a) * high < 0.009) continue;
       const steps = Math.ceil((b - a) / 0.045);
-      for (let i = 0; i < steps; i++) {
-        const left = a + ((b - a) * i) / steps,
-          right = a + ((b - a) * (i + 1)) / steps;
+      for (let j = 0; j < steps; j++) {
+        const left = a + ((b - a) * j) / steps,
+          right = a + ((b - a) * (j + 1)) / steps;
         mesh.quad(
           mesh.ringPoint(low, left, top),
           mesh.ringPoint(low, right, top),
@@ -2247,43 +2263,33 @@ function drawInteriorFloorPattern(mesh, patch, y, color, circulation, region = p
           ink
         );
       }
-    };
-  if (circulation) {
-    // The returns cross the ring, so their bands run radially into the next corridor.
-    const radial =
-      /return/i.test(region.kind ?? '') || ['link', 'bridgeAccess'].includes(region.kind);
-    for (const fraction of [0.32, 0.68]) {
-      if (radial) {
-        const axis = region.start + (region.end - region.start) * fraction,
-          half = 0.042 / ((region.r + region.R) / 2);
-        ring(r, R, Math.max(start, axis - half), Math.min(end, axis + half));
-      } else {
-        const axis = region.r + (region.R - region.r) * fraction;
-        ring(Math.max(r, axis - 0.042), Math.min(R, axis + 0.042), start, end);
-      }
     }
     return;
   }
-  // Keep the 450 × 600 mm tile layout anchored to the room, even in a cropped drawing.
-  const course = 0.45,
-    tileLength = 0.6,
-    joint = 0.009,
-    firstRow = Math.floor((r - region.r) / course);
-  for (let row = firstRow, edge = region.r + firstRow * course; edge < R; row++, edge += course) {
-    if (row > 0) ring(Math.max(r, edge - joint), Math.min(R, edge + joint), start, end);
-    // Measure along each course instead of sharing one angle across the whole room.
-    const radius = edge + course / 2,
-      spacing = tileLength / radius,
-      half = joint / radius,
-      offset = region.start + spacing * (row % 2 ? 0.5 : 1),
-      firstColumn = Math.max(0, Math.ceil((start - half - offset) / spacing));
-    for (let angle = offset + firstColumn * spacing; angle - half < end; angle += spacing)
-      ring(
-        Math.max(r, edge + joint),
-        Math.min(R, edge + course - joint),
-        Math.max(start, angle - half),
-        Math.min(end, angle + half)
-      );
+  // Sample the full room so cropped drawings keep the same flecks as the assembly.
+  const span = region.end - region.start,
+    radialArea = region.R ** 2 - region.r ** 2,
+    seed =
+      Math.round(mod(region.start, TAU) * 100000) ^
+      Math.imul(Math.round(region.r * 1000), 0x45d9f3b),
+    sample = random(seed),
+    count = Math.ceil(radialArea * span * 0.63);
+  for (let i = 0; i < count; i++) {
+    const radius = Math.sqrt(region.r ** 2 + radialArea * sample()),
+      angle = region.start + span * sample(),
+      size = 0.023 + sample() * 0.048,
+      tone = 0.82 + sample() * 0.14,
+      width = size / radius;
+    if (radius - size < r || radius + size > R || angle - width < start || angle + width > end)
+      continue;
+    const at = (dr, da) => mesh.ringPoint(radius + size * dr, angle + width * da, top);
+    mesh.quad(
+      at(-0.58, -0.4),
+      at(-0.22, 0.8),
+      at(0.78, 0.28),
+      at(0.4, -0.9),
+      materialTint(color, tone)
+    );
   }
 }
 
@@ -2293,7 +2299,7 @@ const LOBBY_RUG_MARGIN = 0.03;
 // in the software renderer. The perimeter remains a single curved floor element.
 function drawSharedLobbyFloor(mesh, hub, y, height) {
   const { r, R, start, end } = hub;
-  const color = rgb('#ded7c7');
+  const color = CIRCULATION_FLOOR_FINISH;
   mesh.sector(r, R, start, end, y, height, color, null, true);
   const columns = Math.max(1, Math.ceil(((end - start) * R) / 0.75)),
     rows = Math.ceil((R - r) / 0.75),
@@ -2307,20 +2313,20 @@ function drawSharedLobbyFloor(mesh, hub, y, height) {
     for (let j = 0; j < columns; j++)
       mesh.quad(point(i, j), point(i, j + 1), point(i + 1, j + 1), point(i + 1, j), color);
   const { passage, arch, shelfOuter } = hub.layout;
-  // The paving bands lead up to each end of the rug.
+  // Brush the short approaches up to the rug in the direction of the aisle.
   const length = arch - 0.065,
     rugEnd = shelfOuter + LOBBY_RUG_MARGIN,
     top = y + height + 0.003,
-    ink = rgb('#a29783');
+    ink = materialTint(color, 0.89);
   if (length > rugEnd)
-    for (const side of [-1, 1]) {
-      const across = side * passage * 0.29,
+    for (const fraction of [-0.34, -0.17, 0, 0.17, 0.34]) {
+      const across = passage * fraction,
         at = (along, offset) => sharedLobbyPoint(hub, along, across + offset, top);
       for (const [start, end] of [
         [-length, -rugEnd],
         [rugEnd, length]
       ])
-        mesh.quad(at(start, -0.042), at(end, -0.042), at(end, 0.042), at(start, 0.042), ink);
+        mesh.quad(at(start, -0.016), at(end, -0.016), at(end, 0.016), at(start, 0.016), ink);
     }
 }
 
@@ -3076,7 +3082,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           m.R - facadeThickness(m) - 0.035
         ),
         flat = !exporting && view.xray,
-        h = flat ? 0.13 : BUILD_SECTION.floorHeight - 0.31;
+        h = flat ? 0.13 : BUILD_SECTION.floorHeight - 0.31,
+        surface = flat ? ROOM_FLOOR_FINISH.map((part, i) => part + (c[i] - part) * 0.56) : c;
       if (rb <= ra + 0.001) continue;
       let portal = null;
       if (room.slideLanding && !flat && m.feature.slide) {
@@ -3092,7 +3099,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         room.end - gap,
         y + 0.25,
         h,
-        c,
+        surface,
         portal,
         !exporting && !view.inspect && view.showRoofDeck && !view.xray && f === view.floors - 1
       );
@@ -3106,7 +3113,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
             end: room.end - gap
           },
           y + 0.25 + h,
-          c,
+          surface,
           false,
           room
         );
@@ -3140,7 +3147,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       kind = q.kind,
       isLift = kind === 'elevator',
       isHub = kind === 'hub',
-      color = rgb(isLift ? '#777a91' : isHub ? '#80509e' : '#eee9da');
+      color = isLift ? rgb('#777a91') : isHub ? rgb('#80509e') : CIRCULATION_FLOOR_FINISH;
     mark(
       `Circulation_L${q.f + 1}_${isLift ? 'Lift_' + (q.block + 1) : isHub ? 'Shared_' + P[q.pair[0]].id + '_' + P[q.pair[1]].id : kind}`,
       `${kind}_${q.f + 1}_${q.start.toFixed(3)}`
