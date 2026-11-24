@@ -1,5 +1,9 @@
 # Changelog
 
+## Shared lobby drawing set
+- Added automatically scaled axonometrics and plans for every shared lobby, with adjoining programme rooms and corridor approaches or a furniture-only view.
+- Added a lobby-relative compass with the building centre as south, per-sheet vector SVG export and PDF printing for the complete set.
+
 ## Shared lobby fit and atrium guards
 - Tried more room packings and a shorter lobby footprint for Attract pairs while preserving room minimums, the clear aisle, assigned docks and the area accounting.
 - Added one to three shelf levels to selected bays behind the couches and stocked the open shelves with books, games and ceramics. Thickened the sofa cushions and added throw pillows.

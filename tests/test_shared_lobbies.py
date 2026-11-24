@@ -1,5 +1,6 @@
-"""Verify the walk-through lobby, its furniture and the scaled section perspective."""
+"""Verify shared lobby routes, furnishings, sections and drawing sheets."""
 
+from math import pi
 from pathlib import Path
 import os
 import shutil
@@ -380,5 +381,64 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(page.locator('#drawingPlaneAxis')).to_have_value('vertical')
     expect(page.locator('#drawingPlanes .drawing-plane-row')).to_have_count(1)
     expect(lobby_plan).to_have_value('')
+
+    page.locator('#openMassing').click()
+    page.evaluate('''() => {
+        state = { ...defaults(), seed: 607, relations: { '1-3': 'attract' }, simRunning: false };
+        update();
+    }''')
+    page.locator('#openDrawings').click()
+    expect(page.locator('#lobbyDrawingControls')).to_be_hidden()
+    page.locator('#drawingDocument').select_option('lobbies')
+    expect(page.locator('#lobbyDrawingControls')).to_be_visible()
+    pages = page.locator('#documentPages .lobby-axo-page > svg')
+    count = page.evaluate('model.circulation.hubs.length')
+    expect(pages).to_have_count(2 * count)
+    axo, plan = pages.nth(0), pages.nth(1)
+    expect(axo).to_have_attribute('data-lobby-view', 'axo')
+    expect(plan).to_have_attribute('data-lobby-view', 'plan')
+    expect(axo).to_have_attribute('data-lobby-direction', 'S')
+    expect(plan).to_have_attribute('data-lobby-direction', 'S')
+    south_arrow = plan.locator('[data-local-south-arrow] > g')
+    expect(south_arrow).to_have_count(1)
+    south_rotation = south_arrow.get_attribute('transform')
+    expect(plan.locator('[data-layer="Programme labels"]')).to_contain_text('Corridor')
+    azimuth = float(plan.get_attribute('data-lobby-azimuth'))
+    page.locator('#drawingLobbyDirection').select_option('compass')
+    page.get_by_role('button', name='Lobby view from east').click()
+    expect(axo).to_have_attribute('data-lobby-direction', 'E')
+    expect(plan).to_have_attribute('data-lobby-direction', 'E')
+    expect(south_arrow).not_to_have_attribute('transform', south_rotation)
+    assert abs(float(plan.get_attribute('data-lobby-azimuth')) - azimuth + pi / 2) < 1e-8
+    page.locator('#drawingLobbyContext').uncheck()
+    expect(plan.locator('[data-layer="Programme labels"]')).to_have_count(0)
+    page.locator('#drawingLobbyContext').check()
+    page.locator('#drawingLobbyPaper').select_option('tabloid')
+    expect(plan).to_have_attribute('width', '17in')
+    ratio = plan.locator('[data-scale-ratio]')
+    denominator = int(ratio.get_attribute('data-scale-ratio'))
+    assert denominator in (25, 50, 100, 200, 250)
+    expect(ratio).to_have_text(f'1:{denominator}')
+    with page.expect_download() as drawing:
+        page.get_by_role('button', name='Export lobby 1 plan as SVG').click()
+    exported = ET.parse(drawing.value.path()).getroot()
+    assert exported.get('width') == '17in' and exported.get('height') == '11in'
+    assert {layer.get('data-layer') for layer in exported} >= {'Colour fills', 'Programme labels', 'Title and scale'}
+    assert not exported.findall('.//{*}image')
+    page.evaluate('''() => {
+        window.print = () => {
+          window.printedLobbySheets = [...document.querySelectorAll('#floorPrintPages > svg')]
+            .map(sheet => [sheet.getAttribute('width'), sheet.getAttribute('height')]);
+        };
+    }''')
+    page.locator('#printDocument').click()
+    page.wait_for_function('window.printedLobbySheets')
+    assert page.evaluate('window.printedLobbySheets') == [['17in', '11in']] * (2 * count)
+    page.reload()
+    expect(page.locator('#drawingDocument')).to_have_value('lobbies')
+    expect(page.get_by_role('button', name='Lobby view from east')).to_have_attribute('aria-pressed', 'true')
+    expect(page.locator('#drawingLobbyContext')).to_be_checked()
+    page.locator('#drawingLobbyViews').select_option('plan')
+    expect(pages).to_have_count(count)
     assert not errors, errors
-    print('Lobby routes, focused plans and sections, perspective, cut fills, and SVG export passed.')
+    print('Lobby routes, focused cuts, contextual lobby sheets, compass, PDF pages and SVG export passed.')

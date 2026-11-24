@@ -564,9 +564,41 @@
     <option value="programme">Programme document</option>
     <option value="program-diagrams">Programme diagrams</option>
     <option value="circulation">Circulation diagrams</option>
+    <option value="lobbies">Shared lobby drawings</option>
     <option value="structure">Structural load study</option>
    </select>
   </label>
+  <div id="lobbyDrawingControls" hidden>
+   <label class="drawing-view-field">Views to include
+    <select id="drawingLobbyViews">
+     <option value="both">Axonometric and plan</option>
+     <option value="axo">Axonometric</option>
+     <option value="plan">Plan</option>
+    </select>
+   </label>
+   <label class="drawing-view-field">View direction
+    <select id="drawingLobbyDirection">
+     <option value="centre">From the building centre</option>
+     <option value="compass">Lobby-relative compass</option>
+    </select>
+   </label>
+   <div id="drawingLobbyCompass" class="drawing-compass" role="group" aria-label="Lobby view compass" hidden></div>
+   <p class="hint" id="drawingLobbyCompassNote" hidden>South faces the lobby from the building centre.</p>
+   <label class="check"><input type="checkbox" id="drawingLobbyContext" checked> Show adjoining rooms and corridors</label>
+   <label class="drawing-view-field">Rendering
+    <select id="drawingLobbyRender">
+     <option value="colour">Material colour</option>
+     <option value="hybrid">Colour and linework</option>
+     <option value="linework">Linework</option>
+    </select>
+   </label>
+   <label class="drawing-view-field">Paper size
+    <select id="drawingLobbyPaper"><option value="letter">Letter · 8.5 × 11 in</option><option value="tabloid">Tabloid · 11 × 17 in</option></select>
+   </label>
+   <label class="drawing-view-field">Page orientation
+    <select id="drawingLobbyOrientation"><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select>
+   </label>
+  </div>
   <div id="singleDrawingControls">
   <label class="drawing-view-field">Connection preset
    <select id="drawingDetail">

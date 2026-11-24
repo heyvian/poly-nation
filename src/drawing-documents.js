@@ -1,6 +1,6 @@
 'use strict';
 
-const DRAWING_DOCUMENTS = ['programme', 'program-diagrams', 'circulation', 'structure'];
+const DRAWING_DOCUMENTS = ['programme', 'program-diagrams', 'circulation', 'lobbies', 'structure'];
 const CIRCULATION_COLOURS = {
   corridor: '#8ebcb0',
   lobby: '#e1be87',
@@ -8,6 +8,63 @@ const CIRCULATION_COLOURS = {
   bridge: '#589a96'
 };
 const STUDY_INK = '#3c564d';
+
+// Use the installed furnishings and a small window of the actual floor plan around them.
+function lobbyDrawingGeometry(model, hub, seed, includeContext) {
+  const mesh = meshBuilder(),
+    labels = [];
+  if (includeContext) {
+    const apron = model.circulation.width + 1.2,
+      radialMin = Math.max(model.r, hub.r - apron),
+      radialMax = Math.min(model.R, hub.R + apron),
+      start = hub.start - (apron + 1.5) / hub.layout.radius,
+      end = hub.end + (apron + 1.5) / hub.layout.radius;
+    function contextSector(region, color, top, label = '') {
+      const r = Math.max(radialMin, region.r),
+        R = Math.min(radialMax, region.R);
+      if (R - r < 0.02) return;
+      // Normalize neighbouring sectors to the side of the seam used by this lobby.
+      const wrap = TAU * Math.round((hub.layout.heading - (region.start + region.end) / 2) / TAU);
+      for (const shift of [wrap - TAU, wrap, wrap + TAU]) {
+        const a = Math.max(start, region.start + shift),
+          z = Math.min(end, region.end + shift);
+        if ((z - a) * R < 0.02) continue;
+        mesh.sector(r, R, a, z, -0.08, top + 0.08, color);
+        if (label && ((z - a) * (R ** 2 - r ** 2)) / 2 >= 2)
+          labels.push({ label, point: mesh.ringPoint((r + R) / 2, (a + z) / 2, top) });
+      }
+    }
+    mesh.mark('Circulation_Lobby_Context');
+    for (const region of model.circulation.regions) {
+      if (region.f !== hub.f || region.kind === 'lobbyDivider') continue;
+      const label =
+        hub.lobbyId != null &&
+        region.lobbyRouteId === hub.lobbyId &&
+        region.route === 'outerLanding'
+          ? 'Corridor'
+          : '';
+      contextSector(region, rgb('#e5d9c0'), -0.015, label);
+    }
+    mesh.mark('Core_Lobby_Context');
+    for (const room of model.rooms) {
+      if (room.f !== hub.f) continue;
+      const neighbour = hub.lobbyId != null && room.sharedLobby?.id === hub.lobbyId,
+        program = P[room.id],
+        color = rgb(program?.color ?? '#dce2da');
+      // Keep the edges of the cutaway shallow so every compass direction sees the furniture.
+      contextSector(
+        room,
+        color.map((part) => part + (1 - part) * (neighbour ? 0.18 : 0.46)),
+        0.085,
+        neighbour ? program?.short : ''
+      );
+    }
+  }
+  mesh.mark(`Circulation_L${hub.f + 1}_Shared_Lobby`);
+  drawSharedLobbyFloor(mesh, hub, -0.08, 0.08, rgb('#b8a0ca'));
+  drawSharedLobby(mesh, hub, 0, seed, true);
+  return { geometry: drawingGeometry(mesh), labels };
+}
 
 function studySVG(width, height, name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

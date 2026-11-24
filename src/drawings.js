@@ -60,6 +60,11 @@ const openDrawingWorkspace = (() => {
       view: 'axo',
       detail: '',
       document: '',
+      lobbyDirection: 'centre',
+      lobbyAzimuth: 5,
+      lobbyRender: 'colour',
+      lobbyViews: 'both',
+      lobbyContext: true,
       azimuth: 5,
       elevation: 225,
       sectionProjection: 'orthographic',
@@ -81,6 +86,7 @@ const openDrawingWorkspace = (() => {
     },
     sourceModel = null,
     sourceAssignments = {},
+    lobbyPages = [],
     materialSignature = '',
     geometry = null,
     renderedGeometryMode = null,
@@ -98,6 +104,12 @@ const openDrawingWorkspace = (() => {
         view: previousElevation ? 'elevation' : viewNames.includes(saved.view) ? saved.view : 'axo',
         detail: Object.hasOwn(CONNECTION_DETAIL_TITLES, saved.detail) ? saved.detail : '',
         document: DRAWING_DOCUMENTS.includes(saved.document) ? saved.document : '',
+        lobbyDirection: saved.lobbyDirection === 'compass' ? 'compass' : 'centre',
+        lobbyAzimuth:
+          Number.isInteger(saved.lobbyAzimuth) && compassPoints[saved.lobbyAzimuth] ? saved.lobbyAzimuth : 5,
+        lobbyRender: ['colour', 'hybrid', 'linework'].includes(saved.lobbyRender) ? saved.lobbyRender : 'colour',
+        lobbyViews: ['axo', 'plan'].includes(saved.lobbyViews) ? saved.lobbyViews : 'both',
+        lobbyContext: saved.lobbyContext !== false,
         elevation: Number.isFinite(saved.elevation)
           ? mod(saved.elevation, 360)
           : saved.view === 'side'
@@ -226,20 +238,46 @@ const openDrawingWorkspace = (() => {
     // Plan north is world +Z. Moving clockwise on the compass follows the plan axes.
     return { az: Math.PI / 2 + (settings.azimuth * Math.PI) / 4, el: 0.57 };
   }
-  const compass = $('drawingCompass');
-  for (const index of [7, 0, 1, 6, 2, 5, 4, 3]) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = compassPoints[index];
-    button.setAttribute('aria-label', 'View from ' + compassNames[index]);
-    button.dataset.azimuth = index;
-    button.onclick = () => {
-      if (settings.view === 'elevation') settings.elevation = index * 45;
-      else settings.azimuth = index;
-      syncCompass();
-      queueDrawing();
-    };
-    compass.append(button);
+  const compass = $('drawingCompass'),
+    lobbyCompass = $('drawingLobbyCompass');
+  function addCompassButtons(group, label, select) {
+    for (const index of [7, 0, 1, 6, 2, 5, 4, 3]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = compassPoints[index];
+      button.setAttribute('aria-label', label + compassNames[index]);
+      button.dataset.azimuth = index;
+      button.onclick = () => {
+        select(index);
+        queueDrawing();
+      };
+      group.append(button);
+    }
+  }
+  addCompassButtons(compass, 'View from ', (index) => {
+    if (settings.view === 'elevation') settings.elevation = index * 45;
+    else settings.azimuth = index;
+    syncCompass();
+  });
+  addCompassButtons(lobbyCompass, 'Lobby view from ', (index) => {
+    settings.lobbyAzimuth = index;
+    syncLobbyControls();
+  });
+  function syncLobbyControls() {
+    $('lobbyDrawingControls').hidden = settings.document !== 'lobbies';
+    const showCompass = settings.lobbyDirection === 'compass';
+    $('drawingLobbyDirection').value = settings.lobbyDirection;
+    $('drawingLobbyRender').value = settings.lobbyRender;
+    $('drawingLobbyViews').value = settings.lobbyViews;
+    $('drawingLobbyContext').checked = settings.lobbyContext;
+    $('drawingLobbyPaper').value = settings.paper;
+    $('drawingLobbyOrientation').value = settings.orientation;
+    lobbyCompass.hidden = $('drawingLobbyCompassNote').hidden = !showCompass;
+    for (const button of lobbyCompass.children)
+      button.setAttribute(
+        'aria-pressed',
+        String(Number(button.dataset.azimuth) === settings.lobbyAzimuth)
+      );
   }
   function syncCompass() {
     const elevation = !settings.detail && settings.view === 'elevation';
@@ -441,13 +479,18 @@ const openDrawingWorkspace = (() => {
     return { width, height, margin, drawingHeight, denominator, populated: true };
   }
 
-  function drawingNorthArrow({ right, up }, x, y, ink) {
-    // The model's north is +Z. Project it onto the sheet so the arrow follows orbit and cut views.
-    const projected = Math.hypot(right[2], up[2]),
-      northX = right[2] / projected,
-      northY = -up[2] / projected,
-      angle = (Math.atan2(northX, -northY) * 180) / Math.PI;
-    const arrow = svgElement('g', { 'aria-label': 'North arrow', 'data-north-arrow': '' });
+  function drawingDirectionArrow({ right, up }, x, y, ink, south) {
+    // General drawings point to world north. Lobby sheets point back to the building centre.
+    const direction = south ?? [0, 0, 1],
+      across = dot(direction, right),
+      rise = dot(direction, up),
+      projected = Math.hypot(across, rise),
+      directionX = across / projected,
+      directionY = -rise / projected,
+      angle = (Math.atan2(directionX, -directionY) * 180) / Math.PI;
+    const arrow = svgElement('g', south
+      ? { 'aria-label': 'Local south toward the building centre', 'data-local-south-arrow': '' }
+      : { 'aria-label': 'North arrow', 'data-north-arrow': '' });
     const ring = svgElement('g', { transform: `translate(${x} ${y}) rotate(${angle})` });
     // A narrow ring and three dock tabs echo the massing. The fourth tab points north.
     ring.append(
@@ -460,15 +503,15 @@ const openDrawingWorkspace = (() => {
       }),
       svgElement('path', { d: 'M0 -13l3.2 8.5L0 -6.5l-3.2 2Z', fill: ink })
     );
-    const north = svgElement('text', {
-      x: x + northX * 18,
-      y: y + northY * 18 + 2.7,
+    const bearing = svgElement('text', {
+      x: x + directionX * 18,
+      y: y + directionY * 18 + 2.7,
       'text-anchor': 'middle',
       'font-size': 8,
       'font-weight': 650
     });
-    north.textContent = 'N';
-    arrow.append(ring, north);
+    bearing.textContent = south ? 'S' : 'N';
+    arrow.append(ring, bearing);
     return arrow;
   }
 
@@ -511,10 +554,10 @@ const openDrawingWorkspace = (() => {
     });
     ratio.textContent = `1:${denominator}`;
     indicator.replaceChildren(bar, ticks, startLabel, endLabel, ratio);
-    if (mapBasis) indicator.prepend(drawingNorthArrow(mapBasis, end - 178, baseline - 4, ink));
+    if (mapBasis) indicator.prepend(drawingDirectionArrow(mapBasis, end - 178, baseline - 4, ink));
   }
 
-  function renderPens(target, frame, identified = false) {
+  function renderPens(target, frame, identified = false, colourOnly = false) {
     const { pens, ink, perspective, construction, heaviest, denominator } = frame;
     const strokes = perspective
       ? [
@@ -529,6 +572,10 @@ const openDrawingWorkspace = (() => {
       colorLayer.append(
         svgElement('image', { width: frame.width, height: frame.height, href: frame.wash })
       );
+    if (colourOnly) {
+      target.replaceChildren(colorLayer);
+      return;
+    }
     const textureLayer = markSvgLayer(svgElement('g', {}), 'Surface texture');
     const layout = markSvgLayer(svgElement('g', {}), 'Construction lines');
     const guide = markSvgLayer(svgElement('g', {}), 'Pencil marks');
@@ -622,7 +669,7 @@ const openDrawingWorkspace = (() => {
   }
 
   // Each view uses the same physical drawing units. The tile bounds crop its own wash and strokes.
-  function floorView(frame, label, x = 0, y = 0, print = false) {
+  function floorView(frame, label, x = 0, y = 0, print = false, { colourOnly, mapBasis = frame.basis } = {}) {
     const { width, height, margin, drawingHeight, denominator } = frame;
     const tile = svgElement('svg', { x, y, width, height, viewBox: `0 0 ${width} ${height}` });
     const area = svgElement('svg', {
@@ -633,7 +680,7 @@ const openDrawingWorkspace = (() => {
       viewBox: `${margin} ${margin} ${width - margin * 2} ${drawingHeight}`,
       overflow: 'hidden'
     });
-    renderPens(area, frame);
+    renderPens(area, frame, false, colourOnly);
     const ink = sheetInk(frame.pens.paper),
       baseline = height - (print ? margin : Math.min(12, margin));
     const name = svgElement('text', {
@@ -652,7 +699,7 @@ const openDrawingWorkspace = (() => {
         'font-family': 'system-ui, sans-serif',
         'font-size': 11
       });
-      drawScaleIndicator(indicator, denominator, width - margin, baseline, ink, frame.basis);
+      drawScaleIndicator(indicator, denominator, width - margin, baseline, ink, mapBasis);
       tile.append(indicator);
     }
     return tile;
@@ -723,15 +770,155 @@ const openDrawingWorkspace = (() => {
     };
   }
 
+  function renderLobbyPages(paper) {
+    const hubs = sourceModel.circulation.hubs
+      .filter((hub) => hub.layout)
+      .sort((a, b) => a.f - b.f || a.start - b.start);
+    const views = settings.lobbyViews === 'both' ? ['axo', 'plan'] : [settings.lobbyViews],
+      direction = settings.lobbyDirection === 'centre' ? 4 : settings.lobbyAzimuth,
+      caption = compassPoints[direction],
+      colourOnly = settings.lobbyRender === 'colour',
+      hybrid = settings.lobbyRender !== 'linework';
+    return hubs.flatMap((hub, index) => {
+      const { geometry, labels } = lobbyDrawingGeometry(
+          sourceModel,
+          hub,
+          state.seed,
+          settings.lobbyContext
+        ),
+        origin = hub.layout.origin,
+        // The axis to the building centre defines south for this lobby.
+        heading = origin ? Math.atan2(origin[1], origin[0]) : hub.layout.heading,
+        az = heading + (direction * Math.PI) / 4,
+        south = [-Math.cos(heading), 0, -Math.sin(heading)],
+        level = studyFloorName(hub.f, sourceModel),
+        names = hub.pair.map((program) => P[program].name).join(' + ');
+      return views.map((view) => {
+        const isPlan = view === 'plan',
+          projection = isPlan
+            ? `Plan · Local ${caption} at bottom`
+            : `Axonometric · From local ${caption}`,
+          title = `Lobby ${index + 1} · ${names}`,
+          label = `${level} · ${projection}`,
+          frame = renderDrawing(
+            geometry,
+            { az, el: isPlan ? Math.PI / 2 : 0.7 },
+            [],
+            paper,
+            'auto',
+            false,
+            centeredPlacement(),
+            hybrid,
+            settings.pens,
+            { washLightness: colourOnly ? 0.08 : 0.49 }
+          ),
+          tile = floorView(frame, title, 0, 0, true, { colourOnly, mapBasis: null }),
+          [background, area, name, indicator] = tile.children;
+        tile.classList.add('drawing-sheet');
+        tile.setAttribute('width', paper.width + 'in');
+        tile.setAttribute('height', paper.height + 'in');
+        tile.setAttribute('role', 'img');
+        tile.setAttribute('aria-label', `${title} · ${label}`);
+        tile.dataset.lobbyView = view;
+        tile.dataset.lobbyDirection = caption;
+        tile.dataset.lobbyAzimuth = az;
+        const { width, height, margin, drawingHeight, denominator, exportFills } = frame,
+          ink = sheetInk(frame.pens.paper),
+          header = svgElement('text', {
+            x: margin,
+            y: margin - 9,
+            fill: ink,
+            'font-family': 'system-ui, sans-serif',
+            'font-size': 11
+          });
+        indicator.prepend(
+          drawingDirectionArrow(frame.basis, width - margin - 178, height - margin - 4, ink, south)
+        );
+        header.textContent = label;
+        const roomLabels = markSvgLayer(
+          svgElement('g', {
+            fill: '#283e34',
+            stroke: '#fffefa',
+            'stroke-width': 2,
+            'paint-order': 'stroke',
+            'text-anchor': 'middle',
+            'font-family': 'system-ui, sans-serif',
+            'font-size': 10,
+            'font-weight': 650
+          }),
+          'Programme labels'
+        );
+        for (const { point, label } of labels) {
+          const x = frame.originX + dot(point, frame.basis.right) * frame.scale,
+            y = frame.originY - dot(point, frame.basis.up) * frame.scale,
+            depth = frame.depth[Math.floor(y) * width + Math.floor(x)];
+          // Suppress a label if the other side of the lounge hides that patch of floor in an axo.
+          if (depth - dot(point, frame.basis.back) > 0.08) continue;
+          const note = svgElement('text', { x, y });
+          note.textContent = label;
+          roomLabels.append(note);
+        }
+        if (roomLabels.hasChildNodes()) area.append(roomLabels);
+        tile.append(header);
+        const footerGroup = markSvgLayer(svgElement('g', {}), 'Title and scale');
+        footerGroup.append(name.cloneNode(true), indicator.cloneNode(true), header.cloneNode(true));
+        const crop = svgElement('rect', {
+          x: margin,
+          y: margin,
+          width: width - 2 * margin,
+          height: drawingHeight
+        });
+        const filename = () =>
+          `poly-nation-${state.seed}-lobby-${index + 1}-${view}-${caption.toLowerCase()}-1-${denominator}.svg`;
+        function vector() {
+          return vectorPage(
+            paper,
+            { width, height, denominator },
+            title + ' · ' + label,
+            background.getAttribute('fill'),
+            footerGroup,
+            [{ source: area, crop, makeFills: exportFills }]
+          );
+        }
+        const preview = document.createElement('figure'),
+          button = document.createElement('button');
+        preview.className = 'lobby-axo-page';
+        button.type = 'button';
+        button.textContent = 'Export SVG';
+        button.setAttribute(
+          'aria-label',
+          `Export lobby ${index + 1} ${isPlan ? 'plan' : 'axonometric'} as SVG`
+        );
+        button.onclick = () =>
+          downloadBlob(
+            new XMLSerializer().serializeToString(vector()),
+            'image/svg+xml',
+            filename()
+          );
+        preview.append(button, tile);
+        return { preview, vector };
+      });
+    });
+  }
+
   function render() {
     timer = 0;
     if (!sourceModel || panel.hidden) return;
     const paper = paperDimensions();
     try {
       if (settings.document) {
-        $('documentPages').replaceChildren(
-          ...drawingSetPages(settings.document, sourceModel, sourceAssignments)
-        );
+        lobbyPages = settings.document === 'lobbies' ? renderLobbyPages(paper) : [];
+        const pages = settings.document === 'lobbies'
+          ? lobbyPages.map(({ preview }) => preview)
+          : drawingSetPages(settings.document, sourceModel, sourceAssignments);
+        if (!pages.length) {
+          const message = document.createElement('p');
+          message.className = 'hint';
+          message.textContent = 'No shared lobbies in this design. Set an Attract relationship in Massing to generate one where space allows.';
+          pages.push(message);
+        }
+        $('documentPages').replaceChildren(...pages);
+        $('printDocument').disabled = settings.document === 'lobbies' && !lobbyPages.length;
         $('drawingDocumentStage').scrollTop = 0;
         return;
       }
@@ -838,6 +1025,11 @@ const openDrawingWorkspace = (() => {
     } catch (error) {
       console.error('Drawing render failed', error);
       status.textContent = 'The drawing could not be rendered.';
+      if (settings.document) {
+        lobbyPages = [];
+        $('printDocument').disabled = true;
+        $('documentPages').textContent = 'The document could not be rendered.';
+      }
     }
   }
   function showStatus() {
@@ -858,6 +1050,7 @@ const openDrawingWorkspace = (() => {
   function queueDrawing() {
     saveDrawing();
     exportButton.disabled = printButton.disabled = true;
+    $('printDocument').disabled = true;
     $('printFloorSet').disabled = true;
     clearTimeout(timer);
     timer = setTimeout(render, 45);
@@ -1028,6 +1221,7 @@ const openDrawingWorkspace = (() => {
     $('drawingView').value = settings.view;
     const documentMode = Boolean(settings.document);
     $('drawingDocument').value = settings.document;
+    syncLobbyControls();
     $('singleDrawingControls').hidden = $('drawingMainStage').hidden = documentMode;
     $('drawingDocumentStage').hidden = !documentMode;
     const detail = Boolean(settings.detail);
@@ -1146,6 +1340,23 @@ const openDrawingWorkspace = (() => {
     settings.document = event.target.value;
     stopPlacing();
     syncSettings();
+    queueDrawing();
+  };
+  for (const [id, key] of [
+    ['drawingLobbyDirection', 'lobbyDirection'],
+    ['drawingLobbyViews', 'lobbyViews'],
+    ['drawingLobbyRender', 'lobbyRender'],
+    ['drawingLobbyPaper', 'paper'],
+    ['drawingLobbyOrientation', 'orientation']
+  ]) {
+    $(id).onchange = (event) => {
+      settings[key] = event.target.value;
+      syncLobbyControls();
+      queueDrawing();
+    };
+  }
+  $('drawingLobbyContext').onchange = (event) => {
+    settings.lobbyContext = event.target.checked;
     queueDrawing();
   };
   $('drawingPlanSheet').onchange = (event) => {
@@ -1465,20 +1676,23 @@ const openDrawingWorkspace = (() => {
     target.append(item.cloneNode(true));
   }
 
-  function vectorDrawingSheet() {
-    const { width, height } = paperDimensions();
+  function vectorPage(paper, frame, caption, paperColour, pageFooter, regions, sectionLens) {
     const root = svgElement('svg', {
-      width: width + 'in',
-      height: height + 'in',
-      viewBox: sheet.getAttribute('viewBox')
+      width: paper.width + 'in',
+      height: paper.height + 'in',
+      viewBox: `0 0 ${frame.width} ${frame.height}`
     });
-    if (sheet.dataset.sectionLens) root.dataset.sectionLens = sheet.dataset.sectionLens;
+    if (sectionLens) root.dataset.sectionLens = sectionLens;
     const title = svgElement('title', {}),
       defs = svgElement('defs', {}),
+      background = markSvgLayer(svgElement('g', {}), 'Paper'),
       layers = new Map();
-    title.textContent = `${footerTitle.textContent} · 1:${rendered.denominator}`;
+    title.textContent = `${caption} · 1:${frame.denominator}`;
     root.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:inkscape', layerNS);
-    root.append(title, defs, paperLayer.cloneNode(true));
+    background.append(
+      svgElement('rect', { width: frame.width, height: frame.height, fill: paperColour })
+    );
+    root.append(title, defs, background);
 
     // Expose the paper, each pen and the other treatments at the root. Each group carries its own
     // crop so Illustrator can lift it into a layer without changing its appearance or position.
@@ -1506,25 +1720,16 @@ const openDrawingWorkspace = (() => {
     }
 
     const labels = markSvgLayer(svgElement('g', {}), 'Floor labels');
-    if (allPlans()) {
-      // The preview uses nested SVG viewports. Reapply their crops in each exported pen layer.
-      [...floorTiles.children].forEach((tile, i) => {
-        const [area, label] = tile.children,
-          x = tile.getAttribute('x'),
-          y = tile.getAttribute('y'),
-          crop = svgElement('rect', {});
-        for (const attribute of ['x', 'y', 'width', 'height'])
-          crop.setAttribute(attribute, area.getAttribute(attribute));
-        const placement = `translate(${x} ${y})`;
-        addRegion(area, crop, placement, i, rendered.regionFills[i]);
-        const caption = label.cloneNode(true);
-        caption.setAttribute('transform', placement);
-        labels.append(caption);
-      });
-    } else addRegion(sheetArtwork, clipRect.cloneNode(true), null, 0, rendered.exportFills);
+    for (const [i, { source, crop, placement, makeFills, label }] of regions.entries()) {
+      addRegion(source, crop.cloneNode(true), placement, i, makeFills);
+      if (!label) continue;
+      const text = label.cloneNode(true);
+      text.setAttribute('transform', placement);
+      labels.append(text);
+    }
 
     root.append(...[...layers.values(), labels].filter((layer) => layer.hasChildNodes()));
-    root.append(footer.cloneNode(true));
+    root.append(pageFooter.cloneNode(true));
     // The ASCII IDs survive import in editors that ignore the readable Inkscape layer labels.
     [...root.children]
       .filter((node) => node.localName === 'g')
@@ -1534,6 +1739,34 @@ const openDrawingWorkspace = (() => {
         layer.id = `PN_${order}_${name}`;
       });
     return root;
+  }
+
+  function vectorDrawingSheet() {
+    // The tiled plan preview uses nested viewports. Reapply their crops within each exported pen.
+    const regions = allPlans()
+      ? [...floorTiles.children].map((tile, i) => {
+          const [area, label] = tile.children,
+            crop = svgElement('rect', {});
+          for (const attribute of ['x', 'y', 'width', 'height'])
+            crop.setAttribute(attribute, area.getAttribute(attribute));
+          return {
+            source: area,
+            crop,
+            placement: `translate(${tile.getAttribute('x')} ${tile.getAttribute('y')})`,
+            makeFills: rendered.regionFills[i],
+            label
+          };
+        })
+      : [{ source: sheetArtwork, crop: clipRect, makeFills: rendered.exportFills }];
+    return vectorPage(
+      paperDimensions(),
+      rendered,
+      footerTitle.textContent,
+      settings.pens.paper,
+      footer,
+      regions,
+      sheet.dataset.sectionLens
+    );
   }
 
   exportButton.onclick = () => {
@@ -1555,9 +1788,36 @@ const openDrawingWorkspace = (() => {
     pageStyle.textContent = `@page { size: ${width}in ${height}in; margin: 0; }`;
     window.print();
   };
-  $('printDocument').onclick = () => {
+  $('printDocument').onclick = async () => {
     const pages = $('documentPages');
     if (!settings.document || !pages.childElementCount) return;
+    if (settings.document === 'lobbies') {
+      const button = $('printDocument'),
+        prepared = lobbyPages,
+        { width, height } = paperDimensions();
+      button.disabled = true;
+      button.textContent = 'Preparing lobby sheets…';
+      try {
+        const sheets = [];
+        for (const { vector } of prepared) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          if (panel.hidden || timer || lobbyPages !== prepared) return;
+          sheets.push(vector());
+        }
+        if (!sheets.length) return;
+        // Print the editable fills at the exact dimensions used to choose the scale.
+        $('floorPrintPages').replaceChildren(...sheets);
+        document.body.classList.add('printing-floor-set');
+        pageStyle.textContent = `@page { size: ${width}in ${height}in; margin: 0; }`;
+        window.print();
+      } catch (error) {
+        console.error('Lobby set print failed', error);
+      } finally {
+        button.disabled = Boolean(timer) || (settings.document === 'lobbies' && !lobbyPages.length);
+        button.textContent = 'Print / save PDF';
+      }
+      return;
+    }
     $('documentPrintPages').replaceChildren(
       ...[...pages.children].map((page) => page.cloneNode(true))
     );

@@ -220,10 +220,10 @@ function trimDrawingFace(triangle, clips) {
   return polygon;
 }
 
-function drawingFaceColor(face, sun) {
+function drawingFaceColor(face, sun, washLightness) {
   const shade = 0.82 + 0.18 * Math.abs(dot(face.normal, sun));
   // Keep the wash light enough for the architectural strokes and section cuts to read over it.
-  return face.color.map((channel) => (0.49 + 0.51 * channel * shade) * 255);
+  return face.color.map((channel) => (washLightness + (1 - washLightness) * channel * shade) * 255);
 }
 
 function rasterDrawingPolygon(depth, width, height, polygon, pixels, color, outline, body, gradient) {
@@ -344,7 +344,8 @@ function drawingExportFills(
   width,
   height,
   sun,
-  projectView
+  projectView,
+  washLightness
 ) {
   const resolution = 2,
     columns = width * resolution,
@@ -361,7 +362,7 @@ function drawingExportFills(
       const atResolution = polygon
         .map(projectView)
         .map(([x, y, z]) => [x * resolution, y * resolution, z]);
-      rasterDrawingPolygon(depth, columns, rows, atResolution, pixels, drawingFaceColor(face, sun));
+      rasterDrawingPolygon(depth, columns, rows, atResolution, pixels, drawingFaceColor(face, sun, washLightness));
     }
   }
   return traceDrawingFills(pixels, columns, rows, resolution);
@@ -649,7 +650,7 @@ function renderDrawing(
   placement,
   hybrid,
   pens,
-  { region, sectionLens, floorSet, focus, cutFill } = {}
+  { region, sectionLens, floorSet, focus, cutFill, washLightness = 0.49 } = {}
 ) {
   const width = region?.width ?? paper.width * DRAWING_PIXELS_PER_INCH,
     height = region?.height ?? paper.height * DRAWING_PIXELS_PER_INCH,
@@ -745,7 +746,7 @@ function renderDrawing(
     const polygon = trimDrawingFace(triangle, clips);
     if (polygon.length < 3) continue;
     if (!face.glazing || !seeThrough) {
-      const color = paint && drawingFaceColor(face, sun);
+      const color = paint && drawingFaceColor(face, sun, washLightness);
       rasterDrawingPolygon(
         depth,
         width,
@@ -1042,7 +1043,8 @@ function renderDrawing(
             width,
             height,
             sun,
-            projectView
+            projectView,
+            washLightness
           )
       : null,
     width,
