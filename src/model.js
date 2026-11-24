@@ -886,7 +886,7 @@ function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0) {
   return { rooms, layers, bandN, circulation };
 }
 // Use the same furniture and walking dimensions for placement, drawing and navigation.
-function sharedLobbyFit(a, b, corridorWidth) {
+function sharedLobbyFit(a, b, corridorWidth, maxTableRadius = 1.18) {
   const passage = 0.8 * corridorWidth,
     depth = a.R - a.r,
     couchDepth = 0.88,
@@ -899,7 +899,7 @@ function sharedLobbyFit(a, b, corridorWidth) {
     availableHalfLength =
       radius * Math.tan(Math.min(1, (leftAvailable + rightAvailable) / (2 * scale))),
     tableRadius = Math.min(
-      1.18,
+      maxTableRadius,
       (depth - passage) / 2 - couchDepth - shelfDepth - tableGap - 0.18,
       availableHalfLength - couchDepth - shelfDepth - tableGap - 1.22
     );
@@ -1087,13 +1087,6 @@ function planLobbyShoulder(regions, room, fit, side, inside, lobbyId) {
     movedOuter = inside ? room.R - fit.passage : high,
     area = ((movedOuter ** 2 - movedInner ** 2) * (movedEnd - movedStart)) / 2;
   if (movedEnd <= movedStart || area < state.minRoomArea - 1e-7) return null;
-  // Reserve enough depth for the programme threshold before fitting the rotated layout.
-  const skew = Math.cos(doorwayAngle - fit.heading);
-  if (
-    (fit.radius - fit.passage / 2) / skew < movedInner + 0.04 ||
-    (fit.radius + fit.passage / 2) / skew > movedOuter - 0.04
-  )
-    return null;
 
   const landing = kind + 'Landing',
     shoulder = kind + 'Shoulder',
@@ -1204,12 +1197,7 @@ function placeLobbyApproaches(layout, a, b, fit, lobbyId, slotN, blocked, pinned
 function formSharedLobbies(layout, slotN, blocked, blockedLimit) {
   const { circulation, rooms } = layout;
   const hubs = [],
-    pinned = new Set(
-      Object.keys(state.modulePrograms).map((key) => {
-        const [columns, floor, dock] = key.split(':').map(Number);
-        return floor * slotN + (Math.round((dock / columns) * slotN) % slotN);
-      })
-    );
+    pinned = new Set(pinnedDocks(slotN).values());
   for (const layer of layout.layers)
     for (const list of layer) {
       const pairs = [];
@@ -1238,17 +1226,15 @@ function formSharedLobbies(layout, slotN, blocked, blockedLimit) {
         const boundary = a.end,
           scale = (a.R ** 2 - a.r ** 2) / 2,
           id = hubs.length,
-          plan = placeLobbyApproaches(
-            layout,
-            a,
-            b,
-            initialFit,
-            id,
-            slotN,
-            blocked,
-            pinned,
-            blockedLimit - blocked.size
-          );
+          dockBudget = blockedLimit - blocked.size;
+        // Try a shorter footprint before giving up on an otherwise suitable room pair.
+        // The compact option keeps the full aisle and uses the existing minimum table size.
+        let plan = null;
+        for (const fit of [initialFit, sharedLobbyFit(a, b, circulation.width, 0.9)]) {
+          if (!fit) continue;
+          plan = placeLobbyApproaches(layout, a, b, fit, id, slotN, blocked, pinned, dockBudget);
+          if (plan) break;
+        }
         if (!plan) continue;
         const { approaches, docks, fit, aligned } = plan;
         const hubInner = a.r,
@@ -1327,6 +1313,16 @@ function roomAt(rooms, angle) {
   }
   return UNUSED;
 }
+
+function pinnedDocks(slotN) {
+  return new Map(
+    Object.keys(state.modulePrograms).map((key) => {
+      const [columns, floor, dock] = key.split(':').map(Number);
+      return [key, floor * slotN + (Math.round((dock / columns) * slotN) % slotN)];
+    })
+  );
+}
+
 // Distribute adaptive uses across only the vacant, unblocked docks.
 function assignVacancies(slots, retailCount) {
   const vacant = slots.filter((s) => !s.blocked && s.p === EMPTY),
@@ -1855,7 +1851,19 @@ function autoGeometry(coreTotal, rinseCore) {
 function derive(dockVariant = state.dockVariant) {
   const floorHeight = floorPitch(state.slabThickness),
     sum = (a) => a.reduce((x, y) => x + y, 0),
-    retailWant = (n) => apportion(state.vacancy, Math.max(0, n))[3];
+    retailWant = (n) => apportion(state.vacancy, Math.max(0, n))[3],
+    hasRepel = Object.values(state.relations).includes('repel'),
+    requestedRooms = Object.keys(state.roomPrograms).filter((key) =>
+      key.startsWith(String(state.seed) + ':')
+    ).length;
+  const roomConflicts = ({ rooms }) => (hasRepel ? repellingRoomContacts(rooms) : 0);
+  const roomEdits = ({ rooms }) =>
+    rooms
+      .filter((room) => Object.hasOwn(state.roomPrograms, room.editKey))
+      .map((room) => room.editKey);
+  const preservesEdits = (nextRooms, nextBlocked, previousRooms, previousBlocked) =>
+    previousRooms.every((key) => nextRooms.includes(key)) &&
+    nextBlocked.every((key) => previousBlocked.includes(key));
   let manualClamped = false,
     manual = null;
   if (!state.autoCore) {
@@ -1872,7 +1880,7 @@ function derive(dockVariant = state.dockVariant) {
     }
     manual = { R, r, width };
   }
-  function candidate(n, k, full = false) {
+  function candidate(n, k, searchLobbies = false) {
     const levels = Math.min(2, state.floors),
       angle = -0.84;
     let l = state.lobby,
@@ -1976,11 +1984,7 @@ function derive(dockVariant = state.dockVariant) {
         attempt
       );
     let layout = pack(0);
-    const hasRepel = Object.values(state.relations).includes('repel');
     const activeClusters = PROGRAMS.map((_, id) => id).filter((id) => state.cluster[id]);
-    const requestedRooms = Object.keys(state.roomPrograms).filter((key) =>
-      key.startsWith(String(state.seed) + ':')
-    ).length;
     if (hasRepel || activeClusters.length || requestedRooms) {
       // Compare seeded alternatives when the first floor quotas leave conflicts or
       // scatter a selected program. Penalize missing area as well as angular drift.
@@ -1996,10 +2000,8 @@ function derive(dockVariant = state.dockVariant) {
           );
           return cost + (2 * missing + drift) / Math.max(1, ring[id]);
         }, 0);
-      let conflicts = hasRepel ? repellingRoomContacts(layout.rooms) : 0;
-      const matchedRooms = (candidate) =>
-        candidate.rooms.filter((room) => Object.hasOwn(state.roomPrograms, room.editKey)).length;
-      let matches = matchedRooms(layout);
+      let conflicts = roomConflicts(layout);
+      let matches = roomEdits(layout).length;
       let cost = alignment(layout.rooms);
       const clusterAttempts = Math.ceil(3 * clusterStrength());
       for (
@@ -2011,9 +2013,9 @@ function derive(dockVariant = state.dockVariant) {
         attempt++
       ) {
         const alternate = pack(attempt);
-        const count = hasRepel ? repellingRoomContacts(alternate.rooms) : 0;
+        const count = roomConflicts(alternate);
         const alternateCost = alignment(alternate.rooms);
-        const alternateMatches = matchedRooms(alternate);
+        const alternateMatches = roomEdits(alternate).length;
         if (
           alternateMatches > matches ||
           (alternateMatches === matches &&
@@ -2026,19 +2028,53 @@ function derive(dockVariant = state.dockVariant) {
         }
       }
     }
-    circulation = layout.circulation;
-    const feature = designRideAndSlide(layout, R, r, slotN, lobby, floorHeight);
-    // The boarding platform completes the cone's inner edge all the way to the mast.
-    const ride = feature.ride;
-    ride.roofPitch = designSwingRoof(ride, r, roofPlan.y);
-    ride.roofLevel = ride.roofPitch.canopyRidgeY - 0.16;
-    connectSlide(layout, feature, R, slotN);
-    const blocked = new Set([
+    function fitRoutes(roomPlan) {
+      const feature = designRideAndSlide(roomPlan, R, r, slotN, lobby, floorHeight);
+      // The boarding platform completes the cone's inner edge all the way to the mast.
+      const ride = feature.ride;
+      ride.roofPitch = designSwingRoof(ride, r, roofPlan.y);
+      ride.roofLevel = ride.roofPitch.canopyRidgeY - 0.16;
+      connectSlide(roomPlan, feature, R, slotN);
+      const blocked = new Set([
         ...feature.blocked,
         ...lobby.blocked,
         ...(feature.climbing?.blocked || [])
       ]);
-    formSharedLobbies(layout, slotN, blocked, rawMax - count - k);
+      formSharedLobbies(roomPlan, slotN, blocked, rawMax - count - k);
+      return { feature, blocked };
+    }
+    let { feature, blocked } = fitRoutes(layout);
+    const pinned = pinnedDocks(slotN),
+      blockedPins = (set) => [...pinned].filter(([, id]) => set.has(id)).map(([key]) => key);
+    if (searchLobbies && !activeClusters.length) {
+      // Compare packings after fitting the slide and through routes, when the lobby
+      // count is known. Protect hand-placed rooms, docking and existing slide access.
+      let conflicts = roomConflicts(layout),
+        edits = roomEdits(layout),
+        blockedEdits = blockedPins(blocked);
+      for (let attempt = 6; attempt <= 10; attempt++) {
+        const alternate = pack(attempt);
+        const alternateEdits = roomEdits(alternate);
+        if (alternateEdits.length < edits.length) continue;
+        const routes = fitRoutes(alternate);
+        const alternateBlocked = blockedPins(routes.blocked);
+        if (
+          count + k > rawMax - routes.blocked.size ||
+          !preservesEdits(alternateEdits, alternateBlocked, edits, blockedEdits) ||
+          (feature.slide && !routes.feature.slide) ||
+          (alternateEdits.length === edits.length &&
+            alternate.circulation.hubs.length <= layout.circulation.hubs.length)
+        ) continue;
+        const alternateConflicts = roomConflicts(alternate);
+        if (alternateConflicts > conflicts) continue;
+        layout = alternate;
+        ({ feature, blocked } = routes);
+        conflicts = alternateConflicts;
+        edits = alternateEdits;
+        blockedEdits = alternateBlocked;
+      }
+    }
+    circulation = layout.circulation;
     const actualRing = P.map((p, i) =>
         sum(layout.rooms.filter((q) => q.id === i).map((q) => q.area))
       ),
@@ -2064,6 +2100,8 @@ function derive(dockVariant = state.dockVariant) {
       required,
       goals: adjusted,
       k,
+      roomEdits: roomEdits(layout),
+      blockedPins: blockedPins(blocked),
       lobby,
       circulation,
       roofPlan
@@ -2074,7 +2112,7 @@ function derive(dockVariant = state.dockVariant) {
   }
   let best = null;
   for (let n = Math.min(state.modules, Math.floor(state.areaCap / MODULE.area)); n >= 0; n--) {
-    best = candidate(n, 0, true);
+    best = candidate(n, 0);
     if (best) break;
   }
   if (!best) throw Error('No feasible core geometry');
@@ -2090,30 +2128,47 @@ function derive(dockVariant = state.dockVariant) {
       )
     );
     for (let k = upper; k > 0; k--) {
-      const c = candidate(base.count, k, true);
+      const c = candidate(base.count, k);
       if (
         c &&
         c.count === base.count &&
         k <= retailWant(c.max - c.count) &&
-        (!base.circulation.hubs.length || c.circulation.hubs.length)
+        c.circulation.hubs.length >= base.circulation.hubs.length
       )
         return c;
     }
     return base;
   }
   best = addRetail(best);
-  // Try one fewer requested module when that can make room for an explicit Attract lobby.
-  // Keep the higher count if the extra floor area does not actually produce a through route.
-  if (
-    !best.circulation.hubs.length &&
-    Object.values(state.relations).includes('attract') &&
-    best.count > Object.keys(state.modulePrograms).length
-  ) {
-    const alternative = candidate(best.count - 1, 0, true);
-    if (alternative) {
-      const integrated = addRetail(alternative);
-      if (integrated.count === best.count - 1 && integrated.circulation.hubs.length)
-        best = integrated;
+  if (Object.values(state.relations).includes('attract')) {
+    const manualDocks = Object.keys(state.modulePrograms).length,
+      originalCount = best.count;
+    function improves(alternative) {
+      return (
+        alternative &&
+        alternative.k <= retailWant(alternative.max - alternative.count) &&
+        preservesEdits(
+          alternative.roomEdits,
+          alternative.blockedPins,
+          best.roomEdits,
+          best.blockedPins
+        ) &&
+        (!best.feature.slide || alternative.feature.slide) &&
+        (alternative.roomEdits.length > best.roomEdits.length ||
+          alternative.circulation.hubs.length > best.circulation.hubs.length) &&
+        roomConflicts(alternative) <= roomConflicts(best)
+      );
+    }
+    const alternatePacking = candidate(originalCount, best.k, true);
+    if (alternatePacking?.count === originalCount && improves(alternatePacking))
+      best = alternatePacking;
+    // Give a lounge priority over a small amount of module area only when it adds a
+    // through route. Try the second only if no lobby fits or an edit still needs its room.
+    for (let fewer = 1; fewer <= 2 && originalCount - fewer >= manualDocks; fewer++) {
+      if (fewer === 2 && best.circulation.hubs.length && best.roomEdits.length === requestedRooms)
+        break;
+      const alternative = candidate(originalCount - fewer, best.k, true);
+      if (alternative?.count === originalCount - fewer && improves(alternative)) best = alternative;
     }
   }
 

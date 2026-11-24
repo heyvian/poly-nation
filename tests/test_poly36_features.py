@@ -287,6 +287,17 @@ with serve_lab(root) as url, sync_playwright() as p:
        g.edges[node.id].some(edge => edge.kind === 'atriumBridge'));
      const areas = m.core.reduce((sum, area) => sum + area, 0) +
        m.count * MODULE.area + m.lobby.area + total + m.retail + m.roofPlan.area;
+     const assembly = buildAssemblyMesh(m, {slabs: true}, 2, {assignments: {}, view: state});
+     const glazing = (prefix) => assembly.groups.flatMap((group, index) =>
+       group.layer.startsWith(prefix)
+         ? assembly.glass.slice(group.glass, assembly.groups[index+1]?.glass) : []);
+     const bridgeGlazing = glazing('Assembly_Atrium_Bridges'),
+       slabGlazing = glazing('Assembly_Atrium_Edge_Railings'),
+       galleryGlazing = glazing('Assembly_Lobby_Galleries'),
+       base = buildStorey(m, 1).base;
+     const followsLevelTwo = [...bridgeGlazing, ...slabGlazing, ...galleryGlazing]
+       .filter((_, index) => index % 10 === 1)
+       .every((y) => Math.abs(y - base) < 1e-8 || Math.abs(y - base - 1.1) < 1e-8);
      return {
        headings: bridges.map(bridge => bridge.heading),
        network: bridgeNodes.length > 0 && bridgeNodes.every(node => g.reachable.has(node.id)),
@@ -297,7 +308,9 @@ with serve_lab(root) as url, sync_playwright() as p:
          atriumGuardSpans(m, bridge.f).every(([start, end]) =>
            mod(angle, TAU) < start || mod(angle, TAU) > end))),
        railings: bridges.some(bridge => atriumGuardSpans(m, bridge.f).length > 0) &&
-         exportGeometry(m).objects.some(object => /^Atrium_Edge_Railings_L[0-9]+_Glazing$/.test(object.layer))
+         exportGeometry(m).objects.some(object => /^Atrium_Edge_Railings_L[0-9]+_Glazing$/.test(object.layer)),
+       buildRailings: followsLevelTwo && slabGlazing.length > 0 && galleryGlazing.length > 0 &&
+         bridgeGlazing.length === 120
      };
    });
    const roof = base.roofPlan;
@@ -353,7 +366,8 @@ with serve_lab(root) as url, sync_playwright() as p:
  aligned, radial = atrium['modes']
  assert len(set(aligned['headings'])) == 1 and len(radial['headings']) == 3, atrium
  assert abs(radial['headings'][1] - radial['headings'][0] - 2 * 3.141592653589793 / 3) < 1e-8, atrium
- assert all(mode['network'] and mode['area'] and mode['clear'] and mode['landings'] and mode['railings']
+ assert all(mode['network'] and mode['area'] and mode['clear'] and mode['landings'] and
+            mode['railings'] and mode['buildRailings']
             for mode in atrium['modes']), atrium
  print('lobby crossing, upper bridge layouts, conical roof access and pavilion area passed', flush=True)
  slider_label = page.locator('label[for="affinity"]')

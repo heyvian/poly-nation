@@ -52,6 +52,13 @@ with serve_lab(root) as url, sync_playwright() as p:
         const shelfIndex = mesh.groups.findIndex(group => group.layer.endsWith('Shared_Shelving'));
         const shelving = mesh.solid.slice(mesh.groups[shelfIndex].solid, mesh.groups[shelfIndex+1].solid);
         const wood = rgb('#b18a64'), shelfTops = new Set(), wallSides = new Set();
+        const hasColor = (hex) => {
+          const color = rgb(hex);
+          return shelving.some((_, i) =>
+            i % 10 === 6 && color.every((component, offset) => shelving[i+offset] === component));
+        };
+        const stocked = hasColor('#b27765') && hasColor('#a87960') &&
+          ['#bd985d', '#7f9c81', '#9a6a63', '#7b91a4'].some(hasColor);
         for (let i = 0; i < shelving.length; i += 10) {
           if (!wood.every((color, j) => shelving[i+6+j] === color)) continue;
           const x = shelving[i], z = shelving[i+2];
@@ -85,9 +92,13 @@ with serve_lab(root) as url, sync_playwright() as p:
               edge.path.slice(0, 3).every(([x, , z]) => Math.abs(acrossLobby(x, z)) < 1e-6) &&
               Math.abs(alongLobby(edge.path[2][0], edge.path[2][2])) > arch),
           wallFitted: wallSides.size === 2,
-          varyingShelves: shelfTops.size >= 4 && Math.max(...shelfTops) <= 1.29 &&
-            shelving.some((height, i) => i % 10 === 1 && Math.abs(height - 0.465) < 1e-8) &&
+          varyingShelves: shelfTops.size >= 8 &&
+            Math.max(...shelfTops) >= 1.91 && Math.max(...shelfTops) <= 2.22 &&
+            [...shelfTops].some(top => top >= 0.98 && top <= 1.29 &&
+              [1, 2, 3].every(tier => [...shelfTops].some(upper => Math.abs(upper - top - tier * 0.31) < 1e-8))) &&
+            shelving.some((height, i) => i % 10 === 1 && Math.abs(height - 0.52) < 1e-8) &&
             shelving.some((color, i) => i % 10 === 6 && color === rgb('#9e7956')[0]),
+          stocked,
           plants: foliageClear && tops.every(height => height >= 2.2 && height < 2.76) &&
             new Set(tops).size === 4 && plantedWithSeed(state.seed) === plants.join() &&
             plantedWithSeed(state.seed + 1) !== plants.join()
@@ -110,6 +121,28 @@ with serve_lab(root) as url, sync_playwright() as p:
     }''')
     assert result['recovered'] and result['checks'] and result['accounted'] and result['minimums'] and result['integrated'] and result['furnishedInBuild'], result
     assert all(all(check.values()) for check in result['checks']), result
+
+    assert page.evaluate('''() => {
+      const previous = state;
+      try {
+        // These small programmes previously missed one another or ran out of fit space.
+        return [[607, '1-3', 0], [609, '3-4', 2]].every(([seed, pair, allowance]) => {
+          state = { ...defaults(), seed, relations: { [pair]: 'attract' } };
+          const layout = derive();
+          const graph = buildNavigation(layout);
+          const hub = graph.nodes.find(node => node.cell?.pair?.join('-') === pair ||
+            node.cell?.pair?.slice().reverse().join('-') === pair);
+          const counted = layout.core.reduce((sum, area) => sum + area, 0) +
+            layout.count * MODULE.area + layout.lobby.area + layout.circulation.total +
+            layout.retail + layout.roofPlan.area;
+          return hub && graph.reachable.has(hub.id) && layout.count >= 110 - allowance &&
+            Math.abs(layout.total - counted) < 1e-5 && layout.total <= state.areaCap + 1e-6 &&
+            layout.rooms.every(room => room.area >= state.minRoomArea - 1e-6);
+        });
+      } finally {
+        state = previous;
+      }
+    }''')
 
     assert page.evaluate('''() => {
       // Overlapping triangles swap depth across their area. A centroid sort cannot depict this.

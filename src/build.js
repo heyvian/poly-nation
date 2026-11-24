@@ -582,6 +582,7 @@ function drawDockClosure({ box, line, sector, mark, ringPoint }, model, slot, { 
 function buildAssemblyMesh(model, layers, levels, preview) {
   const mesh = meshBuilder(),
     { box, quad, line, sector, ringPoint, mark } = mesh,
+    { curvedGlassGuard } = glassGuards(mesh),
     { dockGap } = BUILD_SECTION,
     floorHeight = modelFloorPitch(model),
     slabThickness = layers.slabThickness ?? model.slabThickness ?? BUILD_SECTION.slabThickness,
@@ -698,8 +699,9 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     if (layers.slabs) {
       mark('Assembly_Floor_' + (f + 1));
       for (const arc of arcs) sector(model.r, model.R, ...arc, y, slabThickness, concrete);
-      if (f === 1 && model.lobby.gallery)
-        for (const [angle, half] of openings)
+      if (f === 1 && model.lobby.gallery) {
+        mark('Assembly_Lobby_Galleries');
+        for (const [angle, half] of openings) {
           sector(
             model.lobby.gallery,
             model.R,
@@ -709,6 +711,15 @@ function buildAssemblyMesh(model, layers, levels, preview) {
             slabThickness,
             concrete
           );
+          for (const radius of [model.lobby.gallery, model.R])
+            curvedGlassGuard(radius, base, angle - half, angle + half);
+        }
+      }
+      if (f > 0) {
+        mark(`Assembly_Atrium_Edge_Railings_L${f + 1}`);
+        for (const [start, end] of atriumGuardSpans(model, f))
+          curvedGlassGuard(model.r, base, start, end);
+      }
     }
     if (layers.frame) {
       mark('Assembly_Ring_Beams_' + (f + 1));
@@ -935,24 +946,13 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   if (layers.docks && (dockStructure === 'roof-hung' || dockStructure === 'columns'))
     drawSharedDockSupports(mesh, model, dockSlots, dockStructure, slabThickness);
 
-  // Preserve the modeled spans when the assembly is shown without its finish layers.
+  // The guard glazing belongs to the walking surfaces, independent of façade visibility.
   if (layers.slabs) {
     mark('Assembly_Atrium_Bridges');
     for (const bridge of model.circulation.bridges ?? []) {
       if (bridge.f >= floors) continue;
-      const radial = Math.sqrt(model.r ** 2 - bridge.offset ** 2),
-        x = Math.cos(bridge.heading),
-        z = Math.sin(bridge.heading);
-      box(
-        x * bridge.offset,
-        bridge.f * floorHeight + 0.3,
-        z * bridge.offset,
-        bridge.width,
-        0.23,
-        2 * radial,
-        bridge.heading + Math.PI / 2,
-        concrete
-      );
+      const { base } = buildStorey(model, bridge.f, slabThickness);
+      drawAtriumBridge(mesh, model.r, bridge, base, 0.23, concrete);
     }
   }
   if (slide) {

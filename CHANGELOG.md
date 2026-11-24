@@ -1,5 +1,10 @@
 # Changelog
 
+## Shared lobby fit and atrium guards
+- Tried more room packings and a shorter lobby footprint for Attract pairs while preserving room minimums, the clear aisle, assigned docks and the area accounting.
+- Added one to three shelf levels to selected bays behind the couches and stocked the open shelves with books, games and ceramics. Thickened the sofa cushions and added throw pillows.
+- Added glazing and handrails to Build's upper atrium edges, lobby galleries and both sides of the optional atrium bridges. Bridge decks now follow the curved slab edges.
+
 ## Lobby approaches and built-in storage
 - Aligned each shared lobby's clear aisle, arches and furniture to the corridor openings in its generated floor plan.
 - Extended shelving and cupboards to the enclosing walls behind the seating, with clear approaches for the corridor and programme doors.

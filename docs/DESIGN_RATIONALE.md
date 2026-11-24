@@ -32,7 +32,7 @@ Two ground-floor lobbies face each other on an axis perpendicular to the lift co
 
 ### Radial and vertically aligned bridges
 
-Optional bridges pass close to the mast and connect the upper corridors. They let the designer compare whether shorter routes change encounter patterns. Stacking the bridges keeps the crossings on one axis. A radial arrangement changes the view and orientation of each crossing. Guards line the bridges and the open atrium edges.
+Optional bridges pass close to the mast and connect the upper corridors. They let the designer compare whether shorter routes change encounter patterns. Stacking the bridges keeps the crossings on one axis. A radial arrangement changes the view and orientation of each crossing. Glazed guards line the bridges, upper lobby galleries and open atrium edges to preserve views into the greenhouse.
 
 ### Pitched glass roof and two-storey pavilions
 
@@ -90,7 +90,7 @@ The corridor, lobbies and shortcuts shape who passes through, who stops and who 
 
 ### Two kinds of threshold
 
-Where two attracted rooms have enough space, their shared lobby becomes the route between them and carries traffic from the main corridor. The adjacent room turns towards the façade to make room for the corridor approach. The aisle, seating and planted arches rotate together to meet the corridor openings directly. On two-band floors a second approach joins the aisle at each arch. The clear passage is 80% as wide as the main corridor. The foliage varies from planter to planter and rises to about the height of the arch. Split half-round couches and tables leave the passage clear. The timber shelves and cupboards behind the couches grow to meet the enclosing walls, leaving the arches and room doors clear. The casework varies in depth and height and closes the space that could otherwise serve as a bypass. Cushioned reading seats form where a bay is deep enough, with a break in the couch back for access. Laminated timber arches mark the entrances. Separate thresholds for repelling programmes connect to the common route. The outer corridor reaches each active dock, and two opposing lift cores connect the levels.
+Where two attracted rooms have enough space, their shared lobby becomes the route between them and carries traffic from the main corridor. The adjacent room turns towards the façade to make room for the corridor approach. The aisle, seating and planted arches rotate together to meet the corridor openings directly. On two-band floors a second approach joins the aisle at each arch. The clear passage is 80% as wide as the main corridor. The foliage varies from planter to planter and rises to about the height of the arch. Split half-round couches and tables leave the passage clear. The timber shelves and cupboards behind the couches grow to meet the enclosing walls, leaving the arches and room doors clear. The casework varies in depth and height and closes the space that could otherwise serve as a bypass. Some bays gain up to three open shelves above couch height, while the bays near the arches stay low. Cushioned reading seats form where a bay is deep enough, with a break in the couch back for access. Laminated timber arches mark the entrances. Separate thresholds for repelling programmes connect to the common route. The outer corridor reaches each active dock, and two opposing lift cores connect the levels.
 
 ### A local bypass
 

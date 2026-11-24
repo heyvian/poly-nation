@@ -13,6 +13,8 @@ In Massing, turn on **Edit programming**, then select a room, module, or availab
 
 Use **Massing → Building → Atrium bridges**, under **Core geometry**, to choose **Off**, **Radial**, or **Vertically aligned**. The bridges pass close to the central mast and enter the pollination trial as walkable routes.
 
+In **Build**, glass guards at open atrium edges, upper lobby galleries and bridge sides appear with **Floor and roof slabs**. Bridge ends meet the curved slab edge and stay open at their landings.
+
 **Materials** starts from a separate copy of the current massing and saves the study locally in the browser. **Update from massing** refreshes that copy. Use the swatch palettes to assign structure and cladding to the building, core, or module programs. Open any of the six assembly cards to see its exploded axonometric below the live model. **Snapshot** downloads a PNG sheet with the current model view and all six assembly cards. Each card lists its structure and cladding combinations. **Cost & analysis** shows CAD estimates by assembly, per-module averages, and a building summary based on the chosen materials. **Estimate assumptions** sets the two benchmark rates. The estimates cover the core ring and enclosed modules. Use **Material design rationale** to keep your own notes alongside the study.
 
 The **Apply to** palette also offers commercial dock modules, rooftop shops, the water slide, and the swing mast. Choose **Modules by program → Daycare** to set a paint palette and sheen. Daycare starts with bright, glossy colours. The palette varies by dock and supports custom colours. Paint is shown in material views, and the program-colour display shows the program legend colours. The snapshot keeps the six main assembly cards.
