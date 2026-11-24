@@ -36,6 +36,7 @@ const openDrawingWorkspace = (() => {
       'northwest'
     ],
     viewNames = ['axo', 'plan', 'elevation', 'aligned'];
+  const centeredPlacement = () => ({ x: 0, y: 0, ground: false, modelUnits: true });
   footer.setAttribute('fill', '#243c30');
   footer.setAttribute('font-family', 'system-ui, sans-serif');
   footer.setAttribute('font-size', '11');
@@ -63,6 +64,7 @@ const openDrawingWorkspace = (() => {
       elevation: 225,
       sectionProjection: 'orthographic',
       sectionLens: 35,
+      perspectiveFade: 55,
       source: 'massing',
       showSite: false,
       planSheet: 'single',
@@ -74,7 +76,7 @@ const openDrawingWorkspace = (() => {
       scale: 'auto',
       mode: 'linework',
       pens: drawingPens(),
-      placement: { x: 0, y: 0, ground: false }
+      placement: centeredPlacement()
     },
     sourceModel = null,
     sourceAssignments = {},
@@ -103,6 +105,7 @@ const openDrawingWorkspace = (() => {
         source: saved.source === 'build' ? 'build' : 'massing',
         sectionProjection: saved.sectionProjection === 'perspective' ? 'perspective' : 'orthographic',
         sectionLens: clamp(Number(saved.sectionLens) || 35, 8, 200),
+        perspectiveFade: Number.isFinite(saved.perspectiveFade) ? clamp(saved.perspectiveFade, 0, 100) : 55,
         showSite: saved.showSite === true,
         planSheet: saved.planSheet === 'floors' ? 'floors' : 'single',
         azimuth:
@@ -116,7 +119,8 @@ const openDrawingWorkspace = (() => {
         placement: {
           x: Number.isFinite(saved.placement?.x) ? saved.placement.x : 0,
           y: Number.isFinite(saved.placement?.y) ? saved.placement.y : 0,
-          ground: saved.placement?.ground === true
+          ground: saved.placement?.ground === true,
+          modelUnits: saved.placement?.modelUnits === true
         },
         glazing: saved.glazing === true,
         pens: drawingPens(saved.pens),
@@ -237,6 +241,7 @@ const openDrawingWorkspace = (() => {
       Boolean(settings.detail) || settings.view !== 'plan';
     sheet.classList.toggle('planset', allPlans());
     $('placeDrawingPlane').disabled = allPlans();
+    $('centerDrawing').disabled = Boolean(settings.detail) || allPlans();
     syncSectionView();
   }
 
@@ -255,6 +260,14 @@ const openDrawingWorkspace = (() => {
     const slider = $('drawingSectionLens');
     slider.value = lensPosition(settings.sectionLens);
     slider.setAttribute('aria-valuetext', settings.sectionLens + ' millimetres');
+    syncPerspectiveFade();
+  }
+  const perspectiveOpacity = () => (100 - settings.perspectiveFade) / 100;
+  function syncPerspectiveFade() {
+    const value = `${settings.perspectiveFade}%`;
+    $('drawingPerspectiveFade').value = settings.perspectiveFade;
+    $('drawingPerspectiveFade').setAttribute('aria-valuetext', value);
+    $('drawingPerspectiveFadeValue').value = value;
   }
   function sectionOptics() {
     const plane = currentPlane();
@@ -473,8 +486,13 @@ const openDrawingWorkspace = (() => {
   }
 
   function renderPens(target, frame, identified = false) {
-    const { pens, ink, texture, pencil, pencilEcho, construction, section, heaviest, denominator } =
-      frame;
+    const { pens, ink, perspective, construction, heaviest, denominator } = frame;
+    const strokes = perspective
+      ? [
+          [frame, false],
+          [perspective, true]
+        ]
+      : [[frame, false]];
     const widths = printedDrawingPenWidths(pens, denominator),
       guideScale = drawingPenScale(pens, denominator);
     const colorLayer = markSvgLayer(svgElement('g', {}), 'Colour wash');
@@ -485,8 +503,8 @@ const openDrawingWorkspace = (() => {
     const textureLayer = markSvgLayer(svgElement('g', {}), 'Surface texture');
     const layout = markSvgLayer(svgElement('g', {}), 'Construction lines');
     const guide = markSvgLayer(svgElement('g', {}), 'Pencil marks');
-    function path(d, width, stroke) {
-      return svgElement('path', {
+    function path(d, width, stroke, recedes = false) {
+      const outline = svgElement('path', {
         d,
         fill: 'none',
         stroke,
@@ -494,6 +512,11 @@ const openDrawingWorkspace = (() => {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round'
       });
+      if (recedes) {
+        outline.dataset.perspectiveStroke = '';
+        outline.setAttribute('stroke-opacity', perspectiveOpacity());
+      }
+      return outline;
     }
     const graphite = sheetInk(pens.paper) === '#ebeee8' ? '#cfc4b9' : '#6d655d';
     if (construction) {
@@ -502,54 +525,64 @@ const openDrawingWorkspace = (() => {
       axes.setAttribute('stroke-dasharray', '12 4 2 4');
       layout.append(axes);
     }
-    for (const [d, width, opacity] of [
-      [pencilEcho, 0.12, 0.43],
-      [pencil, 0.19, 0.73]
-    ]) {
-      if (!d) continue;
-      const strokes = path(d, width * guideScale, graphite);
-      strokes.setAttribute('opacity', opacity);
-      guide.append(strokes);
+    for (const [lines, recedes] of strokes) {
+      for (const [d, width, opacity] of [
+        [lines.pencilEcho, 0.12, 0.43],
+        [lines.pencil, 0.19, 0.73]
+      ]) {
+        if (!d) continue;
+        const stroke = path(d, width * guideScale, graphite, recedes);
+        stroke.setAttribute('opacity', opacity);
+        guide.append(stroke);
+      }
     }
     const layers = [colorLayer, layout, guide, textureLayer];
-    const firstInk = ink.findIndex((pressure) => pressure.some(Boolean));
+    const firstInk = ink.findIndex(
+      (pen, i) => pen.some(Boolean) || perspective?.ink[i].some(Boolean)
+    );
     const order = pens.widths.map((_, i) => i).sort((a, b) => pens.widths[a] - pens.widths[b]);
     for (const i of order) {
       const width = widths[i],
         stroke = pens.colors[i];
-      if (texture[i]) textureLayer.append(path(texture[i], width, stroke));
+      for (const [lines, recedes] of strokes)
+        if (lines.texture[i]) textureLayer.append(path(lines.texture[i], width, stroke, recedes));
       const layer = markSvgLayer(
         svgElement('g', { 'data-weight-mm': width }),
         `Pen ${i + 1} · ${width.toFixed(2)} mm`
       );
       // Pressure varies slightly within a pen layer. Standard linework and section cuts use
       // the full printed width reported on the sheet, as do most sketch marks.
-      const named = ink[i].findIndex(Boolean);
-      for (const [pressure, multiplier] of [
-        [1, 0.94],
-        [0, 1],
-        [2, 1.06]
-      ]) {
-        if (!ink[i][pressure]) continue;
-        const linework = path(ink[i][pressure], width * multiplier, stroke);
-        if (identified && i === firstInk && pressure === named) linework.id = 'drawingLinework';
-        layer.append(linework);
+      let needsLineworkId = identified && i === firstInk;
+      for (const [lines, recedes] of strokes) {
+        for (const [pressure, multiplier] of [
+          [1, 0.94],
+          [0, 1],
+          [2, 1.06]
+        ]) {
+          if (!lines.ink[i][pressure]) continue;
+          const linework = path(lines.ink[i][pressure], width * multiplier, stroke, recedes);
+          if (needsLineworkId) linework.id = 'drawingLinework';
+          needsLineworkId = false;
+          layer.append(linework);
+        }
       }
       if (i === heaviest) {
-        const cut = path(section, width, stroke);
+        if (perspective?.section) layer.append(path(perspective.section, width, stroke, true));
+        const cut = path(frame.section, width, stroke);
         if (identified) cut.id = 'drawingSections';
         layer.append(cut);
       }
       layers.push(layer);
     }
-    for (const [name, strokes] of [
-      ['Component outlines', frame.componentInk],
-      ['Overall silhouette', frame.silhouetteInk]
+    for (const [name, key] of [
+      ['Component outlines', 'componentInk'],
+      ['Overall silhouette', 'silhouetteInk']
     ]) {
-      if (!strokes) continue;
       const layer = markSvgLayer(svgElement('g', {}), name);
-      layer.append(path(strokes, widths[heaviest], pens.colors[heaviest]));
-      layers.push(layer);
+      for (const [lines, recedes] of strokes)
+        if (lines[key])
+          layer.append(path(lines[key], widths[heaviest], pens.colors[heaviest], recedes));
+      if (layer.hasChildNodes()) layers.push(layer);
     }
     target.replaceChildren(...layers);
   }
@@ -630,7 +663,7 @@ const openDrawingWorkspace = (() => {
         { x: 0, y: 0, ground: false },
         settings.mode !== 'linework',
         settings.pens,
-        region
+        { region, floorSet: true }
       );
       denominator = String(frame.denominator);
       cropped ||= frame.cropped;
@@ -715,9 +748,17 @@ const openDrawingWorkspace = (() => {
               settings.placement,
               settings.mode !== 'linework',
               settings.pens,
-              null,
-              optics
+              { sectionLens: optics }
             );
+      // Older sheets store their pan in paper millimetres. Convert at the saved scale so
+      // subsequent scale changes preserve the current crop.
+      if (rendered.scale && !settings.placement.modelUnits) {
+        const metresPerMillimetre = DRAWING_PIXELS_PER_INCH / (25.4 * rendered.scale);
+        settings.placement.x *= metresPerMillimetre;
+        settings.placement.y *= metresPerMillimetre;
+        settings.placement.modelUnits = true;
+        saveDrawing();
+      }
       const { width, height, margin, denominator } = rendered,
         ruleY = height - margin * 1.8,
         textY = height - margin,
@@ -1098,7 +1139,11 @@ const openDrawingWorkspace = (() => {
   $('fitDrawing').onclick = () => {
     settings.scale = 'auto';
     $('drawingScale').value = settings.scale;
-    settings.placement = { x: 0, y: 0, ground: false };
+    settings.placement = centeredPlacement();
+    queueDrawing();
+  };
+  $('centerDrawing').onclick = () => {
+    settings.placement = centeredPlacement();
     queueDrawing();
   };
   $('groundDrawing').onclick = () => {
@@ -1150,6 +1195,14 @@ const openDrawingWorkspace = (() => {
     settings.sectionProjection = event.target.value;
     syncSectionView();
     queueDrawing();
+  };
+  $('drawingPerspectiveFade').oninput = (event) => {
+    settings.perspectiveFade = event.target.valueAsNumber;
+    syncPerspectiveFade();
+    // SVG export copies these attributes. Keep the slider responsive without reprojecting the model.
+    for (const stroke of sheetArtwork.querySelectorAll('[data-perspective-stroke]'))
+      stroke.setAttribute('stroke-opacity', perspectiveOpacity());
+    saveDrawing();
   };
   const lensSlider = $('drawingSectionLens');
   let lensPointer = false;
@@ -1263,8 +1316,16 @@ const openDrawingWorkspace = (() => {
     }
   });
   function moveDrawing(x, y) {
-    settings.placement.x += x;
-    settings.placement.y += y;
+    if (!rendered?.scale) return;
+    const metresPerMillimetre = DRAWING_PIXELS_PER_INCH / (25.4 * rendered.scale);
+    const placement = settings.placement;
+    if (y && placement.ground && rendered.grounded) {
+      // A vertical pan resumes free positioning from the visible ground-aligned frame.
+      placement.y = (rendered.originY - rendered.centeredY) / rendered.scale;
+      placement.ground = false;
+    }
+    placement.x += x * metresPerMillimetre;
+    placement.y += y * metresPerMillimetre;
     queueDrawing();
   }
   function sheetPoint(event) {
@@ -1467,7 +1528,8 @@ const openDrawingWorkspace = (() => {
           glazing,
           { x: 0, y: 0, ground: false },
           mode !== 'linework',
-          pens
+          pens,
+          { floorSet: true }
         );
         const page = floorView(frame, 'Poly Nation · ' + label, 0, 0, true);
         page.setAttribute('width', paper.width + 'in');

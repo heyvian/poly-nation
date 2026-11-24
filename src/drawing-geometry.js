@@ -471,7 +471,44 @@ function sectionLensProjection(cutDepth, focalDistance, centerX, centerY) {
   };
 }
 
-// Project the complete model on a physical sheet. Clipping offsets keep a stable frame.
+// Fit the clipped drawing, including new corners where planes cross faces and loose edges.
+function drawingFrameBounds(geometry, points, clips) {
+  let left = Infinity,
+    top = Infinity,
+    right = -Infinity,
+    bottom = -Infinity;
+  function include([x, y]) {
+    left = Math.min(left, x);
+    top = Math.min(top, y);
+    right = Math.max(right, x);
+    bottom = Math.max(bottom, y);
+  }
+  if (clips.length) {
+    const inside = points.map((point) =>
+      clips.every((plane) => drawingDistance(point, plane) <= 1e-7)
+    );
+    points.forEach((point, i) => {
+      if (inside[i]) include(point);
+    });
+    for (const { vertices } of geometry.faces) {
+      if (vertices.every((i) => inside[i])) continue;
+      const polygon = trimDrawingFace(
+        vertices.map((i) => points[i]),
+        clips
+      );
+      if (polygon.length >= 3) polygon.forEach(include);
+    }
+    for (const { a, b } of geometry.lines) {
+      if (inside[a] && inside[b]) continue;
+      clipDrawingLine(points[a], points[b], clips)?.forEach(include);
+    }
+  } else points.forEach(include);
+  return Number.isFinite(left)
+    ? { left, top, right, bottom }
+    : { left: 0, top: 0, right: 0, bottom: 0 };
+}
+
+// Project the drawing in model units, then place it at a physical sheet scale.
 function renderDrawing(
   geometry,
   camera,
@@ -482,8 +519,7 @@ function renderDrawing(
   placement,
   hybrid,
   pens,
-  region = null,
-  sectionLens = null
+  { region, sectionLens, floorSet } = {}
 ) {
   const width = region?.width ?? paper.width * DRAWING_PIXELS_PER_INCH,
     height = region?.height ?? paper.height * DRAWING_PIXELS_PER_INCH,
@@ -492,53 +528,66 @@ function renderDrawing(
     drawingHeight = height - (region ? DRAWING_TILE_RESERVED_HEIGHT : margin * 3.2);
   const basis = orbitBasis(camera),
     { right, up, back } = basis,
-    raw = geometry.points.map((p) => [dot(p, right), -dot(p, up), dot(p, back)]);
-  let left = Infinity,
-    top = Infinity,
-    rightEdge = -Infinity,
-    bottom = -Infinity,
-    ground = 0;
-  for (const [i, [x, y]] of raw.entries()) {
-    left = Math.min(left, x);
-    rightEdge = Math.max(rightEdge, x);
-    top = Math.min(top, y);
-    bottom = Math.max(bottom, y);
-    // In an axonometric, anchor the foremost ground edge. Elevations use the zero grade datum.
-    if (Math.abs(camera.el) > 0.01 && Math.abs(geometry.points[i][1]) <= 0.25)
-      ground = Math.max(ground, y);
+    raw = geometry.points.map((p) => [dot(p, right), -dot(p, up), dot(p, back)]),
+    modelClips = planes.map(({ normal, offset, flip }) => {
+      const sign = flip ? -1 : 1;
+      return {
+        x: sign * dot(normal, right),
+        y: -sign * dot(normal, up),
+        z: sign * dot(normal, back),
+        level: sign * offset
+      };
+    }),
+    { left, top, right: rightEdge, bottom } = drawingFrameBounds(geometry, raw, modelClips),
+    midX = (left + rightEdge) / 2,
+    midY = (top + bottom) / 2;
+  // Ground stays tied to the original grade datum, even when a cut removes it from view.
+  let ground = 0;
+  if (Math.abs(camera.el) > 0.01) {
+    for (const [i, [, y]] of raw.entries())
+      if (Math.abs(geometry.points[i][1]) <= 0.25) ground = Math.max(ground, y);
   }
-  if (!raw.length) {
-    left = top = 0;
-    rightEdge = bottom = 1;
-  }
-  const available = Math.min(
-      (width - margin * 2) / (rightEdge - left),
-      drawingHeight / (bottom - top)
-    ),
-    minimumDenominator = (1000 * pixelsPerMillimetre) / available,
-    denominator =
-      scaleChoice === 'auto'
-        ? (DRAWING_SCALES.find((value) => value >= minimumDenominator) ?? DRAWING_SCALES.at(-1))
-        : Number(scaleChoice),
+  // Every floor in a printed or tiled set shares the model's full fit scale.
+  const fitBounds = floorSet
+      ? drawingFrameBounds(geometry, raw, [])
+      : { left, top, right: rightEdge, bottom },
+    required =
+      1000 *
+      pixelsPerMillimetre *
+      Math.max(
+        (fitBounds.right - fitBounds.left) / (width - margin * 2),
+        (fitBounds.bottom - fitBounds.top) / drawingHeight
+      ),
+    fittedDenominator = DRAWING_SCALES.find((value) => value >= required) ?? Math.ceil(required),
+    denominator = scaleChoice === 'auto' ? fittedDenominator : Number(scaleChoice),
     scale = (1000 * pixelsPerMillimetre) / denominator,
-    originX = width / 2 - ((left + rightEdge) * scale) / 2 + placement.x * pixelsPerMillimetre,
-    centeredY = margin + drawingHeight / 2 - ((top + bottom) * scale) / 2,
+    offsetScale = placement.modelUnits ? scale : pixelsPerMillimetre,
+    originX = width / 2 - midX * scale + placement.x * offsetScale,
+    centeredY = margin + drawingHeight / 2 - midY * scale,
     groundY = margin + drawingHeight - 5 * pixelsPerMillimetre,
-    originY =
-      (placement.ground && Math.abs(Math.cos(camera.el)) > 0.01
-        ? groundY - ground * scale
-        : centeredY) +
-      placement.y * pixelsPerMillimetre,
+    grounded = placement.ground && Math.abs(Math.cos(camera.el)) > 0.01,
+    originY = (grounded ? groundY - ground * scale : centeredY) + placement.y * offsetScale,
     projected = raw.map(([x, y, z]) => [originX + x * scale, originY + y * scale, z]),
     depth = new Float32Array(width * height).fill(-Infinity),
     gradient = { x: new Float32Array(depth.length), y: new Float32Array(depth.length) },
     paint = hybrid ? new ImageData(width, height) : null,
     sun = unit([-0.4, 1, 0.65]),
     cutLines = [];
-  const viewCenter = (left + rightEdge) / 2,
-    focalDistance = sectionLens && (sectionLens.millimetres * (width - margin * 2)) / (36 * scale),
-    optics = sectionLens && sectionLensProjection(sectionLens.cutDepth, focalDistance,
-      originX + viewCenter * scale, originY - sectionLens.eyeLevel * scale),
+  // Calibrate the lens at fit scale. Changing the printed scale enlarges the same projected
+  // drawing, so a detail beyond the cut can stay anchored just like a detail on the cut.
+  const eyeLevel = sectionLens && clamp(sectionLens.eyeLevel, -bottom, -top),
+    focalDistance =
+      sectionLens &&
+      (sectionLens.millimetres * (width - margin * 2) * fittedDenominator) /
+        (36 * 1000 * pixelsPerMillimetre),
+    optics =
+      sectionLens &&
+      sectionLensProjection(
+        sectionLens.cutDepth,
+        focalDistance,
+        originX + midX * scale,
+        originY - eyeLevel * scale
+      ),
     projectView = optics ? optics.project : (point) => point;
   const outline =
     pens.silhouette || pens.componentOutlines
@@ -548,12 +597,12 @@ function renderDrawing(
         }
       : null;
   // Transform model-space planes into the same pixel and depth coordinates as the mesh.
-  const clips = planes.map(({ normal, offset, flip }) => {
-    const sign = flip ? -1 : 1,
-      x = (sign * dot(normal, right)) / scale,
-      y = (-sign * dot(normal, up)) / scale;
-    return { x, y, z: sign * dot(normal, back), level: sign * offset + x * originX + y * originY };
-  });
+  const clips = modelClips.map(({ x, y, z, level }) => ({
+    x: x / scale,
+    y: y / scale,
+    z,
+    level: level + (x * originX + y * originY) / scale
+  }));
   for (const face of geometry.faces) {
     const triangle = face.vertices.map((index) => projected[index]);
     const polygon = trimDrawingFace(triangle, clips);
@@ -591,6 +640,7 @@ function renderDrawing(
   }
   const marks = [],
     section = [],
+    recedingSection = [],
     seen = new Set(),
     tolerance = 0.008;
   const coordinate = (p) => p[0].toFixed(1) + ' ' + p[1].toFixed(1);
@@ -618,9 +668,16 @@ function renderDrawing(
         pixel = row * width + column;
       // Match the face depth to the exact stroke position. A pixel-sized allowance in
       // model units can otherwise show geometry through thin opaque surfaces at small scales.
-      const visible = atFrontCut || (column >= 0 && column < width && row >= 0 && row < height &&
-        z + tolerance >= depth[pixel] +
-          (x - column - 0.5) * gradient.x[pixel] + (y - row - 0.5) * gradient.y[pixel]);
+      const visible =
+        atFrontCut ||
+        (column >= 0 &&
+          column < width &&
+          row >= 0 &&
+          row < height &&
+          z + tolerance >=
+            depth[pixel] +
+              (x - column - 0.5) * gradient.x[pixel] +
+              (y - row - 0.5) * gradient.y[pixel]);
       if (visible && start == null) start = i;
       if ((!visible || i === steps) && start != null) {
         const end = visible ? i : i - 0.5;
@@ -642,12 +699,24 @@ function renderDrawing(
   // Draw section cuts first in the deduplication set so their heavier weight wins.
   // The camera-facing cut already clips everything in front of it. Avoid testing
   // its strokes against sampled background depths, which vary with the lens.
-  const frontDepth = clips.reduce((nearest, plane) =>
-    Math.abs(plane.x) < 1e-9 && Math.abs(plane.y) < 1e-9 && plane.z > 0.999999
-      ? Math.min(nearest, plane.level / plane.z) : nearest, Infinity);
+  const frontDepth = clips.reduce(
+    (nearest, plane) =>
+      Math.abs(plane.x) < 1e-9 && Math.abs(plane.y) < 1e-9 && plane.z > 0.999999
+        ? Math.min(nearest, plane.level / plane.z)
+        : nearest,
+    Infinity
+  );
   for (const [a, b] of cutLines) {
     const atFrontCut = Math.abs(a[2] - frontDepth) < 1e-7 && Math.abs(b[2] - frontDepth) < 1e-7;
-    strokeVisible(a, b, (command) => section.push(command), atFrontCut);
+    strokeVisible(
+      a,
+      b,
+      (command, from, to) => {
+        const lines = optics && (from[2] + to[2]) / 2 < -1e-7 ? recedingSection : section;
+        lines.push(command);
+      },
+      atFrontCut
+    );
   }
   function strokeModelEdge(a, b, component, detail, texture = false, bodies = null) {
     const clipped = clipDrawingLine(projected[a], projected[b], clips);
@@ -673,8 +742,9 @@ function renderDrawing(
     // Silhouette edges face the lens itself in a section perspective.
     let towardLens = back;
     if (sectionLens) {
-      const [x, y, z] = projected[start], across = viewCenter - (x - originX) / scale,
-        height = sectionLens.eyeLevel + (y - originY) / scale,
+      const [x, y, z] = projected[start],
+        across = midX - (x - originX) / scale,
+        height = eyeLevel + (y - originY) / scale,
         depth = sectionLens.cutDepth + focalDistance - z;
       towardLens = back.map((value, i) => value * depth + right[i] * across + up[i] * height);
     }
@@ -701,13 +771,18 @@ function renderDrawing(
       .map((width, index) => ({ width, index }))
       .sort((a, b) => b.width - a.width),
     count = ranked.length,
-    ink = Array.from({ length: count }, () => [[], [], []]),
-    texture = Array.from({ length: count }, () => []),
-    pencil = [],
-    pencilEcho = [],
-    silhouetteInk = [],
-    componentInk = [],
     sketch = pens.style === 'sketch';
+  const penPaths = (cuts) => ({
+    ink: Array.from({ length: count }, () => [[], [], []]),
+    texture: Array.from({ length: count }, () => []),
+    pencil: [],
+    pencilEcho: [],
+    silhouetteInk: [],
+    componentInk: [],
+    section: cuts
+  });
+  const front = penPaths(section),
+    behind = optics && penPaths(recedingSection);
   let far = Infinity,
     near = -Infinity;
   for (const mark of marks) {
@@ -716,6 +791,9 @@ function renderDrawing(
   }
   // Base the intervals on visible strokes so a clip or a cropped sheet still uses the pen range.
   for (const mark of marks) {
+    // Keep the same physical pens while giving the linework behind the cut its own opacity.
+    const { ink, texture, pencil, pencilEcho, silhouetteInk, componentInk } =
+      behind && mark.depth < -1e-7 ? behind : front;
     const position = near > far ? (near - mark.depth) / (near - far) : 0;
     const index =
       pens.mode === 'component'
@@ -763,8 +841,12 @@ function renderDrawing(
     ? constructionGuides(
         geometry.model,
         camera,
-        (point) => projectView([originX + dot(point, right) * scale, originY - dot(point, up) * scale,
-          dot(point, back)]),
+        (point) =>
+          projectView([
+            originX + dot(point, right) * scale,
+            originY - dot(point, up) * scale,
+            dot(point, back)
+          ]),
         coordinate
       )
     : '';
@@ -777,27 +859,44 @@ function renderDrawing(
     ctx.putImageData(paint, 0, 0);
     wash = image.toDataURL('image/png');
   }
+  function joinPaths({ ink, texture, ...lines }) {
+    const paths = Object.fromEntries(
+      Object.entries(lines).map(([name, commands]) => [name, commands.join('')])
+    );
+    return {
+      ...paths,
+      ink: ink.map((pen) => pen.map((commands) => commands.join(''))),
+      texture: texture.map((commands) => commands.join(''))
+    };
+  }
   return {
-    ink: ink.map((pressure) => pressure.map((paths) => paths.join(''))),
-    silhouetteInk: silhouetteInk.join(''),
-    componentInk: componentInk.join(''),
-    texture: texture.map((paths) => paths.join('')),
-    pencil: pencil.join(''),
-    pencilEcho: pencilEcho.join(''),
+    ...joinPaths(front),
+    perspective: behind && joinPaths(behind),
     construction,
-    section: section.join(''),
     pens,
     heaviest: ranked[0].index,
-    populated: marks.length > 0 || section.length > 0,
+    populated: marks.length > 0 || section.length > 0 || recedingSection.length > 0,
     basis,
     scale,
     originX,
     originY,
+    centeredY,
+    grounded,
     depth,
     optics,
     wash,
     exportFills: hybrid
-      ? () => drawingExportFills(geometry, projected, seeThrough, clips, width, height, sun, projectView)
+      ? () =>
+          drawingExportFills(
+            geometry,
+            projected,
+            seeThrough,
+            clips,
+            width,
+            height,
+            sun,
+            projectView
+          )
       : null,
     width,
     height,

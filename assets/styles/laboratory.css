@@ -634,6 +634,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  background: var(--paper);
 }
 .drawing-view-field { display: grid; gap: 4px; }
+#drawingLobbyCut { min-width: 0; }
 .drawing-pen-settings { display: grid; gap: 7px; }
 .drawing-colours { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 12px; align-items: end; }
 /* Keep each pen's slider, millimetre field and ink swatch together in the narrow drawing rail. */
@@ -713,6 +714,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 .drawing-plane-actions button { flex: 1; white-space: nowrap; }
  .drawing-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 12px; gap: 8px; }
 .drawing-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.drawing-placement-actions { display: flex; flex-wrap: wrap; gap: 5px; }
 .drawing-toolbar label { display: grid; gap: 3px; font-size: 11px; font-weight: 600; }
 .drawing-toolbar select { min-height: 30px; color: var(--ink); font: inherit; }
 .drawing-toolbar #exportDrawing { margin-left: auto; }

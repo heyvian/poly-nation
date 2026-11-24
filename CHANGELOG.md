@@ -1,5 +1,9 @@
 # Changelog
 
+## Drawing placement and section linework
+- Added a lightening slider for strokes behind the perspective section cut. Preview, SVG and print retain the selected fade and the existing printed pen widths.
+- Kept the same crop centre as scale changes. Added Centre at the current scale, used the clipped geometry for Fit and retained the Ground datum alignment.
+
 ## Walk-through shared lobbies and section perspective
 - Attraction now participates in room ordering on its own. Fitted shared lobbies preserve the room minimums and link each pair through planted archways, half-round furniture and a clear passage set to 80% of the corridor width.
 - Added centred lobby sections and a section perspective with adjustable focal length. The cut stays at the same physical scale in preview, print and SVG.

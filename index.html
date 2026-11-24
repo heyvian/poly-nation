@@ -676,6 +676,8 @@
     <input id="drawingSectionLens" type="range" min="0" max="1000" aria-label="Section lens focal length" list="drawingLensTicks">
     <datalist id="drawingLensTicks"></datalist>
     <p class="hint">8 mm ultra-wide to 200 mm telephoto. The cut keeps the sheet scale.</p>
+    <label class="drawing-offset" for="drawingPerspectiveFade">Lighten beyond cut <output id="drawingPerspectiveFadeValue" for="drawingPerspectiveFade">55%</output></label>
+    <input id="drawingPerspectiveFade" type="range" min="0" max="100" value="55">
    </div>
   </div>
   <details class="drawing-export-help">
@@ -696,8 +698,11 @@
    <label>Scale
     <select id="drawingScale"><option value="auto">Auto fit</option></select>
    </label>
-   <button type="button" id="fitDrawing" title="Center the drawing and fit its scale to the sheet">Fit</button>
-   <button type="button" id="groundDrawing" title="Align ground 5 mm above the bottom drawing margin">Ground</button>
+   <div class="drawing-placement-actions" role="group" aria-label="Drawing placement">
+    <button type="button" id="fitDrawing" title="Fit the visible geometry to the sheet">Fit</button>
+    <button type="button" id="centerDrawing" title="Centre the visible geometry at the current scale">Centre</button>
+    <button type="button" id="groundDrawing" title="Align ground 5 mm above the bottom drawing margin">Ground</button>
+   </div>
    <button type="button" class="primary" id="exportDrawing" disabled>Export SVG</button>
    <button type="button" id="printDrawing" disabled>Print / PDF</button>
    <button type="button" id="printFloorSet" hidden>Print floor set</button>
