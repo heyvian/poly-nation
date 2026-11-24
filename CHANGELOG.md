@@ -1,5 +1,10 @@
 # Changelog
 
+## Room tiles and lobby details
+- Rescaled the staggered room hatch to nominal 450 × 600 mm tiles and softened the joints. Paired paving bands continue to identify circulation.
+- Extended one patterned rug beneath both lobby seating areas and across the aisle.
+- Generated a crown profile and coloured inlay for each lobby arch from the programme of the room it serves.
+
 ## Lobby finishes and clear interiors
 - Gave shared lobbies green upholstery and seeded violet rug patterns based on the ring, plug-in docks and opposing entrances.
 - Added paired paving bands to circulation and staggered tile joints to room floors in Build, cutaway views and contextual lobby drawings.

@@ -20,6 +20,33 @@ with serve_lab(root) as url, sync_playwright() as p:
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(url + '/')
+    assert page.evaluate('''() => {
+      const floor = {r: 12, R: 18, start: 0.4, end: 0.65};
+      const mesh = meshBuilder();
+      drawInteriorFloorPattern(mesh, floor, 0, [0.7, 0.7, 0.7], false);
+      // Measure whole tiles from the generated joints on both sides of the curved floor.
+      const courses = new Map();
+      for (let i = 0; i < mesh.solid.length; i += 60) {
+        const data = mesh.solid;
+        const inner = Math.hypot(data[i], data[i + 2]);
+        const outer = Math.hypot(data[i + 20], data[i + 22]);
+        if (outer - inner < 0.4) continue;
+        const radius = (inner + outer) / 2;
+        const key = radius.toFixed(5);
+        const angle = (Math.atan2(data[i + 2], data[i]) +
+          Math.atan2(data[i + 12], data[i + 10])) / 2;
+        if (!courses.has(key)) courses.set(key, []);
+        courses.get(key).push(radius * (angle - floor.start));
+      }
+      const rows = [...courses.entries()].filter(([, joints]) => joints.length >= 2);
+      const [inner, outer] = [rows[0], rows.at(-1)];
+      if (!inner || !outer || rows.length < 10) return false;
+      const [firstRadius, firstJoints] = inner;
+      const [nextRadius, nextJoints] = rows[1];
+      return Math.abs(nextRadius - firstRadius - 0.45) < 1e-5 &&
+        Math.abs(firstJoints[0] - nextJoints[0] - 0.3) < 1e-5 &&
+        [firstJoints, outer[1]].every(joints => Math.abs(joints[1] - joints[0] - 0.6) < 1e-5);
+    }''')
     result = page.evaluate('''() => {
       state = defaults();
       state.relations['0-4'] = 'attract';
@@ -46,8 +73,25 @@ with serve_lab(root) as url, sync_playwright() as p:
         const { heading, axis, origin, passage, arch, tableRadius, couchDepth } = hub.layout;
         const alongLobby = (x, z) => (x - origin[0]) * axis[0] + (z - origin[1]) * axis[1];
         const acrossLobby = (x, z) => (x - origin[0]) * axis[1] - (z - origin[1]) * axis[0];
-        const tight = mesh.solid.some((x, i) => i % 10 === 0 && mesh.solid[i+1] < 1.9 &&
-          Math.abs(acrossLobby(x, mesh.solid[i+2])) < passage / 2 - 0.001);
+        const furnishings = mesh.solid.slice(rug.length);
+        const tight = furnishings.some((x, i) => i % 10 === 0 && furnishings[i+1] < 1.9 &&
+          Math.abs(acrossLobby(x, furnishings[i+2])) < passage / 2 - 0.001);
+        const rugCoversAisle = rug.some((x, i) => i % 10 === 0 && rug[i+4] > 0.99 &&
+          Math.hypot(x - origin[0], rug[i+2] - origin[1]) < 1e-6) &&
+          rug.every((y, i) => i % 10 !== 1 || y < 0.03);
+        const thresholds = mesh.groups.flatMap((group, i) =>
+          group.layer.endsWith('Shared_Thresholds') ? [{
+            name: group.name,
+            vertices: mesh.solid.slice(group.solid, mesh.groups[i+1].solid)
+          }] : []);
+        const programmedThresholds = thresholds.length === 2 && thresholds.every(({name, vertices}, i) => {
+          const { program, along } = hub.doors[i];
+          const accent = rgb(PROGRAMS[program].color);
+          return name.startsWith(PROGRAMS[program].name) &&
+            vertices.some((x, j) => j % 10 === 0 && vertices[j+1] > 2.16 &&
+              Math.abs(alongLobby(x, vertices[j+2]) - along) < 0.1 &&
+              accent.every((channel, k) => vertices[j+6+k] === channel));
+        });
         const outside = mesh.solid.some((x, i) => {
           if (i % 10 !== 0) return false;
           const z = mesh.solid[i+2], radial = Math.hypot(x,z);
@@ -111,8 +155,9 @@ with serve_lab(root) as url, sync_playwright() as p:
             shelving.some((height, i) => i % 10 === 1 && Math.abs(height - 0.52) < 1e-8) &&
             shelving.some((color, i) => i % 10 === 6 && color === rgb('#9e7956')[0]),
           stocked,
-          rugs: rugColors.size >= 3 && !rugColors.has(rgb('#5e8c80').join()) &&
+          rugs: rugCoversAisle && rugColors.size >= 3 && !rugColors.has(rgb('#5e8c80').join()) &&
             rug.join() !== rugBuffer(alternate).join(),
+          programmedThresholds,
           plants: foliageClear && tops.every(height => height >= 2.2 && height < 2.76) &&
             new Set(tops).size === 4 && plantedWithSeed(state.seed) === plants.join() &&
             plantedWithSeed(state.seed + 1) !== plants.join()
