@@ -8,6 +8,8 @@ The user wants to compare how architectural distributions affect opportunities f
 
 Default seed 606; 36 human visitors; live speed 3×; fixed simulation increments 0.25 s, score sample each simulated second. `advanceScored` integrates both. Visual toggles don't change population counts. Building changes restart the live simulation. Simulation continues in rationale view unless paused.
 
+A furnished shared lobby has three explicit connections. Visitors moving directly between its two programme rooms pass through both planted thresholds along the clear central aisle. The public corridor meets the aisle alongside one arch. Both attached rooms use the lobby for corridor access. Encounters in the furnished space retain the shared-lobby weight.
+
 Human and dog routes can enter either ground-floor lobby from the public promenade and cross the biofiltration greenhouse on straight approaches joined by a circular walk. Agents can take either side of the swing mast. The crossing uses the same geometry as the modeled paving. Encounters there use the existing greenhouse scoring weights.
 
 Optional upper-floor atrium bridges give agents a shortcut between sectors of the same floor. The routes connect both ends to the outer corridor, use the existing corridor weights and participate in shortest-path routing. Trial comparisons log changes to the bridge arrangement and the resulting bridge count. Stairs above the glazing connect the public roof to the swing platform at the ridge. Simulated visitors who use wheelchairs stay on routes without stairs.

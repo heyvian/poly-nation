@@ -214,11 +214,16 @@ function buildNavigation(m) {
       q = pathWithin(d, a, r).reverse();
     connect(c.node, d.node, [...p, ...q.slice(1)]);
   }
+  const servicedHubs = new Map();
+  for (const c of cells) if (c.kind === 'hub' && c.layout) servicedHubs.set(c.lobbyId, c);
   for (let i = 0; i < cells.length; i++)
     for (let j = i + 1; j < cells.length; j++) {
       const c = cells[i],
         d = cells[j];
       if (c.f !== d.f) continue;
+      // A furnished lobby has three explicit connections. Generic sector adjacency
+      // would leave corridor shortcuts into the rooms or paths across the couches.
+      if (c.sharedLobby || d.sharedLobby || (c.kind === 'hub' && c.layout) || (d.kind === 'hub' && d.layout)) continue;
       // Room-to-room connections are prohibited: shared hubs create a separate intermediary.
       if (c.kind === 'room' && d.kind === 'room') continue;
       // The atrium is accessible through the ground-floor lobby, not arbitrary rooms.
@@ -257,6 +262,20 @@ function buildNavigation(m) {
         }
       }
     }
+  for (const c of cells) {
+    if (!c.sharedLobby) continue;
+    const { id, angle, r } = c.sharedLobby, hub = servicedHubs.get(id);
+    if (!hub) continue;
+    connect(c.node, hub.node, [...pathWithin(c, angle, r), nodes[hub.node].p]);
+  }
+  for (const hub of servicedHubs.values()) {
+    const { angle, along } = hub.layout.publicEntry, y = yFor(hub.f);
+    const access = cells.find((c) => c.f === hub.f && c.kind === 'corridor' &&
+      Math.abs(c.r - hub.R) < eps && [angle, angle + TAU, angle - TAU]
+        .some((value) => value >= c.start - eps && value <= c.end + eps));
+    if (access) connect(access.node, hub.node, [...pathWithin(access, angle, hub.R),
+      sharedLobbyPoint(hub, along, 0, y), nodes[hub.node].p]);
+  }
   for (const list of liftNodes) {
     list.sort((a, b) => a.f - b.f);
     for (let i = 1; i < list.length; i++) connect(list[i - 1].id, list[i].id, null, 'lift');

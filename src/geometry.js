@@ -2194,6 +2194,157 @@ function drawSlideJoints({ mark, quad, tri }, points, radius, color, maxY, minRa
   }
 }
 
+// Give the lobby surface small faces so its flat panels also sort under the furniture
+// in the software renderer. The perimeter remains a single curved floor element.
+function drawSharedLobbyFloor(mesh, hub, y, height, color) {
+  const { r, R, start, end } = hub;
+  mesh.sector(r, R, start, end, y, height, color, null, true);
+  const columns = Math.max(1, Math.ceil(((end - start) * R) / 0.75)),
+    rows = Math.ceil((R - r) / 0.75),
+    point = (row, column) => mesh.ringPoint(r + ((R - r) * row) / rows,
+      start + ((end - start) * column) / columns, y + height);
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < columns; j++)
+      mesh.quad(point(i, j), point(i, j + 1), point(i + 1, j + 1), point(i + 1, j), color);
+}
+
+// Retain the arrangement stored by Material snapshots from before the walk-through lobby.
+function drawSavedSharedLobby(mesh, hub, y) {
+  const angle = (hub.start + hub.end) / 2,
+    depth = hub.R - hub.r,
+    radius = hub.r + depth * 0.44,
+    span = (hub.end - hub.start) * radius;
+  if (depth <= 2.2 || span <= 2.3) return;
+  const box = (r, level, width, height, length, color) =>
+    mesh.box(...mesh.ringPoint(r, angle, y + level), width, height, length, angle, rgb(color), true);
+  mesh.mark(`Circulation_L${hub.f + 1}_Shared_Furniture`, `Shared gathering ${hub.start.toFixed(3)}`);
+  box(radius, 0.09, 0.28, 0.71, 0.28, '#5c426a');
+  box(radius, 0.8, Math.min(1.25, span * 0.3), 0.12, Math.min(1.4, depth * 0.26), '#d4bb9c');
+  box(radius, 0.079, Math.min(span * 0.68, 3.7), 0.025, Math.min(depth * 0.65, 3.8), '#bca4ce');
+  const sofaWidth = Math.min(2.4, span * 0.55),
+    sofaDepth = Math.min(0.83, depth * 0.18);
+  for (const side of [-1, 1]) {
+    const r = radius + side * Math.min(depth * 0.29, 1.6);
+    if (r - sofaDepth / 2 < hub.r + 0.1 || r + sofaDepth / 2 > hub.R - 0.1) continue;
+    box(r, 0.1, sofaWidth, 0.42, sofaDepth, '#d2c7bb');
+    box(r + side * sofaDepth * 0.36, 0.5, sofaWidth, 0.43, sofaDepth * 0.27, '#a69aa9');
+  }
+}
+
+// Split the circular furniture into two halves. The straight edges stay outside the
+// same clear strip used by the occupancy graph.
+function drawSharedLobby(mesh, hub, y) {
+  const { mark, box, quad, tri } = mesh,
+    { heading, passage, tableRadius, couchInner, couchOuter, shelfOuter, arch } = hub.layout,
+    edge = passage / 2,
+    timber = rgb('#b18a64'),
+    cushion = rgb('#a996b6'),
+    back = rgb('#73617f'),
+    base = rgb('#4f3c57'),
+    tabletop = rgb('#d9ba91'),
+    rug = rgb('#b8a0ca'),
+    leaf = [rgb('#497253'), rgb('#709167'), rgb('#587e55')];
+  const point = (along, across, up) => sharedLobbyPoint(hub, along, across, y + up);
+  const curved = (sign, radius, angle, up) =>
+    point(radius * Math.cos(angle), sign * (edge + radius * Math.sin(angle)), up);
+  function strip(sign, inner, outer, bottom, height, color, start = 0, end = Math.PI) {
+    const steps = Math.max(1, Math.ceil((end - start) / 0.13)),
+      rows = Math.ceil((outer - inner) / 0.34);
+    // Reflection reverses the winding. Keep the mirrored faces outward in both renderers.
+    const face = (a, b, c, d) => (sign > 0 ? quad(a, b, c, d, color) : quad(d, c, b, a, color));
+    for (let i = 0; i < steps; i++) {
+      const a = start + ((end - start) * i) / steps,
+        b = start + ((end - start) * (i + 1)) / steps,
+        at = (radius, angle, cap = false) =>
+          curved(sign, radius, angle, bottom + (cap ? height : 0));
+      for (let j = 0; j < rows; j++) {
+        const first = inner + ((outer - inner) * j) / rows,
+          last = inner + ((outer - inner) * (j + 1)) / rows;
+        face(at(first, a, true), at(last, a, true), at(last, b, true), at(first, b, true));
+        face(at(first, b), at(last, b), at(last, a), at(first, a));
+      }
+      face(at(inner, a, true), at(inner, b, true), at(inner, b), at(inner, a));
+      face(at(outer, a, true), at(outer, a), at(outer, b), at(outer, b, true));
+      if (i === 0) face(at(inner, a, true), at(inner, a), at(outer, a), at(outer, a, true));
+      if (i === steps - 1) face(at(inner, b, true), at(outer, b, true), at(outer, b), at(inner, b));
+    }
+  }
+  function block(along, across, up, width, height, depth, color, angle = heading) {
+    box(...point(along, across, up), width, height, depth, angle, color);
+  }
+  mark(`Circulation_L${hub.f + 1}_Shared_Furniture`, `Shared gathering ${hub.start.toFixed(3)}`);
+  for (const sign of [-1, 1]) {
+    // A broad half-round table and a regular-depth upholstered seat face each other.
+    strip(sign, 0.006, shelfOuter + 0.03, 0.012, 0.022, rug);
+    strip(sign, 0.005, tableRadius, 0.69, 0.075, tabletop);
+    block(0, sign * (edge + tableRadius * 0.48), 0.035, 0.29, 0.66, 0.32, base);
+    strip(sign, couchInner + 0.04, couchOuter, 0.04, 0.35, base);
+    for (let i = 0; i < 7; i++) {
+      const a = (i * Math.PI) / 7,
+        b = ((i + 1) * Math.PI) / 7;
+      strip(sign, couchInner, couchOuter - 0.075, 0.36, 0.105, cushion, a + 0.009, b - 0.009);
+      strip(sign, couchOuter - 0.17, couchOuter, 0.46, 0.42, back, a + 0.01, b - 0.01);
+    }
+    // Two open shelves and spaced dividers follow the couch back.
+    for (const h of [0.09, 0.43, 0.78]) strip(sign, couchOuter, shelfOuter, h, 0.045, timber);
+    for (let i = 0; i <= 8; i++) {
+      const a = clamp((i * Math.PI) / 8 - 0.009, 0, Math.PI - 0.018);
+      strip(sign, couchOuter, shelfOuter, 0.1, 0.68, timber, a, a + 0.018);
+      if (i === 8) continue;
+      const books = a + 0.085,
+        radius = couchOuter + 0.12;
+      for (const [j, color] of ['#e7d6b9', '#a46b5a', '#6e867e'].entries()) {
+        const angle = books + 0.026 * j;
+        block(
+          radius * Math.cos(angle),
+          sign * (edge + radius * Math.sin(angle)),
+          0.48,
+          0.047,
+          0.15 + 0.025 * j,
+          0.14,
+          rgb(color),
+          heading - sign * (angle - Math.PI / 2)
+        );
+      }
+    }
+  }
+  mark(`Circulation_L${hub.f + 1}_Shared_Thresholds`, `Planted arches ${hub.start.toFixed(3)}`);
+  for (const along of [-arch, arch]) {
+    const spring = 2.16,
+      post = edge + 0.06,
+      archColor = rgb('#9a7957');
+    for (const sign of [-1, 1]) {
+      block(along, sign * post, 0, 0.17, spring, 0.12, archColor);
+      const across = sign * (edge + 0.42);
+      block(along, across, 0.015, 0.42, 0.32, 0.41, rgb('#986f59'));
+      for (let i = 0; i < 5; i++) {
+        const theta = (i * TAU) / 5,
+          a = 0.24 * Math.cos(theta),
+          b = 0.15 * Math.sin(theta);
+        const tip = point(along + a, across + b, 0.88 + 0.11 * (i % 3));
+        tri(
+          point(along, across, 0.31),
+          point(along + a * 0.38 - 0.13, across + b * 0.4, 0.75),
+          tip,
+          leaf[i % leaf.length]
+        );
+        tri(
+          point(along, across, 0.31),
+          tip,
+          point(along + a * 0.38 + 0.13, across + b * 0.4, 0.75),
+          leaf[(i + 1) % leaf.length]
+        );
+      }
+    }
+    const archPoint = (a) => point(along, post * Math.cos(a), spring + 0.41 * Math.sin(a));
+    for (let i = 0; i < 16; i++) {
+      const a = (Math.PI * i) / 16,
+        b = (Math.PI * (i + 1)) / 16;
+      drawAssemblyMember(mesh, archPoint(a), archPoint(b), 0.17, archColor, 0.12, heading);
+    }
+  }
+}
+
 // Translate the derived plan into drawing geometry. Export uses the full model regardless of current cutaway.
 function buildMesh(m, exporting = false, view = state, preview = null) {
   const b = meshBuilder(),
@@ -2374,7 +2525,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       `Circulation_L${q.f + 1}_${isLift ? 'Lift_' + (q.block + 1) : isHub ? 'Shared_' + P[q.pair[0]].id + '_' + P[q.pair[1]].id : kind}`,
       `${kind}_${q.f + 1}_${q.start.toFixed(3)}`
     );
-    sector(q.r, q.R, q.start, q.end, y, isLift ? floorH - 0.18 : 0.075, color);
+    if (isHub && q.layout) drawSharedLobbyFloor(b, q, y, 0.075, color);
+    else sector(q.r, q.R, q.start, q.end, y, isLift ? floorH - 0.18 : 0.075, color);
     if (isLift) {
       const a = q.end,
         rad = (q.r + q.R) / 2,
@@ -2386,38 +2538,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         quad(v0, v1, [v1[0], y + 2.25, v1[2]], [v0[0], y + 2.25, v0[2]], dc);
       }
     } else {
-      if (isHub) {
-        const a = (q.start + q.end) / 2,
-          rad = q.r + (q.R - q.r) * 0.44,
-          depth = q.R - q.r,
-          span = (q.end - q.start) * rad;
-        if (depth > 2.2 && span > 2.3) {
-          const at = (rr, aa, h, w, ht, d, col) =>
-            box(rr * Math.cos(aa), h, rr * Math.sin(aa), w, ht, d, aa, col, true);
-          mark(
-            `Circulation_L${q.f + 1}_Shared_Furniture`,
-            `Shared gathering ${q.start.toFixed(3)}`
-          );
-          const timber = rgb('#d4bb9c'),
-            base = rgb('#5c426a');
-          const tw = Math.min(1.25, span * 0.3),
-            td = Math.min(1.4, depth * 0.26);
-          at(rad, a, y + 0.09, 0.28, 0.71, 0.28, base);
-          at(rad, a, y + 0.8, tw, 0.12, td, timber);
-          const rugW = Math.min(span * 0.68, 3.7),
-            rugD = Math.min(depth * 0.65, 3.8);
-          at(rad, a, y + 0.079, rugW, 0.025, rugD, rgb('#bca4ce'));
-          const sofaW = Math.min(2.4, span * 0.55),
-            sofaD = Math.min(0.83, depth * 0.18);
-          for (const sign of [-1, 1]) {
-            const dr = sign * Math.min(depth * 0.29, 1.6),
-              sr = rad + dr;
-            if (sr - sofaD / 2 < q.r + 0.1 || sr + sofaD / 2 > q.R - 0.1) continue;
-            at(sr, a, y + 0.1, sofaW, 0.42, sofaD, rgb('#d2c7bb'));
-            at(sr + sign * sofaD * 0.36, a, y + 0.5, sofaW, 0.43, sofaD * 0.27, rgb('#a69aa9'));
-          }
-        }
-      }
+      if (isHub && q.layout) drawSharedLobby(b, q, y + 0.075);
+      else if (isHub) drawSavedSharedLobby(b, q, y);
       const col = rgb(isHub ? '#5e3c77' : '#bfc3b9');
       for (const radius of [q.r, q.R]) {
         const n = Math.max(1, Math.ceil((q.end - q.start) / 0.09));
@@ -2482,7 +2604,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       co = rgb(d.kind === 'shared' ? '#5d805f' : '#66786f');
     mark(`Circulation_L${d.f + 1}_Doors`);
     if (d.kind === 'shared') {
-      const w = 0.55;
+      const w = (d.width ?? 1.1) / 2;
       line(ringPoint(Math.max(0, d.r - w), d.angle, y), ringPoint(d.r + w, d.angle, y), co);
     } else {
       const w = (d.width || 1.2) / 2 / Math.max(1, d.r);

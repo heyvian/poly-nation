@@ -1,5 +1,9 @@
 # Changelog
 
+## Walk-through shared lobbies and section perspective
+- Attraction now participates in room ordering on its own. Fitted shared lobbies preserve the room minimums and link each pair through planted archways, half-round furniture and a clear passage set to 80% of the corridor width.
+- Added centred lobby sections and a section perspective with adjustable focal length. The cut stays at the same physical scale in preview, print and SVG.
+
 ## Cable-stay floor framing
 - Shortened the stay receivers and lower compression seats to the perimeter ring. Shared radial collectors now replace ordinary beams on their grid lines, resolving the crossing spans in Build and its drawing source.
 

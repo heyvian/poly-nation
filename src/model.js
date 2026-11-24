@@ -585,11 +585,12 @@ function repellingRoomContacts(rooms) {
   return count;
 }
 // Improve room order inside each uninterrupted arc before carving shared lobbies.
-function refineRoomPlacement(layers) {
+function refineRoomPlacement(layers, corridorWidth) {
   const strength = clusterStrength();
   const clustering = state.cluster.some(Boolean);
   const repulsion = Object.values(state.relations).includes('repel');
-  if (!repulsion && !clustering) return;
+  const attraction = Object.values(state.relations).includes('attract');
+  if (!repulsion && !clustering && !attraction) return;
   const targetAngles = state.cluster.map((active, id) => (active ? clusterAngle(id) : null));
   for (const layer of layers) {
     const rooms = layer.flat();
@@ -609,13 +610,17 @@ function refineRoomPlacement(layers) {
           const a = rooms[i],
             b = rooms[j];
           if (relationMode(a.id, b.id) === 'attract' && roomsAreNeighbors(a, b)) {
-            cost -= RELATIONSHIP_WEIGHT * relationMagnitude(a.id, b.id) * Math.min(a.area, b.area);
+            const [left, right] = angDist(a.end, b.start) < 1e-7 ? [a, b] : [b, a];
+            const lobby = a.band === b.band && angDist(left.end, right.start) < 1e-7
+              ? sharedLobbyFit(left, right, corridorWidth) : null;
+            const weight = RELATIONSHIP_WEIGHT * relationMagnitude(a.id, b.id);
+            cost -= weight * (Math.min(a.area, b.area) + (lobby ? 180 : 0));
           }
         }
       return cost;
     }
     let conflicts = repulsion ? repellingRoomContacts(rooms) : 0;
-    if (!conflicts && !clustering) continue;
+    if (!conflicts && !clustering && !attraction) continue;
     let cost = placementCost();
     const arcs = [];
     for (const band of layer) {
@@ -639,7 +644,7 @@ function refineRoomPlacement(layers) {
         room.end = cursor;
       }
     }
-    for (let pass = 0; pass < rooms.length && (conflicts || clustering); pass++) {
+    for (let pass = 0; pass < rooms.length && (conflicts || clustering || attraction); pass++) {
       let best = null,
         bestCount = conflicts,
         bestCost = cost;
@@ -864,16 +869,82 @@ function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0) {
         }
       }
     }
-  refineRoomPlacement(layers);
+  refineRoomPlacement(layers, circulation.width);
   rooms.length = 0;
   for (const layer of layers) for (const list of layer) rooms.push(...list);
   // Resolve manual programs before carving lobbies or routing the slide.
   assignRoomPrograms(rooms);
   circulation.roomPacking = { minimum: state.minRoomArea, merged, alcoves, alcoveArea };
-  // Carve common entrance lobbies from two attracted neighbors. Both rooms open into the shared space;
-  // repelling/neutral pairs retain separate doors off their common corridor (no direct inter-room opening).
+  circulation.hubs = [];
+  circulation.hubArea = 0;
+  circulation.doors = [];
+  circulation.elevatorArea = circulation.regions
+    .filter((q) => q.kind === 'elevator')
+    .reduce((sum, q) => sum + q.area, 0);
+  circulation.corridorArea = circulation.area - circulation.elevatorArea;
+  circulation.total = circulation.area;
+  return { rooms, layers, bandN, circulation };
+}
+// Use the same furniture and walking dimensions for placement, drawing and navigation.
+function sharedLobbyFit(a, b, corridorWidth) {
+  const passage = 0.8 * corridorWidth,
+    depth = a.R - a.r,
+    couchDepth = 0.88,
+    shelfDepth = 0.25,
+    tableGap = 0.34,
+    radius = (a.r + a.R) / 2,
+    scale = (a.R ** 2 - a.r ** 2) / 2,
+    leftAvailable = Math.max(0, a.area - state.minRoomArea),
+    rightAvailable = Math.max(0, b.area - state.minRoomArea),
+    availableHalfLength =
+      radius * Math.tan(Math.min(1, (leftAvailable + rightAvailable) / (2 * scale))),
+    tableRadius = Math.min(
+      1.18,
+      (depth - passage) / 2 - couchDepth - shelfDepth - tableGap - 0.18,
+      availableHalfLength - couchDepth - shelfDepth - tableGap - 1.22
+    );
+  if (tableRadius < 0.9) return null;
+  const couchInner = tableRadius + tableGap,
+    couchOuter = couchInner + couchDepth,
+    shelfOuter = couchOuter + shelfDepth,
+    arch = shelfOuter + 0.22,
+    approach = arch + 0.68,
+    halfSpan = Math.atan((approach + 0.32) / radius),
+    target = 2 * halfSpan * scale;
+  if (leftAvailable + rightAvailable < target - 1e-7) return null;
+  // Use surplus on one side when the other room is already near its minimum.
+  const left = clamp(target / 2, Math.max(0, target - rightAvailable), leftAvailable),
+    start = a.end - left / scale,
+    end = start + 2 * halfSpan;
+  return {
+    start,
+    end,
+    area: target,
+    heading: (start + end) / 2,
+    radius,
+    passage,
+    tableRadius,
+    couchDepth,
+    couchInner,
+    couchOuter,
+    shelfOuter,
+    arch,
+    approach
+  };
+}
+
+function sharedLobbyPoint(q, along, across, y) {
+  const { heading, radius } = q.layout,
+    cos = Math.cos(heading),
+    sin = Math.sin(heading);
+  return [(radius + across) * cos - along * sin, y, (radius + across) * sin + along * cos];
+}
+
+// Carve lobbies after the slide has reserved its landing rooms and façade bypasses.
+function formSharedLobbies(layout) {
+  const { circulation, rooms } = layout;
   const hubs = [];
-  for (const layer of layers)
+  for (const layer of layout.layers)
     for (const list of layer) {
       const pairs = [];
       for (let j = 0; j < list.length; j++) {
@@ -881,82 +952,101 @@ function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0) {
           b = list[(j + 1) % list.length];
         if (
           a === b ||
-          a.id === b.id ||
-          a.id >= 5 ||
-          b.id >= 5 ||
+          a.facadeFacing ||
+          b.facadeFacing ||
+          !PROGRAMS[a.id] ||
+          !PROGRAMS[b.id] ||
           angDist(a.end, b.start) > 1e-7 ||
           relationMode(a.id, b.id) !== 'attract'
         )
           continue;
-        const weight = RELATIONSHIP_WEIGHT * relationMagnitude(a.id, b.id);
-        pairs.push({ a, b, weight });
+        const fit = sharedLobbyFit(a, b, circulation.width);
+        if (fit)
+          pairs.push({ a, b, fit, weight: RELATIONSHIP_WEIGHT * relationMagnitude(a.id, b.id) });
       }
-      for (const { a, b, weight } of pairs) {
-        const scale = (a.R * a.R - a.r * a.r) / 2,
-          boundary = a.end;
-        const preferredWidth = 4.3 + 5.1 * weight,
-          target = Math.min(110, (scale * preferredWidth) / a.R);
-        const left = Math.min(target / 2, a.area * 0.35, Math.max(0, a.area - state.minRoomArea)),
-          right = Math.min(target / 2, b.area * 0.35, Math.max(0, b.area - state.minRoomArea)),
-          clearWidth = ((left + right) * a.R) / scale;
-        if (clearWidth < 2.0 || (Math.min(left, right) * a.R) / scale < 0.6) continue;
-        a.end -= left / scale;
-        b.start += right / scale;
-        a.area -= left;
-        b.area -= right;
+      pairs.sort((a, b) => b.weight - a.weight);
+      for (const { a, b, fit, weight } of pairs) {
+        if (a.sharedLobby || b.sharedLobby) continue;
+        const publicEntry = [-fit.approach, fit.approach]
+          .map((along) => ({
+            along,
+            angle: fit.heading + Math.asin(along / a.R)
+          }))
+          .find(({ angle }) =>
+            circulation.regions.some(
+              (region) =>
+                region.f === a.f &&
+                region.kind !== 'elevator' &&
+                Math.abs(region.r - a.R) < 1e-7 &&
+                [angle - TAU, angle, angle + TAU].some(
+                  (value) => value >= region.start - 1e-7 && value <= region.end + 1e-7
+                )
+            )
+          );
+        if (!publicEntry) continue;
+        const boundary = a.end,
+          scale = (a.R ** 2 - a.r ** 2) / 2,
+          id = hubs.length;
+        a.end = fit.start;
+        b.start = fit.end - (b.start < boundary - Math.PI ? TAU : 0);
+        a.area -= (boundary - fit.start) * scale;
+        b.area -= (fit.end - boundary) * scale;
+        const doors = [a, b].map((room, side) => {
+          const angle = side ? b.start : a.end,
+            skew = Math.cos(angle - fit.heading);
+          room.sharedLobby = {
+            id,
+            angle,
+            r: fit.radius / skew,
+            width: fit.passage / skew
+          };
+          return {
+            ...room.sharedLobby,
+            f: room.f,
+            program: room.id,
+            kind: 'shared',
+            pair: [a.id, b.id]
+          };
+        });
         hubs.push({
           kind: 'hub',
           f: a.f,
           band: a.band,
           r: a.r,
           R: a.R,
-          start: boundary - left / scale,
-          end: boundary + right / scale,
-          area: left + right,
-          clearWidth,
+          start: fit.start,
+          end: fit.end,
+          area: fit.area,
+          clearWidth: fit.passage,
           pair: [a.id, b.id],
-          strength: weight
+          strength: weight,
+          lobbyId: id,
+          doors,
+          layout: { ...fit, publicEntry }
         });
       }
     }
-  const hubArea = hubs.reduce((s, x) => s + x.area, 0),
-    elevatorArea = circulation.regions
-      .filter((q) => q.kind === 'elevator')
-      .reduce((s, q) => s + q.area, 0);
   circulation.hubs = hubs;
-  circulation.hubArea = hubArea;
-  circulation.elevatorArea = elevatorArea;
-  circulation.corridorArea = circulation.area - elevatorArea;
-  circulation.total = circulation.area + hubArea;
-  // Program door records used in both visualization and portable JSON.
-  circulation.doors = [];
-  for (const room of rooms) {
-    if (room.area <= 0.001) continue;
-    circulation.doors.push({
-      f: room.f,
-      program: room.id,
-      angle: (room.start + room.end) / 2,
-      r: room.R,
-      width: Math.min(1.2, (room.end - room.start) * room.R * 0.68),
-      kind: 'corridor'
-    });
-  }
-  for (const hub of hubs) {
-    const edgeR = hub.R - Math.min(0.8, (hub.R - hub.r) * 0.25);
-    circulation.doors.push(
-      {
-        f: hub.f,
-        program: hub.pair[0],
-        angle: hub.start,
-        r: edgeR,
-        kind: 'shared',
-        pair: hub.pair
-      },
-      { f: hub.f, program: hub.pair[1], angle: hub.end, r: edgeR, kind: 'shared', pair: hub.pair }
-    );
-  }
-  return { rooms, layers, bandN, circulation };
+  circulation.hubArea = hubs.reduce((total, hub) => total + hub.area, 0);
+  circulation.total = circulation.area + circulation.hubArea;
+  circulation.doors = [
+    ...rooms
+      .filter((room) => !room.sharedLobby && room.area > 0.001)
+      .map((room) => {
+        const r = room.facadeFacing ? room.r : room.R;
+        return {
+          f: room.f,
+          program: room.id,
+          angle: (room.start + room.end) / 2,
+          r,
+          width: Math.min(1.2, (room.end - room.start) * r * (room.facadeFacing ? 0.6 : 0.68)),
+          kind: 'corridor'
+        };
+      }),
+    ...hubs.flatMap((hub) => hub.doors)
+  ];
 }
+
 function roomAt(rooms, angle) {
   for (const s of rooms) {
     if (mod(angle - s.start, TAU) < s.end - s.start + 1e-8) return s.id;
@@ -1360,23 +1450,6 @@ function connectSlide(layout, feature, R, slotN) {
     q.slideLanding = landing;
     q.slideDetour = !landing;
     q.slideDoorRadius = q.r;
-    c.doors = c.doors.filter(
-      (d) =>
-        !(
-          d.f === q.f &&
-          d.program === q.id &&
-          d.kind === 'corridor' &&
-          angDist(d.angle, center) < 1e-6
-        )
-    );
-    c.doors.push({
-      f: q.f,
-      program: q.id,
-      angle: center,
-      r: q.r,
-      width: Math.min(1.2, (end - start) * q.r * 0.6),
-      kind: 'corridor'
-    });
     // The new room front cannot serve a dock. Reserve every overlapping docking threshold
     // (but do not cascade the next detour selection from these additional frontage reservations).
     const pad = Math.atan((MODULE.width / 2 + 0.5) / R);
@@ -1678,6 +1751,7 @@ function derive(dockVariant = state.dockVariant) {
     ride.roofPitch = designSwingRoof(ride, r, roofPlan.y);
     ride.roofLevel = ride.roofPitch.canopyRidgeY - 0.16;
     connectSlide(layout, feature, R, slotN);
+    formSharedLobbies(layout);
     const actualRing = P.map((p, i) =>
         sum(layout.rooms.filter((q) => q.id === i).map((q) => q.area))
       ),

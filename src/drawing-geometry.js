@@ -328,33 +328,40 @@ function traceDrawingFills(pixels, width, height, resolution) {
 
 // Export uses a finer sampling grid than the interactive wash, with the same clipping and depth
 // rules. Its result is a set of editable SVG fills, one compound path per visible colour.
-function drawingExportFills(geometry, projected, seeThrough, clips, width, height, sun) {
+function drawingExportFills(
+  geometry,
+  projected,
+  seeThrough,
+  clips,
+  width,
+  height,
+  sun,
+  projectView
+) {
   const resolution = 2,
     columns = width * resolution,
     rows = height * resolution,
     pixels = new Uint8ClampedArray(columns * rows * 4),
-    depth = new Float32Array(columns * rows).fill(-Infinity),
-    points = projected.map(([x, y, z]) => [x * resolution, y * resolution, z]),
-    planes = clips.map(({ x, y, z, level }) => ({
-      x: x / resolution,
-      y: y / resolution,
-      z,
-      level
-    }));
+    depth = new Float32Array(columns * rows).fill(-Infinity);
   for (const face of geometry.faces) {
     if (face.glazing && seeThrough) continue;
     const polygon = trimDrawingFace(
-      face.vertices.map((index) => points[index]),
-      planes
+      face.vertices.map((index) => projected[index]),
+      clips
     );
-    if (polygon.length >= 3)
-      rasterDrawingPolygon(depth, columns, rows, polygon, pixels, drawingFaceColor(face, sun));
+    if (polygon.length >= 3) {
+      const atResolution = polygon
+        .map(projectView)
+        .map(([x, y, z]) => [x * resolution, y * resolution, z]);
+      rasterDrawingPolygon(depth, columns, rows, atResolution, pixels, drawingFaceColor(face, sun));
+    }
   }
   return traceDrawingFills(pixels, columns, rows, resolution);
 }
 
 const DRAWING_SCALES = [25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000];
 const DRAWING_PIXELS_PER_INCH = 88;
+const SECTION_LENS_STOPS = [8, 14, 20, 24, 28, 35, 50, 85, 105, 135, 200];
 const DRAWING_TILE_MARGIN = 8;
 const DRAWING_TILE_RESERVED_HEIGHT = 35;
 const DRAWING_PEN_PRESETS = [
@@ -443,6 +450,27 @@ function constructionGuides(model, camera, project, coordinate) {
     .join('');
 }
 
+// Put the picture plane at the cut. Its magnification is exactly 1, even as the
+// full-frame-equivalent lens changes the rate at which farther geometry recedes.
+function sectionLensProjection(cutDepth, focalDistance, centerX, centerY) {
+  return {
+    project([x, y, z]) {
+      const behind = Math.max(0, cutDepth - z),
+        factor = focalDistance / (focalDistance + behind);
+      if (behind < 1e-9) return [x, y, 0];
+      return [centerX + (x - centerX) * factor, centerY + (y - centerY) * factor, -behind * factor];
+    },
+    unproject([x, y, z]) {
+      const factor = 1 + z / focalDistance;
+      return [
+        centerX + (x - centerX) / factor,
+        centerY + (y - centerY) / factor,
+        cutDepth + z / factor
+      ];
+    }
+  };
+}
+
 // Project the complete model on a physical sheet. Clipping offsets keep a stable frame.
 function renderDrawing(
   geometry,
@@ -454,7 +482,8 @@ function renderDrawing(
   placement,
   hybrid,
   pens,
-  region = null
+  region = null,
+  sectionLens = null
 ) {
   const width = region?.width ?? paper.width * DRAWING_PIXELS_PER_INCH,
     height = region?.height ?? paper.height * DRAWING_PIXELS_PER_INCH,
@@ -506,6 +535,11 @@ function renderDrawing(
     paint = hybrid ? new ImageData(width, height) : null,
     sun = unit([-0.4, 1, 0.65]),
     cutLines = [];
+  const viewCenter = (left + rightEdge) / 2,
+    focalDistance = sectionLens && (sectionLens.millimetres * (width - margin * 2)) / (36 * scale),
+    optics = sectionLens && sectionLensProjection(sectionLens.cutDepth, focalDistance,
+      originX + viewCenter * scale, originY - sectionLens.eyeLevel * scale),
+    projectView = optics ? optics.project : (point) => point;
   const outline =
     pens.silhouette || pens.componentOutlines
       ? {
@@ -530,7 +564,7 @@ function renderDrawing(
         depth,
         width,
         height,
-        polygon,
+        optics ? polygon.map(projectView) : polygon,
         paint?.data,
         color,
         face.body ? outline : null,
@@ -566,8 +600,8 @@ function renderDrawing(
     { x: 0, y: -1, z: 0, level: -margin },
     { x: 0, y: 1, z: 0, level: margin + drawingHeight }
   ];
-  function strokeVisible(startPoint, endPoint, collect) {
-    const paperLine = clipDrawingLine(startPoint, endPoint, sheetEdges);
+  function strokeVisible(startPoint, endPoint, collect, atFrontCut = false) {
+    const paperLine = clipDrawingLine(projectView(startPoint), projectView(endPoint), sheetEdges);
     if (!paperLine) return;
     const [a, b] = paperLine;
     const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -584,9 +618,9 @@ function renderDrawing(
         pixel = row * width + column;
       // Match the face depth to the exact stroke position. A pixel-sized allowance in
       // model units can otherwise show geometry through thin opaque surfaces at small scales.
-      const visible = column >= 0 && column < width && row >= 0 && row < height &&
+      const visible = atFrontCut || (column >= 0 && column < width && row >= 0 && row < height &&
         z + tolerance >= depth[pixel] +
-          (x - column - 0.5) * gradient.x[pixel] + (y - row - 0.5) * gradient.y[pixel];
+          (x - column - 0.5) * gradient.x[pixel] + (y - row - 0.5) * gradient.y[pixel]);
       if (visible && start == null) start = i;
       if ((!visible || i === steps) && start != null) {
         const end = visible ? i : i - 0.5;
@@ -606,7 +640,15 @@ function renderDrawing(
     }
   }
   // Draw section cuts first in the deduplication set so their heavier weight wins.
-  for (const [a, b] of cutLines) strokeVisible(a, b, (command) => section.push(command));
+  // The camera-facing cut already clips everything in front of it. Avoid testing
+  // its strokes against sampled background depths, which vary with the lens.
+  const frontDepth = clips.reduce((nearest, plane) =>
+    Math.abs(plane.x) < 1e-9 && Math.abs(plane.y) < 1e-9 && plane.z > 0.999999
+      ? Math.min(nearest, plane.level / plane.z) : nearest, Infinity);
+  for (const [a, b] of cutLines) {
+    const atFrontCut = Math.abs(a[2] - frontDepth) < 1e-7 && Math.abs(b[2] - frontDepth) < 1e-7;
+    strokeVisible(a, b, (command) => section.push(command), atFrontCut);
+  }
   function strokeModelEdge(a, b, component, detail, texture = false, bodies = null) {
     const clipped = clipDrawingLine(projected[a], projected[b], clips);
     if (clipped)
@@ -627,13 +669,21 @@ function renderDrawing(
       });
   }
   for (const { start, end, faces } of geometry.edges) {
-    const first = faces[0],
-      facing = dot(first.normal, back);
+    const first = faces[0];
+    // Silhouette edges face the lens itself in a section perspective.
+    let towardLens = back;
+    if (sectionLens) {
+      const [x, y, z] = projected[start], across = viewCenter - (x - originX) / scale,
+        height = sectionLens.eyeLevel + (y - originY) / scale,
+        depth = sectionLens.cutDepth + focalDistance - z;
+      towardLens = back.map((value, i) => value * depth + right[i] * across + up[i] * height);
+    }
+    const facing = dot(first.normal, towardLens);
     const silhouette =
       faces.length === 1 ||
       faces.slice(1).some((other) => {
         const similarity = Math.abs(dot(first.normal, other.normal)),
-          otherFacing = dot(other.normal, back);
+          otherFacing = dot(other.normal, towardLens);
         // Coplanar triangles disappear. Smooth fans show a stroke only at a silhouette.
         return similarity < 0.9999 && facing * otherFacing <= 0;
       });
@@ -713,7 +763,8 @@ function renderDrawing(
     ? constructionGuides(
         geometry.model,
         camera,
-        (point) => [originX + dot(point, right) * scale, originY - dot(point, up) * scale],
+        (point) => projectView([originX + dot(point, right) * scale, originY - dot(point, up) * scale,
+          dot(point, back)]),
         coordinate
       )
     : '';
@@ -743,9 +794,10 @@ function renderDrawing(
     originX,
     originY,
     depth,
+    optics,
     wash,
     exportFills: hybrid
-      ? () => drawingExportFills(geometry, projected, seeThrough, clips, width, height, sun)
+      ? () => drawingExportFills(geometry, projected, seeThrough, clips, width, height, sun, projectView)
       : null,
     width,
     height,

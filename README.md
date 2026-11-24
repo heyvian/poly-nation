@@ -5,7 +5,7 @@ A student-directed architectural research instrument for the Poly Nation / Infin
 
 ## Design workflow
 
-Open `index.html`, set the massing, and use the Topology Designer to set relationships between programs. Attract favors nearby rooms and modules and can create shared lobbies. Repel prioritizes separating neighbors on the same floor and allows vertical module neighbors. Clustering strength governs how closely selected programs group, including vertical alignment.
+Open `index.html`, set the massing, and use the Topology Designer to set relationships between programs. Attract favors nearby rooms and modules. Where two same-floor rooms have enough space, their shared lobby routes visitors between them through planted arches. The clear passage is 80% of the main corridor width. Large half-round tables, full-depth curved couches and shelves behind the couches sit beside it. Repel prioritizes separating neighbors on the same floor and allows vertical module neighbors. Clustering strength governs how closely selected programs group, including vertical alignment.
 
 Massing, Materials, Build and the Site terrain viewer share camera controls. Left-drag to orbit, right-drag to pan in either direction, and scroll to zoom. On a touchscreen, drag with one finger to orbit or use two fingers to pan and pinch-zoom. Site orbits around the placed project in both district and building views. **Plan** looks straight down with north at the top. Use **3D**, **Side** where available, or **Fit** to change the view.
 
@@ -20,6 +20,8 @@ The **Apply to** palette also offers commercial dock modules, rooftop shops, the
 Choose **Water slide** under **Apply to** for a colour picker, a hex field and a matte-to-gloss slider. The colour and sheen are saved with the material study and used by Build and material drawings.
 
 **Drawings** creates plan, elevation and axonometric sheets. Add and move horizontal or vertical clipping planes to draw sections. A vertical plane snaps near the midpoint when you drag its slider. Use **Center** to place it exactly on the building axis and **Align view** to look square to the cut. Choose Letter or Tabloid, portrait or landscape, and an architectural scale. **Auto fit** picks the largest listed scale that fits the view on the sheet. The footer shows the drawing ratio and a metric scale bar. Plans and axonometrics also show a north arrow that follows the view. Export a physically sized SVG or use **Print / PDF** with actual-size printing.
+
+Choose **Shared lobby section** to align a vertical cut through the centre of the building and the selected lobby. For an aligned vertical cut, **Section perspective** keeps the cut at the printed scale and gives the geometry behind it one-point perspective. The lens slider runs from 8 to 200 mm and snaps near common focal lengths. You can enter a focal length directly.
 
 Use **Source** to draw the massing or the full Build assembly with the current material assignments. Elevation has compass presets and a continuous horizontal orbit. Set a horizontal plane to the project datum or a floor datum. Its offset follows that floor when you change levels. In Plan, **All floor plans** puts the cuts at a shared scale on one sheet. **Print floor set** lays them out one floor per page.
 

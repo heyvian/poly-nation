@@ -61,6 +61,8 @@ const openDrawingWorkspace = (() => {
       document: '',
       azimuth: 5,
       elevation: 225,
+      sectionProjection: 'orthographic',
+      sectionLens: 35,
       source: 'massing',
       showSite: false,
       planSheet: 'single',
@@ -99,6 +101,8 @@ const openDrawingWorkspace = (() => {
             ? 315
             : 225,
         source: saved.source === 'build' ? 'build' : 'massing',
+        sectionProjection: saved.sectionProjection === 'perspective' ? 'perspective' : 'orthographic',
+        sectionLens: clamp(Number(saved.sectionLens) || 35, 8, 200),
         showSite: saved.showSite === true,
         planSheet: saved.planSheet === 'floors' ? 'floors' : 'single',
         azimuth:
@@ -155,11 +159,22 @@ const openDrawingWorkspace = (() => {
       // Export is independent of local storage.
     }
   }
+  const lobbyKey = (hub) => [hub.f, hub.band, hub.start.toFixed(5), ...hub.pair].join('/');
+  const selectedLobby = (plane) =>
+    plane?.lobbyKey &&
+    sourceModel?.circulation.hubs.find((hub) => hub.layout && lobbyKey(hub) === plane.lobbyKey);
+  function planeAngle(plane) {
+    const hub = selectedLobby(plane);
+    if (!hub) return plane.angle;
+    const bearing = settings.showSite && siteWorkspace.hasTerrain ? siteWorkspace.drawingBearing : 0;
+    return mod((hub.layout.heading * 180) / Math.PI + 90 + bearing, 360);
+  }
   function normalFor(plane) {
     if (plane.axis === 'horizontal') return [0, 1, 0];
-    const angle = (plane.angle * Math.PI) / 180;
+    const angle = (planeAngle(plane) * Math.PI) / 180;
     return [Math.cos(angle), 0, Math.sin(angle)];
   }
+
   const floorDatum = (plane) =>
     plane.axis === 'horizontal' && plane.floor != null
       ? plane.floor * modelFloorPitch(sourceModel)
@@ -184,7 +199,7 @@ const openDrawingWorkspace = (() => {
     const plane = currentPlane();
     if (settings.view === 'aligned' && plane) {
       if (plane.axis === 'horizontal') return { az: -Math.PI / 2, el: plane.flip ? -top : top };
-      return { az: (plane.angle * Math.PI) / 180 + (plane.flip ? Math.PI : 0), el: 0 };
+      return { az: (planeAngle(plane) * Math.PI) / 180 + (plane.flip ? Math.PI : 0), el: 0 };
     }
     // Plan north is world +Z. Moving clockwise on the compass follows the plan axes.
     return { az: Math.PI / 2 + (settings.azimuth * Math.PI) / 4, el: 0.57 };
@@ -222,6 +237,39 @@ const openDrawingWorkspace = (() => {
       Boolean(settings.detail) || settings.view !== 'plan';
     sheet.classList.toggle('planset', allPlans());
     $('placeDrawingPlane').disabled = allPlans();
+    syncSectionView();
+  }
+
+  const lensPosition = (mm) => Math.round((1000 * Math.log(mm / 8)) / Math.log(200 / 8));
+  const lensMillimetres = (position) => Math.round(8 * (200 / 8) ** (position / 1000));
+  $('drawingLensTicks').replaceChildren(
+    ...SECTION_LENS_STOPS.map((mm) => new Option(`${mm} mm`, lensPosition(mm)))
+  );
+  function syncSectionView() {
+    const aligned =
+      !settings.detail && settings.view === 'aligned' && currentPlane()?.axis === 'vertical';
+    $('drawingSectionView').hidden = !aligned;
+    $('drawingSectionProjection').value = settings.sectionProjection;
+    $('drawingSectionLensField').hidden = settings.sectionProjection !== 'perspective';
+    $('drawingSectionLensNumber').value = settings.sectionLens;
+    const slider = $('drawingSectionLens');
+    slider.value = lensPosition(settings.sectionLens);
+    slider.setAttribute('aria-valuetext', settings.sectionLens + ' millimetres');
+  }
+  function sectionOptics() {
+    const plane = currentPlane();
+    if (
+      settings.view !== 'aligned' ||
+      plane?.axis !== 'vertical' ||
+      settings.sectionProjection !== 'perspective'
+    )
+      return null;
+    const hub = selectedLobby(plane);
+    return {
+      cutDepth: planeHeight(plane) * (plane.flip ? -1 : 1),
+      millimetres: settings.sectionLens,
+      eyeLevel: (hub ? hub.f * modelFloorPitch(sourceModel) : 0) + 1.65
+    };
   }
 
   function floorPlans() {
@@ -650,6 +698,7 @@ const openDrawingWorkspace = (() => {
         renderedGeometryMode = mode;
       }
       const camera = settings.detail ? null : viewCamera();
+      const optics = camera && sectionOptics();
       $('groundDrawing').disabled = !camera || Math.abs(Math.cos(camera.el)) <= 0.01;
       if (!allPlans()) floorTiles.replaceChildren();
       rendered = settings.detail
@@ -665,7 +714,9 @@ const openDrawingWorkspace = (() => {
               settings.glazing,
               settings.placement,
               settings.mode !== 'linework',
-              settings.pens
+              settings.pens,
+              null,
+              optics
             );
       const { width, height, margin, denominator } = rendered,
         ruleY = height - margin * 1.8,
@@ -675,11 +726,13 @@ const openDrawingWorkspace = (() => {
           : allPlans()
             ? 'Floor plans'
             : settings.view === 'aligned'
-              ? currentPlane()?.axis === 'vertical'
+              ? optics ? `Section perspective · ${optics.millimetres} mm` : currentPlane()?.axis === 'vertical'
                 ? 'Section'
                 : 'Plan section'
               : $('drawingView').selectedOptions[0].text;
       sheet.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      if (optics) sheet.dataset.sectionLens = optics.millimetres;
+      else delete sheet.dataset.sectionLens;
       clipRect.setAttribute('x', margin);
       clipRect.setAttribute('y', margin);
       clipRect.setAttribute('width', width - margin * 2);
@@ -917,6 +970,14 @@ const openDrawingWorkspace = (() => {
     ])
       $(id).disabled = detail;
     $('drawingPlanes').hidden = detail;
+    $('drawingLobbyCutField').hidden = detail;
+    const availableLobbies = sourceModel?.circulation.hubs.filter((hub) => hub.layout) ?? [];
+    $('drawingLobbyCut').replaceChildren(new Option(
+      availableLobbies.length ? 'Choose a shared lobby' : 'No shared lobbies in this design', ''),
+      ...availableLobbies.map((hub) => new Option(
+        `Level ${hub.f + 1} · ${hub.pair.map((p) => P[p].name).join(' + ')}`, lobbyKey(hub))));
+    $('drawingLobbyCut').disabled = !availableLobbies.length;
+    $('drawingLobbyCut').value = selectedLobby(plane) ? plane.lobbyKey : '';
     $('drawingSource').value = settings.source;
     syncSiteControl();
     $('drawingPlanSheet').value = settings.planSheet;
@@ -967,7 +1028,7 @@ const openDrawingWorkspace = (() => {
       plane.axis === 'vertical' ? 'drawingCenterTick' : ''
     );
     $('drawingFloor').value = plane.floor == null ? '' : String(plane.floor);
-    $('drawingPlaneAngle').value = plane.angle;
+    $('drawingPlaneAngle').value = Math.round(planeAngle(plane));
     $('flipDrawingPlane').checked = plane.flip;
     syncOffset(plane);
   }
@@ -988,11 +1049,12 @@ const openDrawingWorkspace = (() => {
   };
   $('drawingSite').onchange = (event) => {
     settings.showSite = event.target.checked;
+    syncSettings();
     queueDrawing();
   };
   document.addEventListener('west-village-change', () => {
     if (panel.hidden) return;
-    syncSiteControl();
+    syncSettings();
     if (settings.showSite) queueDrawing();
   });
   $('drawingDetail').onchange = (event) => {
@@ -1061,8 +1123,65 @@ const openDrawingWorkspace = (() => {
     $('drawingPlaneAxis').focus();
     queueDrawing();
   };
+  $('drawingLobbyCut').onchange = (event) => {
+    const hub = sourceModel.circulation.hubs.find(
+      (candidate) => candidate.layout && lobbyKey(candidate) === event.target.value
+    );
+    if (!hub) return;
+    const selected = currentPlane(),
+      plane =
+        selected?.axis === 'vertical'
+          ? selected
+          : {
+              id: Math.max(0, ...settings.planes.map((item) => item.id)) + 1,
+              axis: 'vertical',
+              flip: false
+            };
+    if (plane !== selected) settings.planes.push(plane);
+    Object.assign(plane, { lobbyKey: lobbyKey(hub), offset: 0, floor: null });
+    plane.angle = planeAngle(plane);
+    settings.selected = plane.id;
+    settings.view = 'aligned';
+    stopPlacing();
+    syncSettings();
+    queueDrawing();
+  };
+  $('drawingSectionProjection').onchange = (event) => {
+    settings.sectionProjection = event.target.value;
+    syncSectionView();
+    queueDrawing();
+  };
+  const lensSlider = $('drawingSectionLens');
+  let lensPointer = false;
+  lensSlider.onpointerdown = () => {
+    lensPointer = true;
+  };
+  lensSlider.onpointercancel = lensSlider.onkeydown = () => {
+    lensPointer = false;
+  };
+  function setLens(mm, moveSlider = true) {
+    settings.sectionLens = clamp(Math.round(mm), 8, 200);
+    $('drawingSectionLensNumber').value = settings.sectionLens;
+    lensSlider.setAttribute('aria-valuetext', settings.sectionLens + ' millimetres');
+    if (moveSlider) lensSlider.value = lensPosition(settings.sectionLens);
+    queueDrawing();
+  }
+  lensSlider.oninput = () => setLens(lensMillimetres(lensSlider.valueAsNumber), false);
+  lensSlider.onchange = () => {
+    const position = lensSlider.valueAsNumber;
+    const stop = SECTION_LENS_STOPS.find((mm) => Math.abs(lensPosition(mm) - position) <= 18);
+    setLens(lensPointer && stop ? stop : lensMillimetres(position));
+    lensPointer = false;
+  };
+  $('drawingSectionLensNumber').onchange = (event) => {
+    setLens(
+      Number.isFinite(event.target.valueAsNumber) ? event.target.valueAsNumber : settings.sectionLens
+    );
+  };
+
   $('drawingPlaneAxis').onchange = (event) => {
     const plane = currentPlane();
+    delete plane.lobbyKey;
     plane.axis = event.target.value;
     plane.floor = null;
     plane.offset = plane.axis === 'horizontal' ? 1.2 : 0;
@@ -1081,10 +1200,12 @@ const openDrawingWorkspace = (() => {
   };
   $('centerDrawingPlane').onclick = () => movePlane(0);
   $('drawingPlaneAngle').onchange = (event) => {
+    delete currentPlane().lobbyKey;
     currentPlane().angle = Number.isFinite(event.target.valueAsNumber)
       ? mod(event.target.valueAsNumber, 360)
       : currentPlane().angle;
     event.target.value = currentPlane().angle;
+    $('drawingLobbyCut').value = '';
     queueDrawing();
   };
   function movePlane(value) {
@@ -1092,6 +1213,11 @@ const openDrawingWorkspace = (() => {
     if (Number.isFinite(value)) {
       const [min, max] = offsetLimits(plane);
       plane.offset = Math.round(clamp(value, min, max) * 10) / 10;
+      if (plane.lobbyKey && plane.offset !== 0) {
+        plane.angle = planeAngle(plane);
+        delete plane.lobbyKey;
+        $('drawingLobbyCut').value = '';
+      }
     }
     syncOffset(plane);
     queueDrawing();
@@ -1186,7 +1312,7 @@ const openDrawingWorkspace = (() => {
   sheet.addEventListener('click', (event) => {
     if (!placing || !rendered) return;
     const point = sheetPoint(event);
-    const { basis, width, height, depth, scale, originX, originY } = rendered;
+    const { basis, width, height, depth, scale, originX, originY, optics } = rendered;
     if (point.x < 0 || point.y < 0 || point.x >= width || point.y >= height) return;
     const z = depth[Math.floor(point.y) * width + Math.floor(point.x)],
       normal = normalFor(currentPlane()),
@@ -1195,10 +1321,10 @@ const openDrawingWorkspace = (() => {
       status.textContent = 'Click a visible surface or enter an offset.';
       return;
     }
-    const offset =
-      ((point.x - originX) / scale) * dot(normal, basis.right) -
-      ((point.y - originY) / scale) * dot(normal, basis.up) +
-      (Number.isFinite(z) ? z * toward : 0);
+    const [x, y, worldDepth] = optics && Number.isFinite(z)
+      ? optics.unproject([point.x, point.y, z]) : [point.x, point.y, z];
+    const offset = ((x - originX) / scale) * dot(normal, basis.right) -
+      ((y - originY) / scale) * dot(normal, basis.up) + (Number.isFinite(worldDepth) ? worldDepth * toward : 0);
     stopPlacing();
     movePlane(offset - floorDatum(currentPlane()));
   });
@@ -1226,6 +1352,7 @@ const openDrawingWorkspace = (() => {
       height: height + 'in',
       viewBox: sheet.getAttribute('viewBox')
     });
+    if (sheet.dataset.sectionLens) root.dataset.sectionLens = sheet.dataset.sectionLens;
     const title = svgElement('title', {}),
       defs = svgElement('defs', {}),
       layers = new Map();

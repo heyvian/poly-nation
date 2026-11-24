@@ -690,23 +690,36 @@ function buildAssemblyMesh(model, layers, levels, preview) {
         const [low, high] = room.facadeFacing ? [room.r, room.r + wall] : [room.R - wall, room.R];
         if (!room.facadeFacing)
           sector(room.r, room.r + wall, room.start, room.end, base, clearHeight, wallColor);
-        for (const [a, z] of [
-          [room.start, door - doorway],
-          [door + doorway, room.end]
-        ])
-          sector(low, high, a, z, base, clearHeight, wallColor);
-        sector(
-          low,
-          high,
-          door - doorway,
-          door + doorway,
-          base + doorHead,
-          clearHeight - doorHead,
-          wallColor
-        );
-        for (const angle of [room.start, room.end])
-          at((room.R + room.r) / 2, angle, base, wall, clearHeight, room.R - room.r, wallColor);
+        if (room.sharedLobby) {
+          sector(low, high, room.start, room.end, base, clearHeight, wallColor);
+        } else {
+          for (const [a, z] of [[room.start, door - doorway], [door + doorway, room.end]])
+            sector(low, high, a, z, base, clearHeight, wallColor);
+          sector(low, high, door - doorway, door + doorway, base + doorHead,
+            clearHeight - doorHead, wallColor);
+        }
+        for (const angle of [room.start, room.end]) {
+          const portal = room.sharedLobby;
+          const sideWall = (a, b, y, height) => {
+            if (b > a) at((a + b) / 2, angle, y, wall, height, b - a, wallColor);
+          };
+          if (!portal || Math.abs(angle - portal.angle) > 1e-7) {
+            sideWall(room.r, room.R, base, clearHeight);
+            continue;
+          }
+          const from = portal.r - portal.width / 2, to = portal.r + portal.width / 2,
+            head = 2.3;
+          sideWall(room.r, from, base, clearHeight);
+          sideWall(to, room.R, base, clearHeight);
+          sideWall(from, to, base + head, clearHeight - head);
+        }
       }
+    }
+    if (layers.slabs || layers.walls) for (const hub of model.circulation.hubs) {
+      if (hub.f !== f || !hub.layout) continue;
+      mark(`Circulation_L${f + 1}_Shared_Lobby`, `Lobby ${hub.start.toFixed(3)}`);
+      drawSharedLobbyFloor(mesh, hub, base, 0.018, rgb('#a889bc'));
+      drawSharedLobby(mesh, hub, base + 0.018);
     }
   }
   if (full && layers.slabs) {

@@ -432,6 +432,9 @@ const siteWorkspace = (() => {
     get revision() {
       return revision;
     },
+    get drawingBearing() {
+      return sceneOptions().bearing;
+    },
     composeDrawing(mesh) {
       return terrain
         ? siteAssemblyMesh(mesh, terrain, { ...sceneOptions(), relativeToBuilding: true })

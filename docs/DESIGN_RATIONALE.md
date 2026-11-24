@@ -90,7 +90,7 @@ The corridor, lobbies and shortcuts shape who passes through, who stops and who 
 
 ### Two kinds of threshold
 
-Rooms with an attract relationship can share a furnished lobby when there is space to make one. Separate thresholds for repelling programmes still connect to the common route. The outer corridor reaches each active dock, and two opposing lift cores connect the levels.
+Where two attracted rooms have enough space, their shared lobby becomes the route between them. Planted arches frame a passage 80% as wide as the main corridor. Split half-round couches and tables leave that passage clear, while shelves behind the couches hold books and games. Separate thresholds for repelling programmes connect to the common route. The outer corridor reaches each active dock, and two opposing lift cores connect the levels.
 
 ### A local bypass
 
