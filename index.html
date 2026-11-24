@@ -638,7 +638,11 @@
   <label class="drawing-view-field" id="drawingLobbyCutField">Shared lobby section
    <select id="drawingLobbyCut"><option value="">Choose a shared lobby</option></select>
   </label>
+  <label class="drawing-view-field" id="drawingLobbyPlanField">Shared lobby plan
+   <select id="drawingLobbyPlan"><option value="">Choose a shared lobby</option></select>
+  </label>
   <button type="button" id="addDrawingPlane">Add plane</button>
+  <label class="check" id="drawingCutFillField"><input id="drawingCutFill" type="checkbox" checked> Solid black cut fill</label>
   <div id="drawingPlanes" class="drawing-plane-list"></div>
   <div id="drawingPlaneFields" class="drawing-plane-fields" hidden>
    <label class="drawing-view-field">Orientation
@@ -666,7 +670,7 @@
    </div>
   </div>
   <div id="drawingSectionView" class="drawing-plane-fields" hidden>
-   <label class="drawing-view-field">Section projection
+   <label class="drawing-view-field"><span id="drawingProjectionTitle">Section projection</span>
     <select id="drawingSectionProjection"><option value="orthographic">Orthographic</option><option value="perspective">Section perspective</option></select>
    </label>
    <div id="drawingSectionLensField" class="drawing-view-field" hidden>

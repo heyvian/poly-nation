@@ -95,7 +95,8 @@ function drawingGeometry(mesh, model) {
         color: data.slice(i + 6, i + 9),
         component: parts[group],
         body: bodyIds[group],
-        glazing: kind === 'glass'
+        glazing: kind === 'glass',
+        cutGroup: kind === 'solid' && !groups[group].layer.startsWith('Site ') ? group : null
       };
       faces.push(face);
       // DEM triangles occlude geometry and carry color. Their contours and shoreline
@@ -467,8 +468,130 @@ function sectionLensProjection(cutDepth, focalDistance, centerX, centerY) {
         centerY + (y - centerY) / factor,
         cutDepth + z / factor
       ];
+    },
+    planeDepth(plane) {
+      // Intersect a projected viewing ray with a secondary cut plane in inverse-depth space.
+      const origin = plane.x * centerX + plane.y * centerY + plane.z * cutDepth - plane.level,
+        divisor = plane.z + origin / focalDistance;
+      return Math.abs(divisor) > 1e-9
+        ? (x, y) => (plane.level - plane.x * x - plane.y * y - plane.z * cutDepth) / divisor
+        : null;
     }
   };
+}
+
+// Each solid contributes oriented edges to the cut. Trace only closed loops so loose surfaces
+// remain linework. Opposite winding preserves holes within a solid's compound path.
+function drawingCutContours(segments) {
+  const outgoing = new Map();
+  const key = (point) => point.map((value) => Math.round(value * 10000)).join(',');
+  for (const [a, b] of segments) {
+    const start = key(a),
+      end = key(b);
+    if (start === end) continue;
+    const reverse = outgoing.get(end);
+    if (reverse?.delete(start)) {
+      if (!reverse.size) outgoing.delete(end);
+      continue;
+    }
+    if (!outgoing.has(start)) outgoing.set(start, new Map());
+    outgoing.get(start).set(end, a);
+  }
+  const contours = [];
+  while (outgoing.size) {
+    let vertex = outgoing.keys().next().value;
+    const positions = [],
+      visited = new Map();
+    while (outgoing.has(vertex) && !visited.has(vertex)) {
+      const edges = outgoing.get(vertex),
+        [next, position] = edges.entries().next().value;
+      visited.set(vertex, positions.length);
+      positions.push(position);
+      edges.delete(next);
+      if (!edges.size) outgoing.delete(vertex);
+      vertex = next;
+    }
+    const start = visited.get(vertex);
+    if (start != null && positions.length - start >= 3) contours.push(positions.slice(start));
+  }
+  return contours;
+}
+
+function collectDrawingCut(triangle, plane, groups, group) {
+  const distances = triangle.map((point) => drawingDistance(point, plane));
+  let start, end;
+  for (let i = 0; i < 3; i++) {
+    const j = (i + 1) % 3,
+      a = distances[i],
+      b = distances[j];
+    if (a > 1e-7 === b > 1e-7) continue;
+    const point = drawingMix(triangle[i], triangle[j], clamp(a / (a - b), 0, 1));
+    if (a > 1e-7) end = point;
+    else start = point;
+  }
+  if (!start || !end) return;
+  if (!groups.has(group)) groups.set(group, []);
+  groups.get(group).push([start, end]);
+}
+
+function drawingCutFills(cuts, clips, { optics, depth, width, height, frontDepth, sheetEdges }) {
+  const fills = [];
+  let mask, visible;
+  for (const [index, groups] of cuts.entries()) {
+    const plane = clips[index],
+      remaining = clips.filter((_, i) => i !== index),
+      isFront =
+        Math.abs(plane.x) < 1e-9 &&
+        Math.abs(plane.y) < 1e-9 &&
+        plane.z > 0.999999 &&
+        Math.abs(plane.level / plane.z - frontDepth) < 1e-7;
+    const paths = [...groups.values()]
+      .map((segments) =>
+        drawingCutContours(segments)
+          .map((loop) => trimDrawingFace(loop, remaining))
+          .map((loop) => trimDrawingFace(optics ? loop.map(optics.project) : loop, sheetEdges))
+          .filter((loop) => loop.length >= 3)
+          .map(
+            (loop) =>
+              loop.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(3)} ${y.toFixed(3)}`).join('') +
+              'Z'
+          )
+          .join('')
+      )
+      .filter(Boolean);
+    if (isFront) {
+      // The aligned cut faces the reader. Preserve its true outlines as vectors.
+      fills.push(...paths);
+      continue;
+    }
+    const depthAt = optics
+      ? optics.planeDepth(plane)
+      : Math.abs(plane.z) > 1e-9
+        ? (x, y) => (plane.level - plane.x * x - plane.y * y) / plane.z
+        : null;
+    if (!paths.length || !depthAt) continue;
+    if (!mask) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      mask = canvas.getContext('2d', { willReadFrequently: true });
+      visible = new Uint8ClampedArray(width * height * 4);
+    }
+    // An oblique or secondary cut can sit behind retained geometry. Use the existing depth
+    // buffer to mask it, then trace the visible black area back to an editable SVG path.
+    mask.clearRect(0, 0, width, height);
+    for (const d of paths) mask.fill(new Path2D(d));
+    const pixels = mask.getImageData(0, 0, width, height).data;
+    for (let i = 0; i < depth.length; i++) {
+      if (
+        pixels[i * 4 + 3] >= 128 &&
+        depthAt((i % width) + 0.5, Math.floor(i / width) + 0.5) + 0.008 >= depth[i]
+      )
+        visible[i * 4 + 3] = 255;
+    }
+  }
+  if (visible) for (const { d } of traceDrawingFills(visible, width, height, 1)) fills.push(d);
+  return fills;
 }
 
 // Fit the clipped drawing, including new corners where planes cross faces and loose edges.
@@ -519,7 +642,7 @@ function renderDrawing(
   placement,
   hybrid,
   pens,
-  { region, sectionLens, floorSet } = {}
+  { region, sectionLens, floorSet, focus, cutFill } = {}
 ) {
   const width = region?.width ?? paper.width * DRAWING_PIXELS_PER_INCH,
     height = region?.height ?? paper.height * DRAWING_PIXELS_PER_INCH,
@@ -528,7 +651,8 @@ function renderDrawing(
     drawingHeight = height - (region ? DRAWING_TILE_RESERVED_HEIGHT : margin * 3.2);
   const basis = orbitBasis(camera),
     { right, up, back } = basis,
-    raw = geometry.points.map((p) => [dot(p, right), -dot(p, up), dot(p, back)]),
+    projectToView = (point) => [dot(point, right), -dot(point, up), dot(point, back)],
+    raw = geometry.points.map(projectToView),
     modelClips = planes.map(({ normal, offset, flip }) => {
       const sign = flip ? -1 : 1;
       return {
@@ -538,9 +662,10 @@ function renderDrawing(
         level: sign * offset
       };
     }),
-    { left, top, right: rightEdge, bottom } = drawingFrameBounds(geometry, raw, modelClips),
-    midX = (left + rightEdge) / 2,
-    midY = (top + bottom) / 2;
+    bounds = drawingFrameBounds(geometry, raw, modelClips),
+    frame = focus ? drawingFrameBounds(geometry, focus.map(projectToView), []) : bounds,
+    midX = (frame.left + frame.right) / 2,
+    midY = (frame.top + frame.bottom) / 2;
   // Ground stays tied to the original grade datum, even when a cut removes it from view.
   let ground = 0;
   if (Math.abs(camera.el) > 0.01) {
@@ -548,9 +673,7 @@ function renderDrawing(
       if (Math.abs(geometry.points[i][1]) <= 0.25) ground = Math.max(ground, y);
   }
   // Every floor in a printed or tiled set shares the model's full fit scale.
-  const fitBounds = floorSet
-      ? drawingFrameBounds(geometry, raw, [])
-      : { left, top, right: rightEdge, bottom },
+  const fitBounds = floorSet ? drawingFrameBounds(geometry, raw, []) : frame,
     required =
       1000 *
       pixelsPerMillimetre *
@@ -575,7 +698,10 @@ function renderDrawing(
     cutLines = [];
   // Calibrate the lens at fit scale. Changing the printed scale enlarges the same projected
   // drawing, so a detail beyond the cut can stay anchored just like a detail on the cut.
-  const eyeLevel = sectionLens && clamp(sectionLens.eyeLevel, -bottom, -top),
+  const lensY =
+      sectionLens?.eyeLevel == null
+        ? midY
+        : clamp(-sectionLens.eyeLevel, bounds.top, bounds.bottom),
     focalDistance =
       sectionLens &&
       (sectionLens.millimetres * (width - margin * 2) * fittedDenominator) /
@@ -586,7 +712,7 @@ function renderDrawing(
         sectionLens.cutDepth,
         focalDistance,
         originX + midX * scale,
-        originY - eyeLevel * scale
+        originY + lensY * scale
       ),
     projectView = optics ? optics.project : (point) => point;
   const outline =
@@ -603,8 +729,12 @@ function renderDrawing(
     z,
     level: level + (x * originX + y * originY) / scale
   }));
+  const capSegments = cutFill ? clips.map(() => new Map()) : [];
   for (const face of geometry.faces) {
     const triangle = face.vertices.map((index) => projected[index]);
+    if (capSegments.length && face.cutGroup != null)
+      for (const [i, groups] of capSegments.entries())
+        collectDrawingCut(triangle, clips[i], groups, face.cutGroup);
     const polygon = trimDrawingFace(triangle, clips);
     if (polygon.length < 3) continue;
     if (!face.glazing || !seeThrough) {
@@ -706,6 +836,14 @@ function renderDrawing(
         : nearest,
     Infinity
   );
+  const cutFills = drawingCutFills(capSegments, clips, {
+    optics,
+    depth,
+    width,
+    height,
+    frontDepth,
+    sheetEdges
+  });
   for (const [a, b] of cutLines) {
     const atFrontCut = Math.abs(a[2] - frontDepth) < 1e-7 && Math.abs(b[2] - frontDepth) < 1e-7;
     strokeVisible(
@@ -744,7 +882,7 @@ function renderDrawing(
     if (sectionLens) {
       const [x, y, z] = projected[start],
         across = midX - (x - originX) / scale,
-        height = eyeLevel + (y - originY) / scale,
+        height = (y - originY) / scale - lensY,
         depth = sectionLens.cutDepth + focalDistance - z;
       towardLens = back.map((value, i) => value * depth + right[i] * across + up[i] * height);
     }
@@ -873,9 +1011,11 @@ function renderDrawing(
     ...joinPaths(front),
     perspective: behind && joinPaths(behind),
     construction,
+    cutFills,
     pens,
     heaviest: ranked[0].index,
-    populated: marks.length > 0 || section.length > 0 || recedingSection.length > 0,
+    populated:
+      marks.length > 0 || section.length > 0 || recedingSection.length > 0 || cutFills.length > 0,
     basis,
     scale,
     originX,
@@ -904,9 +1044,9 @@ function renderDrawing(
     margin,
     drawingHeight,
     cropped:
-      originX + left * scale < margin - 0.1 ||
-      originX + rightEdge * scale > width - margin + 0.1 ||
-      originY + top * scale < margin - 0.1 ||
-      originY + bottom * scale > margin + drawingHeight + 0.1
+      originX + bounds.left * scale < margin - 0.1 ||
+      originX + bounds.right * scale > width - margin + 0.1 ||
+      originY + bounds.top * scale < margin - 0.1 ||
+      originY + bounds.bottom * scale > margin + drawingHeight + 0.1
   };
 }

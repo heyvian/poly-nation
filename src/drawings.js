@@ -65,6 +65,7 @@ const openDrawingWorkspace = (() => {
       sectionProjection: 'orthographic',
       sectionLens: 35,
       perspectiveFade: 55,
+      cutFill: true,
       source: 'massing',
       showSite: false,
       planSheet: 'single',
@@ -106,6 +107,7 @@ const openDrawingWorkspace = (() => {
         sectionProjection: saved.sectionProjection === 'perspective' ? 'perspective' : 'orthographic',
         sectionLens: clamp(Number(saved.sectionLens) || 35, 8, 200),
         perspectiveFade: Number.isFinite(saved.perspectiveFade) ? clamp(saved.perspectiveFade, 0, 100) : 55,
+        cutFill: saved.cutFill !== false,
         showSite: saved.showSite === true,
         planSheet: saved.planSheet === 'floors' ? 'floors' : 'single',
         azimuth:
@@ -167,6 +169,22 @@ const openDrawingWorkspace = (() => {
   const selectedLobby = (plane) =>
     plane?.lobbyKey &&
     sourceModel?.circulation.hubs.find((hub) => hub.layout && lobbyKey(hub) === plane.lobbyKey);
+  const focusedLobbyPlan = (plane = currentPlane()) =>
+    settings.view === 'aligned' && plane?.axis === 'horizontal' ? selectedLobby(plane) : null;
+  function lobbyPlanFrame(hub, includeSite) {
+    const bearing = includeSite ? (siteWorkspace.drawingBearing * Math.PI) / 180 : 0,
+      cos = Math.cos(bearing),
+      sin = Math.sin(bearing),
+      halfWidth = (hub.R - hub.r) / 2 + 2,
+      halfLength = hub.layout.approach + 2;
+    // Frame the furnishings and a short stretch of both approaches and the public corridor.
+    return [-halfLength, halfLength].flatMap((along) =>
+      [-halfWidth, halfWidth].map((across) => {
+        const [x, , z] = sharedLobbyPoint(hub, along, across, 0);
+        return [x * cos - z * sin, 0, x * sin + z * cos];
+      })
+    );
+  }
   function planeAngle(plane) {
     const hub = selectedLobby(plane);
     if (!hub) return plane.angle;
@@ -242,6 +260,9 @@ const openDrawingWorkspace = (() => {
     sheet.classList.toggle('planset', allPlans());
     $('placeDrawingPlane').disabled = allPlans();
     $('centerDrawing').disabled = Boolean(settings.detail) || allPlans();
+    $('drawingCutFillField').hidden = Boolean(settings.detail);
+    $('drawingCutFill').disabled = !currentPlane() && !allPlans();
+    $('drawingCutFill').checked = settings.cutFill;
     syncSectionView();
   }
 
@@ -251,9 +272,15 @@ const openDrawingWorkspace = (() => {
     ...SECTION_LENS_STOPS.map((mm) => new Option(`${mm} mm`, lensPosition(mm)))
   );
   function syncSectionView() {
-    const aligned =
-      !settings.detail && settings.view === 'aligned' && currentPlane()?.axis === 'vertical';
-    $('drawingSectionView').hidden = !aligned;
+    const plane = currentPlane(),
+      plan = focusedLobbyPlan(plane),
+      aligned = !settings.detail && settings.view === 'aligned';
+    $('drawingLobbyCut').value =
+      aligned && plane?.axis === 'vertical' && selectedLobby(plane) ? plane.lobbyKey : '';
+    $('drawingLobbyPlan').value = aligned && plan ? plane.lobbyKey : '';
+    $('drawingSectionView').hidden = !(aligned && (plane?.axis === 'vertical' || plan));
+    $('drawingProjectionTitle').textContent = plan ? 'Plan projection' : 'Section projection';
+    $('drawingSectionProjection').options[1].text = plan ? 'Plan perspective' : 'Section perspective';
     $('drawingSectionProjection').value = settings.sectionProjection;
     $('drawingSectionLensField').hidden = settings.sectionProjection !== 'perspective';
     $('drawingSectionLensNumber').value = settings.sectionLens;
@@ -273,7 +300,8 @@ const openDrawingWorkspace = (() => {
     const plane = currentPlane();
     if (
       settings.view !== 'aligned' ||
-      plane?.axis !== 'vertical' ||
+      !plane ||
+      (plane.axis === 'horizontal' && !focusedLobbyPlan(plane)) ||
       settings.sectionProjection !== 'perspective'
     )
       return null;
@@ -281,7 +309,8 @@ const openDrawingWorkspace = (() => {
     return {
       cutDepth: planeHeight(plane) * (plane.flip ? -1 : 1),
       millimetres: settings.sectionLens,
-      eyeLevel: (hub ? hub.f * modelFloorPitch(sourceModel) : 0) + 1.65
+      eyeLevel:
+        plane.axis === 'vertical' ? (hub ? hub.f * modelFloorPitch(sourceModel) : 0) + 1.65 : null
     };
   }
 
@@ -584,6 +613,11 @@ const openDrawingWorkspace = (() => {
           layer.append(path(lines[key], widths[heaviest], pens.colors[heaviest], recedes));
       if (layer.hasChildNodes()) layers.push(layer);
     }
+    if (frame.cutFills.length) {
+      const fill = markSvgLayer(svgElement('g', { fill: '#000000' }), 'Cut fill');
+      for (const d of frame.cutFills) fill.append(svgElement('path', { d, 'fill-rule': 'nonzero' }));
+      layers.push(fill);
+    }
     target.replaceChildren(...layers);
   }
 
@@ -663,7 +697,7 @@ const openDrawingWorkspace = (() => {
         { x: 0, y: 0, ground: false },
         settings.mode !== 'linework',
         settings.pens,
-        { region, floorSet: true }
+        { region, floorSet: true, cutFill: settings.cutFill }
       );
       denominator = String(frame.denominator);
       cropped ||= frame.cropped;
@@ -731,7 +765,7 @@ const openDrawingWorkspace = (() => {
         renderedGeometryMode = mode;
       }
       const camera = settings.detail ? null : viewCamera();
-      const optics = camera && sectionOptics();
+      const optics = camera && sectionOptics(), lobby = camera && focusedLobbyPlan();
       $('groundDrawing').disabled = !camera || Math.abs(Math.cos(camera.el)) <= 0.01;
       if (!allPlans()) floorTiles.replaceChildren();
       rendered = settings.detail
@@ -748,7 +782,8 @@ const openDrawingWorkspace = (() => {
               settings.placement,
               settings.mode !== 'linework',
               settings.pens,
-              { sectionLens: optics }
+              { sectionLens: optics, focus: lobby ? lobbyPlanFrame(lobby, includeSite) : null,
+                cutFill: settings.cutFill }
             );
       // Older sheets store their pan in paper millimetres. Convert at the saved scale so
       // subsequent scale changes preserve the current crop.
@@ -759,10 +794,11 @@ const openDrawingWorkspace = (() => {
         settings.placement.modelUnits = true;
         saveDrawing();
       }
-      const { width, height, margin, denominator } = rendered,
+      const lobbyTitle = lobby && `Shared lobby plan · Level ${lobby.f + 1}`,
+        { width, height, margin, denominator } = rendered,
         ruleY = height - margin * 1.8,
         textY = height - margin,
-        viewLabel = settings.detail
+        viewLabel = lobbyTitle ? lobbyTitle + (optics ? ` · ${optics.millimetres} mm` : '') : settings.detail
           ? CONNECTION_DETAIL_TITLES[settings.detail]
           : allPlans()
             ? 'Floor plans'
@@ -1011,14 +1047,16 @@ const openDrawingWorkspace = (() => {
     ])
       $(id).disabled = detail;
     $('drawingPlanes').hidden = detail;
-    $('drawingLobbyCutField').hidden = detail;
     const availableLobbies = sourceModel?.circulation.hubs.filter((hub) => hub.layout) ?? [];
-    $('drawingLobbyCut').replaceChildren(new Option(
-      availableLobbies.length ? 'Choose a shared lobby' : 'No shared lobbies in this design', ''),
-      ...availableLobbies.map((hub) => new Option(
-        `Level ${hub.f + 1} · ${hub.pair.map((p) => P[p].name).join(' + ')}`, lobbyKey(hub))));
-    $('drawingLobbyCut').disabled = !availableLobbies.length;
-    $('drawingLobbyCut').value = selectedLobby(plane) ? plane.lobbyKey : '';
+    for (const id of ['drawingLobbyCut', 'drawingLobbyPlan']) {
+      $(id + 'Field').hidden = detail;
+      $(id).replaceChildren(
+        new Option(availableLobbies.length ? 'Choose a shared lobby' : 'No shared lobbies in this design', ''),
+        ...availableLobbies.map((hub) => new Option(
+          `Level ${hub.f + 1} · ${hub.pair.map((p) => P[p].name).join(' + ')}`, lobbyKey(hub)))
+      );
+      $(id).disabled = !availableLobbies.length;
+    }
     $('drawingSource').value = settings.source;
     syncSiteControl();
     $('drawingPlanSheet').value = settings.planSheet;
@@ -1136,6 +1174,10 @@ const openDrawingWorkspace = (() => {
     settings.glazing = event.target.checked;
     queueDrawing();
   };
+  $('drawingCutFill').onchange = (event) => {
+    settings.cutFill = event.target.checked;
+    queueDrawing();
+  };
   $('fitDrawing').onclick = () => {
     settings.scale = 'auto';
     $('drawingScale').value = settings.scale;
@@ -1168,29 +1210,40 @@ const openDrawingWorkspace = (() => {
     $('drawingPlaneAxis').focus();
     queueDrawing();
   };
-  $('drawingLobbyCut').onchange = (event) => {
+  function applyLobbyCut(key, axis) {
     const hub = sourceModel.circulation.hubs.find(
-      (candidate) => candidate.layout && lobbyKey(candidate) === event.target.value
+      (candidate) => candidate.layout && lobbyKey(candidate) === key
     );
     if (!hub) return;
     const selected = currentPlane(),
-      plane =
-        selected?.axis === 'vertical'
-          ? selected
-          : {
-              id: Math.max(0, ...settings.planes.map((item) => item.id)) + 1,
-              axis: 'vertical',
-              flip: false
-            };
-    if (plane !== selected) settings.planes.push(plane);
-    Object.assign(plane, { lobbyKey: lobbyKey(hub), offset: 0, floor: null });
-    plane.angle = planeAngle(plane);
+      // Plan and section are alternative views of a lobby. Reuse their plane so they do not clip each other.
+      existing =
+        settings.planes.find((plane) => plane.lobbyKey) ??
+        (selected?.axis === axis ? selected : null),
+      plane = existing ?? { id: Math.max(0, ...settings.planes.map((item) => item.id)) + 1 },
+      horizontal = axis === 'horizontal';
+    if (horizontal || (plane.lobbyKey && plane.axis === 'horizontal')) {
+      settings.scale = 'auto';
+      settings.placement = centeredPlacement();
+    }
+    if (!existing) settings.planes.push(plane);
+    Object.assign(plane, {
+      axis,
+      lobbyKey: key,
+      offset: horizontal ? 1.7 : 0,
+      floor: horizontal ? hub.f : null,
+      flip: !horizontal && plane.axis === axis && Boolean(plane.flip)
+    });
+    plane.angle = horizontal ? 0 : planeAngle(plane);
     settings.selected = plane.id;
     settings.view = 'aligned';
     stopPlacing();
     syncSettings();
     queueDrawing();
-  };
+  }
+  $('drawingLobbyCut').onchange = (event) => applyLobbyCut(event.target.value, 'vertical');
+  $('drawingLobbyPlan').onchange = (event) => applyLobbyCut(event.target.value, 'horizontal');
+
   $('drawingSectionProjection').onchange = (event) => {
     settings.sectionProjection = event.target.value;
     syncSectionView();
@@ -1248,7 +1301,13 @@ const openDrawingWorkspace = (() => {
     if (selected === '') plane.offset = planeHeight(plane);
     else if (plane.floor == null && Math.abs(plane.offset) > pitch)
       plane.offset = Math.round(mod(plane.offset, pitch) * 10) / 10;
-    plane.floor = selected === '' ? null : Number(selected);
+    const floor = selected === '' ? null : Number(selected);
+    if (plane.floor !== floor && plane.lobbyKey) {
+      delete plane.lobbyKey;
+      settings.placement = centeredPlacement();
+    }
+    plane.floor = floor;
+    syncSectionView();
     movePlane(plane.offset);
   };
   $('centerDrawingPlane').onclick = () => movePlane(0);
@@ -1266,7 +1325,7 @@ const openDrawingWorkspace = (() => {
     if (Number.isFinite(value)) {
       const [min, max] = offsetLimits(plane);
       plane.offset = Math.round(clamp(value, min, max) * 10) / 10;
-      if (plane.lobbyKey && plane.offset !== 0) {
+      if (plane.axis === 'vertical' && plane.lobbyKey && plane.offset !== 0) {
         plane.angle = planeAngle(plane);
         delete plane.lobbyKey;
         $('drawingLobbyCut').value = '';
@@ -1391,9 +1450,9 @@ const openDrawingWorkspace = (() => {
   });
 
   function exportArtwork(item, target) {
-    if (item.localName === 'path') {
+    if (item.localName === 'path' && !item.hasAttribute('fill-rule')) {
       // The renderer packs disconnected strokes into each path. Bound the number of subpaths per
-      // object so large sheets remain practical to select and edit in a vector application.
+      // object so large sheets remain practical to edit. Filled contours keep their holes together.
       const strokes = item.getAttribute('d').match(/M[^M]+/g) || [];
       for (let first = 0; first < strokes.length; first += 256) {
         const path = item.cloneNode(false);
@@ -1478,8 +1537,10 @@ const openDrawingWorkspace = (() => {
   }
 
   exportButton.onclick = () => {
+    const lobby = focusedLobbyPlan();
     const view = settings.detail
       ? 'detail-' + settings.detail
+      : lobby ? `lobby-plan-l${lobby.f + 1}`
       : allPlans()
         ? 'floor-plans'
         : settings.view;
@@ -1512,7 +1573,7 @@ const openDrawingWorkspace = (() => {
       plans = floorPlans(),
       model = geometry,
       camera = viewCamera(),
-      { scale, glazing, mode, pens } = settings;
+      { scale, glazing, mode, pens, cutFill } = settings;
     printingFloorSet = button.disabled = true;
     button.textContent = 'Preparing floor set…';
     try {
@@ -1529,7 +1590,7 @@ const openDrawingWorkspace = (() => {
           { x: 0, y: 0, ground: false },
           mode !== 'linework',
           pens,
-          { floorSet: true }
+          { floorSet: true, cutFill }
         );
         const page = floorView(frame, 'Poly Nation · ' + label, 0, 0, true);
         page.setAttribute('width', paper.width + 'in');

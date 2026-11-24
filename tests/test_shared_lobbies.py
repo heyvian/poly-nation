@@ -62,6 +62,22 @@ with serve_lab(root) as url, sync_playwright() as p:
     assert result['recovered'] and result['checks'] and result['minimums'] and result['furnishedInBuild'], result
     assert all(all(check.values()) for check in result['checks']), result
 
+    assert page.evaluate('''() => {
+      // The cut through a ring must keep its opening, and an isolated sheet has no solid cap.
+      const mesh = meshBuilder(), color = rgb('#b8a0ca');
+      mesh.mark('Core_Test_Ring');
+      mesh.sector(1, 3, 0, TAU, -1, 2, color);
+      mesh.mark('Core_Test_Sheet');
+      mesh.quad([5,-1,0], [7,-1,0], [7,1,0], [5,1,0], color);
+      const frame = renderDrawing(drawingGeometry(mesh), { az: -Math.PI / 2, el: Math.PI / 2 },
+        [{ normal: [0,1,0], offset: 0 }], { width: 11, height: 8.5 }, 100, false,
+        { x: 0, y: 0 }, false, drawingPens(), { cutFill: true });
+      const context = document.createElement('canvas').getContext('2d');
+      const covered = (x, y) => frame.cutFills.some((d) => context.isPointInPath(new Path2D(d), x, y));
+      return frame.cutFills.length === 1 && !covered(frame.originX, frame.originY) &&
+        covered(frame.originX + 2*frame.scale, frame.originY);
+    }''')
+
     # A point beyond the cut must stay centred even as its projected shape is enlarged.
     assert page.evaluate('''() => {
       const camera = { az: Math.PI / 2, el: 0 };
@@ -189,5 +205,58 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(lens).to_have_value('24')
     expect(fade).to_have_value('70')
     expect(sheet).to_have_attribute('data-section-lens', '24')
+
+    lobby_plan = page.locator('#drawingLobbyPlan')
+    lobby_plan.select_option(index=1)
+    expect(page.locator('#drawingPlaneAxis')).to_have_value('horizontal')
+    expect(page.locator('#drawingPlaneOffset')).to_have_value('1.7')
+    expect(page.locator('#drawingProjectionTitle')).to_have_text('Plan projection')
+    expect(page.locator('#exportDrawing')).to_be_enabled()
+    expect(sheet.locator('[data-scale-ratio]')).to_have_text('1:100')
+    expect(sheet.locator('[data-layer="Title and scale"]')).to_contain_text('Shared lobby plan')
+    expect(page.locator('#drawingPlanes .drawing-plane-row')).to_have_count(1)
+    expect(lobby).to_have_value('')
+    expect(page.locator('#groundDrawing')).to_be_disabled()
+    expect(fade).to_have_value('70')
+    cap = sheet.locator('[data-layer="Cut fill"]')
+    expect(cap).to_have_attribute('fill', '#000000')
+    caps_at_cut = cap.inner_html()
+    lens.fill('8')
+    lens.press('Tab')
+    expect(sheet).to_have_attribute('data-section-lens', '8')
+    assert cap.inner_html() == caps_at_cut
+    drawing_scale.select_option('100')
+    sheet.press('Shift+ArrowRight')
+    expect(page.locator('#exportDrawing')).to_be_enabled()
+    panned_caps = cap.inner_html()
+    assert panned_caps != caps_at_cut
+    drawing_scale.select_option('50')
+    expect(page.locator('#exportDrawing')).to_be_enabled()
+    drawing_scale.select_option('100')
+    expect(page.locator('#exportDrawing')).to_be_enabled()
+    assert cap.inner_html() == panned_caps
+    page.locator('#centerDrawing').click()
+    expect(page.locator('#exportDrawing')).to_be_enabled()
+    assert cap.inner_html() == caps_at_cut
+    page.locator('#drawingCutFill').uncheck()
+    expect(cap).to_have_count(0)
+    page.locator('#drawingCutFill').check()
+    expect(cap).to_have_attribute('fill', '#000000')
+    with page.expect_download() as result:
+        page.locator('#exportDrawing').click()
+    assert 'lobby-plan' in result.value.suggested_filename
+    plan_svg = ET.parse(result.value.path()).getroot()
+    fill = next(node for node in plan_svg if node.get('data-layer') == 'Cut fill')
+    assert fill.get('fill') == '#000000' and fill.find('.//{*}path').get('fill-rule') == 'nonzero'
+    page.locator('#drawingPlaneOffset').fill('1.9')
+    page.locator('#drawingPlaneOffset').press('Tab')
+    expect(lobby_plan).not_to_have_value('')
+    page.reload()
+    expect(lobby_plan).not_to_have_value('')
+    expect(page.locator('#drawingPlaneOffset')).to_have_value('1.9')
+    lobby.select_option(index=1)
+    expect(page.locator('#drawingPlaneAxis')).to_have_value('vertical')
+    expect(page.locator('#drawingPlanes .drawing-plane-row')).to_have_count(1)
+    expect(lobby_plan).to_have_value('')
     assert not errors, errors
-    print('Lobby routes, section optics, depth fade, anchored scale, placement tools and SVG export passed.')
+    print('Lobby routes, focused plans and sections, perspective, cut fills, and SVG export passed.')

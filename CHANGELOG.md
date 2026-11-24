@@ -1,5 +1,9 @@
 # Changelog
 
+## Shared lobby plans and cut fills
+- Added a focused horizontal cut at the selected shared lobby, with an adjustable height, an orthographic or perspective view, and a crop that stays anchored through scale changes.
+- Added optional solid black fill at clipping planes. Closed cut contours retain their holes, respect visibility and export on a separate SVG layer.
+
 ## Drawing placement and section linework
 - Added a lightening slider for strokes behind the perspective section cut. Preview, SVG and print retain the selected fade and the existing printed pen widths.
 - Kept the same crop centre as scale changes. Added Centre at the current scale, used the clipped geometry for Fit and retained the Ground datum alignment.

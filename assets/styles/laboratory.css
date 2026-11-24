@@ -634,7 +634,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  background: var(--paper);
 }
 .drawing-view-field { display: grid; gap: 4px; }
-#drawingLobbyCut { min-width: 0; }
+#drawingLobbyCut, #drawingLobbyPlan { min-width: 0; }
 .drawing-pen-settings { display: grid; gap: 7px; }
 .drawing-colours { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 12px; align-items: end; }
 /* Keep each pen's slider, millimetre field and ink swatch together in the narrow drawing rail. */
