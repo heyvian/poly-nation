@@ -1,5 +1,10 @@
 # Changelog
 
+## Shared lobby locations and quarter domes
+- Prioritized fitting a full shared lobby near a lift core or bridge approach, with a preference for connecting its corridor return directly to the junction. Removed the earlier freestanding landing furniture.
+- Rebuilt the timber lattice as a quarter dome over one semicircular seating bay, with uprights that extend the generated casework and two intermediate supports.
+- Increased maximum magnification fivefold in Massing and Build. Scroll and pinch now keep the detail under the cursor or pinch midpoint in view.
+
 ## Atrium stairs, landing lounges and lighting study
 - Added furnished core and bridge landing lounges off the clear aisle. Shared through-lobbies use the continuous corridor floor under the rug, with fitted nook benches and occasional open timber canopies.
 - Deepened the bridge decks and added a schematic midspan bearing at the fixed mast sleeve. Curved down-stairs use clear landings with optional short corridor links. Their area and navigation are included in the model.

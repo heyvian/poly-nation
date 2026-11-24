@@ -25,7 +25,7 @@ with serve_lab(root) as url, sync_playwright() as p:
       state.relations['0-1'] = 'attract';
       state.simRunning = state.animateSwing = false;
       update();
-      const { stairs, bridges, landingLounges } = model.circulation;
+      const { stairs, bridges, hubs } = model.circulation;
       const { edges, nodes, reachable } = buildNavigation(model);
       const lifts = new Set(nodes.filter(n => n.kind === 'lift').map(n => n.f));
       const stairRoutes = edges.flatMap((choices, from) =>
@@ -34,14 +34,49 @@ with serve_lab(root) as url, sync_playwright() as p:
       const assembly = buildAssemblyMesh(model, {slabs: true}, 0, {assignments: {}, view: state});
       const hasLayer = suffix => assembly.groups.some((group, index) =>
         group.layer.includes(suffix) && (assembly.groups[index + 1]?.solid ?? assembly.solid.length) > group.solid);
+      const junctionTypes = new Set();
+      for (const [mode, seed] of [['off', 606], ['aligned', 607]]) {
+        Object.assign(state, { atriumBridges: mode, seed });
+        const alternative = derive();
+        if (alternative.circulation.hubs.length >= 2)
+          alternative.circulation.hubs.forEach(h => {
+            if (h.access?.connected) junctionTypes.add(h.access.type);
+          });
+      }
+      Object.assign(state, { atriumBridges: 'aligned', seed: 606 });
+      const canopyFollowsCabinets = hubs.some(hub => {
+        const mesh = meshBuilder();
+        drawSharedLobby(mesh, hub, 0, state.seed, true);
+        const i = mesh.groups.findIndex(g => g.layer.endsWith('_Shared_Lattice_Canopy'));
+        if (i < 0) return false;
+        const vertices = mesh.solid.slice(mesh.groups[i].solid, mesh.groups[i + 1].solid);
+        const { axis, origin, passage, couchOuter } = hub.layout;
+        const locations = [];
+        for (let j = 0; j < vertices.length; j += 10) {
+          const x = vertices[j] - origin[0], z = vertices[j+2] - origin[1];
+          locations.push({ along: x*axis[0] + z*axis[1], across: x*axis[1] - z*axis[0], y: vertices[j+1] });
+        }
+        const sign = Math.sign(locations[0].across);
+        const support = mesh.groups.findIndex(g => g.layer.endsWith('_Shared_Lattice_Intermediate_Supports'));
+        const uprights = mesh.solid.slice(mesh.groups[support].solid, mesh.groups[support + 1].solid);
+        // The two added uprights stand on taller cabinet tops, leaving the low reading seats open.
+        return uprights.length === 2 * 360 && uprights.every((value, k) => k % 10 !== 1 || value > 0.95) &&
+          locations.every(p => sign*p.across >= passage/2 - 0.05 && p.y < 3.72 && p.y > 0.32) &&
+          locations.some(p => p.y > 3.3 && Math.abs(p.along) < 0.06) &&
+          locations.filter(p => p.y < 1.8).every(p =>
+            Math.abs(Math.hypot(p.along, Math.abs(p.across)-passage/2) - couchOuter - 0.123) < 0.04);
+      });
       return {
         accounted: model.total <= state.areaCap && model.circulation.stairArea > 0,
         stairs: stairs.length === bridges.length && stairRoutes.length === stairs.length && stairRoutes.every(Boolean),
         separated: stairs.some((s, i) => i > 0 && angDist(s.top, stairs[i - 1].top) > Math.PI / 2),
         clear: stairs.every(s => s.going >= 0.28 && s.going < 0.43 && modelFloorPitch(model) / s.risers < 0.18),
         stepFree: bridges.every(bridge => lifts.has(bridge.f)),
-        lounges: new Set(landingLounges.map(l => l.type)).size === 2 &&
-          nodes.filter(n => n.kind === 'landingLounge' && reachable.has(n.id)).length === landingLounges.length,
+        junctionLobbies: junctionTypes.has('core') && junctionTypes.has('bridge') &&
+          hubs.length >= 2 && hubs.some(h => h.access?.connected) &&
+          nodes.filter(n => n.kind === 'hub' && reachable.has(n.id)).length === hubs.length &&
+          assembly.groups.every(group => !group.layer.includes('_Landing_Lounge')),
+        canopyFollowsCabinets,
         furniture: ['_Shared_Nook_Benches', '_Shared_Lattice_Canopy', 'Assembly_Atrium_Bearings',
           'Infinite_Rinse_Perimeter_Walk'].every(hasLayer)
       };
@@ -50,6 +85,29 @@ with serve_lab(root) as url, sync_playwright() as p:
 
     expect(page.locator('#openBuild + span + button')).to_have_text('Render')
     page.evaluate('window.designBeforeRender = model')
+    page.evaluate('''() => {
+      window.zoomSamples = {};
+      const glDraw = paintWebGL;
+      const canvasDraw = paintSoftware;
+      paintWebGL = (canvas, gl, renderer, camera, ...args) => {
+        window.zoomSamples[canvas.id] = { ...camera };
+        return glDraw(canvas, gl, renderer, camera, ...args);
+      };
+      paintSoftware = (mesh, renderer, camera, ...args) => {
+        window.zoomSamples[renderer.canvas.id] = { ...camera };
+        return canvasDraw(mesh, renderer, camera, ...args);
+      };
+    }''')
+    for tab, target in [('#openMassing', 'canvas'), ('#openBuild', 'buildCanvas')]:
+        page.locator(tab).click()
+        subject = page.locator('#' + target)
+        bounds = subject.bounding_box()
+        subject.dispatch_event('wheel', {
+            'deltaY': -6500, 'clientX': bounds['x'] + bounds['width'] * 0.7,
+            'clientY': bounds['y'] + bounds['height'] * 0.43,
+        })
+        camera = page.evaluate('id => window.zoomSamples[id]', target)
+        assert camera['zoom'] < 0.02 and camera['panX'] > 0
     page.locator('#openRender').click()
     expect(page.locator('#renderPhase')).to_be_visible()
     expect(page.locator('#buildPhase')).to_be_hidden()
@@ -70,4 +128,4 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(canvas).to_be_visible()
     assert not errors, errors
     browser.close()
-    print('Atrium stair fit, bridge bearings, landing lounges and independent lighting passed.')
+    print('Atrium stairs, shared lobby placement, quarter domes, detail zoom and lighting passed.')

@@ -1771,41 +1771,6 @@ function drawAtriumStair(mesh, r, stair, high, low, deck) {
     line(point(outer - 0.075, i, 1.1), ringPoint(outer - 0.075, angle, y + 1.1), steel);
 }
 
-function drawLandingLounge(mesh, lounge, y) {
-  const { f, type, angle, radius, length, depth, furnishingDepth, paired } = lounge,
-    timber = rgb('#ad8762'),
-    upholstery = rgb('#629185'),
-    weave = rgb('#baafc4'),
-    part = (across, along, up, w, d, h, color) => {
-      const x = (radius + along) * Math.cos(angle) - across * Math.sin(angle),
-        z = (radius + along) * Math.sin(angle) + across * Math.cos(angle);
-      mesh.box(x, y + up, z, w, h, d, angle, color);
-    };
-  mesh.mark(`Circulation_L${f + 1}_Landing_Lounge`, `${type === 'bridge' ? 'Bridge' : 'Core'} landing ${angle.toFixed(3)}`);
-  // The floor is continuous. Only the small woven runner and bench sit above it.
-  if (paired) {
-    const width = furnishingDepth - 0.22,
-      center = (depth - furnishingDepth) / 2;
-    part(center, 0, 0.005, furnishingDepth - 0.04, length + 0.17, 0.009, weave);
-    for (const sign of [-1, 1]) {
-      const end = sign * (length / 2 - 0.32);
-      part(center, end, 0.04, width, 0.58, 0.34, timber);
-      part(center, end - sign * 0.033, 0.38, width - 0.09, 0.49, 0.108, upholstery);
-      part(center, end + sign * 0.22, 0.48, width, 0.14, 0.26, upholstery);
-    }
-    part(center, 0, 0.03, 0.09, 0.1, 0.46, timber);
-    part(center, 0, 0.49, Math.min(0.54, width - 0.08), 0.43, 0.04, rgb('#d9ba91'));
-    return;
-  }
-  part(-0.22, 0, 0.005, depth + 0.51, length + 0.19, 0.009, weave);
-  for (const offset of [-0.29, -0.4]) part(offset, 0, 0.015, 0.034, length + 0.1, 0.002, timber);
-  part(0, 0, 0.047, depth, length, 0.33, timber);
-  part(-0.026, 0, 0.377, depth - 0.056, length - 0.055, 0.105, upholstery);
-  part(depth / 2 - 0.09, 0, 0.482, 0.15, length - 0.04, 0.28, upholstery);
-  for (const sign of [-1, 1])
-    part(0, sign * (length / 2 - 0.13), 0.035, depth - 0.06, 0.17, 0.38, timber);
-}
-
 // The boarding deck closes the canopy at the mast, with stairs over the glazing.
 function drawSwingAboveRoof(b, m, assembly = false) {
   const { mark, sector, ringPoint, quad, line, glass, box } = b,
@@ -2850,7 +2815,9 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     board = 0.038,
     shelfPitch = 0.31,
     bayCount = 8,
-    seatTop = 0.52;
+    seatTop = 0.52,
+    cabinetStile = 0.024 / shelfInner,
+    cabinetTop = ({ type, height, extraShelves }) => type === 'seat' ? 0.39 : height + extraShelves * shelfPitch;
   const bookColors = ['#b27765', '#778f82', '#c5a771', '#66778c', '#d8c4ab', '#856b70'].map(rgb);
   const gameColors = ['#bd985d', '#7f9c81', '#9a6a63', '#7b91a4'].map(rgb);
   const pillowColors = ['#e6cb9f', '#ad7462', '#a4b9a8'].map(rgb);
@@ -3023,8 +2990,8 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     const sign = side ? 1 : -1;
     for (const { start, end, outer, height, type, extraShelves, nook } of bays) {
       const low = type === 'seat',
-        high = low ? 0.39 : height + extraShelves * shelfPitch,
-        stile = 0.024 / shelfInner,
+        high = cabinetTop({ type, height, extraShelves }),
+        stile = cabinetStile,
         left = start + stile + 0.002,
         right = end - stile - 0.002,
         shelfBoards = low ? [0.08, high - board] : [0.12, 0.47];
@@ -3128,46 +3095,47 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     block(along, across, 0.395, width - 0.075, 0.095, depth - 0.05, cushion, heading + turn);
   }
 
-  // Seeded open timber shells shelter one seating bay. Fit the footprint before
-  // placing the ribs, and keep every support outside the clear aisle and threshold.
+  // A quarter dome springs from the semicircular cabinet backs. Each upright
+  // extends an actual cabinet stile, including the low reading-seat bays.
   const canopyRandom = random(lobbySeed ^ 0x21bebc31);
   if (hub.layout.axis && canopyRandom() < 0.46) {
-    const side = canopyRandom() < 0.5 ? -1 : 1,
-      alongRadius = Math.min(couchOuter * 0.95, arch - 0.59),
-      acrossRadius = Math.min(1.12, couchOuter * 0.38),
-      acrossCenter = side * (edge + acrossRadius + 0.25),
-      spring = 2.21,
-      rise = 1.05 + canopyRandom() * 0.25,
+    const sign = canopyRandom() < 0.5 ? -1 : 1,
+      bays = shelves[sign < 0 ? 0 : 1],
+      radius = shelfInner + 0.105,
+      spring = Math.max(2.13, ...bays.map((bay) => cabinetTop(bay) + 0.06)),
+      rise = Math.min(3.64 - spring, 1.35 + canopyRandom() * 0.17),
+      ribs = [
+        ...bays.map((bay) => ({ bay, angle: bay.start + cabinetStile / 2 })),
+        { bay: bays.at(-1), angle: bays.at(-1).end - cabinetStile / 2 }
+      ],
+      first = ribs[0].angle,
+      last = ribs.at(-1).angle,
       wood = rgb('#ab805b'),
-      at = (angle, pitch) => point(
-        alongRadius * Math.cos(angle) * Math.cos(pitch),
-        acrossCenter + acrossRadius * Math.sin(angle) * Math.cos(pitch),
-        spring + rise * Math.sin(pitch)
-      ),
-      sizeOK = alongRadius > 1.1 && acrossRadius > 0.7 &&
-        Array.from({ length: 20 }, (_, i) => {
-          const [x, , z] = at(i * TAU / 20, 0);
-          return sharedLobbyContains(hub, x, z, 0.12);
-        }).every(Boolean);
-    if (sizeOK) {
-      mark(`Circulation_L${hub.f + 1}_Shared_Lattice_Canopy`, `Timber canopy ${hub.start.toFixed(3)}`);
-      const batten = (a, b, width) => drawAssemblyMember(mesh, a, b, width, wood);
-      for (let i = 0; i < 10; i++) {
-        const angle = i * TAU / 10;
-        for (let j = 0; j < 8; j++)
-          batten(at(angle, j * Math.PI / 16), at(angle, (j + 1) * Math.PI / 16), 0.06);
-      }
-      for (const pitch of [0, 0.31, 0.62, 0.92, 1.22]) {
-        for (let i = 0; i < 24; i++) batten(at(i * TAU / 24, pitch), at((i + 1) * TAU / 24, pitch), 0.046);
-      }
-      const outerSide = point(0, acrossCenter + side * acrossRadius, spring);
-      const anchors = [-1, 1].map((end) => curved(side, couchOuter + 0.08,
-        end < 0 ? 2.25 : 0.89, 0.04));
-      for (const foot of anchors) {
-        const head = [foot[0], outerSide[1], foot[2]];
-        batten(foot, head, 0.075);
-        batten(head, outerSide, 0.068);
-      }
+      at = (angle, pitch) => curved(sign, radius * Math.cos(pitch), angle, spring + rise * Math.sin(pitch)),
+      batten = (a, b, width) => drawAssemblyMember(mesh, a, b, width, wood);
+    mark(`Circulation_L${hub.f + 1}_Shared_Lattice_Canopy`, `Timber quarter dome ${hub.start.toFixed(3)}`);
+    for (const [index, { angle, bay }] of ribs.entries()) {
+      const edgeRib = index === 0 || index === ribs.length - 1,
+        gauge = edgeRib ? 0.078 : 0.051;
+      batten(curved(sign, radius, angle, cabinetTop(bay) - 0.02), at(angle, 0), edgeRib ? 0.032 : 0.042);
+      for (let j = 0; j < 12; j++)
+        batten(at(angle, j * Math.PI / 24), at(angle, (j + 1) * Math.PI / 24), gauge);
+    }
+    const ringAngle = (i) => first + (last - first) * i / 24;
+    for (const pitch of [0, 0.32, 0.63, 0.93, 1.19])
+      for (let i = 0; i < 24; i++)
+        batten(at(ringAngle(i), pitch), at(ringAngle(i + 1), pitch), pitch === 0 ? 0.088 : 0.038);
+    // Two intermediate uprights pick up the springing rail between the main
+    // ribs. Use the flanking full-height cabinet bays to keep reading seats open.
+    const flankingBays = [
+      bays.slice(1, bayCount / 2).find((bay) => bay.type !== 'seat'),
+      bays.slice(bayCount / 2, -1).findLast((bay) => bay.type !== 'seat')
+    ];
+    mark(`Circulation_L${hub.f + 1}_Shared_Lattice_Intermediate_Supports`, `Casework uprights ${hub.start.toFixed(3)}`);
+    for (const bay of flankingBays) {
+      if (!bay) continue;
+      const angle = (bay.start + bay.end) / 2;
+      batten(curved(sign, radius, angle, cabinetTop(bay) - 0.012), at(angle, 0), 0.044);
     }
   }
   // Use a local random sequence so the same lobby keeps its plants in every workspace.
@@ -3350,7 +3318,6 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     if (isHub && q.layout) drawSharedLobbyFloor(b, q, y + 0.075);
     else sector(q.r, q.R, q.start, q.end, y, isLift ? floorH - 0.18 : 0.075, color);
     if (!isHub && !isLift) drawInteriorFloorPattern(b, q, y + 0.075, color, true);
-    if (q.lounge) drawLandingLounge(b, q.lounge, y + 0.075);
     if (isLift) {
       const a = q.end,
         rad = (q.r + q.R) / 2,

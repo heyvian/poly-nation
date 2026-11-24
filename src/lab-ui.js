@@ -906,13 +906,27 @@ function paintWebGL(
   gl.depthMask(true);
   gl.disable(gl.BLEND);
 }
+const DETAIL_CAMERA_ZOOM = 0.012;
+
 // Model canvases share pointer gestures and camera presets across workspaces.
-function bindModelCamera({ canvas, getCamera, getMesh, onChange, buttons, panLimit = 180, minimumZoom = 0.06 }) {
+function bindModelCamera({
+  canvas, getCamera, getMesh, onChange, buttons, panLimit = 180,
+  minimumZoom = 0.06, zoomToPointer = false
+}) {
   const pointers = new Map();
   const topView = Math.PI / 2;
-  const setZoom = (camera, zoom) => {
-    camera.zoom = clamp(zoom, minimumZoom, 3);
-  };
+  function setZoom(camera, zoom, x, y) {
+    const next = clamp(zoom, minimumZoom, 3),
+      mesh = zoomToPointer && getMesh();
+    if (mesh && next !== camera.zoom) {
+      const { left, top, width, height } = canvas.getBoundingClientRect();
+      const shift = 2 * baseViewHalf(mesh, camera, width / height) * (camera.zoom - next) / height;
+      // Keep the point under the cursor or pinch midpoint at the same screen position.
+      camera.panX = clamp((camera.panX ?? 0) + (x - left - width / 2) * shift, -panLimit, panLimit);
+      camera.pan = clamp(camera.pan + (top + height / 2 - y) * shift, -panLimit, panLimit);
+    }
+    camera.zoom = next;
+  }
   function pan(camera, dx, dy) {
     const height = Math.max(1, canvas.clientHeight),
       mesh = getMesh(),
@@ -939,7 +953,8 @@ function bindModelCamera({ canvas, getCamera, getMesh, onChange, buttons, panLim
       const other = [...pointers.entries()].find(([id]) => id !== event.pointerId)[1],
         before = Math.hypot(old.x - other.x, old.y - other.y),
         after = Math.hypot(next.x - other.x, next.y - other.y);
-      if (before > 0 && after > 0) setZoom(camera, (camera.zoom * before) / after);
+      if (before > 0 && after > 0)
+        setZoom(camera, (camera.zoom * before) / after, (old.x + other.x) / 2, (old.y + other.y) / 2);
       pan(camera, dx / 2, dy / 2);
     } else if (old.pan) pan(camera, dx, dy);
     else {
@@ -957,7 +972,7 @@ function bindModelCamera({ canvas, getCamera, getMesh, onChange, buttons, panLim
     (event) => {
       event.preventDefault();
       const camera = getCamera();
-      setZoom(camera, camera.zoom * Math.exp(event.deltaY * 0.001));
+      setZoom(camera, camera.zoom * Math.exp(event.deltaY * 0.001), event.clientX, event.clientY);
       onChange();
     },
     { passive: false }
@@ -986,6 +1001,8 @@ bindModelCamera({
     draw();
     queueSave();
   },
+  minimumZoom: DETAIL_CAMERA_ZOOM,
+  zoomToPointer: true,
   buttons: { axo: 'axo', plan: 'plan', side: 'side', fit: 'fit' }
 });
 new ResizeObserver(draw).observe(canvas);
@@ -1075,7 +1092,6 @@ function update() {
   $('elevatorArea').textContent = fmt(m.circulation.elevatorArea) + ' m²';
   $('hubArea').textContent = fmt(m.circulation.hubArea) + ' m²';
   $('hubCount').textContent = m.circulation.hubs.length;
-  $('landingLoungeCount').textContent = m.circulation.landingLounges?.length ?? 0;
   const hubPairs = [];
   for (let i = 0; i < 5; i++)
     for (let j = i + 1; j < 5; j++)
@@ -1342,7 +1358,6 @@ $('export').onclick = () => {
         bridgeArea: m.circulation.bridgeArea,
         stairArea: m.circulation.stairArea,
         stairs: m.circulation.stairs,
-        landingLounges: m.circulation.landingLounges,
         bridges: m.circulation.bridges,
         roomPacking: m.circulation.roomPacking,
         regions: m.circulation.regions,
@@ -1536,7 +1551,7 @@ function applySaved(data) {
   camera = {
     az: Number.isFinite(c.az) ? c.az : -0.84,
     el: clamp(Number.isFinite(c.el) ? c.el : 0.57, 0, Math.PI / 2),
-    zoom: clamp(Number.isFinite(c.zoom) ? c.zoom : 1, 0.06, 3),
+    zoom: clamp(Number.isFinite(c.zoom) ? c.zoom : 1, DETAIL_CAMERA_ZOOM, 3),
     pan: clamp(Number.isFinite(c.pan) ? c.pan : 0, -180, 180),
     panX: clamp(Number.isFinite(c.panX) ? c.panX : 0, -180, 180)
   };

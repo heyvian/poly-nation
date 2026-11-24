@@ -59,20 +59,6 @@ function buildNavigation(m) {
     const kind = q.kind === 'elevator' ? 'lift' : 'corridor',
       ids = addCell(q, kind, kind === 'corridor' && q.kind !== 'bridgeAccess');
     if (kind === 'lift' && ids.length) liftNodes[q.block].push({ f: q.f, id: ids[0] });
-    if (q.lounge && ids.length) {
-      const { radius, angle, length, depth, paired, furnishingDepth } = q.lounge,
-        a = angle - ((paired ? furnishingDepth - depth / 2 : depth / 2) + 0.27) / radius,
-        point = xyz(radius, a, yFor(q.f)),
-        nearest = ids.reduce((best, id) =>
-          Math.hypot(...sub(nodes[id].p, point)) < Math.hypot(...sub(nodes[best].p, point)) ? id : best
-        ),
-        seat = node(point, 'landingLounge', { f: q.f, cell: {
-          r: radius - length / 2, R: radius + length / 2,
-          start: a - 0.23 / radius, end: a + 0.23 / radius
-        } });
-      connect(nearest, seat);
-      dest.push(seat);
-    }
     if (q.kind === 'bridgeAccess' && ids.length) {
       if (!bridgeLandings.has(q.f)) bridgeLandings.set(q.f, []);
       bridgeLandings.get(q.f).push(ids[0]);
@@ -1088,10 +1074,10 @@ function advanceOccupancy(s, dt) {
                 ? 18 + s.rng() * 8
                 : ['room', 'module', 'slideStart', 'slideEnd', 'retail'].includes(n.kind)
                   ? 9 + s.rng() * 23
-                  : ['garden', 'balcony', 'plaza', 'greenhouse', 'gazebo', 'landingLounge'].includes(n.kind)
+                  : ['garden', 'balcony', 'plaza', 'greenhouse', 'gazebo'].includes(n.kind)
                     ? 7 + s.rng() * 15
                     : 2 + s.rng() * 7;
-          if (n.kind === 'hub' || n.kind === 'landingLounge') {
+          if (n.kind === 'hub') {
             s.gather++;
             a.social = 0;
           }
@@ -1110,7 +1096,7 @@ const CP_LABELS = {
   hub: 'Shared lobby',
   room: 'Same room / module',
   garden: 'Garden / gazebo',
-  plaza: 'Plaza / entrance / landing lounge',
+  plaza: 'Plaza / entrance lobby',
   balcony: 'Public balcony',
   greenhouse: 'Greenhouse',
   roof: 'Roof promenade',
@@ -1152,7 +1138,6 @@ function scoreCategory(k) {
       plaza: 'plaza',
       entry: 'plaza',
       lobby: 'plaza',
-      landingLounge: 'plaza',
       balcony: 'balcony',
       greenhouse: 'greenhouse',
       roof: 'roof',
@@ -1389,7 +1374,7 @@ function trialLayout(model, trial) {
     lobby: lobby.area,
     bridges: circulation.bridges.length,
     stairs: circulation.stairs?.length ?? 0,
-    landingLounges: circulation.landingLounges?.length ?? 0,
+    junctionLobbies: circulation.hubs.filter((hub) => hub.access).length,
     entry: trial.graph.entry != null,
     corridors: circulation.corridorArea,
     plaza: model.plaza.area,
@@ -1503,7 +1488,7 @@ function trialLogSections(record) {
       'Lobby area built': area(layout.lobby),
       'Atrium bridges built': trialValue(layout.bridges),
       'Bridge stairs': trialValue(layout.stairs),
-      'Core / bridge landing lounges': trialValue(layout.landingLounges),
+      'Shared lobbies near cores or bridges': trialValue(layout.junctionLobbies),
       'Usable visitor entrance':
         typeof layout.entry === 'boolean' ? (layout.entry ? 'Yes' : 'No') : null,
       'Corridor area': area(layout.corridors),

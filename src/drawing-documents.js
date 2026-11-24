@@ -204,10 +204,6 @@ function studyFloor(model, floor, kind) {
         CIRCULATION_COLOURS[key],
         key === 'lift' ? 1.4 : 0.04
       );
-      if (q.lounge) {
-        const { angle, radius, length, depth } = q.lounge;
-        put(studyRectangle(angle, radius, depth, length), CIRCULATION_COLOURS.lobby, 0.35);
-      }
       for (const { radius, start, end } of q.layout?.corridorScreens ?? [])
         put(studyArc(radius - 0.08, radius + 0.08, start, end), '#536157');
     }

@@ -839,7 +839,6 @@ function buildAssemblyMesh(model, layers, levels, preview) {
         const finish = 0.006;
         sector(q.r, q.R, q.start, q.end, base, finish, CIRCULATION_FLOOR_FINISH);
         drawInteriorFloorPattern(mesh, q, base + finish, CIRCULATION_FLOOR_FINISH, true);
-        if (q.lounge) drawLandingLounge(mesh, q.lounge, base + finish);
       }
     }
   }
@@ -1150,6 +1149,8 @@ const openBuildWorkspace = (() => {
     getCamera: () => view,
     getMesh: () => assembly,
     onChange: present,
+    minimumZoom: DETAIL_CAMERA_ZOOM,
+    zoomToPointer: true,
     buttons: { axo: 'buildAxo', plan: 'buildPlan', side: 'buildSide', fit: 'buildFit' }
   });
   new ResizeObserver(present).observe(canvas);
