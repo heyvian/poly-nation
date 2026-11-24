@@ -31,10 +31,11 @@ with serve_lab(root) as url, sync_playwright() as p:
       const geometryChecks = hubs.map(hub => {
         const mesh = meshBuilder();
         drawSharedLobby(mesh, hub, 0, state.seed);
-        const { heading, radius, passage, arch, tableRadius, couchDepth } = hub.layout;
-        const clear = (x, z) => Math.abs(x * Math.cos(heading) + z * Math.sin(heading) - radius);
+        const { heading, axis, origin, passage, arch, tableRadius, couchDepth } = hub.layout;
+        const alongLobby = (x, z) => (x - origin[0]) * axis[0] + (z - origin[1]) * axis[1];
+        const acrossLobby = (x, z) => (x - origin[0]) * axis[1] - (z - origin[1]) * axis[0];
         const tight = mesh.solid.some((x, i) => i % 10 === 0 && mesh.solid[i+1] < 1.9 &&
-          clear(x, mesh.solid[i+2]) < passage / 2 - 0.001);
+          Math.abs(acrossLobby(x, mesh.solid[i+2])) < passage / 2 - 0.001);
         const outside = mesh.solid.some((x, i) => {
           if (i % 10 !== 0) return false;
           const z = mesh.solid[i+2], radial = Math.hypot(x,z);
@@ -50,10 +51,13 @@ with serve_lab(root) as url, sync_playwright() as p:
           shortestPath(g, publicApproaches[0].id, publicApproaches[1].id, 'human');
         const shelfIndex = mesh.groups.findIndex(group => group.layer.endsWith('Shared_Shelving'));
         const shelving = mesh.solid.slice(mesh.groups[shelfIndex].solid, mesh.groups[shelfIndex+1].solid);
-        const wood = rgb('#b18a64'), shelfTops = new Set();
+        const wood = rgb('#b18a64'), shelfTops = new Set(), wallSides = new Set();
         for (let i = 0; i < shelving.length; i += 10) {
-          if (wood.every((color, j) => shelving[i+6+j] === color) && shelving[i+1] >= 0.97)
-            shelfTops.add(shelving[i+1]);
+          if (!wood.every((color, j) => shelving[i+6+j] === color)) continue;
+          const x = shelving[i], z = shelving[i+2];
+          if (shelving[i+1] >= 0.97) shelfTops.add(shelving[i+1]);
+          if (Math.abs(alongLobby(x, z)) < arch - 0.2 && !sharedLobbyContains(hub, x, z, 0.05))
+            wallSides.add(Math.sign(acrossLobby(x, z)));
         }
         const planting = (mesh) => mesh.solid.slice(
           mesh.groups.find(group => group.layer.endsWith('Shared_Planting')).solid);
@@ -61,8 +65,7 @@ with serve_lab(root) as url, sync_playwright() as p:
         let foliageClear = true;
         for (let i = 0; i < plants.length; i += 10) {
           const x = plants[i], z = plants[i+2],
-            across = x * Math.cos(heading) + z * Math.sin(heading) - radius,
-            along = -x * Math.sin(heading) + z * Math.cos(heading),
+            across = acrossLobby(x, z), along = alongLobby(x, z),
             side = (along > 0 ? 2 : 0) + (across > 0 ? 1 : 0);
           tops[side] = Math.max(tops[side], plants[i+1]);
           foliageClear &&= Math.abs(across) >= passage / 2;
@@ -74,11 +77,14 @@ with serve_lab(root) as url, sync_playwright() as p:
         };
         return {
           cleared: !tight && !outside && Math.abs(passage - model.circulation.width * 0.8) < 1e-8,
+          rotated: Math.abs(axis[0] * Math.cos(heading) + axis[1] * Math.sin(heading)) > 0.05,
           scale: couchDepth === 0.88 && 2*tableRadius >= 1.8 && arch > tableRadius,
           route: route?.length === 2 && route[0].to === n.id && rooms.every(room => g.edges[room.id].length === 1),
           public: throughLobby?.length === 2 && throughLobby[0].to === n.id &&
             g.edges[n.id].filter(edge => g.nodes[edge.to].kind === 'corridor').every(edge =>
-              edge.path.some(([x, , z]) => Math.abs(-x * Math.sin(heading) + z * Math.cos(heading)) > arch)),
+              edge.path.slice(0, 3).every(([x, , z]) => Math.abs(acrossLobby(x, z)) < 1e-6) &&
+              Math.abs(alongLobby(edge.path[2][0], edge.path[2][2])) > arch),
+          wallFitted: wallSides.size === 2,
           varyingShelves: shelfTops.size >= 4 && Math.max(...shelfTops) <= 1.29 &&
             shelving.some((height, i) => i % 10 === 1 && Math.abs(height - 0.465) < 1e-8) &&
             shelving.some((color, i) => i % 10 === 6 && color === rgb('#9e7956')[0]),
@@ -127,9 +133,18 @@ with serve_lab(root) as url, sync_playwright() as p:
         const accessibleDocks = graph.nodes.filter(node => node.slot != null && graph.reachable.has(node.id));
         return wide.circulation.dual && hubs.length > 0 && availableDocks.length === accessibleDocks.length &&
           hubs.every(hub => {
-            const approaches = graph.edges[hub.id].map(edge => graph.nodes[edge.to]).filter(node => node.kind === 'corridor');
-            return approaches.length === 4 && [0, 2].every(i =>
-              shortestPath(graph, approaches[i].id, approaches[i+1].id, 'human')[0].to === hub.id);
+            const entrances = graph.edges[hub.id].filter(edge => graph.nodes[edge.to].kind === 'corridor');
+            const { arch, axis, origin } = hub.cell.layout;
+            return entrances.length === 4 && [-1, 1].every(side => {
+              const align = ([x, , z]) => (x - origin[0]) * axis[0] + (z - origin[1]) * axis[1];
+              const paths = entrances.filter(edge => Math.abs(align(edge.path[1]) - side * arch) < 1e-6);
+              if (paths.length !== 2) return false;
+              const [[x, , z], [otherX, , otherZ]] = paths.map(edge => edge.path[2]);
+              const across = ((x + otherX) / 2 - origin[0]) * axis[1] -
+                ((z + otherZ) / 2 - origin[1]) * axis[0];
+              return Math.abs(across) < 1e-6;
+            }) && [0, 2].every(i =>
+              shortestPath(graph, entrances[i].to, entrances[i+1].to, 'human')[0].to === hub.id);
           });
       } finally {
         state = previous;

@@ -934,10 +934,128 @@ function sharedLobbyFit(a, b, corridorWidth) {
 }
 
 function sharedLobbyPoint(q, along, across, y) {
-  const { heading, radius } = q.layout,
-    cos = Math.cos(heading),
+  const { heading, radius, axis, origin } = q.layout;
+  if (axis)
+    return [
+      origin[0] + along * axis[0] + across * axis[1],
+      y,
+      origin[1] + along * axis[1] - across * axis[0]
+    ];
+  // Older Materials snapshots keep the furniture frame they were saved with.
+  const cos = Math.cos(heading),
     sin = Math.sin(heading);
   return [(radius + across) * cos - along * sin, y, (radius + across) * sin + along * cos];
+}
+
+function sharedLobbyContains(q, x, z, margin = 0) {
+  const r = Math.hypot(x, z),
+    angle = Math.atan2(z, x);
+  return (
+    r >= q.r + margin &&
+    r <= q.R - margin &&
+    angDist(angle, q.layout.heading) <= (q.end - q.start) / 2 - margin / r
+  );
+}
+
+// The furniture frame follows the actual corridor mouths. Two-band floors combine
+// both mouths at each end into an approach to a single clear aisle.
+function alignSharedLobby(fit, a, b, approaches) {
+  const entries = approaches.flatMap(({ entries }) => entries),
+    ends = [-1, 1].map((side) => {
+      const group = entries.filter(({ along }) => Math.sign(along) === side);
+      return [0, 1].map(
+        (i) =>
+          group.reduce(
+            (sum, { radius, angle }) => sum + radius * (i ? Math.sin(angle) : Math.cos(angle)),
+            0
+          ) / group.length
+      );
+    }),
+    dx = ends[1][0] - ends[0][0],
+    dz = ends[1][1] - ends[0][1],
+    distance = Math.hypot(dx, dz);
+  if (distance < 3) return null;
+
+  const axis = [dx / distance, dz / distance],
+    midpoint = [(ends[0][0] + ends[1][0]) / 2, (ends[0][1] + ends[1][1]) / 2];
+  const roomDoors = [a, b].map((room, i) => {
+    const { r, R } = approaches.find((approach) => approach.room === room)?.moved ?? room;
+    return { r, R, angle: i ? fit.end : fit.start, side: i ? 1 : -1 };
+  });
+  const floor = { r: a.r, R: a.R, start: fit.start, end: fit.end };
+  // A tighter bay can use a slightly smaller table with the same seat depth and aisle.
+  for (let reduction = 0; reduction <= 0.281; reduction += 0.07) {
+    const tableRadius = Math.max(0.9, fit.tableRadius - reduction),
+      change = fit.tableRadius - tableRadius,
+      arch = fit.arch - change,
+      aisleEdge = fit.passage / 2,
+      shelfOuter = fit.shelfOuter - change;
+    for (const shift of [0, -0.2, 0.2, -0.4, 0.4, -0.6, 0.6]) {
+      const origin = [midpoint[0] + shift * axis[0], midpoint[1] + shift * axis[1]],
+        layout = {
+          ...fit,
+          origin,
+          axis,
+          tableRadius,
+          arch,
+          shelfOuter,
+          couchInner: fit.couchInner - change,
+          couchOuter: fit.couchOuter - change
+        },
+        hub = { ...floor, layout };
+      const fits = (along, across) => {
+        const [x, , z] = sharedLobbyPoint(hub, along, across, 0);
+        return sharedLobbyContains(hub, x, z, 0.015);
+      };
+      if (
+        !entries.every(
+          ({ along, radius, angle }) =>
+            Math.sign(along) *
+              ((radius * Math.cos(angle) - origin[0]) * axis[0] +
+                (radius * Math.sin(angle) - origin[1]) * axis[1]) >=
+            arch + 0.28
+        )
+      )
+        continue;
+      const chairsFit = [-1, 1].every((side) =>
+        Array.from({ length: 25 }, (_, i) => (i * Math.PI) / 24).every((angle) =>
+          fits(shelfOuter * Math.cos(angle), side * (aisleEdge + shelfOuter * Math.sin(angle)))
+        )
+      );
+      const thresholdsFit = [-arch, arch].every((along) =>
+        [-1, 1].every((side) =>
+          [-0.385, 0.385].every((step) => fits(along + step, side * (aisleEdge + 0.805)))
+        )
+      );
+      if (!chairsFit || !thresholdsFit) continue;
+
+      // The programme doors share the end approaches and leave the built-in backs intact.
+      const doors = roomDoors.map(({ r, R, angle, side }) => {
+        const width = 1.2,
+          first = r + width / 2 + 0.08,
+          last = R - width / 2 - 0.08;
+        let best = null;
+        for (let at = first; at <= last; at += 0.08) {
+          const x = at * Math.cos(angle) - origin[0],
+            z = at * Math.sin(angle) - origin[1],
+            along = x * axis[0] + z * axis[1],
+            across = x * axis[1] - z * axis[0];
+          if (side * along < arch + 0.14) continue;
+          const score = Math.abs(across) + Math.abs(along - side * (arch + 0.35)) * 0.2;
+          if (!best || score < best.score)
+            best = { angle, r: at, width, along: side * arch, score };
+        }
+        return best;
+      });
+      if (doors.some((door) => !door)) continue;
+      const publicEntries = entries.map((entry) => ({
+        ...entry,
+        along: Math.sign(entry.along) * arch
+      }));
+      return { layout: { ...layout, publicEntries }, doors };
+    }
+  }
+  return null;
 }
 
 // Trade a corridor strip with one programme room, with a return at the far end.
@@ -969,7 +1087,7 @@ function planLobbyShoulder(regions, room, fit, side, inside, lobbyId) {
     movedOuter = inside ? room.R - fit.passage : high,
     area = ((movedOuter ** 2 - movedInner ** 2) * (movedEnd - movedStart)) / 2;
   if (movedEnd <= movedStart || area < state.minRoomArea - 1e-7) return null;
-  // The room threshold keeps the full aisle width at the end of the lounge.
+  // Reserve enough depth for the programme threshold before fitting the rotated layout.
   const skew = Math.cos(doorwayAngle - fit.heading);
   if (
     (fit.radius - fit.passage / 2) / skew < movedInner + 0.04 ||
@@ -1055,8 +1173,10 @@ function lobbyApproaches(layout, a, b, fit, lobbyId, slotN, blocked, pinned) {
         docks.push(id);
     }
     if (docks.some((id) => pinned.has(id))) continue;
-    if (!best || docks.length < best.docks.length)
-      best = { approaches: inner ? [outer, inner] : [outer], docks };
+    if (best && docks.length >= best.docks.length) continue;
+    const approaches = inner ? [outer, inner] : [outer],
+      aligned = alignSharedLobby(fit, a, b, approaches);
+    if (aligned) best = { approaches, docks, aligned };
   }
   return best;
 }
@@ -1130,7 +1250,7 @@ function formSharedLobbies(layout, slotN, blocked, blockedLimit) {
             blockedLimit - blocked.size
           );
         if (!plan) continue;
-        const { approaches, docks, fit } = plan;
+        const { approaches, docks, fit, aligned } = plan;
         const hubInner = a.r,
           hubOuter = a.R;
         a.end = fit.start;
@@ -1145,12 +1265,13 @@ function formSharedLobbies(layout, slotN, blocked, blockedLimit) {
         for (const dock of docks) blocked.add(dock);
         const doors = [a, b].map((room, side) => {
           const angle = side ? b.start : a.end,
-            skew = Math.cos(angle - fit.heading);
+            { r, width, along } = aligned.doors[side];
           room.sharedLobby = {
             id,
             angle,
-            r: fit.radius / skew,
-            width: fit.passage / skew
+            r,
+            width,
+            along
           };
           return {
             ...room.sharedLobby,
@@ -1174,10 +1295,7 @@ function formSharedLobbies(layout, slotN, blocked, blockedLimit) {
           strength: weight,
           lobbyId: id,
           doors,
-          layout: {
-            ...fit,
-            publicEntries: approaches.flatMap((approach) => approach.entries)
-          }
+          layout: aligned.layout
         });
       }
     }

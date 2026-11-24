@@ -2296,7 +2296,8 @@ function drawLobbyPlant(mesh, point, along, across, crownHeight, sample) {
 // same clear strip used by the occupancy graph.
 function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
   const { mark, box, quad, tri, textureLine } = mesh,
-    { heading, passage, tableRadius, couchInner, couchOuter, shelfOuter, arch } = hub.layout,
+    { axis, passage, tableRadius, couchInner, couchOuter, shelfOuter, arch } = hub.layout,
+    heading = axis ? Math.atan2(-axis[0], axis[1]) : hub.layout.heading,
     edge = passage / 2,
     timber = rgb('#b18a64'),
     cushion = rgb('#a996b6'),
@@ -2396,20 +2397,12 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
   // lounge free so the public approaches can turn past the planted arches.
   function shelfLimit(sign, angle) {
     let low = shelfOuter,
-      high = shelfOuter + 0.85;
+      high = shelfOuter + (hub.R - hub.r);
     for (let i = 0; i < 12; i++) {
       const at = (low + high) / 2,
         along = at * Math.cos(angle),
-        radial = hub.layout.radius + sign * (edge + at * Math.sin(angle)),
-        distance = Math.hypot(radial, along),
-        heading = Math.atan2(along, radial);
-      if (
-        Math.abs(along) <= arch - 0.15 &&
-        distance > hub.r + 0.045 &&
-        distance < hub.R - 0.045 &&
-        Math.abs(heading) < (hub.end - hub.start) / 2 - 0.04 / radial
-      )
-        low = at;
+        [x, , z] = point(along, sign * (edge + at * Math.sin(angle)), 0);
+      if (Math.abs(along) <= arch - 0.15 && sharedLobbyContains(hub, x, z, 0.025)) low = at;
       else high = at;
     }
     return low;
@@ -2418,8 +2411,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     const bays = Array.from({ length: bayCount }, (_, i) => {
       const start = (i * Math.PI) / bayCount + 0.005,
         end = ((i + 1) * Math.PI) / bayCount - 0.005,
-        depthShare = i >= 2 && i <= 5 ? 1 : 0.35 + 0.55 * cabinetRandom(),
-        outer = (angle) => shelfOuter + (shelfLimit(sign, angle) - shelfOuter) * depthShare,
+        outer = (angle) => shelfLimit(sign, angle),
         height = 0.98 + Math.floor(cabinetRandom() * 8) * 0.044,
         type = i % 4 === 1 || cabinetRandom() < 0.22 ? 'cupboard' : 'open';
       return { start, end, outer, height, type };

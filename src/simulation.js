@@ -86,6 +86,7 @@ function buildNavigation(m) {
   }
   for (const q of m.circulation.hubs) {
     const ids = addCell(q, 'hub');
+    if (q.layout?.axis && ids.length) nodes[ids[0]].p = sharedLobbyPoint(q, 0, 0, yFor(q.f));
     dest.push(...ids);
   }
   for (const q of m.rooms) {
@@ -265,20 +266,52 @@ function buildNavigation(m) {
     }
   for (const c of cells) {
     if (!c.sharedLobby) continue;
-    const { id, angle, r } = c.sharedLobby, hub = servicedHubs.get(id);
+    const { id, angle, r, along } = c.sharedLobby,
+      hub = servicedHubs.get(id);
     if (!hub) continue;
-    connect(c.node, hub.node, [...pathWithin(c, angle, r), nodes[hub.node].p]);
+    const approach = Number.isFinite(along) ? [sharedLobbyPoint(hub, along, 0, yFor(hub.f))] : [];
+    connect(c.node, hub.node, [...pathWithin(c, angle, r), ...approach, nodes[hub.node].p]);
   }
   for (const hub of servicedHubs.values()) {
     const entries = hub.layout.publicEntries ?? [{ ...hub.layout.publicEntry, radius: hub.R }],
       y = yFor(hub.f);
     for (const { angle, along, radius, inside, route } of entries) {
-      const access = cells.find((c) => c.f === hub.f && c.kind === 'corridor' &&
-        (route ? c.lobbyRouteId === hub.lobbyId && c.route === route :
-          Math.abs((inside ? c.R : c.r) - radius) < eps) &&
-        [angle, angle + TAU, angle - TAU].some((value) => value >= c.start - eps && value <= c.end + eps));
-      if (access) connect(access.node, hub.node, [...pathWithin(access, angle, radius),
-        sharedLobbyPoint(hub, along, 0, y), nodes[hub.node].p]);
+      const access = cells.find(
+        (c) =>
+          c.f === hub.f &&
+          c.kind === 'corridor' &&
+          (route
+            ? c.lobbyRouteId === hub.lobbyId && c.route === route
+            : Math.abs((inside ? c.R : c.r) - radius) < eps) &&
+          [angle, angle + TAU, angle - TAU].some(
+            (value) => value >= c.start - eps && value <= c.end + eps
+          )
+      );
+      if (!access) continue;
+      const arch = sharedLobbyPoint(hub, along, 0, y),
+        portal = xyz(radius, angle, y);
+      let path = pathWithin(access, angle, radius);
+      if (hub.layout.axis) {
+        // Carry the entrance alignment a short way into the corridor where its width allows.
+        const direction = unit(sub(portal, arch));
+        for (const distance of [0.55, 0.3, 0.15]) {
+          const x = portal[0] + distance * direction[0],
+            z = portal[2] + distance * direction[2],
+            r = Math.hypot(x, z),
+            a = Math.atan2(z, x);
+          if (
+            r > access.r + eps &&
+            r < access.R - eps &&
+            [a, a - TAU, a + TAU].some(
+              (value) => value > access.start + eps && value < access.end - eps
+            )
+          ) {
+            path = [...pathWithin(access, a, r), portal];
+            break;
+          }
+        }
+      }
+      connect(access.node, hub.node, [...path, arch, nodes[hub.node].p]);
     }
   }
   for (const list of liftNodes) {

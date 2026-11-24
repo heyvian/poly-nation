@@ -1,5 +1,9 @@
 # Changelog
 
+## Lobby approaches and built-in storage
+- Aligned each shared lobby's clear aisle, arches and furniture to the corridor openings in its generated floor plan.
+- Extended shelving and cupboards to the enclosing walls behind the seating, with clear approaches for the corridor and programme doors.
+
 ## Shared lobbies integrated into the plan
 - Reshaped neighbouring programme rooms and public corridor strips to route visitors through the furnished lobby. Removed the former divider and screens from new layouts.
 - Fitted mixed-height timber shelves and cupboards to the space behind the couches, with cushioned reading seats in deeper bays.

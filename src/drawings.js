@@ -175,12 +175,12 @@ const openDrawingWorkspace = (() => {
     const bearing = includeSite ? (siteWorkspace.drawingBearing * Math.PI) / 180 : 0,
       cos = Math.cos(bearing),
       sin = Math.sin(bearing),
-      halfWidth = (hub.R - hub.r) / 2 + 2,
-      halfLength = hub.layout.approach + 2;
-    // Frame the furnishings and a short stretch of both approaches and the public corridor.
-    return [-halfLength, halfLength].flatMap((along) =>
-      [-halfWidth, halfWidth].map((across) => {
-        const [x, , z] = sharedLobbyPoint(hub, along, across, 0);
+      apron = 2 / hub.layout.radius;
+    // Fit the lobby's actual room edges and a short length of both approaches.
+    return [hub.r - 2, hub.R + 2].flatMap((radius) =>
+      [hub.start - apron, hub.layout.heading, hub.end + apron].map((angle) => {
+        const x = radius * Math.cos(angle),
+          z = radius * Math.sin(angle);
         return [x * cos - z * sin, 0, x * sin + z * cos];
       })
     );
