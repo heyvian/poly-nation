@@ -610,7 +610,8 @@ const STRUCTURAL_SYSTEMS = {
     short: 'Wood framing',
     group: 'Timber',
     color: '#c49b62',
-    frame: 'stud'
+    frame: 'stud',
+    module: true
   },
   clt: {
     name: 'Cross-laminated timber (CLT)',
@@ -619,6 +620,10 @@ const STRUCTURAL_SYSTEMS = {
     color: '#b88453',
     frame: 'solid',
     module: true
+  },
+  'stacked-timber': {
+    name: 'Stacked timber walls on a cassette chassis', short: 'Stacked timber', group: 'Timber',
+    color: '#98704c', frame: 'solid', logs: true, module: true
   },
   glulam: {
     name: 'Braced glulam post and beam',
@@ -828,6 +833,34 @@ const EXTERIOR_FINISHES = {
     texture: 'grain',
     module: true
   },
+  'timber-cassettes': {
+    name: 'Douglas fir rainscreen panels', short: 'Fir panels', group: 'Timber and plant-based',
+    color: '#c2986e', seam: '#755b45', joint: 1.22, course: 1.22, texture: 'panels', module: true, detailed: true
+  },
+  'exposed-clt': {
+    name: 'Weather-protected exposed CLT', short: 'Exposed CLT', group: 'Timber and plant-based',
+    color: '#d4aa7c', seam: '#8f6b4d', joint: 2.45, texture: 'panels', module: true, detailed: true
+  },
+  'board-batten': {
+    name: 'Vertical timber board and batten', short: 'Board and batten', group: 'Timber and plant-based',
+    color: '#ab815d', seam: '#7e644d', joint: 0.28, texture: 'batten', module: true, detailed: true
+  },
+  'larch-lap': {
+    name: 'Horizontal larch lap boards', short: 'Larch lap', group: 'Timber and plant-based',
+    color: '#ad7a54', seam: '#74543b', joint: 3.65, course: 0.18, stagger: true, module: true, detailed: true
+  },
+  'reclaimed-boards': {
+    name: 'Reclaimed vertical barn boards', short: 'Reclaimed boards', group: 'Timber and plant-based',
+    color: '#938677', seam: '#5d554e', joint: 0.22, texture: 'panels', module: true, detailed: true
+  },
+  'cedar-shingles': {
+    name: 'Split cedar shingles', short: 'Cedar shingles', group: 'Timber and plant-based',
+    color: '#af8969', seam: '#745840', joint: 0.24, course: 0.19, stagger: true, texture: 'shingles', module: true, detailed: true
+  },
+  'log-siding': {
+    name: 'Rounded timber log courses', short: 'Rounded logs', group: 'Timber and plant-based',
+    color: '#a97850', seam: '#614631', course: 0.235, texture: 'logs', module: true, detailed: true
+  },
   'cork-panel': {
     name: 'Expanded cork rainscreen panels',
     short: 'Cork panels',
@@ -859,6 +892,14 @@ const EXTERIOR_FINISHES = {
   'painted-tin': {
     name: 'Painted ribbed tin siding', short: 'Painted tin', group: 'Metal', color: '#607b76',
     seam: '#aab9af', joint: 0.52, texture: 'ribs', gloss: 0.16, module: true
+  },
+  'metal-shingles': {
+    name: 'Interlocking diamond zinc shingles', short: 'Zinc shingles', group: 'Metal',
+    color: '#7b898a', seam: '#4a585e', joint: 0.36, course: 0.27, texture: 'diamond', gloss: 0.16, module: true, detailed: true
+  },
+  'tin-shingles': {
+    name: 'Stamped tin-plated shingles', short: 'Tin shingles', group: 'Metal',
+    color: '#afb7ad', seam: '#758580', joint: 0.36, course: 0.27, stagger: true, texture: 'shingles', gloss: 0.25, module: true, detailed: true
   },
   'trailer-aluminum': {
     name: 'Polished riveted aluminum sheet', short: 'Riveted aluminum', group: 'Metal', color: '#b8c6c7',
@@ -963,7 +1004,7 @@ function materialSlotKey(layout, slot) {
   return [layout.slotN, slot.f, slot.j, slot.p].join(':');
 }
 
-function materialValues(assignments, scope, program, slotKey) {
+function materialValues(assignments, scope, program, slotKey, assigned = null) {
   if (Object.hasOwn(ACCESSORY_MATERIALS, scope))
     return Object.fromEntries(
       Object.entries(ACCESSORY_MATERIALS[scope]).map(([field, keys]) => [
@@ -988,8 +1029,11 @@ function materialValues(assignments, scope, program, slotKey) {
   // Older studies can contain heavy module presets. Resolve through to the next compatible layer.
   for (const key of scopes) {
     const selection = assignments[key];
-    for (const field of Object.keys(defaults))
-      if (materialCompatible(field, selection?.[field], scope)) defaults[field] = selection[field];
+    for (const field of Object.keys(defaults)) {
+      if (!materialCompatible(field, selection?.[field], scope)) continue;
+      defaults[field] = selection[field];
+      assigned?.add(field);
+    }
   }
   return defaults;
 }
@@ -3855,7 +3899,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         continue;
       }
       if (s.p !== EMPTY || s.use === 'retail') {
-        if (varied) {
+        const detailed = values && (EXTERIOR_FINISHES[values.facade].detailed || STRUCTURAL_SYSTEMS[values.structure].logs);
+        if (varied || detailed) {
           const plan = furnishedModulePlan(m, s, preview.assignments, view.seed, exterior.balconies.has(s.i)),
             foot = center - MODULE.depth / 2;
           drawFittedModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), preview, plan, { craneLifting: Boolean(m.crane) });

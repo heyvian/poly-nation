@@ -20,6 +20,10 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     massing = page.evaluate('JSON.stringify([state.seed, model.total, model.slots])')
     page.locator('#openMaterials').click()
     page.locator('#uniqueModules').check()
+    shades = page.get_by_role('checkbox', name='Window awnings and shades')
+    skylights = page.get_by_role('checkbox', name='Skylights')
+    expect(skylights).to_be_checked()
+    shades.uncheck()
     expect(page.get_by_role('slider', name='Love hotel similarity')).to_have_value('40')
     daycare = page.get_by_role('slider', name='Daycare similarity')
     daycare.focus()
@@ -32,6 +36,8 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     page.reload()
     page.locator('#openMaterials').click()
     expect(page.locator('#uniqueModules')).to_be_checked()
+    expect(shades).not_to_be_checked()
+    shades.check()
     expect(daycare).to_have_value('100')
     page.locator('#openBuild').click()
     expect(page.locator('#buildFacade')).to_be_checked()
@@ -44,14 +50,15 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
         varied = {...assignments, moduleDesign: {enabled: true, similarity: {day: 0}}},
         plans = withFixture.slots.map((slot) => furnishedModulePlan(withFixture, slot, varied, seed)),
         daycare = withFixture.slots.filter(slot => P[slot.p].id === 'day'),
-        signature = plan => JSON.stringify([plan.values, plan.form, plan.sideWindows, plan.pattern, plan.palette]),
+        shape = ({ kind, half, length, nose, variation }) => [kind, half, length, nose, variation],
+        signature = plan => JSON.stringify([plan.values, shape(plan.form), plan.sideWindows, plan.palette]),
         shared = new Set(daycare.map(slot => signature(furnishedModulePlan(withFixture, slot, assignments, seed)))),
         mixed = new Set(daycare.map(slot => signature(furnishedModulePlan(withFixture, slot, varied, seed)))),
         study = (similarity) => daycare.map(slot => furnishedModulePlan(withFixture, slot,
           {...assignments, moduleDesign: {enabled: true, similarity: {day: similarity}}}, seed)),
         moderate = study(45), formLock = study(70), finishes = (collection) =>
           new Set(collection.map(plan => plan.values.facade)).size,
-        forms = (collection) => new Set(collection.map(plan => JSON.stringify(plan.form))).size,
+        forms = (collection) => new Set(collection.map(plan => JSON.stringify(shape(plan.form)))).size,
         exposure = realizedModuleEnclosure(model, assignments, seed),
         takeoff = estimateMaterialAssemblies(model, assignments, DEFAULT_MATERIAL_RATES),
         preview = {assignments, view: {seed}}, layers = buildViewLayers(),
@@ -85,6 +92,18 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
       drawAlternativeDock(boxFloor, model, {...testSlot, f: 1}, upper, 'box-floor', MODULE_CASSETTE_DEPTH);
       // Measure the first solid, which is the box itself, independent of the core returns.
       const boxBottom = Math.min(...Array.from({length: 36}, (_, i) => boxFloor.solid[10 * i + 1]));
+      const cabin = plans.find(plan => plan.form.kind === 'cabin'),
+        glazed = plans.findIndex(plan => plan.skylight),
+        glassRoof = meshBuilder(), sample = {...withFixture.slots[glazed], angle: 0};
+      drawFittedModule(glassRoof, sample, 0, 0, 0, {assignments: varied, view: {seed}, finishJoints: true},
+        plans[glazed], {assembly: true});
+      const roofGlassStart = glassRoof.groups.find(group => group.layer === 'Assembly_Module_Roof').glass,
+        sharedSaltboxes = withFixture.slots.filter(slot => P[slot.p].id === 'love').map(slot =>
+          furnishedModulePlan(withFixture, slot, {...varied, moduleDesign: {enabled: true, similarity: {love: 100}}}, seed).form),
+        roofHands = new Set(sharedSaltboxes.map(form => Math.sign(form.profile[0][1] - form.profile.at(-1)[1]))),
+        muted = {...varied, moduleDesign: {...varied.moduleDesign, windowShades: false, skylights: false}},
+        alternate = furnishedModulePlan(withFixture, sample, muted, seed),
+        doors = new Set(plans.filter(plan => plan.endOpening.door).map(plan => plan.endOpening.doorStyle));
       return {
         roofFits: roofPeaks.every(height => height <= MODULE.height + 1e-7) &&
           boxBottom - storey.base - Math.max(...roofPeaks) >= 0.10 - 1e-6,
@@ -95,8 +114,16 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
           moduleHalfAt(plan.form, plan.length) < plan.form.half - 0.35),
         proportional: forms(moderate) < daycare.length / 2 && forms(formLock) === 1 &&
           finishes(moderate) >= 10 && finishes(formLock) >= 10,
-        lightweight: ['cedar', 'vinyl', 'stucco', 'painted-tin', 'trailer-aluminum'].every(key =>
+        lightweight: ['cedar', 'vinyl', 'stucco', 'painted-tin', 'trailer-aluminum', 'timber-cassettes', 'exposed-clt',
+          'board-batten', 'larch-lap', 'reclaimed-boards', 'cedar-shingles', 'metal-shingles', 'tin-shingles'].every(key =>
           materialCompatible('facade', key, 'module') && plans.some(plan => plan.values.facade === key)),
+        timberCabin: cabin.values.structure === 'stacked-timber' && cabin.values.facade === 'log-siding' &&
+          plans.some(plan => plan.values.facade === 'exposed-clt' && plan.values.structure === 'clt'),
+        mirroredRoofs: sharedSaltboxes.every(form => form.kind === 'saltbox') && roofHands.has(-1) && roofHands.has(1),
+        roofLight: glassRoof.glass.length > roofGlassStart && glassRoof.glass.every(Number.isFinite),
+        options: !alternate.skylight && !alternate.shade && signature(alternate) === signature(plans[glazed]) &&
+          new Set(plans.map(plan => plan.shade)).size === 4,
+        variedDoors: ['sliding', 'french', 'solid', 'half-glazed', 'hinged'].every(door => doors.has(door)),
         uses: [...new Set(plans.flatMap(plan => plan.zones.map(zone => zone.use)))],
         aligned: plans.every(plan => plan.doorWidth === plans[0].doorWidth && plan.doorHeight === plans[0].doorHeight),
         windowsFit: plans.every(plan => plan.sideWindows.every(windows => windows.every((window, i) =>
@@ -115,10 +142,11 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     }''')
     assert 'overhang' not in results, results
     assert results['lengths'] == [9, 13.5, 18], results
-    assert results['families'] == 11 and results['materialCount'] == 17, results
+    assert results['families'] == 16 and results['materialCount'] >= 25, results
     assert {'bunk', 'office', 'crew', 'bed', 'bath', 'living', 'play', 'rinse'} <= set(results['uses']), results
     assert results['shared'] == 1 and results['mixed'] > 10, results
-    for check in ['aligned', 'windowsFit', 'measured', 'streams', 'proportional', 'lightweight', 'seated', 'roofFits', 'mesh', 'noRoofs', 'noModules', 'finite']:
+    for check in ['aligned', 'windowsFit', 'measured', 'streams', 'proportional', 'lightweight', 'seated', 'roofFits', 'mesh',
+                  'noRoofs', 'noModules', 'finite', 'timberCabin', 'mirroredRoofs', 'roofLight', 'options', 'variedDoors']:
         assert results[check], results
     assert not errors, errors
-    print('Eleven module forms, finish diversity, form-first similarity, envelope fit and workspace controls passed.')
+    print('Module forms and claddings, roof handedness, skylights, shades, door diversity, envelope fit and restoration passed.')

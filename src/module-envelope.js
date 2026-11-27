@@ -3,15 +3,17 @@
 // Profiles are measured across the enclosure from -1 to 1. The solid shell,
 // roof framing and nominal area takeoff all use these same sections.
 const MODULE_FORM_KINDS = [
-  'flat', 'gable', 'shed', 'saltbox', 'vault', 'streamliner', 'bevel', 'sawtooth', 'butterfly', 'stepped', 'hip'
+  'flat', 'gable', 'shed', 'saltbox', 'vault', 'streamliner', 'bevel', 'sawtooth', 'butterfly', 'stepped', 'hip',
+  'cabin', 'gambrel', 'clerestory', 'lantern', 'folded'
 ];
 
-function moduleEnvelope(kind, length, sample, varied) {
+function moduleEnvelope(kind, length, sample, varied, roofHand) {
   const depth = MODULE.height, half = varied ? 2.00 + sample() * 0.185 : MODULE.width / 2,
-    hand = sample() < 0.5 ? -1 : 1, variation = sample(),
+    defaultHand = sample() < 0.5 ? -1 : 1, hand = roofHand ?? defaultHand, variation = sample(),
     finish = kind === 'streamliner' ? 2.36 + variation * 0.13 :
       kind === 'vault' ? 2.46 + variation * 0.22 :
-        kind === 'flat' ? 3.31 : kind === 'bevel' ? 2.62 + variation * 0.17 : 2.60 + variation * 0.27,
+        kind === 'cabin' ? 2.41 : kind === 'flat' ? 3.31 :
+          kind === 'bevel' ? 2.62 + variation * 0.17 : 2.60 + variation * 0.27,
     crown = varied ? 3.39 + sample() * 0.11 : depth;
   const arc = (count, raise) => Array.from({ length: count + 1 }, (_, i) => {
     const a = Math.PI * i / count;
@@ -20,6 +22,12 @@ function moduleEnvelope(kind, length, sample, varied) {
   const shapes = {
     flat: () => [[-1, crown], [1, crown]],
     gable: () => [[-1, finish], [0, crown], [1, finish]],
+    cabin: () => [[-1, finish], [0, crown], [1, finish]],
+    gambrel: () => [[-1, finish], [-0.61, crown - 0.27], [0, crown], [0.61, crown - 0.27], [1, finish]],
+    clerestory: () => [[-1, finish + 0.19], [0.10, crown - 0.49], [0.116, crown], [1, finish + 0.12]],
+    lantern: () => [[-1, finish], [-0.42, crown - 0.44], [-0.404, crown - 0.08], [0.404, crown],
+      [0.42, crown - 0.44], [1, finish + 0.16]],
+    folded: () => [[-1, finish], [-0.58, crown - 0.13], [0.06, crown - 0.42], [0.58, crown], [1, finish + 0.14]],
     shed: () => [[-1, finish], [1, crown]],
     saltbox: () => [[-1, finish + 0.24], [-0.43 + 0.17 * variation, crown], [1, finish]],
     vault: () => arc(8, 1),

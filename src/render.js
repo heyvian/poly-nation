@@ -117,7 +117,7 @@ const openRenderWorkspace = (() => {
     assembly = buildAssemblyMesh(source, layers, visible, {
       assignments,
       view: { seed: state.seed },
-      finishJoints: false
+      finishJoints: Boolean(renderer)
     });
     drawRenderFixtures(assembly, source, lighting, visible);
     assembly.renderLighting = lighting;

@@ -10,16 +10,24 @@ const PROGRAM_MODULE_FORM = {
 const MODULE_FINISHES = [
   'cedar', 'charred-wood', 'thermo-wood', 'plywood', 'vinyl', 'stucco', 'painted-tin', 'trailer-aluminum',
   'corrugated', 'zinc', 'fiber-cement', 'recycled-composite', 'cork-panel', 'weathering-steel',
-  'polycarbonate', 'insulated-panel', 'perforated-aluminum'
+  'polycarbonate', 'insulated-panel', 'perforated-aluminum', 'timber-cassettes', 'exposed-clt',
+  'board-batten', 'larch-lap', 'reclaimed-boards', 'cedar-shingles', 'metal-shingles', 'tin-shingles'
 ];
-const MODULE_DETAILS = ['shutters', 'hood', 'ribs', 'patch', 'screen', 'vents', 'frames', 'straps'];
+const MODULE_DETAILS = ['shutters', 'screen', 'vents', 'frames', 'frames'];
+const MODULE_STRUCTURE_BY_FINISH = {
+  'log-siding': ['stacked-timber'], 'exposed-clt': ['clt'],
+  'timber-cassettes': ['clt', 'wood-stud', 'glulam'],
+  'trailer-aluminum': ['aluminum-truss', 'light-steel'],
+  corrugated: ['steel-tube', 'light-steel'], 'insulated-panel': ['steel-frame', 'steel-tube'],
+  polycarbonate: ['glulam', 'steel-frame'], 'weathering-steel': ['steel-tube', 'steel-frame']
+};
 const MODULE_WINDOW_STYLES = ['ribbon', 'punched', 'portholes', 'picture', 'clerestory', 'paired'];
 const MODULE_COLOURS = [
   ['#bbc5bc', '#275b54'], ['#eddfc2', '#a4523c'], ['#a2b2bd', '#294d67'], ['#e2dad9', '#684663'],
   ['#d6af68', '#664e41'], ['#ceb0a7', '#7b414a'], ['#5b7565', '#ccb888'], ['#e4decb', '#696d45'],
   ['#9db8b1', '#23575f'], ['#d8cdab', '#964b36'], ['#91744f', '#e4d5b9'], ['#a9a1ad', '#5c6478']
 ];
-const MODULE_FACADE_PATTERNS = ['bare', 'belt', 'base', 'end-panels', 'patchwork', 'upper-band'];
+const MODULE_PATIO_DOORS = ['hinged', 'half-glazed', 'french', 'sliding', 'solid'];
 
 function moduleSimilarity(assignments, program) {
   const value = assignments?.moduleDesign?.similarity?.[program];
@@ -34,9 +42,11 @@ function moduleMaterialSelection(model, slot, assignments, seed) {
   const retail = slot.p === EMPTY,
     scope = retail ? 'commercial' : 'module',
     key = materialSlotKey(model, slot),
-    values = materialValues(assignments, scope, retail ? null : slot.p, retail ? null : key),
+    assigned = new Set(),
+    values = materialValues(assignments, scope, retail ? null : slot.p, retail ? null : key, assigned),
     program = retail ? 'retail' : P[slot.p].id,
-    unique = assignments.moduleDesign?.enabled === true,
+    settings = assignments.moduleDesign,
+    unique = settings?.enabled === true,
     localSeed = dockDesignSeed(seed, slot),
     similarity = moduleSimilarity(assignments, program) / 100,
     commonSeed = (seed ^ Math.imul(slot.p + 3, 0x7feb352d)) >>> 0,
@@ -52,28 +62,55 @@ function moduleMaterialSelection(model, slot, assignments, seed) {
     amount = formSample(),
     length = !unique || followsForm && ['rinse', 'fire', 'retail', 'unused'].includes(program)
       ? MODULE.depth : amount < 0.29 ? 9 : amount < 0.60 ? 13.5 : MODULE.depth,
-    form = moduleEnvelope(kind, length, formSample, unique),
+    roofHand = random(localSeed ^ 0xc12c3703)() < 0.5 ? -1 : 1,
+    form = moduleEnvelope(kind, length, formSample, unique, roofHand),
     style = random((followsFinish || !unique ? commonSeed : localSeed) ^ 0x4d69fe61),
-    // Variation on the outside remains independent of the form roll. A
-    // streamlined local recipe often supplies metal to the material palette.
     materialRoll = style(),
-    generatedFinish = localForm === 'streamliner' && materialRoll < 0.74
+    generatedFinish = kind === 'cabin' ? 'log-siding' : kind === 'streamliner' && materialRoll < 0.82
       ? choose(['trailer-aluminum', 'trailer-aluminum', 'painted-tin', 'zinc'], style)
       : choose(MODULE_FINISHES, style),
     broad = formSample(),
     detail = unique ? choose(MODULE_DETAILS, style) : 'frames',
-    windowStyle = unique ? choose(MODULE_WINDOW_STYLES, style) : 'punched',
+    windowStyle = !unique || kind === 'cabin' ? 'punched' : choose(MODULE_WINDOW_STYLES, style),
     palette = choose(MODULE_COLOURS, style),
-    pattern = unique ? choose(MODULE_FACADE_PATTERNS, style) : 'bare',
-    tint = unique && !followsFinish ? 0.84 + style() * 0.31 : 1,
-    paintIndex = unique ? Math.floor(style() * 31) : slot.j + 2 * slot.f + seed;
+    tint = unique && !followsFinish ? 0.91 + style() * 0.19 : 1,
+    paintIndex = unique ? Math.floor(style() * 31) : slot.j + 2 * slot.f + seed,
+    shade = unique && style() < 0.52 && kind !== 'streamliner'
+      ? choose(['awning', 'visor', 'louvers'], style) : null,
+    patioDoor = !unique ? 'sliding' : kind === 'cabin' ? choose(['half-glazed', 'solid'], style) : choose(MODULE_PATIO_DOORS, style),
+    skylight = unique && style() < 0.38 ? moduleSkylight(form, style) : null;
   // Preserve individual overrides. The shared finish inherits the current
   // palette assignment, with the remaining units exploring lightweight skins.
   if (unique && !followsFinish && !assignments['module:' + key]?.facade) values.facade = generatedFinish;
+  if (unique && !followsFinish && !assigned.has('structure')) {
+    const timber = EXTERIOR_FINISHES[values.facade].group === 'Timber and plant-based';
+    values.structure = choose(MODULE_STRUCTURE_BY_FINISH[values.facade] ?? (timber
+      ? ['wood-stud', 'wood-stud', 'lvl-box', 'glulam', 'clt'] : ['wood-stud', 'light-steel', 'steel-frame']), style);
+  }
   return {
-    values, program, unique, form, length, broad, detail, windowStyle, palette, pattern, tint, paintIndex,
+    values, program, unique, form, length, broad, detail, windowStyle, palette, tint, paintIndex, patioDoor,
+    shade: settings?.windowShades === false ? null : shade,
+    skylight: settings?.skylights === false ? null : skylight,
     finishSeed: unique && followsFinish ? commonSeed : localSeed
   };
+}
+
+function moduleSkylight(form, sample) {
+  if (!['flat', 'gable', 'shed', 'saltbox', 'cabin', 'butterfly'].includes(form.kind)) return null;
+  const facets = [];
+  for (let i = 0; i < form.profile.length - 1; i++) {
+    const [a] = form.profile[i], [b] = form.profile[i + 1];
+    if (b - a < 0.58) continue;
+    const half = Math.min(0.23, (b - a) * 0.27), center = (a + b) / 2;
+    facets.push({ facet: i, left: center - half, right: center + half });
+  }
+  if (!facets.length) return null;
+  const opening = facets[Math.floor(sample() * facets.length)], { facet, left, right } = opening,
+    [[a, y], [b, h]] = form.profile.slice(facet, facet + 2),
+    rise = [left, right].map((u) => y + (h - y) * (u - a) / (b - a)),
+    lift = Math.min(0.055, MODULE.height - Math.max(...rise));
+  const start = (0.39 + sample() * 0.18) * form.length;
+  return { ...opening, start, end: start + 1.26, lift };
 }
 
 function furnishedModulePlan(model, slot, assignments, seed, tipBalcony = false) {
@@ -81,7 +118,7 @@ function furnishedModulePlan(model, slot, assignments, seed, tipBalcony = false)
     { program, length, form, unique, broad, windowStyle } = design,
     // The 1.95 m dock threshold and the module door share the centre line.
     doorWidth = 1.5, doorHeight = 2.26,
-    wall = form.kind === 'streamliner' ? 0.15 : form.kind === 'hip' ? 0.26 : 0.18,
+    wall = design.values.structure === 'stacked-timber' ? 0.23 : form.kind === 'streamliner' ? 0.15 : form.kind === 'hip' ? 0.26 : 0.18,
     inside = form.half - wall,
     aisleEdge = -inside + 1.13,
     entry = 1.45,
@@ -146,6 +183,7 @@ function furnishedModulePlan(model, slot, assignments, seed, tipBalcony = false)
   const balcony = !patio && (tipBalcony || unique && ['day', 'love', 'senior'].includes(program) && broad < 0.27);
   const endHalf = moduleHalfAt(form, length),
     door = Math.min(doorHeight, form.eave - 0.07),
+    patioWidth = design.patioDoor === 'sliding' && unique ? 1.65 : design.patioDoor === 'french' ? 1.40 : 1.15,
     endWindow = { center: 0, width: Math.min(2.35, 1.44 * endHalf), bottom: 0.85,
       top: Math.min(form.eave - 0.135, 2.44), shape: form.kind === 'streamliner' ? 'rounded' : 'square' };
   return {
@@ -153,7 +191,8 @@ function furnishedModulePlan(model, slot, assignments, seed, tipBalcony = false)
     roof: form.kind, ceiling: form.eave,
     sideWindows: [-1, 1].map(sideWindows),
     endOpening: patio || balcony
-      ? { center: Math.max(-endHalf + 0.62, patio ? -1.05 : -0.85), width: 1.15, bottom: 0, top: door, door: true }
+      ? { center: Math.max(-endHalf + patioWidth / 2 + 0.045, patio ? -1.05 : -0.85), width: patioWidth,
+        bottom: 0, top: door, door: true, doorStyle: design.patioDoor }
       : endWindow
   };
 }

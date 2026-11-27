@@ -1,5 +1,10 @@
 # Changelog
 
+## Module façades, roofs and openings
+- Use conventional cladding joints instead of colour bands. Added timber panels, protected exposed CLT, milled and reclaimed boards, rounded timber courses, cedar shakes, diamond zinc shingles and stamped tin shingles.
+- Added five shell families, including a stacked-timber cabin, and independent roof handedness at each dock.
+- Added optional window awnings and shades, modeled skylights and five patio door types. The chassis and dock-side entry retain their standard fit.
+
 ## Round mats for capsule groups
 - Give each inward-facing bridge seating group one round mat.
 

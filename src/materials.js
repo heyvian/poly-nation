@@ -571,7 +571,8 @@ const materialWorkspace = (() => {
     for (const [field, id] of Object.entries(paletteIds)) refreshPalette(field, id);
     syncAssignment();
   }
-  const uniqueModules = $('uniqueModules');
+  const uniqueModules = $('uniqueModules'),
+    exteriorOptions = [['windowShades', $('moduleWindowShades')], ['skylights', $('moduleSkylights')]];
   const similarityFields = PROGRAMS.map((program) => {
     const label = document.createElement('label'),
       readout = document.createElement('output'), slider = document.createElement('input');
@@ -594,6 +595,8 @@ const materialWorkspace = (() => {
     const enabled = study.assignments.moduleDesign?.enabled === true;
     uniqueModules.checked = enabled;
     $('moduleSimilarity').hidden = !enabled;
+    $('moduleExteriorOptions').hidden = !enabled;
+    for (const [key, input] of exteriorOptions) input.checked = study.assignments.moduleDesign?.[key] !== false;
     for (const { id, slider, readout } of similarityFields) {
       slider.value = moduleSimilarity(study.assignments, id);
       readout.value = slider.value + '%';
@@ -616,6 +619,10 @@ const materialWorkspace = (() => {
   }
   uniqueModules.onchange = () => {
     (study.assignments.moduleDesign ||= {}).enabled = uniqueModules.checked;
+    applyModuleDesign();
+  };
+  for (const [key, input] of exteriorOptions) input.onchange = () => {
+    (study.assignments.moduleDesign ||= {})[key] = input.checked;
     applyModuleDesign();
   };
 

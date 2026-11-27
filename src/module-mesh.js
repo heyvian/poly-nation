@@ -46,7 +46,7 @@ function drawFittedModule(mesh, slot, x, y, z, preview, plan, options = {}) {
   elevation(false, 1, [plan.endOpening]);
   if (cover) {
     if (assembly) mesh.mark('Assembly_Module_Roof', reference);
-    const { profile, stations } = form,
+    const { profile, stations } = form, { skylight } = plan,
       roofPoint = ([u, v], at, inset = 0) => point(u * (moduleHalfAt(form, at) - inset), at, moduleRoofAt(form, v, at)),
       atEave = (u, at) => point(u * moduleHalfAt(form, at), at, ceiling),
       coverColour = appearance.cover;
@@ -67,30 +67,58 @@ function drawFittedModule(mesh, slot, x, y, z, preview, plan, options = {}) {
     } else {
       // The crown, hips and trailer tail are shared with plan and section.
       // Every high point is contained by the original docking envelope.
-      for (let i = 1; i < stations.length; i++) {
-        const a = stations[i - 1], b = stations[i];
+      const spans = skylight ? [...stations, skylight.start, skylight.end].sort((a, b) => a - b) : stations;
+      for (let i = 1; i < spans.length; i++) {
+        const a = spans[i - 1], b = spans[i], opening = skylight && a >= skylight.start && b <= skylight.end;
         for (let j = 1; j < profile.length; j++) {
           const left = profile[j - 1], right = profile[j],
-            points = [roofPoint(left, a), roofPoint(right, a), roofPoint(right, b), roofPoint(left, b)];
-          mesh.quad(...points, coverColour, mesh.solid, 1 + appearance.gloss);
-          if (form.kind === 'streamliner' && (i > 1 || j === 3 || j === 9))
-            mesh.textureLine(...(i > 1 ? points.slice(0, 2) : [points[0], points[3]]), appearance.accent);
+            facet = (u, at) => roofPoint([u, left[1] + (right[1] - left[1]) * (u - left[0]) / (right[0] - left[0])], at),
+            cuts = opening && skylight.facet === j - 1
+              ? [[left[0], skylight.left], [skylight.right, right[0]]] : [[left[0], right[0]]];
+          for (const [u, v] of cuts) {
+            const points = [facet(u, a), facet(v, a), facet(v, b), facet(u, b)],
+              raisedMonitor = (form.kind === 'clerestory' || form.kind === 'lantern') && v - u < 0.025 && Math.abs(left[1] - right[1]) > 0.2;
+            if (raisedMonitor) mesh.quad(...points, rgb('#95aaa5'), mesh.glass, 0.82);
+            else mesh.quad(...points, coverColour, mesh.solid, 1 + appearance.gloss);
+            if (form.kind === 'streamliner' && (i > 1 || j === 3 || j === 9))
+              mesh.textureLine(...(i > 1 ? points.slice(0, 2) : [points[0], points[3]]), appearance.accent);
+          }
         }
         for (const edge of [profile[0], profile.at(-1)]) {
           if (edge[1] - ceiling < 0.002) continue;
           const points = [atEave(edge[0], a), atEave(edge[0], b), roofPoint(edge, b), roofPoint(edge, a)];
           mesh.quad(...(edge[0] < 0 ? points : points.reverse()), appearance.skin);
         }
-        mesh.quad(atEave(1, a), atEave(-1, a), atEave(-1, b), atEave(1, b), rgb('#d9d2c0'));
+        const ceilingRuns = opening ? [[-1, skylight.left], [skylight.right, 1]] : [[-1, 1]];
+        for (const [left, right] of ceilingRuns)
+          mesh.quad(atEave(right, a), atEave(left, a), atEave(left, b), atEave(right, b), rgb('#d9d2c0'));
       }
       for (const at of [0, length]) for (let j = 1; j < profile.length; j++) {
         const left = profile[j - 1], right = profile[j],
           points = [atEave(left[0], at), atEave(right[0], at), roofPoint(right, at), roofPoint(left, at)];
         mesh.quad(...(at === 0 ? points : points.reverse()), appearance.skin);
       }
+      if (skylight) drawModuleSkylight(mesh, skylight, profile, roofPoint, atEave, appearance.trim);
     }
   }
   if (interiors) drawFurnishedModuleInterior(mesh, slot, x, y, z, plan, reference);
+}
+
+function drawModuleSkylight(mesh, skylight, profile, roofPoint, atEave, trim) {
+  const { facet, left, right, start, end, lift } = skylight,
+    [[a, y], [b, h]] = profile.slice(facet, facet + 2),
+    height = (u) => y + (h - y) * (u - a) / (b - a),
+    outer = [[left, start], [right, start], [right, end], [left, end]],
+    inner = [[left + 0.025, start + 0.06], [right - 0.025, start + 0.06],
+      [right - 0.025, end - 0.06], [left + 0.025, end - 0.06]],
+    at = ([u, v], up) => roofPoint([u, height(u) + up], v),
+    pane = inner.map((p) => at(p, lift - 0.005));
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4, p = outer[i], q = outer[j];
+    mesh.quad(atEave(...p), atEave(...q), at(q, lift), at(p, lift), rgb('#c7c8be'));
+    mesh.quad(at(p, lift), at(q, lift), at(inner[j], lift), at(inner[i], lift), trim);
+  }
+  mesh.quad(...pane, rgb('#8cabbb'), mesh.glass, 0.74);
 }
 
 function drawFittedModuleTerrace(mesh, slot, x, y, z, plan) {
