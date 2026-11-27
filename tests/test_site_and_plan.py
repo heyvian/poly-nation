@@ -257,12 +257,23 @@ with serve_lab(root) as url, sync_playwright() as p:
       const envelope = model.R + BUILD_SECTION.dockGap + MODULE.depth + 2;
       const spans = plan.rows.flatMap(row => row.transfers);
       const ramps = plan.accesses.filter(route => route.kind === 'ramp');
+      const mesh = meshBuilder();
+      drawSiteFoundations(mesh, model, plan, false);
+      const landward = mesh.groups.flatMap((group, i) => {
+        if (!/^Site_Foundation_(Stem_Walls|Pile_Caps|Piles)$/.test(group.layer)) return [];
+        return mesh.solid.slice(group.solid, mesh.groups[i + 1]?.solid ?? mesh.solid.length)
+          .flatMap((x, j, points) => j % 10 === 0 ? [[x, points[j + 2]]] : []);
+      });
+      const cuts = siteSectionCuts(plan);
       return plan.floor > siteTerrainMaximum(terrain, [0, 0], envelope) + 0.95 && spans.length > 0 &&
+        landward.length > 0 && landward.every(point => !plan.water.overlaps(point, 5)) &&
+        plan.rows.some(row => row.supports.some(support => support.bank && plan.water.overlaps(row.at(support.at), 5))) &&
         plan.rows.every(row => row.supports.every(support => !plan.water.overlaps(row.at(support.at), 1.3))) &&
         spans.every(span => plan.floor - SITE_PLATFORM_BEAM_TOP - span.depth >= plan.water.level + 5 - 1e-6) &&
         ramps.length > 0 && ramps.every(({ nodes }) => nodes.slice(1).every(([station, y], i) =>
           Math.abs(y - nodes[i][1]) <= (station - nodes[i][0]) / 20 + 1e-6)) &&
-        plan.accesses.some(route => route.kind === 'stair') && siteSectionCuts(plan).some(cut => cut.kind === 'canal-detail');
+        plan.accesses.some(route => route.kind === 'stair') && cuts.some(cut => cut.kind === 'canal-detail') &&
+        cuts.some(cut => cut.kind === 'piled-detail');
     }''')
 
     page.locator('#openDrawings').click()
@@ -280,6 +291,7 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(district).to_contain_text('10 Avenue SW')
     expect(district).to_contain_text('Bow River')
     expect(district.locator('[data-site-context=overlay] path').first).to_be_attached()
+    expect(page.locator('#documentPages svg[data-site-section=piled-detail]')).to_contain_text('Pile lengths are shown schematically')
     expect(page.locator('#printDocument')).to_be_enabled()
     page.evaluate('window.print = () => {}')
     page.locator('#printDocument').click()

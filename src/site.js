@@ -195,7 +195,10 @@ const siteWorkspace = (() => {
         : `Ground at pin ${elevation.toFixed(1)} m.`;
       if (supports) {
         const spans = supports.rows.reduce((count, row) => count + row.transfers.length, 0),
-          structure = spans ? `${spans} clear-span ${spans === 1 ? 'girder' : 'girders'} on dry-bank supports.` : 'Footings follow the local grade.',
+          piled = supports.perimeter.runs.length || supports.rows.some((row) => row.landward.length),
+          landward = piled ? ' Landward stem walls bear on schematic piles.' : '',
+          structure = spans ? `${spans} clear-span ${spans === 1 ? 'girder' : 'girders'} on dry-bank supports.${landward}`
+            : piled ? 'Landward stem walls bear on schematic piles.' : 'Footings follow the local grade.',
           access = supports.accesses.length < 4 ? ' Some lobby approaches need a different alignment to reach dry grade.' : '';
         supportStatus.textContent = supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' + access : structure + access;
       }

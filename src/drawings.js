@@ -910,17 +910,18 @@ const openDrawingWorkspace = (() => {
     if (district) cuts.unshift(district);
     return cuts.map((cut, index) => {
       const { title, note, at, angle, from, to, kind } = cut, [cx, cz] = plan.position,
-        detail = kind === 'canal-detail' || kind === 'approach', district = kind === 'district',
+        detail = kind === 'canal-detail' || kind === 'piled-detail' || kind === 'approach', district = kind === 'district',
         point = (station, height) => { const [x, z] = at(station); return [x - cx, height - plan.foundation, z - cz]; },
         along = [Math.cos(angle), 0, Math.sin(angle)], normal = [-along[2], 0, along[0]],
         offset = dot(point(0, 0), normal), plane = { normal, offset },
         camera = { az: angle + Math.PI / 2, el: 0 },
         { profile, surfaces } = siteSectionGround(plan, cut, canalDepth),
-        bottom = Math.min(...profile.map(([, y]) => y), plan.floor - 1.5) - 2.2,
+        bottom = Math.min(...profile.map(([, y]) => y), plan.floor - 1.5) - (cut.belowGrade ?? 2.2),
         upper = cut.crown ?? plan.floor + Math.min(kind === 'canal-detail' ? 1.55 : 6.4,
           modelFloorPitch(sourceModel) * sourceModel.layers.length),
         focus = [from, to].flatMap((station) => [bottom, detail ? upper : Math.max(upper, contextTop + 3)].map((y) => point(station, y))),
-        drawingY = detail ? 414 : 142, region = { width: w - 2 * margin, height: h - drawingY - 65 },
+        drawingY = detail ? 414 : 142,
+        region = { width: w - 2 * margin - (cut.labels ? 280 : 0), height: h - drawingY - 65 },
         frame = renderDrawing(geometry, camera, [
           plane, { normal, offset: offset - 5, flip: true },
           { normal: along, offset: to }, { normal: along, offset: from, flip: true },
@@ -955,7 +956,7 @@ const openDrawingWorkspace = (() => {
         x, y, fill: ink, 'font-size': size, ...options
       }, content);
       if (detail) {
-        const overviewY = 134, overviewRegion = { width: region.width, height: drawingY - overviewY - 6 },
+        const overviewY = 134, overviewRegion = { width: w - 2 * margin, height: drawingY - overviewY - 6 },
           overview = renderDrawing(contextGeometry, camera, [], paper, 'auto', false, centeredPlacement(), false, pale,
             { region: overviewRegion, scales }),
           view = floorView(overview, '', margin, overviewY), contextArea = view.children[0];
@@ -980,6 +981,12 @@ const openDrawingWorkspace = (() => {
       }
       area.prepend(ground);
       svg.append(tile);
+      for (const [station, height, label] of cut.labels ?? []) {
+        const [x, y] = project(frame, station, height), py = y + drawingY, start = x + margin,
+          end = Math.max(start + 40, w * 0.73);
+        studyMark(svg, 'line', { x1: start, x2: end, y1: py, y2: py, stroke: rule });
+        text(end + 8, py + 4, label, 13);
+      }
       if (cut.clearance) {
         const { station, underside, height } = cut.clearance,
           [x, y] = project(frame, station, underside), [, base] = project(frame, station, plan.water.level),

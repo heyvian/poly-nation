@@ -4,6 +4,11 @@ const SITE_PLATFORM_BEAM_TOP = 0.46;
 const SITE_DRY_BEAM_DEPTH = 0.42;
 const SITE_WATER_CLEARANCE = 5;
 const SITE_APPROACH_DECK_DEPTH = 0.22;
+const SITE_BANK_FOUNDATION_SETBACK = 5;
+const SITE_PILE_CAP_WIDTH = 0.90;
+const SITE_PILE_CAP_COVER = 0.33;
+const SITE_PILE_CAP_DEPTH = 0.48;
+const SITE_PILE_DISPLAY_LENGTH = 3.2;
 
 function siteDiskPlanes([x, z], radius) {
   // Tangent half-planes enclose the full circular footprint.
@@ -151,6 +156,21 @@ function siteGirderRow(position, angle, offset, radius, water, terrain, reach) {
   return { at, angle, offset, half, transfers, supports, unresolved };
 }
 
+function siteLandwardRuns(at, from, to, water, transfers = []) {
+  const count = Math.ceil((to - from) / 0.85), runs = [];
+  for (let i = 0; i < count; i++) {
+    const start = from + (to - from) * i / count, end = from + (to - from) * (i + 1) / count;
+    if (transfers.some((span) => start < span.to && end > span.from)) continue;
+    // The disk includes this whole piece of the cap, not just the wall's centreline.
+    const padding = SITE_BANK_FOUNDATION_SETBACK + SITE_PILE_CAP_WIDTH / 2 + (end - start) / 2 + 0.025;
+    if (water.overlaps(at((start + end) / 2), padding)) continue;
+    const previous = runs.at(-1);
+    if (previous && Math.abs(previous.to - start) < 1e-6) previous.to = end;
+    else runs.push({ from: start, to: end });
+  }
+  return runs.filter(({ from, to }) => to - from >= 1.4);
+}
+
 function siteApproach(terrain, water, position, angle, start, offset, top, kind) {
   const at = siteLine(position, angle, offset), surfaceAt = (station) => siteTerrainHeight(terrain, ...at(station)),
     ramp = kind === 'ramp', width = ramp ? 1.9 : 2.05, junction = 1.55,
@@ -224,7 +244,20 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: s
       siteTerrainMaximum(terrain, position, envelope) + SITE_PLATFORM_BEAM_TOP + SITE_DRY_BEAM_DEPTH + 0.19,
       water.overlaps(position, envelope) ? water.level + SITE_WATER_CLEARANCE + SITE_PLATFORM_BEAM_TOP + gridDepth : -Infinity),
     foundation = floor - base, moat = craneMoatBounds(model.crane),
+    coreRadius = buildRingFrame(model).outside, perimeterLength = TAU * coreRadius,
+    perimeterAt = (station) => {
+      const theta = station / coreRadius;
+      return [position[0] + coreRadius * Math.cos(theta), position[1] + coreRadius * Math.sin(theta)];
+    },
+    perimeter = { at: perimeterAt, radius: coreRadius, length: perimeterLength,
+      runs: siteLandwardRuns(perimeterAt, 0, perimeterLength, water) },
     accesses = [];
+  for (const row of rows) {
+    const half = Math.sqrt(Math.max(0, coreRadius ** 2 - row.offset ** 2));
+    row.landward = siteLandwardRuns(row.at, -half, half, water, row.transfers);
+    row.supports = row.supports.filter((support) => support.bank ||
+      !row.landward.some(({ from, to }) => support.at >= from && support.at <= to));
+  }
   for (const [i, azimuth] of [accessAngle, accessAngle + Math.PI].entries()) {
     const start = moat ? moat.outer + 2.43 : radius - 0.35, top = moat ? foundation + 0.31 : floor - 0.01;
     for (const [kind, offset] of [['stair', -1.24], ['ramp', 1.24]]) {
@@ -233,8 +266,51 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: s
     }
   }
   return { position, angle, radius, foundation, floor, groundAtPin, water, rows, crossingOffset, anchor,
-    terrain, accesses, accessAngle, moat, contextReach: Math.max(envelope, model.crane?.extent ?? 0),
+    terrain, accesses, accessAngle, moat, perimeter, contextReach: Math.max(envelope, model.crane?.extent ?? 0),
     unresolved: rows.some((row) => row.unresolved) };
+}
+
+function sitePileStations({ from, to }) {
+  const count = Math.ceil((to - from) / 5.2);
+  return Array.from({ length: count }, (_, i) => from + (to - from) * (i + 0.5) / count);
+}
+
+function drawSitePiledWall(mesh, at, tangent, run, terrain, top, concrete, cap) {
+  const { from, to } = run, count = Math.ceil((to - from) / 0.85),
+    level = (station) => siteTerrainHeight(terrain, ...at(station)) - SITE_PILE_CAP_COVER,
+    closed = Math.hypot(...at(from).map((value, i) => value - at(to)[i])) < 1e-6;
+  function ribbon(width, bottom, crown, colour) {
+    const profiles = Array.from({ length: count + 1 }, (_, i) => {
+      const station = from + (to - from) * i / count, [x, z] = at(station), angle = tangent(station),
+        dx = Math.sin(angle) * width / 2, dz = Math.cos(angle) * width / 2,
+        lo = bottom(station), hi = crown(station);
+      return [[x + dx, lo, z - dz], [x - dx, lo, z + dz], [x - dx, hi, z + dz], [x + dx, hi, z - dz]];
+    });
+    for (let i = 1; i < profiles.length; i++) {
+      const a = profiles[i - 1], b = profiles[i];
+      for (let j = 0; j < 4; j++) {
+        const next = (j + 1) % 4;
+        mesh.quad(a[j], b[j], b[next], a[next], colour);
+      }
+    }
+    if (closed) return;
+    mesh.quad(...profiles[0], colour);
+    mesh.quad(...profiles.at(-1).slice().reverse(), colour);
+  }
+  mesh.mark('Site_Foundation_Stem_Walls', 'Landward reinforced-concrete stem wall');
+  ribbon(0.36, level, () => top, concrete);
+  mesh.mark('Site_Foundation_Pile_Caps', 'Continuous grade beam over piles');
+  ribbon(SITE_PILE_CAP_WIDTH, (station) => level(station) - SITE_PILE_CAP_DEPTH, level, cap);
+  mesh.mark('Site_Foundation_Piles', 'Schematic bored pile shafts below grade');
+  for (const station of sitePileStations(run)) {
+    const [x, z] = at(station), high = level(station) - SITE_PILE_CAP_DEPTH, low = high - SITE_PILE_DISPLAY_LENGTH,
+      ring = (j, y) => [x + 0.25 * Math.cos(j * TAU / 12), y, z + 0.25 * Math.sin(j * TAU / 12)];
+    for (let j = 0; j < 12; j++) {
+      mesh.quad(ring(j, low), ring(j, high), ring(j + 1, high), ring(j + 1, low), concrete);
+      mesh.tri([x, high, z], ring(j + 1, high), ring(j, high), concrete);
+      mesh.tri([x, low, z], ring(j, low), ring(j + 1, low), concrete);
+    }
+  }
 }
 
 function drawSiteFoundations(mesh, model, plan, extendRunway) {
@@ -269,6 +345,10 @@ function drawSiteFoundations(mesh, model, plan, extendRunway) {
   mesh.mark('Site_Foundation_Ring_Girders', 'Annular collectors below the permanent core');
   for (const r of [ring.inside, ring.outside])
     sector(r - 0.24, r + 0.24, beamTop - 0.25, 0.25, concrete);
+  const perimeter = plan.perimeter;
+  for (const run of perimeter.runs)
+    drawSitePiledWall(mesh, perimeter.at, (station) => station / perimeter.radius + Math.PI / 2,
+      run, terrain, beamTop - 0.25, concrete, stone);
   for (const row of rows) {
     mesh.mark('Site_Foundation_Girders', 'Underfloor beam grid');
     let station = -row.half;
@@ -280,6 +360,8 @@ function drawSiteFoundations(mesh, model, plan, extendRunway) {
       station = span.to;
     }
     girder(row, station, row.half, SITE_DRY_BEAM_DEPTH, concrete);
+    for (const run of row.landward)
+      drawSitePiledWall(mesh, row.at, () => row.angle, run, terrain, beamTop - SITE_DRY_BEAM_DEPTH, concrete, stone);
     for (const support of row.supports) {
       mesh.mark(support.bank ? 'Site_Foundation_Bank_Bents' : 'Site_Foundation_Piers',
         support.bank ? 'Dry-bank bearings and pad foundations' : 'Footings stepped to local grade');
@@ -378,9 +460,9 @@ function siteSectionCuts(plan) {
     foundation = {
       kind: 'foundation',
       title: channel ? 'Canal crossing and foundations' : 'Core foundations and site grade',
-      note: channel ? 'The transfer girders carry the ground floor to bearings beyond the canal banks.'
+      note: channel ? 'Open bearing frames carry the crossing. Piled stem walls begin at least 5 m from the bank.'
         : plan.anchor ? 'The section shows the water crossing where dry-bank supports are unresolved.'
-          : 'The ground floor stays level over the stepped pier footings.',
+          : 'Pile-supported concrete walls follow the grade beneath the level ground floor.',
       at: row.at, angle: row.angle, from: Math.min(-radius - 9, ...row.transfers.map((span) => span.from - 7)),
       to: Math.max(radius + 9, ...row.transfers.map((span) => span.to + 7))
     };
@@ -392,8 +474,26 @@ function siteSectionCuts(plan) {
         .sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))[0] ?? [span.from, span.to];
     cuts.push({ kind: 'canal-detail', title: 'Canal crossing · Bank bearings and girder',
       note: `Study span ${(span.to - span.from).toFixed(1)} m between dry-bank bearings. Clear height above the study water level is ${clearance.toFixed(1)} m.`,
-      at: row.at, angle: row.angle, from: span.from - 5, to: span.to + 5,
+      at: row.at, angle: row.angle, from: span.from - 8, to: span.to + 8,
       clearance: { station: (a + b) / 2, underside, height: clearance } });
+  }
+  const piled = [row, ...rows.filter((candidate) => candidate !== row)]
+    .flatMap((candidate) => candidate.landward.map((run) => ({ row: candidate, run })))
+    .sort((a, b) => (b.run.to - b.run.from) - (a.run.to - a.run.from))[0];
+  if (piled) {
+    const { run, row } = piled, through = (run.from + run.to) / 2,
+      from = Math.max(run.from - 3, through - 9), to = Math.min(run.to + 3, through + 9),
+      edge = Math.min(run.to, to), shaft = sitePileStations(run).findLast((station) => station <= to - 0.25),
+      grade = (station) => siteTerrainHeight(plan.terrain, ...row.at(station)),
+      capY = grade(edge) - SITE_PILE_CAP_COVER - SITE_PILE_CAP_DEPTH / 2;
+    cuts.push({ kind: 'piled-detail', title: 'Landward foundation · Stem wall and piles',
+      note: 'A continuous grade beam carries the stem wall. Pile lengths are shown schematically below local grade.',
+      at: row.at, angle: row.angle, from, to, crown: plan.floor + 1.55, belowGrade: SITE_PILE_DISPLAY_LENGTH + 1.7,
+      labels: [
+        [edge, (grade(edge) + plan.floor - SITE_PLATFORM_BEAM_TOP - SITE_DRY_BEAM_DEPTH) / 2, 'Concrete stem wall'],
+        [edge, capY, 'Pile-supported grade beam'],
+        [shaft + 0.25, grade(shaft) - SITE_PILE_CAP_COVER - SITE_PILE_CAP_DEPTH - SITE_PILE_DISPLAY_LENGTH / 2, 'Schematic pile shaft']
+      ] });
   }
   return [...cuts, ...['ramp', 'stair'].flatMap((kind) => {
     const route = accesses.find((entry) => entry.requested === kind && entry.kind === kind) ??

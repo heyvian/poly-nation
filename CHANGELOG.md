@@ -1,5 +1,8 @@
 # Changelog
 
+## Landward West Village foundations
+- Show continuous concrete stem walls and schematic piled grade beams beyond a 5 m horizontal setback from modeled waterways. Keep the canal bearings and clear spans open and add a landward foundation detail to the site section set.
+
 ## West Village district section
 - Increase clearance over district water to 5 m and keep entry crossings level above the channel before descending to grade.
 - Show the full building in pale linework and add an automatically scaled west-facing district section from the Bow River to 10 Avenue SW.
