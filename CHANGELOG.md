@@ -2,7 +2,7 @@
 
 ## Crane study drawing set
 - Use a wide four-point hoist and a handoff to fixed receiving guides. The inboard heads release first while the outboard pair supports the tail.
-- Print vector 11 × 17 landscape sheets for the elevated, moat and roof-only cranes. Pair project axonometrics and elevations with the four cassette installation stages and the moat drawbridge sequence.
+- Print vector 11 × 17 landscape sheets for the elevated, moat and roof-only cranes. Use one shared cassette installation sheet with the retracted and attached hoist lines called out. Include the moat drawbridge sequence when selected.
 
 ## Continuous moat water
 - End plaza paving and move amenities inside the inner bank. Fill the excavated ring with one continuous water surface under the pier-supported rails. Keep the moat clear where it meets the live terrain.

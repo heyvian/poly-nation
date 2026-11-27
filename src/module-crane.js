@@ -248,6 +248,20 @@ function drawCantileverAnchorage(mesh, model, crane, paint, cutY) {
   }
 }
 
+function craneBoomUnderside({ head, roofInner, tower }, radius) {
+  return head + 0.25 * (radius - roofInner) / (tower - roofInner);
+}
+
+function craneHoistStations(crane, pose) {
+  const { pickupOffset, pinHeight } = craneCassetteRig(),
+    center = pose.slot ? pose.payloadStart + MODULE.depth / 2 : crane.liftCenter;
+  return [-pickupOffset, pickupOffset].map((offset) => {
+    const radius = center + offset, boomY = craneBoomUnderside(crane, radius),
+      engaged = Boolean(pose.slot && (offset > 0 || pose.inboardHook));
+    return { radius, boomY, pinY: engaged ? pose.payloadY + pinHeight : boomY - 1.45, engaged };
+  });
+}
+
 function drawCraneGantry(mesh, crane, pose, paint) {
   const { angle } = pose, { mark } = mesh,
     { block, member } = craneFrame(mesh, angle),
@@ -256,7 +270,7 @@ function drawCraneGantry(mesh, crane, pose, paint) {
     { roofInner, roofOuter, tower, groundRail, groundGauge, roofRail, head, depth } = crane,
     cantilever = crane.runway === 'cantilever', cross = crane.width / 2, foot = (groundRail ?? 0) + 0.47,
     divisions = Math.ceil((tower - roofInner) / 3.9),
-    bottom = (r) => head + 0.25 * (r - roofInner) / (tower - roofInner),
+    bottom = (r) => craneBoomUnderside(crane, r),
     top = (r) => bottom(r) + depth * (cantilever ? r <= roofOuter
       ? 0.60 + 0.40 * (r - roofInner) / (roofOuter - roofInner)
       : 1 - 0.68 * (r - roofOuter) / (tower - roofOuter)
@@ -328,23 +342,23 @@ function drawCraneGantry(mesh, crane, pose, paint) {
       block(r + width * 0.45, at, y - 0.052, 0.31, 0.315, 0.09, dark);
     }
   }
-  drawCraneHoist(mesh, block, member, bottom, crane, pose, dark, steel, amber);
+  drawCraneHoist(mesh, block, member, crane, pose, dark, steel, amber);
 
   if (pose.slot) drawCraneCassette(mesh, angle, pose, amber);
   mark('Crane_Motion_End');
 }
 
-function drawCraneHoist(mesh, block, member, bottom, crane, pose, dark, steel, amber) {
-  const { pickupOffset, jawHalfWidth, pinHeight } = craneCassetteRig(),
-    center = pose.slot ? pose.payloadStart + MODULE.depth / 2 : crane.liftCenter;
+function drawCraneHoist(mesh, block, member, crane, pose, dark, steel, amber) {
+  const { jawHalfWidth } = craneCassetteRig(), stations = craneHoistStations(crane, pose);
   mesh.mark('Crane_Hoist_Rails', 'Continuous radial trolley rails below the boom');
   for (const t of [-crane.width / 2, crane.width / 2]) {
     const start = crane.dockTip - MODULE.depth * 0.43, end = crane.liftOuter - 1.6;
-    member([start, t, bottom(start) - 0.34], [end, t, bottom(end) - 0.34], 0.21, dark, 0.38);
+    member([start, t, craneBoomUnderside(crane, start) - 0.34],
+      [end, t, craneBoomUnderside(crane, end) - 0.34], 0.21, dark, 0.38);
   }
   mesh.mark('Crane_Hoist', 'Two traveling crossheads with independently reeling side hoists');
-  for (const r of [center - pickupOffset, center + pickupOffset]) {
-    const y = bottom(r), width = jawHalfWidth * 2 + 0.36;
+  for (const { radius: r, boomY: y } of stations) {
+    const width = jawHalfWidth * 2 + 0.36;
     block(r, 0, y - 0.75, width, 0.34, 0.64, steel, true);
     for (const t of [-jawHalfWidth, jawHalfWidth]) {
       block(r, t, y - 0.40, 0.38, 0.43, 0.78, dark, true);
@@ -352,18 +366,13 @@ function drawCraneHoist(mesh, block, member, bottom, crane, pose, dark, steel, a
     }
   }
   mesh.mark('Crane_Hoist_Lines', 'Four vertical hoist lines outside the cassette width');
-  for (const r of [center - pickupOffset, center + pickupOffset]) {
-    const engaged = pose.slot && (r > center || pose.inboardHook);
-    for (const t of [-jawHalfWidth, jawHalfWidth]) {
-      const pinY = engaged ? pose.payloadY + pinHeight : bottom(r) - 1.45;
-      member([r, t, bottom(r) - 0.69], [r, t, pinY + 0.14], 0.047, dark);
-    }
-  }
+  for (const { radius: r, boomY, pinY } of stations)
+    for (const t of [-jawHalfWidth, jawHalfWidth])
+      member([r, t, boomY - 0.69], [r, t, pinY + 0.14], 0.047, dark);
   mesh.mark('Crane_Lifting_Jaws', 'Independent side heads with retracting chassis pins');
-  for (const r of [center - pickupOffset, center + pickupOffset]) {
-    const engaged = pose.slot && (r > center || pose.inboardHook);
+  for (const { radius: r, pinY, engaged } of stations) {
     for (const side of [-1, 1]) {
-      const t = side * jawHalfWidth, pinY = engaged ? pose.payloadY + pinHeight : bottom(r) - 1.45;
+      const t = side * jawHalfWidth;
       block(r, t, pinY - 0.10, 0.22, 0.27, 0.30, amber, true);
       if (engaged) member([r, t, pinY], [r, side * (MODULE.width / 2 - 0.07), pinY], 0.11, dark, 0.10);
     }

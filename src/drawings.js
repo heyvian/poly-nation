@@ -900,9 +900,9 @@ const openDrawingWorkspace = (() => {
       width = paper.width * DRAWING_PIXELS_PER_INCH, height = paper.height * DRAWING_PIXELS_PER_INCH,
       margin = 48, ink = '#203a35', muted = '#4d655d', rule = '#a9b9b3',
       pens = drawingPens({
-        mode: 'component', widths: [0.24, 0.28, 0.14, 0.18],
-        colors: ['#20564f', '#985324', '#899692', '#5792a3'],
-        components: { docks: 0, modules: 1, core: 2, circulation: 3, rides: 2, site: 2 }
+        mode: 'component', widths: [0.30, 0.28, 0.14, 0.18, 0.26],
+        colors: ['#20564f', '#985324', '#899692', '#5792a3', '#254b76'],
+        components: { docks: 0, modules: 1, core: 2, circulation: 3, rides: 4, site: 2 }
       }),
       view = { ...state, craneBearing: settings.craneBearing ?? state.craneBearing },
       current = () => revision === craneRender && !timer && settings.document === 'cranes' && !panel.hidden,
@@ -946,6 +946,18 @@ const openDrawingWorkspace = (() => {
       const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 13 });
       drawScaleIndicator(indicator, frame.denominator, x + w - 14, y + h - 17, ink, compass ? frame.basis : null);
       if (!frame.populated) text(svg, x + 13, y + 52, 'No geometry in this view', 13, { fill: muted });
+      return frame;
+    }
+    function cableCallout(svg, frame, bounds, point, label, detail, align) {
+      const { x, y, w } = bounds, { originX, originY, basis, scale } = frame,
+        px = x + originX + dot(point, basis.right) * scale,
+        py = y + 20 + originY - dot(point, basis.up) * scale,
+        left = align === 'start', textX = x + (left ? 13 : w - 13), from = x + (left ? 145 : w - 145),
+        colour = pens.colors[4];
+      studyMark(svg, 'line', { x1: from, x2: px, y1: py, y2: py, stroke: colour });
+      studyMark(svg, 'circle', { cx: px, cy: py, r: 2.5, fill: '#ffffff', stroke: colour });
+      text(svg, textX, py - 3, label, 13, { fill: colour, 'text-anchor': align, 'font-weight': 690 });
+      text(svg, textX, py + 14, detail, 12, { fill: muted, 'text-anchor': align });
     }
     function add({ svg, number }) {
       const preview = document.createElement('figure'), button = document.createElement('button'),
@@ -968,7 +980,7 @@ const openDrawingWorkspace = (() => {
     });
     try {
       const models = craneStudyModels(sourceModel, settings.craneSetSupport, view);
-      for (const { model, settings: poseSettings, heading, bay } of models) {
+      for (const { model, settings: poseSettings, heading } of models) {
         const crane = model.crane, support = crane.runway, label = CRANE_RUNWAYS[support];
         await step();
         if (!current()) return;
@@ -989,60 +1001,80 @@ const openDrawingWorkspace = (() => {
           });
           add(page);
         }
-        if (bay) {
-          const above = craneStudyUpperBay(model, bay),
-            page = sheet(`${label} / Module installation`,
-              `Level ${bay.f + 1}  ·  Bay ${bay.j + 1}  ·  ${bearing}°  ·  ${above ? 'Occupied bay above' : 'Clear installation lane'}  ·  Reference cassette in ochre`,
-              support, 'installation'),
-            normal = [-Math.sin(heading), 0, Math.cos(heading)],
-            planes = [{ normal, offset: 3.55 }, { normal, offset: -3.55, flip: true }];
-          for (const [i, [stage, title, note]] of CRANE_STUDY_STAGES.entries()) {
-            await step();
-            if (!current()) return;
-            const options = { ...poseSettings, craneStage: stage }, pose = moduleCranePose(model, crane, options),
-              geometry = craneStudyGeometry(model, options, true, sourceAssignments),
-              focus = craneStudyFocus(heading, model.R - 1.8, crane.tower + 0.8,
-                Math.max(-1.3, pose.payloadY - 4.5), pose.payloadY + 9.2),
-              camera = i ? elevation : { az: heading + 1.08, el: 0.35 };
-            tile(page.svg, geometry, camera, { ...sequenceTile(i), title: `${i + 1}. ${title}`, note, focus, planes });
+      }
+      const installation = models.find(({ bay }) => bay);
+      if (installation) {
+        const { model, settings: poseSettings, heading, bay } = installation, crane = model.crane,
+          above = craneStudyUpperBay(model, bay), bearing = craneDegrees(heading),
+          page = sheet('Module docking / Shared installation sequence',
+            `All three crane options use this sequence  ·  Level ${bay.f + 1}, Bay ${bay.j + 1} at ${bearing}°  ·  ${above ? 'Occupied bay above' : 'Clear installation lane'}`,
+            'shared', 'installation'),
+          normal = [-Math.sin(heading), 0, Math.cos(heading)],
+          planes = [{ normal, offset: 3.55 }, { normal, offset: -3.55, flip: true }],
+          nearBay = { normal: [Math.cos(heading), 0, Math.sin(heading)], offset: model.R - 2.2, flip: true },
+          elevation = { az: heading + Math.PI / 2, el: 0 };
+        for (const [i, [stage, title, note]] of CRANE_STUDY_STAGES.entries()) {
+          await step();
+          if (!current()) return;
+          const options = { ...poseSettings, craneStage: stage }, pose = moduleCranePose(model, crane, options),
+            geometry = craneStudyGeometry(model, options, true, sourceAssignments), bounds = sequenceTile(i),
+            showBoom = stage === 'insert',
+            focus = craneStudyFocus(heading, model.R - 1.8, crane.tower + 0.8,
+              Math.max(-1.3, pose.payloadY - (showBoom ? 1.6 : 4.5)),
+              showBoom ? crane.head + crane.depth + 0.25 : pose.payloadY + 9.2),
+            camera = showBoom ? { az: heading + 1.14, el: 0.16 }
+              : i ? elevation : { az: heading + 1.08, el: 0.35 },
+            frame = tile(page.svg, geometry, camera, { ...bounds, title: `${i + 1}. ${title}`, note, focus,
+              planes: showBoom ? [...planes, nearBay] : planes,
+              scales: showBoom ? [250, 500, 750, 1000, 1250, 2000] : undefined });
+          if (showBoom) {
+            const [inboard, outboard] = craneHoistStations(crane, pose), { jawHalfWidth } = craneCassetteRig(),
+              { point } = craneFrame(null, heading);
+            cableCallout(page.svg, frame, bounds, point(inboard.radius, jawHalfWidth, inboard.pinY),
+              'Inboard pair', 'Reeled up to trolley', 'start');
+            cableCallout(page.svg, frame, bounds,
+              point(outboard.radius, -jawHalfWidth, (outboard.pinY + outboard.boomY) * 0.5),
+              'Outboard pair', 'Still pinned to chassis', 'end');
           }
-          add(page);
         }
-        if (support === 'moat') {
-          const page = sheet('Moat drawbridge / Operating sequence',
-            'The 10 m clear bascule closes to pedestrians before lifting. The gantry passes on the twin rails above the water.', support, 'drawbridge'),
-            axis = crane.gateAngles.reduce((nearest, angle) => angDist(angle, heading) < angDist(nearest, heading) ? angle : nearest),
-            { inner, outer } = craneMoatBounds(crane), full = moatLiftFullyOpenAt(crane),
-            focus = craneStudyFocus(axis, inner - 2.8, outer + 2.9, -1.2, 10.3, 5.8),
-            stages = [
-              [full + 24, 'Pedestrian crossing open', 'Leaf seated, approach barriers up.'],
-              [full + 13, 'Approach barriers close', 'The leaf stays seated while pedestrian access closes.'],
-              [full + 5, 'Counterweighted leaf rises', 'The 10 m deck rotates around its inner-bank hinge.'],
-              [0, 'Gantry passes', 'The raised leaf leaves both rails clear.']
-            ];
-          for (const [i, [distance, title, note]] of stages.entries()) {
-            await step();
-            if (!current()) return;
-            const mesh = meshBuilder(), angle = axis + distance / inner, paint = rgb(cranePaint(sourceAssignments));
-            drawCraneMoat(mesh, model, crane, paint, angle, false);
-            if (i === stages.length - 1) drawCraneGantry(mesh, crane, { angle, stage: 'parked' }, paint);
-            const across = [-Math.sin(axis), 0, Math.cos(axis)], along = [Math.cos(axis), 0, Math.sin(axis)],
-              planes = [{ normal: across, offset: 11 }, { normal: across, offset: -11, flip: true },
-                { normal: along, offset: inner - 6, flip: true }, { normal: along, offset: outer + 6 },
-                { normal: [0, 1, 0], offset: 10.3 }];
-            const geometry = drawingGeometry(mesh, model, { component: craneStudyComponent });
-            tile(page.svg, geometry, { az: axis + 0.91, el: 0.46 }, {
-              ...sequenceTile(i), title: `${i + 1}. ${title}`, note, focus, planes
-            });
-          }
-          add(page);
+        add(page);
+      }
+      const moat = models.find(({ model }) => model.crane.runway === 'moat');
+      if (moat) {
+        const { model, heading } = moat, crane = model.crane;
+        const page = sheet('Moat drawbridge / Operating sequence',
+          'The 10 m clear bascule closes to pedestrians before lifting. The gantry passes on the twin rails above the water.', 'moat', 'drawbridge'),
+          axis = crane.gateAngles.reduce((nearest, angle) => angDist(angle, heading) < angDist(nearest, heading) ? angle : nearest),
+          { inner, outer } = craneMoatBounds(crane), full = moatLiftFullyOpenAt(crane),
+          focus = craneStudyFocus(axis, inner - 2.8, outer + 2.9, -1.2, 10.3, 5.8),
+          stages = [
+            [full + 24, 'Pedestrian crossing open', 'Leaf seated, approach barriers up.'],
+            [full + 13, 'Approach barriers close', 'The leaf stays seated while pedestrian access closes.'],
+            [full + 5, 'Counterweighted leaf rises', 'The 10 m deck rotates around its inner-bank hinge.'],
+            [0, 'Gantry passes', 'The raised leaf leaves both rails clear.']
+          ];
+        for (const [i, [distance, title, note]] of stages.entries()) {
+          await step();
+          if (!current()) return;
+          const mesh = meshBuilder(), angle = axis + distance / inner, paint = rgb(cranePaint(sourceAssignments));
+          drawCraneMoat(mesh, model, crane, paint, angle, false);
+          if (i === stages.length - 1) drawCraneGantry(mesh, crane, { angle, stage: 'parked' }, paint);
+          const across = [-Math.sin(axis), 0, Math.cos(axis)], along = [Math.cos(axis), 0, Math.sin(axis)],
+            planes = [{ normal: across, offset: 11 }, { normal: across, offset: -11, flip: true },
+              { normal: along, offset: inner - 6, flip: true }, { normal: along, offset: outer + 6 },
+              { normal: [0, 1, 0], offset: 10.3 }];
+          const geometry = drawingGeometry(mesh, model, { component: craneStudyComponent });
+          tile(page.svg, geometry, { az: axis + 0.91, el: 0.46 }, {
+            ...sequenceTile(i), title: `${i + 1}. ${title}`, note, focus, planes
+          });
         }
+        add(page);
       }
       if (!current()) return;
       const available = settings.craneSetSupport === 'all' ? 3 : 1;
       feedback.textContent = !models.length ? 'The selected crane has no clear runway in this design.' :
         `${cranePages.length} sheets ready.` + (models.length < available ? ' Some crane options do not fit the current ring.' : '') +
-        (models.some(({ bay }) => !bay) ? ' Installation sheets require a clear dock on the selected level.' : '');
+        (!installation ? ' The installation sheet requires a clear dock on the selected level.' : '');
       $('printDocument').disabled = !cranePages.length;
     } catch (error) {
       console.error('Crane set render failed', error);

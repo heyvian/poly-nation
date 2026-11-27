@@ -220,15 +220,23 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     expect(page.locator('#craneStage')).to_have_value('travel')
     page.locator('#openDrawings').click()
     page.locator('#drawingDocument').select_option('cranes')
-    page.locator('#drawingCraneSetSupport').select_option('moat')
-    expect(page.locator('#craneSetStatus')).to_have_text('4 sheets ready.', timeout=90000)
     sheets = page.locator('#documentPages svg[data-crane-view]')
-    assert sheets.evaluate_all("pages => pages.map(page => page.dataset.craneView)") == ['axo', 'elevation', 'installation', 'drawbridge']
+    expect(page.locator('#craneSetStatus')).to_have_text('8 sheets ready.', timeout=90000)
+    assert sheets.evaluate_all("pages => pages.map(page => page.dataset.craneView)") == [
+        'axo', 'elevation', 'axo', 'elevation', 'axo', 'elevation', 'installation', 'drawbridge'
+    ]
+    docking = page.locator('#documentPages svg[data-crane-view="installation"]')
+    expect(docking).to_contain_text('Reeled up to trolley')
+    expect(docking).to_contain_text('Still pinned to chassis')
     assert sheets.evaluate_all('''pages => pages.every(page => page.getAttribute('width') === '17in' &&
       page.getAttribute('height') === '11in' && !page.querySelector('image') && page.querySelector('[data-scale-ratio]'))''')
     page.evaluate('window.print = () => {}')
     page.locator('#printDocument').click()
-    assert page.locator('#floorPrintPages > svg[data-crane-view]').count() == 4
+    assert page.locator('#floorPrintPages > svg[data-crane-view]').count() == 8
+    page.evaluate('window.dispatchEvent(new Event("afterprint"))')
+    page.locator('#drawingCraneSetSupport').select_option('moat')
+    expect(page.locator('#craneSetStatus')).to_have_text('4 sheets ready.', timeout=90000)
+    assert sheets.evaluate_all("pages => pages.map(page => page.dataset.craneView)") == ['axo', 'elevation', 'installation', 'drawbridge']
     assert page.evaluate("model.crane.runway === 'moat'")
     assert not errors, errors
     print('Live crane positioning, 10 m interlocked bascules, cantilever clearance and reactions, cassette transfer and sheet overrides passed.')

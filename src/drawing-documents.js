@@ -11,7 +11,7 @@ const CRANE_STUDY_STAGES = [
   ['pickup', 'Ground pickup', 'Four independent lift heads pin into the cassette chassis.'],
   ['hoist', 'Hoist outside the stack', 'The 5.9 m cable spread clears the sides of the 4.5 m cassette.'],
   ['transfer', 'Engage the permanent guides', 'The trolley feeds the nose onto fixed rollers while all four lines carry the load.'],
-  ['insert', 'Feed the cassette into the dock', 'The front heads retract. The rear lines support the tail until the dock takes the load.']
+  ['insert', 'Feed the cassette into the dock', 'The dock rollers take the nose while the outboard lines support the tail.']
 ];
 const CIRCULATION_COLOURS = {
   corridor: '#8ebcb0',
@@ -72,6 +72,7 @@ function craneStudyGeometry(model, view, detail, assignments = {}) {
 function craneStudyComponent(layer) {
   if (layer === 'Crane_Demonstration_Module') return 'modules';
   if (layer === 'Crane_Moat_Water') return 'circulation';
+  if (layer === 'Crane_Hoist_Lines' || layer === 'Crane_Lifting_Jaws') return 'rides';
   if (/^(Crane_|Assembly_Dock_)/.test(layer)) return 'docks';
   return 'core';
 }
