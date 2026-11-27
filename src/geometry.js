@@ -3398,7 +3398,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   const cut = !exporting && view.inspect > 0,
     cutY = cut ? buildStorey(m, view.inspect - 1).soffit : Infinity;
   const craneVisible = Boolean(m.crane && (exporting || (!cut && view.showRoofDeck && !view.programEditing))),
-    cranePose = craneVisible ? moduleCranePose(m, m.crane, exporting ? {} : view) : null;
+    cranePose = craneVisible ? moduleCranePose(m, m.crane, exporting ? { craneBearing: view.craneBearing } : view) : null;
   for (let f = 0; f < view.floors; f++) {
     if (!visible(f)) continue;
     const y = f * floorH + 0.22;
@@ -4206,8 +4206,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   drawWaterSlide(b, m.feature.slide, preview, cut ? cutY : Infinity);
   if (m.crane && !view.programEditing) {
     const paint = rgb(cranePaint(preview?.assignments));
-    drawCraneInfrastructure(b, m, m.crane, paint, craneVisible, cutY, cranePose,
-      !exporting && cranePose?.stage === 'ride');
+    const liveCrane = !exporting && !preview && ['parked', 'travel'].includes(view.craneStage) && craneVisible;
+    drawCraneInfrastructure(b, m, m.crane, paint, craneVisible, cutY, cranePose, liveCrane);
     if (cranePose) drawCraneGantry(b, m.crane, cranePose, paint);
   }
 

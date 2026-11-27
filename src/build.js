@@ -1080,17 +1080,27 @@ const openBuildWorkspace = (() => {
     showBuildGravityStudy(copy, assignments, dockStructure.value, copy.slabThickness, depth);
     $('buildCraneStudy').hidden = !copy.crane;
     if (!copy.crane) return;
-    const load = craneLoadStudy(copy, copy.crane, assignments), rig = craneCassetteRig();
+    const load = craneLoadStudy(copy, copy.crane, assignments), rig = craneCassetteRig(),
+      cantilever = copy.crane.runway === 'cantilever',
+      supportRows = cantilever
+        ? `<div class="readout"><span>Outer rail to boom tip</span><b>${load.span.toFixed(1)} m</b></div>
+          <div class="readout"><span>Roof rail separation</span><b>${load.backspan.toFixed(1)} m</b></div>
+          <div class="readout"><span>Inner rail ${load.inner < 0 ? 'hold-down demand' : 'compression'}</span><b>${Math.round(Math.abs(load.inner))} kN</b></div>
+          <div class="readout"><span>Outer rail compression</span><b>${Math.round(load.rim)} kN</b></div>`
+        : `<div class="readout"><span>Outer roof rail to outboard tower</span><b>${load.span.toFixed(1)} m</b></div>
+          <div class="readout"><span>Outer roof rail reaction</span><b>${Math.round(load.rim)} kN</b></div>
+          <div class="readout"><span>Outboard tower reaction</span><b>${Math.round(load.outer)} kN</b></div>`,
+      loadPath = cantilever
+        ? `The study assumes ${Math.round(load.ballast / 9.81)} t of ballast. Captured rollers engage the inner rail when the boom lifts that side. The deep collectors route uplift and compression to ring piers and tied pile caps.`
+        : `Twin roof rails distribute the roof-side reaction to annular collectors and piers. ${copy.crane.runway === 'moat' ? 'The recessed rail plinths' : 'The elevated runway beams and piers'} carry the outboard reaction.`;
     $('buildCraneEstimate').innerHTML = `
       <div class="crane-load-values">
         <div class="readout"><span>Reference cassette and rig</span><b>${(load.load / 9.81).toFixed(0)} t</b></div>
         <div class="readout"><span>Chassis pickup stations</span><b>${(2 * rig.pickupOffset).toFixed(1)} m apart</b></div>
-        <div class="readout"><span>Outer roof rail to outboard tower</span><b>${load.span.toFixed(1)} m</b></div>
-        <div class="readout"><span>Outer roof rail reaction</span><b>${Math.round(load.rim)} kN</b></div>
-        <div class="readout"><span>Outboard tower reaction</span><b>${Math.round(load.outer)} kN</b></div>
-        <div class="readout"><span>Reference bridge bending</span><b>${(load.moment / 1000).toFixed(1)} MN·m</b></div>
+        ${supportRows}
+        <div class="readout"><span>${cantilever ? 'Reference cantilever root bending' : 'Reference bridge bending'}</span><b>${(load.moment / 1000).toFixed(1)} MN·m</b></div>
       </div>
-      <p class="hint">Static comparison with ${load.bridgeWeight.toFixed(0)} kN/m for the bridge. Twin roof rails distribute the roof-side reaction to annular collectors and piers. ${copy.crane.runway === 'moat' ? 'The recessed rail plinths' : 'The elevated runway beams and piers'} carry the outboard reaction. A full study needs moving loads, lateral restraint, braking, wind and site foundations.</p>`;
+      <p class="hint">Static comparison with ${load.bridgeWeight.toFixed(0)} kN/m for the bridge. ${loadPath} A full study needs moving loads, lateral restraint, braking, wind and site foundations.</p>`;
   }
   function saveLayers() {
     // Keep both checked and unchecked choices. Older settings still inherit the defaults.

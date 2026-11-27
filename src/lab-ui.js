@@ -466,7 +466,7 @@ function animateSwingFrame(now) {
         changed = true;
       }
     }
-    if (showingModel && mesh.craneMotion && now - craneAnimation.last >= (software ? 135 : 36)) {
+    if (showingModel && mesh.craneMotion && state.craneStage === 'travel' && now - craneAnimation.last >= (software ? 135 : 36)) {
       const elapsed = craneAnimation.last ? Math.min(0.25, (now - craneAnimation.last) / 1000) : 0;
       craneAnimation.last = now;
       animateCraneMotion(mesh, elapsed, gl, gpu);

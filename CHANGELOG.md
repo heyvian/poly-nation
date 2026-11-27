@@ -1,5 +1,10 @@
 # Changelog
 
+## Three crane supports and live positioning
+- Scrub or enter a gantry bearing, park during unloaded travel, and choose a separate bearing and support on a drawing.
+- Widened the moat drawbridges to 10 m clear and modeled the girder deck, hinge bearings, counterweights and approach interlock.
+- Added the roof-only cantilever, hold-down rail, roof collectors and tied foundations. Reserved clearance at the atrium, swing, boarding stair, lifts and roof pavilions.
+
 ## Module façades, roofs and openings
 - Use conventional cladding joints instead of colour bands. Added timber panels, protected exposed CLT, milled and reclaimed boards, rounded timber courses, cedar shakes, diamond zinc shingles and stamped tin shingles.
 - Added five shell families, including a stacked-timber cabin, and independent roof handedness at each dock.

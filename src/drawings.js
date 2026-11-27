@@ -73,6 +73,7 @@ const openDrawingWorkspace = (() => {
       cutFill: true,
       source: 'massing',
       craneRunway: 'design',
+      craneBearing: null,
       showSite: false,
       planSheet: 'single',
       glazing: false,
@@ -118,6 +119,7 @@ const openDrawingWorkspace = (() => {
             : 225,
         source: saved.source === 'build' ? 'build' : 'massing',
         craneRunway: Object.hasOwn(CRANE_RUNWAYS, saved.craneRunway) ? saved.craneRunway : 'design',
+        craneBearing: Number.isFinite(saved.craneBearing) ? clamp(Math.round(saved.craneBearing), 0, 359) : null,
         sectionProjection: saved.sectionProjection === 'perspective' ? 'perspective' : 'orthographic',
         sectionLens: clamp(Number(saved.sectionLens) || 35, 8, 200),
         perspectiveFade: Number.isFinite(saved.perspectiveFade) ? clamp(saved.perspectiveFade, 0, 100) : 55,
@@ -910,7 +912,8 @@ const openDrawingWorkspace = (() => {
         return;
       }
       const includeSite = settings.showSite && siteWorkspace.hasTerrain,
-        mode = `${settings.source}/${settings.mode}/${settings.craneRunway}/${includeSite ? siteWorkspace.revision : 'building'}`;
+        craneBearing = settings.craneBearing ?? state.craneBearing,
+        mode = `${settings.source}/${settings.mode}/${settings.craneRunway}/${craneBearing}/${includeSite ? siteWorkspace.revision : 'building'}`;
       if (!settings.detail && (!geometry || renderedGeometryMode !== mode)) {
         const view = {
           ...state,
@@ -924,7 +927,8 @@ const openDrawingWorkspace = (() => {
           showModules: true,
           showRoofDeck: true,
           roof: true,
-          craneStage: 'parked'
+          craneStage: 'parked',
+          craneBearing
         };
         const preview = {
           assignments: sourceAssignments,
@@ -1005,7 +1009,7 @@ const openDrawingWorkspace = (() => {
       footerTitle.setAttribute('x', margin);
       footerTitle.setAttribute('y', textY);
       const runwayLabel = !settings.detail && settings.craneRunway !== 'design'
-        ? (settings.craneRunway === 'moat' ? ' · Moat runway' : ' · Elevated runway') : '';
+        ? ` · ${CRANE_RUNWAYS[settings.craneRunway]}` : '';
       footerTitle.textContent = 'Poly Nation · ' + viewLabel + runwayLabel;
       // Elevations and upright sections have an edge-on plan. Their footer only needs the scale.
       const mapBasis = camera && Math.abs(camera.el) > 0.01 ? orbitBasis(camera) : null;
@@ -1247,6 +1251,9 @@ const openDrawingWorkspace = (() => {
     }
     $('drawingSource').value = settings.source;
     $('drawingCraneRunway').value = settings.craneRunway;
+    $('drawingCraneBearing').value = settings.craneBearing ?? '';
+    $('drawingCraneBearing').placeholder = `${state.craneBearing}° · Design`;
+    $('drawingCraneBearing').disabled = detail;
     syncSiteControl();
     $('drawingPlanSheet').value = settings.planSheet;
     syncCompass();
@@ -1317,6 +1324,12 @@ const openDrawingWorkspace = (() => {
   };
   $('drawingCraneRunway').onchange = (event) => {
     settings.craneRunway = event.target.value;
+    queueDrawing();
+  };
+  $('drawingCraneBearing').onchange = (event) => {
+    const value = event.target.valueAsNumber;
+    settings.craneBearing = Number.isFinite(value) ? clamp(Math.round(value), 0, 359) : null;
+    event.target.value = settings.craneBearing ?? '';
     queueDrawing();
   };
   $('drawingSite').onchange = (event) => {
