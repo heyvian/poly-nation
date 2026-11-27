@@ -61,6 +61,13 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
         const i = b.groups.findIndex(group => group.layer === `Crane_Drawbridge_${number}`);
         return Math.max(...b.solid.slice(b.groups[i].solid, b.groups[i + 1].solid).filter((_, j) => j % 10 === 1));
       };
+      const feeding = meshBuilder();
+      drawCraneGantry(feeding, elevated, feed, paint);
+      const feedHeights = [0, 1].map((pair) => {
+        const center = feed.payloadStart + MODULE.depth / 2;
+        return jaws(feeding).filter((_, i, vertices) => i % 3 === 1 &&
+          ((vertices[i - 1] * c + vertices[i + 1] * s > center) === Boolean(pair)));
+      });
       const spanClear = elevated.roofOuter > elevated.roofInner && elevated.groundRail - 1.28 > 4;
       const floorRoom = buildStorey(m, 1).base - MODULE_CASSETTE_DEPTH - DOCK_STRUCTURES['box-floor'].depth;
       const bridgeDeck = layerData(closed, 'Crane_Drawbridge_1').slice(0, 360), lateral = [];
@@ -97,14 +104,18 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
           crane.roofTies.every((angle, i, ties) => mod(ties[(i + 1) % ties.length] - angle, TAU) <= 2 * TAU / m.slotN + 1e-6)) &&
           layerData(open, 'Crane_Roof_Ties').length === 360 * moat.roofTies.length,
         selection: [hoist, set, feed].every(pose => pose.slot.i === slot.i),
-        tipClearance: hoist.payloadStart >= elevated.dockTip + 2.75 && hoist.onHook && !hoist.onCradle,
-        underAnOccupiedBay: feed.payloadStart < elevated.dockTip && feed.payloadY + MODULE.height < floorRoom,
-        released: !set.onHook && set.onCradle && !feed.onHook && feed.onCradle,
-        chassisFit: close(2 * pickupOffset, 10.8) && close(2 * jawHalfWidth - 0.18, 5.16) && sockets.length === 4 &&
+        tipClearance: hoist.payloadStart >= elevated.dockTip + 2.75 && hoist.inboardHook && !hoist.onDock,
+        underAnOccupiedBay: feed.payloadStart + MODULE.depth / 2 < elevated.dockTip && feed.payloadY + MODULE.height < floorRoom,
+        handoff: set.onDock && set.inboardHook && feed.onDock && !feed.inboardHook &&
+          set.payloadStart + MODULE.depth / 2 - pickupOffset > elevated.dockTip &&
+          feed.payloadStart + MODULE.depth / 2 + pickupOffset > elevated.dockTip &&
+          !released.groups.some(group => group.layer.includes('Transfer_Carriage')),
+        chassisFit: close(2 * pickupOffset, 10.8) && close(2 * jawHalfWidth, 5.9) && sockets.length === 4 &&
           sockets.every(([x, y, z, width, height, length]) => close(y + height / 2, hoist.payloadY + pinHeight) &&
             pinVertices.some(([u, v, w]) => Math.abs((u - x) * c + (w - z) * s) < length / 2 &&
               Math.abs(-(u - x) * s + (w - z) * c) < width / 2 && v > y && v < y + height)),
-        jawsRetract: stowed.length > 0 && Math.min(...stowed) > set.payloadY + MODULE.height,
+        jawsRetract: stowed.length > 0 && Math.min(...stowed) < set.payloadY && feedHeights.every(heights => heights.length > 0) &&
+          Math.min(...feedHeights[0]) > feed.payloadY + MODULE.height && Math.min(...feedHeights[1]) < feed.payloadY,
         equilibrium: load.span > 35 && Math.abs(load.rim + load.outer - load.load - load.span * load.bridgeWeight) < 1e-6,
         cantilever: cantilever.groundRail === null && roofLoad.inner < 0 && close(roofLoad.rim + roofLoad.inner,
           roofLoad.load + roofLoad.bridgeWeight * (roofLoad.span + roofLoad.backspan) + roofLoad.ballast) &&
@@ -206,6 +217,18 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     expect(page.locator('#drawingCraneBearing')).to_have_value('231')
     page.locator('#openMassing').click()
     expect(page.locator('#craneRunway')).to_have_value('moat')
-    assert not errors, errors
     expect(page.locator('#craneStage')).to_have_value('travel')
+    page.locator('#openDrawings').click()
+    page.locator('#drawingDocument').select_option('cranes')
+    page.locator('#drawingCraneSetSupport').select_option('moat')
+    expect(page.locator('#craneSetStatus')).to_have_text('4 sheets ready.', timeout=90000)
+    sheets = page.locator('#documentPages svg[data-crane-view]')
+    assert sheets.evaluate_all("pages => pages.map(page => page.dataset.craneView)") == ['axo', 'elevation', 'installation', 'drawbridge']
+    assert sheets.evaluate_all('''pages => pages.every(page => page.getAttribute('width') === '17in' &&
+      page.getAttribute('height') === '11in' && !page.querySelector('image') && page.querySelector('[data-scale-ratio]'))''')
+    page.evaluate('window.print = () => {}')
+    page.locator('#printDocument').click()
+    assert page.locator('#floorPrintPages > svg[data-crane-view]').count() == 4
+    assert page.evaluate("model.crane.runway === 'moat'")
+    assert not errors, errors
     print('Live crane positioning, 10 m interlocked bascules, cantilever clearance and reactions, cassette transfer and sheet overrides passed.')

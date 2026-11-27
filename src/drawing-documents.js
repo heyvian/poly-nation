@@ -1,6 +1,18 @@
 'use strict';
 
-const DRAWING_DOCUMENTS = ['programme', 'program-diagrams', 'circulation', 'lobbies', 'structure'];
+const DRAWING_DOCUMENTS = ['programme', 'program-diagrams', 'circulation', 'lobbies', 'structure', 'cranes'];
+const CRANE_DRAWING_PAPER = { width: 17, height: 11 };
+const CRANE_STUDY_GUIDE = {
+  elevated: 'The outboard tower rolls on twin steel ring girders. Spaced piers leave crossings below the runway.',
+  moat: 'The tower rolls over a continuous moat. At each lobby, a 10 m clear drawbridge lifts for gantry travel.',
+  cantilever: 'The outer roof rail takes compression. Captured rollers engage the inner rail against uplift.'
+};
+const CRANE_STUDY_STAGES = [
+  ['pickup', 'Ground pickup', 'Four independent lift heads pin into the cassette chassis.'],
+  ['hoist', 'Hoist outside the stack', 'The 5.9 m cable spread clears the sides of the 4.5 m cassette.'],
+  ['transfer', 'Engage the permanent guides', 'The trolley feeds the nose onto fixed rollers while all four lines carry the load.'],
+  ['insert', 'Feed the cassette into the dock', 'The front heads retract. The rear lines support the tail until the dock takes the load.']
+];
 const CIRCULATION_COLOURS = {
   corridor: '#8ebcb0',
   lobby: '#e1be87',
@@ -8,6 +20,66 @@ const CIRCULATION_COLOURS = {
   bridge: '#589a96'
 };
 const STUDY_INK = '#3c564d';
+
+function craneStudyUpperBay(model, bay) {
+  return model.slots.some((slot) => slot.f === bay.f + 1 && slot.j === bay.j &&
+    !slot.blocked && (slot.p !== EMPTY || slot.use === 'retail'));
+}
+
+function craneStudyModels(model, support, view) {
+  const options = (support === 'all' ? Object.keys(CRANE_RUNWAYS) : [support]).flatMap((runway) => {
+    const crane = planModuleCrane(model, runway);
+    if (!crane) return [];
+    const { R, lobby, slots, feature } = model;
+    return [{ ...model, crane, plaza: designPlaza(R, lobby, slots, feature.climbing, crane, view.seed) }];
+  });
+  const bearing = (view.craneBearing ?? 316) * Math.PI / 180,
+    floor = clamp((view.craneFloor ?? 2) - 1, 0, model.layers.length - 1),
+    clear = (slot) => options.every((option) => craneDockClear(model, option.crane, slot)),
+    selected = model.slots.filter((slot) => slot.f === floor && clear(slot))
+      .sort((a, b) => angDist(a.angle, bearing) - angDist(b.angle, bearing)),
+    common = selected.find((slot) => craneStudyUpperBay(model, slot)) ?? selected[0];
+  return options.map((option) => {
+    const settings = {
+      ...view,
+      craneFloor: floor + 1,
+      craneBearing: common ? common.angle * 180 / Math.PI : view.craneBearing,
+      craneStage: 'hoist'
+    };
+    const pose = moduleCranePose(option, option.crane, settings);
+    return { model: option, settings, heading: pose.angle, bay: pose.slot };
+  });
+}
+
+function craneStudyGeometry(model, view, detail, assignments = {}) {
+  const mesh = detail
+    ? buildAssemblyMesh(model, {
+      slabs: true, facade: true, docks: true, modules: true, crane: true,
+      moduleInteriors: false, dockStructure: buildViewLayers().dockStructure
+    }, 0, { assignments, view, craneSettings: view })
+    : buildMesh(model, false, {
+      ...view, floors: model.layers.length, inspect: 0, grid: false, xray: false, programEditing: false,
+      showRooms: false, showFacade: true, showModules: true, showRoofDeck: true, roof: true, supports: false
+    });
+  return drawingGeometry(mesh, model, {
+    include: ({ layer }) => /^Crane_/.test(layer) || (detail
+      ? /^(Assembly_(Floor_|Roof_Deck|Exterior_Walls|Module_(Chassis|Skin|Roof)|Dock_)|Dock_Closure_)/.test(layer)
+      : /^(Core_(Foundation|L\d+_Slab)|Facade_|Modules_L|Roof_(Public_Deck|Lift_|Commercial_Retail)|Atrium_(Glass|Roof_Ridge)|Swing_Tower|Public_Plaza_(Paving|Promenade)|Infinite_Rinse_Water_Slide)/.test(layer)),
+    component: craneStudyComponent
+  });
+}
+
+function craneStudyComponent(layer) {
+  if (layer === 'Crane_Demonstration_Module') return 'modules';
+  if (layer === 'Crane_Moat_Water') return 'circulation';
+  if (/^(Crane_|Assembly_Dock_)/.test(layer)) return 'docks';
+  return 'core';
+}
+
+function craneStudyFocus(angle, inner, outer, bottom, top, halfWidth = 3.5) {
+  const { point } = craneFrame(null, angle);
+  return [inner, outer].flatMap((r) => [-halfWidth, halfWidth].flatMap((t) => [bottom, top].map((y) => point(r, t, y))));
+}
 
 // Use the installed furnishings and a small window of the actual floor plan around them.
 function lobbyDrawingGeometry(model, hub, seed, includeContext) {

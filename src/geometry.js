@@ -4216,6 +4216,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const paint = rgb(cranePaint(preview?.assignments));
     const liveCrane = !exporting && !preview && ['parked', 'travel'].includes(view.craneStage) && craneVisible;
     drawCraneInfrastructure(b, m, m.crane, paint, craneVisible, cutY, cranePose, liveCrane);
+    if (cranePose?.slot) drawDockInsertionGuides(b, m, cranePose.slot, cranePose.floorY);
     if (cranePose) drawCraneGantry(b, m.crane, cranePose, paint);
   } else if (craneMoat) drawCraneMoat(b, m, m.crane, rgb(cranePaint(preview?.assignments)), view.craneBearing * Math.PI / 180, false);
 

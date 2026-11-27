@@ -2,7 +2,7 @@
 
 const CRANE_STAGES = {
   parked: 'Parked', pickup: '1 · Pick up at grade', hoist: '2 · Hoist beyond the stack',
-  transfer: '3 · Set onto the cradle', insert: '4 · Slide into the dock', travel: 'Unloaded gantry travel'
+  transfer: '3 · Engage the dock guides', insert: '4 · Feed into the dock', travel: 'Unloaded gantry travel'
 };
 const CRANE_PAINT = '#5d7971';
 const CRANE_RUNWAYS = {
@@ -16,7 +16,7 @@ const MOAT_BARRIER_POST = MOAT_BRIDGE_WIDTH / 2 + 0.25;
 const CRANE_BALLAST = 245; // kN, conceptual ballast over the inner bogies
 
 function craneCassetteRig() {
-  return { pickupOffset: MODULE.depth * 0.30, jawHalfWidth: MODULE.width / 2 + 0.42, pinHeight: -MODULE_CASSETTE_DEPTH / 2 };
+  return { pickupOffset: MODULE.depth * 0.30, jawHalfWidth: MODULE.width / 2 + 0.70, pinHeight: -MODULE_CASSETTE_DEPTH / 2 };
 }
 
 function cranePaint(assignments) {
@@ -94,12 +94,13 @@ function craneDockClear(model, crane, slot) {
   const slide = model.feature.slide;
   if (!slide) return true;
   const y = buildStorey(model, slot.f).base, c = Math.cos(slot.angle), s = Math.sin(slot.angle),
+    { jawHalfWidth } = craneCassetteRig(),
     pad = slide.tubeRadius + 0.56;
   return !slide.points.some(([x, h, z]) => {
-    if (h < y - pad - 0.66 || h > y + MODULE.height + pad) return false;
+    if (h < y - pad - 0.66 || h > crane.head + pad) return false;
     const along = x * c + z * s, across = -x * s + z * c;
     return along >= model.R + BUILD_SECTION.dockGap - pad && along <= crane.liftOuter + pad &&
-      Math.abs(across) <= 3.45 + pad;
+      Math.abs(across) <= jawHalfWidth + 0.50 + pad;
   });
 }
 
@@ -113,13 +114,13 @@ function moduleCranePose(model, crane, settings = {}) {
   const slots = model.slots.filter((slot) => slot.f === floor && craneDockClear(model, crane, slot)),
     slot = slots.sort((a, b) => angDist(a.angle, bearing) - angDist(b.angle, bearing))[0];
   if (!slot) return { stage: 'parked', angle: bearing, slot: null, blocked: true };
-  const floorY = buildStorey(model, slot.f).base;
+  const floorY = buildStorey(model, slot.f).base, onDock = stage === 'transfer' || stage === 'insert',
+    overlap = stage === 'insert' ? MODULE.depth * 0.60 : MODULE.depth * 0.15;
   return {
     stage, angle: slot.angle, slot, floorY,
     payloadY: stage === 'pickup' ? 0.36 : stage === 'hoist' ? floorY + 1.65 : floorY,
-    payloadStart: stage === 'insert' ? crane.dockTip - MODULE.depth * 0.66 : crane.liftInner,
-    onHook: stage === 'pickup' || stage === 'hoist',
-    onCradle: stage === 'transfer' || stage === 'insert'
+    payloadStart: onDock ? crane.dockTip - overlap : crane.liftInner,
+    onDock, inboardHook: stage !== 'insert'
   };
 }
 
@@ -329,89 +330,43 @@ function drawCraneGantry(mesh, crane, pose, paint) {
   }
   drawCraneHoist(mesh, block, member, bottom, crane, pose, dark, steel, amber);
 
-  mark('Crane_Transfer_Carriage', cantilever ? 'Roof-hung retracting transfer guides and dock seats' : 'Guided carriage and deployable insertion rails');
-  const y = pose.onCradle ? pose.floorY : Math.max(0.72, (groundRail ?? 0) + 0.83);
-  for (const t of [-cross, cross]) {
-    const guide = tower - 2.18, guideTop = head - 0.12;
-    if (cantilever) {
-      const low = pose.onCradle ? Math.max(0.11, y - 0.34) : head - 2.32,
-        topY = bottom(guide) + 0.15, length = topY - low;
-      block(guide, t, topY - 0.52, 0.67, 0.76, 0.75, paint, true);
-      if (pose.onCradle) {
-        // Nested guides brace the cradle while a separate line transfers its load to the boom.
-        for (const [j, size] of [0.40, 0.31, 0.22].entries())
-          member([guide, t, topY - j * length / 3],
-            [guide, t, Math.max(low, topY - (j + 1) * length / 3 - 0.26)], size, j % 2 ? paint : dark);
-        member([guide - 0.45, t, topY], [guide - 0.45, t, y - 0.22], 0.043, dark);
-      } else member([guide, t, topY], [guide, t, low], 0.40, dark);
-      block(guide, t, low, 0.52, 0.45, 0.66, amber, true);
-    } else {
-      member([guide, t, foot], [guide, t, guideTop], 0.18, dark);
-      for (let at = foot; at < guideTop; at += 3.65) {
-        member([guide, t, at], [innerLeg(at), t, at], 0.21, paint);
-        if (at + 3.65 < guideTop)
-          member([guide, t, at + 3.65], [innerLeg(at), t, at], 0.16, paint);
-      }
-      member([guide, t, guideTop], [innerLeg(head), t, head], 0.21, paint);
-      const guideBottom = pose.onCradle ? Math.max(0.18, y - 3.05) : groundRail + 0.48,
-        guideHead = Math.max(groundRail + 1.08, y + 0.33);
-      block(guide, t, guideBottom, 0.53, guideHead - guideBottom, 0.73, amber);
-    }
-    if (!pose.onCradle) continue;
-    // Side beams stay outside the cassette. Only shallow bearings reach the
-    // permanent dock tip, in the gap below the incoming cassette.
-    const a = crane.dockTip + 0.80, z = guide,
-      low = Math.min(y - 0.22, Math.max(0.11, y - (cantilever ? 2.35 : 3.05)));
-    member([a, t, y - 0.22], [z, t, y - 0.22], 0.23, steel);
-    member([a, t, y - 0.22], [z, t, low], 0.29, paint);
-    for (let j = 1; j < 7; j++) {
-      const r = a + (z - a) * j / 7;
-      const lowAt = y - 0.22 - (y - 0.22 - low) * j / 7;
-      if (lowAt < y - 0.221) member([r, t, y - 0.22], [r, t, lowAt], 0.13, steel);
-    }
-    const runner = t < 0 ? -1.74 : 1.74;
-    member([crane.dockTip - 0.22, runner, y - 0.26], [z, runner, y - 0.26], 0.16, dark);
-    block(crane.dockTip + 0.08, runner, y - 0.33, 0.34, 0.15, 0.64, amber);
-  }
-  if (pose.onCradle) for (let r = crane.dockTip + 1.05; r < crane.liftOuter; r += 2.0)
-    block(r, 0, y - 0.33, 5.84, 0.13, 0.17, steel);
   if (pose.slot) drawCraneCassette(mesh, angle, pose, amber);
   mark('Crane_Motion_End');
 }
 
 function drawCraneHoist(mesh, block, member, bottom, crane, pose, dark, steel, amber) {
   const { pickupOffset, jawHalfWidth, pinHeight } = craneCassetteRig(),
-    inner = crane.liftCenter - pickupOffset, outer = crane.liftCenter + pickupOffset,
-    rig = pose.onHook ? pose.payloadY + MODULE.height + 0.64 : bottom(inner) - 1.06;
-  mesh.mark('Crane_Hoist', 'Mounted hoist heads and four-point cassette spreader');
-  for (const r of [inner, outer]) {
-    // The head spans between both lower chords. The hoist drums bolt to the crosshead.
-    block(r, 0, bottom(r) - 0.43, crane.width + 0.27, 0.39, 0.58, dark, true);
-    for (const t of [-jawHalfWidth, jawHalfWidth]) {
-      block(r, t, bottom(r) - 0.07, 0.42, 0.51, 0.76, amber);
-      member([r, t, bottom(r) - 0.43], [r, t, rig + 0.23], 0.041, dark);
-    }
-    block(r, 0, rig, 2 * jawHalfWidth + 0.24, 0.23, 0.26, amber, true);
+    center = pose.slot ? pose.payloadStart + MODULE.depth / 2 : crane.liftCenter;
+  mesh.mark('Crane_Hoist_Rails', 'Continuous radial trolley rails below the boom');
+  for (const t of [-crane.width / 2, crane.width / 2]) {
+    const start = crane.dockTip - MODULE.depth * 0.43, end = crane.liftOuter - 1.6;
+    member([start, t, bottom(start) - 0.34], [end, t, bottom(end) - 0.34], 0.21, dark, 0.38);
   }
-  for (const t of [-jawHalfWidth, jawHalfWidth])
-    block(crane.liftCenter, t, rig + 0.02, 0.18, 0.18, 2 * pickupOffset + 0.26, steel, true);
-
-  mesh.mark('Crane_Lifting_Jaws', pose.onHook ? 'Chassis-side drop arms and locking pins' : 'Folded lifting jaws');
-  for (const r of [inner, outer]) for (const side of [-1, 1]) {
-    const t = side * jawHalfWidth;
-    block(r, t, rig - 0.12, 0.28, 0.26, 0.34, steel);
-    if (!pose.onHook) {
-      block(r, t - side * 0.78, rig - 0.24, 1.66, 0.19, 0.20, dark);
-      continue;
+  mesh.mark('Crane_Hoist', 'Two traveling crossheads with independently reeling side hoists');
+  for (const r of [center - pickupOffset, center + pickupOffset]) {
+    const y = bottom(r), width = jawHalfWidth * 2 + 0.36;
+    block(r, 0, y - 0.75, width, 0.34, 0.64, steel, true);
+    for (const t of [-jawHalfWidth, jawHalfWidth]) {
+      block(r, t, y - 0.40, 0.38, 0.43, 0.78, dark, true);
+      block(r, t, y - 0.72, 0.43, 0.48, 0.55, amber, true);
     }
-    const pinY = pose.payloadY + pinHeight, stroke = (rig - pinY) / 3;
-    // Overlapping sleeves retract before the arms fold against the crosshead.
-    for (const [i, width] of [0.18, 0.15, 0.12].entries()) {
-      const top = rig - i * stroke, end = Math.max(pinY, top - stroke - 0.20);
-      member([r, t, top], [r, t, end], width, i % 2 ? dark : steel);
+  }
+  mesh.mark('Crane_Hoist_Lines', 'Four vertical hoist lines outside the cassette width');
+  for (const r of [center - pickupOffset, center + pickupOffset]) {
+    const engaged = pose.slot && (r > center || pose.inboardHook);
+    for (const t of [-jawHalfWidth, jawHalfWidth]) {
+      const pinY = engaged ? pose.payloadY + pinHeight : bottom(r) - 1.45;
+      member([r, t, bottom(r) - 0.69], [r, t, pinY + 0.14], 0.047, dark);
     }
-    // Positive engagement is into the side of the chassis at its mid-depth.
-    member([r, t, pinY], [r, side * (MODULE.width / 2 - 0.07), pinY], 0.11, dark, 0.10);
+  }
+  mesh.mark('Crane_Lifting_Jaws', 'Independent side heads with retracting chassis pins');
+  for (const r of [center - pickupOffset, center + pickupOffset]) {
+    const engaged = pose.slot && (r > center || pose.inboardHook);
+    for (const side of [-1, 1]) {
+      const t = side * jawHalfWidth, pinY = engaged ? pose.payloadY + pinHeight : bottom(r) - 1.45;
+      block(r, t, pinY - 0.10, 0.22, 0.27, 0.30, amber, true);
+      if (engaged) member([r, t, pinY], [r, side * (MODULE.width / 2 - 0.07), pinY], 0.11, dark, 0.10);
+    }
   }
 }
 
@@ -819,12 +774,12 @@ function moveAnimatedMoatGates(mesh, angle, gl = null, renderer = null) {
 function drawDockInsertionGuides(mesh, model, slot, base) {
   const { block } = craneFrame(mesh, slot.angle),
     foot = model.R + BUILD_SECTION.dockGap, tip = foot + MODULE.depth,
-    steel = rgb('#566c62'), keys = rgb('#ab8c66');
+    underside = base - MODULE_CASSETTE_DEPTH, steel = rgb('#566c62'), keys = rgb('#ab8c66');
   mesh.mark(`Crane_Dock_Guides_L${slot.f + 1}`, `Dock ${slot.j + 1} · receiving guides`);
   for (const t of [-1.74, 1.74]) {
-    block((foot + tip) / 2, t, base - MODULE_CASSETTE_DEPTH - 0.084,
-      0.12, 0.084, MODULE.depth, steel);
-    block(tip - 0.19, t, base - MODULE_CASSETTE_DEPTH - 0.115,
-      0.24, 0.112, 0.38, keys);
+    block((foot + tip) / 2, t, underside - 0.18, 0.20, 0.10, MODULE.depth, steel);
+    for (const inset of [0.25, 2.05, 4.3, 6.55, 8.8, 11.05, 13.3, 15.55, 17.5])
+      block(tip - inset, t, underside - 0.083, 0.26, 0.083, 0.18, keys);
+    block(tip - 0.20, t, underside - 0.18, 0.51, 0.10, 0.40, steel, true);
   }
 }

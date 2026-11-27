@@ -74,6 +74,7 @@ const openDrawingWorkspace = (() => {
       source: 'massing',
       craneRunway: 'design',
       craneBearing: null,
+      craneSetSupport: 'all',
       showSite: false,
       planSheet: 'single',
       glazing: false,
@@ -89,6 +90,8 @@ const openDrawingWorkspace = (() => {
     sourceModel = null,
     sourceAssignments = {},
     lobbyPages = [],
+    cranePages = [],
+    craneRender = 0,
     materialSignature = '',
     geometry = null,
     renderedGeometryMode = null,
@@ -120,6 +123,7 @@ const openDrawingWorkspace = (() => {
         source: saved.source === 'build' ? 'build' : 'massing',
         craneRunway: Object.hasOwn(CRANE_RUNWAYS, saved.craneRunway) ? saved.craneRunway : 'design',
         craneBearing: Number.isFinite(saved.craneBearing) ? clamp(Math.round(saved.craneBearing), 0, 359) : null,
+        craneSetSupport: Object.hasOwn(CRANE_RUNWAYS, saved.craneSetSupport) ? saved.craneSetSupport : 'all',
         sectionProjection: saved.sectionProjection === 'perspective' ? 'perspective' : 'orthographic',
         sectionLens: clamp(Number(saved.sectionLens) || 35, 8, 200),
         perspectiveFade: Number.isFinite(saved.perspectiveFade) ? clamp(saved.perspectiveFade, 0, 100) : 55,
@@ -890,9 +894,172 @@ const openDrawingWorkspace = (() => {
     });
   }
 
+  async function renderCraneDocument(revision) {
+    const target = $('documentPages'), feedback = $('craneSetStatus'),
+      paper = CRANE_DRAWING_PAPER,
+      width = paper.width * DRAWING_PIXELS_PER_INCH, height = paper.height * DRAWING_PIXELS_PER_INCH,
+      margin = 48, ink = '#203a35', muted = '#4d655d', rule = '#a9b9b3',
+      pens = drawingPens({
+        mode: 'component', widths: [0.24, 0.28, 0.14, 0.18],
+        colors: ['#20564f', '#985324', '#899692', '#5792a3'],
+        components: { docks: 0, modules: 1, core: 2, circulation: 3, rides: 2, site: 2 }
+      }),
+      view = { ...state, craneBearing: settings.craneBearing ?? state.craneBearing },
+      current = () => revision === craneRender && !timer && settings.document === 'cranes' && !panel.hidden,
+      step = () => new Promise((resolve) => setTimeout(resolve, 0));
+    cranePages = [];
+    target.replaceChildren();
+    feedback.textContent = 'Preparing crane sheets…';
+    const text = (svg, x, y, content, size, options = {}) => studyMark(svg, 'text', {
+      x, y, fill: ink, 'font-size': size, ...options
+    }, content);
+    function sheet(title, subtitle, support, kind) {
+      const number = `PN–CR–${String(cranePages.length + 1).padStart(2, '0')}`,
+        svg = studySVG(width, height, `${title} · ${subtitle}`);
+      svg.classList.add('drawing-sheet');
+      svg.setAttribute('width', '17in');
+      svg.setAttribute('height', '11in');
+      svg.setAttribute('font-family', 'system-ui, sans-serif');
+      svg.dataset.craneSupport = support;
+      svg.dataset.craneView = kind;
+      studyMark(svg, 'title', {}, `${number} · ${title}`);
+      studyMark(svg, 'rect', { width, height, fill: '#ffffff' });
+      text(svg, margin, 40, 'POLY NATION  /  MODULE HANDLING STUDIES', 15, { 'font-weight': 690, 'letter-spacing': 1.4 });
+      text(svg, margin, 78, title, 32, { 'font-weight': 690 });
+      text(svg, margin, 106, subtitle, 15, { fill: muted });
+      text(svg, width - margin, 40, number, 16, { 'text-anchor': 'end', 'font-weight': 650 });
+      studyMark(svg, 'line', { x1: margin, x2: width - margin, y1: 125, y2: 125, stroke: rule });
+      studyMark(svg, 'line', { x1: margin, x2: width - margin, y1: 901, y2: 901, stroke: rule });
+      text(svg, margin, 929, `Design variation ${view.seed}  ·  ${sourceModel.layers.length} levels`, 14, { fill: muted });
+      text(svg, width - margin, 929, '11 × 17 in  /  Print at actual size', 14, { fill: muted, 'text-anchor': 'end' });
+      return { svg, number };
+    }
+    function tile(svg, geometry, camera, { title, note, x, y, w, h, planes = [], focus, compass = false, scales }) {
+      const frame = renderDrawing(geometry, camera, planes, paper, 'auto', false, centeredPlacement(), false, pens,
+        { region: { width: w, height: h - 34 }, focus, scales });
+      const drawing = floorView(frame, '', x, y + 20), area = drawing.children[0];
+      drawing.replaceChildren(area);
+      studyMark(svg, 'rect', { x, y, width: w, height: h, fill: 'none', stroke: '#dce5df' });
+      svg.append(drawing);
+      text(svg, x + 13, y + 25, title, 17, { 'font-weight': 650 });
+      text(svg, x + 13, y + h - 19, note, 13, { fill: muted });
+      const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 13 });
+      drawScaleIndicator(indicator, frame.denominator, x + w - 14, y + h - 17, ink, compass ? frame.basis : null);
+      if (!frame.populated) text(svg, x + 13, y + 52, 'No geometry in this view', 13, { fill: muted });
+    }
+    function add({ svg, number }) {
+      const preview = document.createElement('figure'), button = document.createElement('button'),
+        vector = () => svg.cloneNode(true);
+      preview.className = 'lobby-axo-page';
+      button.type = 'button';
+      button.textContent = 'Export SVG';
+      button.setAttribute('aria-label', `Export ${number} as SVG`);
+      button.onclick = () => downloadBlob(new XMLSerializer().serializeToString(vector()), 'image/svg+xml',
+        `poly-nation-${view.seed}-${number.toLowerCase().replaceAll('–', '-')}.svg`);
+      preview.append(button, svg);
+      cranePages.push({ vector });
+      target.append(preview);
+      feedback.textContent = `Preparing crane sheets… ${cranePages.length} ready`;
+    }
+    const columns = 2, gap = 18, panelWidth = (width - margin * 2 - gap) / columns, panelHeight = 358;
+    const sequenceTile = (index) => ({
+      x: margin + index % columns * (panelWidth + gap),
+      y: 143 + Math.floor(index / columns) * (panelHeight + gap), w: panelWidth, h: panelHeight
+    });
+    try {
+      const models = craneStudyModels(sourceModel, settings.craneSetSupport, view);
+      for (const { model, settings: poseSettings, heading, bay } of models) {
+        const crane = model.crane, support = crane.runway, label = CRANE_RUNWAYS[support];
+        await step();
+        if (!current()) return;
+        const overview = craneStudyGeometry(model, { ...poseSettings, craneStage: 'parked' }, false),
+          bearing = craneDegrees(heading), elevation = { az: heading + Math.PI / 2, el: 0 };
+        const views = [
+          ['axo', 'Project axonometric', { az: heading + 1.08, el: 0.60 }],
+          ['elevation', 'Project elevation', elevation]
+        ];
+        for (const [kind, title, camera] of views) {
+          await step();
+          if (!current()) return;
+          const page = sheet(label, CRANE_STUDY_GUIDE[support], support, kind);
+          tile(page.svg, overview, camera, {
+            title, note: `Gantry parked at ${bearing}°  ·  Green shows the crane and runway`,
+            x: margin, y: 143, w: width - 2 * margin, h: 736, compass: kind === 'axo',
+            scales: [250, 500, 750, 1000, 1250, 2000, 2500, 5000]
+          });
+          add(page);
+        }
+        if (bay) {
+          const above = craneStudyUpperBay(model, bay),
+            page = sheet(`${label} / Module installation`,
+              `Level ${bay.f + 1}  ·  Bay ${bay.j + 1}  ·  ${bearing}°  ·  ${above ? 'Occupied bay above' : 'Clear installation lane'}  ·  Reference cassette in ochre`,
+              support, 'installation'),
+            normal = [-Math.sin(heading), 0, Math.cos(heading)],
+            planes = [{ normal, offset: 3.55 }, { normal, offset: -3.55, flip: true }];
+          for (const [i, [stage, title, note]] of CRANE_STUDY_STAGES.entries()) {
+            await step();
+            if (!current()) return;
+            const options = { ...poseSettings, craneStage: stage }, pose = moduleCranePose(model, crane, options),
+              geometry = craneStudyGeometry(model, options, true, sourceAssignments),
+              focus = craneStudyFocus(heading, model.R - 1.8, crane.tower + 0.8,
+                Math.max(-1.3, pose.payloadY - 4.5), pose.payloadY + 9.2),
+              camera = i ? elevation : { az: heading + 1.08, el: 0.35 };
+            tile(page.svg, geometry, camera, { ...sequenceTile(i), title: `${i + 1}. ${title}`, note, focus, planes });
+          }
+          add(page);
+        }
+        if (support === 'moat') {
+          const page = sheet('Moat drawbridge / Operating sequence',
+            'The 10 m clear bascule closes to pedestrians before lifting. The gantry passes on the twin rails above the water.', support, 'drawbridge'),
+            axis = crane.gateAngles.reduce((nearest, angle) => angDist(angle, heading) < angDist(nearest, heading) ? angle : nearest),
+            { inner, outer } = craneMoatBounds(crane), full = moatLiftFullyOpenAt(crane),
+            focus = craneStudyFocus(axis, inner - 2.8, outer + 2.9, -1.2, 10.3, 5.8),
+            stages = [
+              [full + 24, 'Pedestrian crossing open', 'Leaf seated, approach barriers up.'],
+              [full + 13, 'Approach barriers close', 'The leaf stays seated while pedestrian access closes.'],
+              [full + 5, 'Counterweighted leaf rises', 'The 10 m deck rotates around its inner-bank hinge.'],
+              [0, 'Gantry passes', 'The raised leaf leaves both rails clear.']
+            ];
+          for (const [i, [distance, title, note]] of stages.entries()) {
+            await step();
+            if (!current()) return;
+            const mesh = meshBuilder(), angle = axis + distance / inner, paint = rgb(cranePaint(sourceAssignments));
+            drawCraneMoat(mesh, model, crane, paint, angle, false);
+            if (i === stages.length - 1) drawCraneGantry(mesh, crane, { angle, stage: 'parked' }, paint);
+            const across = [-Math.sin(axis), 0, Math.cos(axis)], along = [Math.cos(axis), 0, Math.sin(axis)],
+              planes = [{ normal: across, offset: 11 }, { normal: across, offset: -11, flip: true },
+                { normal: along, offset: inner - 6, flip: true }, { normal: along, offset: outer + 6 },
+                { normal: [0, 1, 0], offset: 10.3 }];
+            const geometry = drawingGeometry(mesh, model, { component: craneStudyComponent });
+            tile(page.svg, geometry, { az: axis + 0.91, el: 0.46 }, {
+              ...sequenceTile(i), title: `${i + 1}. ${title}`, note, focus, planes
+            });
+          }
+          add(page);
+        }
+      }
+      if (!current()) return;
+      const available = settings.craneSetSupport === 'all' ? 3 : 1;
+      feedback.textContent = !models.length ? 'The selected crane has no clear runway in this design.' :
+        `${cranePages.length} sheets ready.` + (models.length < available ? ' Some crane options do not fit the current ring.' : '') +
+        (models.some(({ bay }) => !bay) ? ' Installation sheets require a clear dock on the selected level.' : '');
+      $('printDocument').disabled = !cranePages.length;
+    } catch (error) {
+      console.error('Crane set render failed', error);
+      if (current()) feedback.textContent = 'The crane set could not be prepared.';
+    }
+  }
+
   function render() {
     timer = 0;
     if (!sourceModel || panel.hidden) return;
+    const revision = ++craneRender;
+    if (settings.document === 'cranes') {
+      renderCraneDocument(revision);
+      $('drawingDocumentStage').scrollTop = 0;
+      return;
+    }
+    cranePages = [];
     const paper = paperDimensions();
     try {
       if (settings.document) {
@@ -1222,6 +1389,8 @@ const openDrawingWorkspace = (() => {
     const documentMode = Boolean(settings.document);
     $('drawingDocument').value = settings.document;
     syncLobbyControls();
+    $('craneDrawingControls').hidden = settings.document !== 'cranes';
+    $('drawingCraneSetSupport').value = settings.craneSetSupport;
     $('singleDrawingControls').hidden = $('drawingMainStage').hidden = documentMode;
     $('drawingDocumentStage').hidden = !documentMode;
     const detail = Boolean(settings.detail);
@@ -1355,6 +1524,10 @@ const openDrawingWorkspace = (() => {
     settings.document = event.target.value;
     stopPlacing();
     syncSettings();
+    queueDrawing();
+  };
+  $('drawingCraneSetSupport').onchange = (event) => {
+    settings.craneSetSupport = event.target.value;
     queueDrawing();
   };
   for (const [id, key] of [
@@ -1845,6 +2018,12 @@ const openDrawingWorkspace = (() => {
   $('printDocument').onclick = async () => {
     const pages = $('documentPages');
     if (!settings.document || !pages.childElementCount) return;
+    if (settings.document === 'cranes') {
+      if (!cranePages.length) return;
+      prepareVectorPrint(cranePages.map(({ vector }) => vector()), CRANE_DRAWING_PAPER);
+      window.print();
+      return;
+    }
     if (settings.document === 'lobbies') {
       const button = $('printDocument'),
         prepared = lobbyPages,
@@ -1924,7 +2103,11 @@ const openDrawingWorkspace = (() => {
       clearTimeout(timer);
       render();
     }
-    if (settings.document === 'lobbies' && lobbyPages.length)
+    if (settings.document === 'cranes') {
+      if (cranePages.length && !$('printDocument').disabled)
+        prepareVectorPrint(cranePages.map(({ vector }) => vector()), CRANE_DRAWING_PAPER);
+    }
+    else if (settings.document === 'lobbies' && lobbyPages.length)
       prepareVectorPrint(
         lobbyPages.map(({ vector }) => vector()),
         paperDimensions()

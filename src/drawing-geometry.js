@@ -47,10 +47,10 @@ function drawingOutlineBody({ layer, name }) {
 }
 
 // Weld drawing vertices so silhouettes and creases can be found across adjacent faces.
-function drawingGeometry(mesh, model) {
+function drawingGeometry(mesh, model, { include = () => true, component = drawingComponent } = {}) {
   const groups = mesh.groups,
     first = groups.findIndex((group) => group.layer !== 'Reference'),
-    parts = groups.map((group) => drawingComponent(group.layer)),
+    parts = groups.map((group) => include(group) ? component(group.layer) : null),
     points = [],
     faces = [],
     edges = new Map(),
@@ -85,11 +85,12 @@ function drawingGeometry(mesh, model) {
     const data = mesh[kind];
     const groupAtOffset = groupAt(kind);
     for (let i = groups[first][kind]; i < data.length; i += 30) {
+      const group = groupAtOffset(i);
+      if (!parts[group]) continue;
       const a = vertex(data, i),
         b = vertex(data, i + 10),
         c = vertex(data, i + 20);
       if (a === b || b === c || c === a) continue;
-      const group = groupAtOffset(i);
       const face = {
         vertices: [a, b, c],
         normal: data.slice(i + 3, i + 6),
@@ -116,10 +117,12 @@ function drawingGeometry(mesh, model) {
   }
   const groupAtLine = groupAt('lines');
   for (let i = groups[first].lines; i < mesh.lines.length; i += 20) {
+    const component = parts[groupAtLine(i)];
+    if (!component) continue;
     const a = vertex(mesh.lines, i),
       b = vertex(mesh.lines, i + 10);
     if (a !== b)
-      lines.push({ a, b, component: parts[groupAtLine(i)], texture: mesh.textureStrokes?.has(i) });
+      lines.push({ a, b, component, texture: mesh.textureStrokes?.has(i) });
   }
   return { points, faces, edges: [...edges.values()], lines, model };
 }
@@ -651,7 +654,7 @@ function renderDrawing(
   placement,
   hybrid,
   pens,
-  { region, sectionLens, floorSet, focus, cutFill, washLightness = 0.49 } = {}
+  { region, sectionLens, floorSet, focus, cutFill, washLightness = 0.49, scales = DRAWING_SCALES } = {}
 ) {
   const width = region?.width ?? paper.width * DRAWING_PIXELS_PER_INCH,
     height = region?.height ?? paper.height * DRAWING_PIXELS_PER_INCH,
@@ -690,7 +693,7 @@ function renderDrawing(
         (fitBounds.right - fitBounds.left) / (width - margin * 2),
         (fitBounds.bottom - fitBounds.top) / drawingHeight
       ),
-    fittedDenominator = DRAWING_SCALES.find((value) => value >= required) ?? Math.ceil(required),
+    fittedDenominator = scales.find((value) => value >= required) ?? Math.ceil(required),
     denominator = scaleChoice === 'auto' ? fittedDenominator : Number(scaleChoice),
     scale = (1000 * pixelsPerMillimetre) / denominator,
     offsetScale = placement.modelUnits ? scale : pixelsPerMillimetre,
