@@ -120,7 +120,24 @@ with serve_lab(root) as url, sync_playwright() as p:
           [0.26296140882703994, 0.32929518242844014]] };
       try {
         const plan = derive(), { circulation } = plan, graph = buildNavigation(plan),
-          { total, corridorArea, hubArea, elevatorArea, hubs } = circulation;
+          { total, corridorArea, hubArea, elevatorArea, hubs } = circulation,
+          lounges = bridgeLounges(plan), baseGraph = buildNavigation(plan, false),
+          seatNodes = graph.nodes.filter(node => node.kind === 'bridgeSeat'),
+          pathsUnchanged = baseGraph.edges.every((edges, id) =>
+            JSON.stringify(edges) === JSON.stringify(graph.edges[id].filter(edge => edge.to < baseGraph.nodes.length))),
+          points = (a) => [a[0], a[2]];
+        const clearOfWalk = lounges.every(({ f, seats, axis, passage }) => seats.every(({ p }) => {
+          const lateral = Math.abs(p[1] * Math.cos(axis) - p[0] * Math.sin(axis)),
+            y = f * modelFloorPitch(plan) + 0.54;
+          return lateral >= passage / 2 + BRIDGE_SEAT_RADIUS && baseGraph.edges.flat().every(({ path }) =>
+            path.slice(1).every((b, i) => {
+              const a = path[i];
+              return Math.min(a[1], b[1]) > y + 0.21 || Math.max(a[1], b[1]) < y - 0.21 ||
+                bridgeSeatDistance(p, points(a), points(b)) >= BRIDGE_SEAT_RADIUS + 0.56;
+            }));
+        }));
+        state = { ...state, bridgeSeating: false };
+        const open = derive();
         state = { ...state, relations: {} };
         const neutral = derive();
         return {
@@ -128,6 +145,21 @@ with serve_lab(root) as url, sync_playwright() as p:
             graph.nodes.filter(node => node.kind === 'hub' && graph.reachable.has(node.id)).length === hubs.length &&
             !graph.nodes.some(node => node.kind === 'publicLobby'),
           neutralOpen: neutral.circulation.hubs.length === 0 && neutral.circulation.bridges.length > 0,
+          clusters: [...new Set(lounges.map(lounge => lounge.f + 1))].join() === '2,4,5' &&
+            lounges.every(({seats}) => seats.length >= 2 && seats.length <= 5) &&
+            lounges.some(({seats}) => seats.some((a, i) => seats.slice(i + 1).some(b => angDist(a.heading, b.heading) > 2))),
+          usableSeats: seatNodes.length === lounges.reduce((count, lounge) => count + lounge.seats.length, 0) &&
+            seatNodes.every(node => graph.reachable.has(node.id) && graph.edges[node.id].length === 1),
+          clearOfWalk, pathsUnchanged,
+          sameProgram: !bridgeLounges(open).length && open.total === plan.total &&
+            JSON.stringify(open.rooms) === JSON.stringify(plan.rooms) && JSON.stringify(open.slots) === JSON.stringify(plan.slots),
+          furniture: lounges.every(lounge => {
+            const mesh = meshBuilder();
+            drawBridgeLounge(mesh, lounge, 0);
+            const ys = mesh.solid.filter((_, i) => i % 10 === 1);
+            return mesh.groups.some(group => group.layer.endsWith('_Bridge_Seating')) && Math.max(...ys) === 2.12 &&
+              mesh.solid.every(Number.isFinite);
+          }),
           openLandings: [2, 4, 5].every(level => circulation.regions.some(region =>
             region.f === level - 1 && region.kind === 'bridgeAccess' && region.r === plan.r)),
           areaSum: Math.abs(total - corridorArea - hubArea - elevatorArea) < 1e-6
@@ -137,6 +169,25 @@ with serve_lab(root) as url, sync_playwright() as p:
       }
     }''')
     assert all(paired_lobbies.values()), paired_lobbies
+
+    # Widen both shoulders in a placement fixture and verify two independent
+    # circles of five can face inward on the same landing.
+    circles = page.evaluate('''() => {
+      const f = 1, footprint = {floorHeight: 4.2, circulation: {
+        bridgeLoungeSeed: 606, width: 2.4, doors: [], bridges: [{ f, width: 2.2 }], regions: [
+          { f, kind: 'bridgeAccess', r: 20, R: 34, start: -0.12, end: 0.12 },
+          { f, kind: 'residual', r: 20, R: 34, start: -0.42, end: -0.12 },
+          { f, kind: 'residual', r: 20, R: 34, start: 0.12, end: 0.42 }
+        ]
+      }}, p = [27, 4.74, 0], node = { id: 0, f, kind: 'corridor', cell: {}, p },
+        path = [[20, 4.74, 0], p, [34, 4.74, 0]],
+        routes = {nodes: [node], edges: [[{ to: 0, path }]], reachable: new Set([0])},
+        courts = fitBridgeLounges(footprint, routes).filter(lounge => lounge.seats.length === 5);
+      return courts.length === 2 && courts[0].court[1] * courts[1].court[1] < 0 &&
+        courts.every(({ court, seats }) => seats.every(({ p, heading, route }) =>
+          angDist(heading, Math.atan2(court[1] - p[1], court[0] - p[0])) < 1e-6 && route[1] === court));
+    }''')
+    assert circles
 
     # A legacy Materials snapshot has one cut bridge approach. Its three
     # radial pieces should return to the exact corridor stored before the cut.
@@ -172,6 +223,13 @@ with serve_lab(root) as url, sync_playwright() as p:
         circulation.hubs.length === hubs;
     }''', saved_approach)
     page.locator('#openMassing').click()
+    seating = page.locator('#bridgeSeating')
+    expect(seating).to_be_visible()
+    expect(seating).to_be_checked()
+    seating.uncheck()
+    page.wait_for_function('!pending && !model.circulation.bridgeLoungeSeed')
+    seating.check()
+    page.wait_for_function('!pending && model.circulation.bridgeLoungeSeed === state.seed')
 
     expect(page.locator('#openBuild + span + button')).to_have_text('Render')
     page.evaluate('window.designBeforeRender = model')

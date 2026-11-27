@@ -842,6 +842,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       }
     }
   }
+  if (layers.slabs || layers.walls) for (const lounge of bridgeLounges(model)) {
+    if (lounge.f < floors)
+      drawBridgeLounge(mesh, lounge, buildStorey(model, lounge.f, slabThickness).base + 0.006);
+  }
   if (full && layers.slabs) {
     mark('Assembly_Roof_Deck');
     sector(model.r, model.R, 0, TAU, model.roofPlan.y - slabThickness, slabThickness, concrete);

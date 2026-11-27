@@ -5,7 +5,7 @@
 let occupancy = null,
   simLast = 0,
   simDrawLast = 0;
-function buildNavigation(m) {
+function buildNavigation(m, includeBridgeSeats = true) {
   const nodes = [],
     edges = [],
     cells = [],
@@ -535,6 +535,21 @@ function buildNavigation(m) {
         }
     }
   }
+  if (includeBridgeSeats) {
+    // Seat visits are optional spurs off the same public routes. Existing
+    // through edges remain available and are never diverted through a seat.
+    for (const { f, seats } of bridgeLounges(m, { nodes, edges, reachable }))
+      for (const seat of seats) {
+        const path = seat.route.map(([x, z]) => [x, yFor(f), z]),
+          anchor = nodes.find((n) => n.f === f && n.kind === 'corridor' &&
+            n.p[0] === path[0][0] && n.p[2] === path[0][2]);
+        if (!anchor || !reachable.has(anchor.id)) continue;
+        const id = node(path.at(-1), 'bridgeSeat', { f });
+        connect(anchor.id, id, path);
+        reachable.add(id);
+        dest.push(id);
+      }
+  }
   return {
     nodes,
     edges,
@@ -556,6 +571,7 @@ function dwellPoint(n, a) {
       (a.i * 2.399963 +
         (a.kind === 'human' ? 0 : a.kind === 'dog' ? 1.3 : a.kind === 'bird' ? 2.8 : 4.1)) %
       TAU;
+  if (n.kind === 'bridgeSeat') return [base[0] + 0.1 * Math.cos(phase), base[1], base[2] + 0.1 * Math.sin(phase)];
   let dx = 0.65 * Math.cos(phase),
     dz = 0.65 * Math.sin(phase);
   if (n.cell) {
@@ -748,7 +764,8 @@ function shortestPath(g, start, goal, kind, stairsAllowed = true) {
         'balcony',
         'gazebo',
         'climbBase',
-        'climbTop'
+        'climbTop',
+        'bridgeSeat'
       ].includes(cur.kind)
     )
       continue;
@@ -1074,10 +1091,10 @@ function advanceOccupancy(s, dt) {
                 ? 18 + s.rng() * 8
                 : ['room', 'module', 'slideStart', 'slideEnd', 'retail'].includes(n.kind)
                   ? 9 + s.rng() * 23
-                  : ['garden', 'balcony', 'plaza', 'greenhouse', 'gazebo'].includes(n.kind)
+                  : ['garden', 'balcony', 'plaza', 'greenhouse', 'gazebo', 'bridgeSeat'].includes(n.kind)
                     ? 7 + s.rng() * 15
                     : 2 + s.rng() * 7;
-          if (n.kind === 'hub') {
+          if (n.kind === 'hub' || n.kind === 'bridgeSeat') {
             s.gather++;
             a.social = 0;
           }
@@ -1146,7 +1163,8 @@ function scoreCategory(k) {
       climbTop: 'ride',
       corridor: 'corridor',
       lift: 'corridor',
-      roofLink: 'corridor'
+      roofLink: 'corridor',
+      bridgeSeat: 'corridor'
     }[k] || 'corridor'
   );
 }
@@ -1184,6 +1202,7 @@ function agentZone(a, s) {
         'plaza',
         'greenhouse',
         'corridor',
+        'bridgeSeat',
         'outdoor',
         'garden',
         'balcony',
@@ -1374,6 +1393,7 @@ function trialLayout(model, trial) {
     lobby: lobby.area,
     bridges: circulation.bridges.length,
     stairs: circulation.stairs?.length ?? 0,
+    bridgeLounges: circulation.bridges.length ? bridgeLounges(model).length : null,
     junctionLobbies: circulation.hubs.filter((hub) => hub.access).length,
     entry: trial.graph.entry != null,
     corridors: circulation.corridorArea,
@@ -1449,6 +1469,8 @@ function trialLogSections(record) {
     'Circulation and play': {
       'Combined lobby area setting': area(settings.lobby),
       'Atrium bridge arrangement': BRIDGE_MODES[settings.atriumBridges ?? 'off'],
+      'Bridge seating setting': settings.atriumBridges && settings.atriumBridges !== 'off' &&
+        typeof settings.bridgeSeating === 'boolean' ? (settings.bridgeSeating ? 'On' : 'Off') : null,
       'Preferred corridor width': metres(settings.corridorWidth),
       'Slide length setting': percent(settings.slideLength),
       'Climbing width': settings.climbWidth === 0 ? 'Off' : metres(settings.climbWidth)
@@ -1488,6 +1510,7 @@ function trialLogSections(record) {
       'Lobby area built': area(layout.lobby),
       'Atrium bridges built': trialValue(layout.bridges),
       'Bridge stairs': trialValue(layout.stairs),
+      'Bridge seating clusters': trialValue(layout.bridgeLounges),
       'Shared lobbies near cores or bridges': trialValue(layout.junctionLobbies),
       'Usable visitor entrance':
         typeof layout.entry === 'boolean' ? (layout.entry ? 'Yes' : 'No') : null,

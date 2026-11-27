@@ -1359,6 +1359,7 @@ $('export').onclick = () => {
         stairArea: m.circulation.stairArea,
         stairs: m.circulation.stairs,
         bridges: m.circulation.bridges,
+        bridgeSeating: bridgeLounges(m),
         roomPacking: m.circulation.roomPacking,
         regions: m.circulation.regions,
         hubs: m.circulation.hubs,
@@ -1467,6 +1468,7 @@ function applySaved(data) {
     'showRoofDeck',
     'showFacade',
     'animateSwing',
+    'bridgeSeating',
     'simRunning'
   ])
     if (typeof s[k] === 'boolean') d[k] = s[k];

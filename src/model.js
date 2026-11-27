@@ -79,6 +79,7 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
     slideLength: 40,
     climbWidth: 10,
     atriumBridges: 'off',
+    bridgeSeating: true,
     lobby: 240,
     relations: {},
     corridorWidth: 2.4,
@@ -285,6 +286,10 @@ $('atriumBridges').onchange = () => {
   state.atriumBridges = $('atriumBridges').value;
   scheduleUpdate();
 };
+$('bridgeSeating').onchange = () => {
+  state.bridgeSeating = $('bridgeSeating').checked;
+  scheduleUpdate();
+};
 PROGRAMS.forEach((p, i) => {
   const d = document.createElement('div');
   d.className = 'program-row';
@@ -305,6 +310,8 @@ function syncControls() {
   refreshInputs.forEach((f) => f());
   $('autoCore').checked = state.autoCore;
   $('atriumBridges').value = state.atriumBridges;
+  $('bridgeSeatSetting').hidden = state.atriumBridges === 'off';
+  $('bridgeSeating').checked = state.bridgeSeating;
   $('buildSlabThickness').value = String(state.slabThickness);
   const pitch = floorPitch(state.slabThickness);
   $('buildStoreyNote').textContent =
@@ -2489,6 +2496,7 @@ function derive(dockVariant = state.dockVariant) {
       ringArea + circulation.bridgeArea + court + count * MODULE.area + roofPlan.serviceArea,
     total = primary + retail + roofPlan.retailArea;
   const plaza = designPlaza(R, lobby, slots, feature.climbing);
+  if (state.bridgeSeating && circulation.bridges.length) circulation.bridgeLoungeSeed = state.seed;
   const layout = {
     R,
     r,

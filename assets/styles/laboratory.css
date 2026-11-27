@@ -597,6 +597,7 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  border: 1px solid #bac7bc;
  border-radius: 4px;
 }
+#bridgeSeatSetting[hidden] { display: none; }
 .bridge-status {
  flex-basis: 100%;
  color: var(--muted);

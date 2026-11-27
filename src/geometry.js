@@ -3484,6 +3484,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       }
     }
   }
+  for (const lounge of bridgeLounges(m))
+    if (visible(lounge.f)) drawBridgeLounge(b, lounge, lounge.f * floorH + 0.535);
   // Upper bridges span the atrium, with open landings into dedicated core passages.
   for (const bridge of circulation.bridges ?? []) {
     if (!visible(bridge.f)) continue;
