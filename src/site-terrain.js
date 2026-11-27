@@ -178,7 +178,8 @@ function siteAssemblyMesh(
     relativeToBuilding = false,
     supportPlan = null,
     model = null,
-    includeTerrain = true
+    includeTerrain = true,
+    includeFoundations = true
   } = {}
 ) {
   const mesh = meshBuilder();
@@ -292,7 +293,7 @@ function siteAssemblyMesh(
     cos = Math.cos(angle),
     extendRunway = supportPlan && model.crane?.runway === 'elevated' &&
       assembly.groups.some(({ layer }) => layer === 'Crane_Elevated_Runway_Columns');
-  if (supportPlan) drawSiteFoundations(mesh, model, supportPlan, extendRunway);
+  if (supportPlan && includeFoundations) drawSiteFoundations(mesh, model, supportPlan, extendRunway);
   if (relativeToBuilding) {
     // Drawings clip and align to the building datum, even when the wider site is visible.
     for (const kind of ['solid', 'glass', 'lines']) {

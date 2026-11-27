@@ -470,9 +470,14 @@ const siteWorkspace = (() => {
         view = { ...state, craneStage: 'parked' },
         building = buildAssemblyMesh(model, layers, Math.min(2, model.layers.length),
           { assignments, view, craneSettings: view }),
-        mesh = siteAssemblyMesh(building, terrain, { ...sceneOptions(), relativeToBuilding: true,
-          includeTerrain: false, model, supportPlan: plan });
-      return { plan, mesh, canalDepth: sceneOptions().canalDepth };
+        placement = { ...sceneOptions(), relativeToBuilding: true, includeTerrain: false, model, supportPlan: plan },
+        mesh = siteAssemblyMesh(building, terrain, placement),
+        overview = buildMesh(model, false, { ...view, floors: model.layers.length, inspect: 0, grid: false,
+          xray: false, programEditing: false, showRooms: false, showFacade: true, showModules: true,
+          roof: true, showRoofDeck: true, supports: false }),
+        context = siteAssemblyMesh(overview, terrain, { ...placement, includeFoundations: false }),
+        district = siteDistrictCut(plan, surface, registration);
+      return { plan, mesh, context, district, canalDepth: placement.canalDepth };
     },
     open(model, assignments) {
       building = model;

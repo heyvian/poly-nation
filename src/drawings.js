@@ -894,53 +894,110 @@ const openDrawingWorkspace = (() => {
   function renderSiteSections() {
     const study = siteWorkspace.sectionStudy(sourceModel, sourceAssignments);
     if (!study) return [];
-    const { plan, mesh, canalDepth } = study, paper = SITE_SECTION_PAPER,
-      geometry = drawingGeometry(mesh, sourceModel), cuts = siteSectionCuts(plan),
+    const { plan, mesh, context, district, canalDepth } = study, paper = SITE_SECTION_PAPER,
+      geometry = drawingGeometry(mesh, sourceModel),
+      contextGeometry = drawingGeometry(context, sourceModel, {
+        include: ({ layer }) => /^(Core_L\d+_Slab|Facade_|Modules_L|Module_Balconies|Roof_(Public_Deck|Lift_|Commercial_Retail)|Atrium_(Glass|Roof_Ridge)|Swing_(Tower|Crown|Boarding)|Crane_(Traveling_Gantry|Roof_|Elevated_Runway|Moat_Runway)|Infinite_Rinse_Water_Slide)/.test(layer)
+      }),
+      cuts = siteSectionCuts(plan),
+      contextTop = plan.foundation + contextGeometry.points.reduce((peak, point) => Math.max(peak, point[1]), 0),
       w = paper.width * DRAWING_PIXELS_PER_INCH, h = paper.height * DRAWING_PIXELS_PER_INCH,
       margin = 48, ink = '#223b35', rule = '#9aaea1', water = '#83afb8', earth = '#e6decb',
+      scales = [50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3000, 5000],
       pens = drawingPens({ mode: 'component', widths: [0.31, 0.20, 0.13], colors: ['#3b5c51', '#54574e', '#8a9790'],
-        components: { core: 0, circulation: 0, docks: 1, modules: 2, rides: 2, site: 2 } });
+        components: { core: 0, circulation: 0, docks: 1, modules: 2, rides: 2, site: 2 } }),
+      pale = drawingPens({ widths: [0.14], colors: ['#abb2af'] });
+    if (district) cuts.unshift(district);
     return cuts.map((cut, index) => {
-      const { title, note, at, angle, from, to } = cut, [cx, cz] = plan.position,
+      const { title, note, at, angle, from, to, kind } = cut, [cx, cz] = plan.position,
+        detail = kind === 'canal-detail' || kind === 'approach', district = kind === 'district',
         point = (station, height) => { const [x, z] = at(station); return [x - cx, height - plan.foundation, z - cz]; },
         along = [Math.cos(angle), 0, Math.sin(angle)], normal = [-along[2], 0, along[0]],
-        offset = dot(point(0, 0), normal),
+        offset = dot(point(0, 0), normal), plane = { normal, offset },
+        camera = { az: angle + Math.PI / 2, el: 0 },
         { profile, surfaces } = siteSectionGround(plan, cut, canalDepth),
         bottom = Math.min(...profile.map(([, y]) => y), plan.floor - 1.5) - 2.2,
-        upper = cut.crown ?? plan.floor + Math.min(cut.kind === 'canal-detail' ? 1.55 : 6.4,
+        upper = cut.crown ?? plan.floor + Math.min(kind === 'canal-detail' ? 1.55 : 6.4,
           modelFloorPitch(sourceModel) * sourceModel.layers.length),
-        focus = [from, to].flatMap((station) => [bottom, upper].map((y) => point(station, y))),
-        frame = renderDrawing(geometry, { az: angle + Math.PI / 2, el: 0 }, [
-          { normal, offset }, { normal, offset: offset - 5, flip: true },
+        focus = [from, to].flatMap((station) => [bottom, detail ? upper : Math.max(upper, contextTop + 3)].map((y) => point(station, y))),
+        drawingY = detail ? 414 : 142, region = { width: w - 2 * margin, height: h - drawingY - 65 },
+        frame = renderDrawing(geometry, camera, [
+          plane, { normal, offset: offset - 5, flip: true },
           { normal: along, offset: to }, { normal: along, offset: from, flip: true },
           { normal: [0, 1, 0], offset: upper - plan.foundation }
-        ], paper, 'auto', false, centeredPlacement(), false, pens, {
-          region: { width: w - 2 * margin, height: h - 204 }, focus, cutFill: true,
-          scales: [50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 750, 1000]
-        }),
-        tile = floorView(frame, '', margin, 142), area = tile.children[0],
+        ], paper, 'auto', false, centeredPlacement(), false, pens, { region, focus, cutFill: true, scales }),
+        tile = floorView(frame, '', margin, drawingY), area = tile.children[0],
         svg = studySVG(w, h, title), sheetNumber = 'PN–SI–' + String(index + 1).padStart(2, '0');
       tile.replaceChildren(area);
-      const coordinates = (pairs) => pairs.map(([station, y]) => {
-          const xyz = point(station, y);
-          return (frame.originX + dot(xyz, frame.basis.right) * frame.scale).toFixed(2) + ',' +
-            (frame.originY - dot(xyz, frame.basis.up) * frame.scale).toFixed(2);
-        }).join(' '),
-        ground = studyMark(svg, 'g', {});
-      studyMark(ground, 'polygon', { points: coordinates([...profile, [to, bottom], [from, bottom]]), fill: earth });
-      for (const surface of surfaces) studyMark(ground, 'polygon', { points: coordinates(surface), fill: water });
-      studyMark(ground, 'polyline', { points: coordinates(profile), fill: 'none', stroke: '#746d55', 'stroke-width': 1.4 });
-      area.prepend(ground);
       svg.classList.add('drawing-sheet');
       svg.setAttribute('width', paper.width + 'in');
       svg.setAttribute('height', paper.height + 'in');
       svg.setAttribute('font-family', 'system-ui, sans-serif');
       svg.dataset.siteSection = cut.kind;
       studyMark(svg, 'rect', { width: w, height: h, fill: '#ffffff' });
-      svg.append(tile);
+
+      function project(view, station, height) {
+        const xyz = point(station, height);
+        return [view.originX + dot(xyz, view.basis.right) * view.scale, view.originY - dot(xyz, view.basis.up) * view.scale];
+      }
+      const coordinates = (pairs) => pairs.map(([station, y]) => project(frame, station, y)
+          .map((value) => value.toFixed(2)).join(',')).join(' '),
+        ground = studyMark(area, 'g', {});
+      studyMark(ground, 'polygon', { points: coordinates([...profile, [to, bottom], [from, bottom]]), fill: earth });
+      for (const surface of surfaces) studyMark(ground, 'polygon', { points: coordinates(surface), fill: water });
+      studyMark(ground, 'polyline', { points: coordinates(profile), fill: 'none', stroke: '#746d55', 'stroke-width': 1.4 });
+
+      if (district)
+        studyMark(ground, 'polyline', { points: coordinates([cut.avenue - 6, cut.avenue, cut.avenue + 6].map((station) =>
+          [station, siteTerrainHeight(plan.terrain, ...at(station)) + 0.05])), fill: 'none', stroke: '#777873', 'stroke-width': 2.4 });
+
       const text = (x, y, content, size, options = {}) => studyMark(svg, 'text', {
         x, y, fill: ink, 'font-size': size, ...options
       }, content);
+      if (detail) {
+        const overviewY = 134, overviewRegion = { width: region.width, height: drawingY - overviewY - 6 },
+          overview = renderDrawing(contextGeometry, camera, [], paper, 'auto', false, centeredPlacement(), false, pale,
+            { region: overviewRegion, scales }),
+          view = floorView(overview, '', margin, overviewY), contextArea = view.children[0];
+        view.replaceChildren(contextArea);
+        view.dataset.siteContext = 'inset';
+        svg.append(view);
+        text(margin + 10, overviewY + 26, 'Building context · Dashed line marks the detail extent', 13, { 'font-weight': 650 });
+        const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 12 });
+        drawScaleIndicator(indicator, overview.denominator, w - margin, drawingY - 27, ink);
+        studyMark(svg, 'line', { x1: margin, y1: drawingY, x2: w - margin, y2: drawingY, stroke: rule });
+        const [a, y] = project(overview, from, plan.floor), [b] = project(overview, to, plan.floor),
+          section = [a, b].sort((x, z) => x - z).map((x) => clamp(x, overview.margin, overview.width - overview.margin));
+        studyMark(contextArea, 'line', { x1: section[0], x2: section[1], y1: y, y2: y,
+          stroke: '#517970', 'stroke-width': 1.5, 'stroke-dasharray': '5 3' });
+      } else {
+        const visiblePlane = Math.abs(offset) > sourceModel.R + MODULE.depth ? [] : [plane],
+          overview = renderDrawing(contextGeometry, camera, visiblePlane, paper, frame.denominator, false,
+            centeredPlacement(), false, pale, { region, focus }),
+          contextLayer = floorView(overview, '').children[0];
+        contextLayer.dataset.siteContext = 'overlay';
+        area.prepend(contextLayer);
+      }
+      area.prepend(ground);
+      svg.append(tile);
+      if (cut.clearance) {
+        const { station, underside, height } = cut.clearance,
+          [x, y] = project(frame, station, underside), [, base] = project(frame, station, plan.water.level),
+          px = x + margin, top = y + drawingY, lower = base + drawingY;
+        studyMark(svg, 'path', { d: `M${px} ${top}V${lower}M${px - 5} ${top}h10M${px - 5} ${lower}h10`,
+          fill: 'none', stroke: ink, 'stroke-width': 1.25 });
+        text(px + 9, (top + lower) / 2 + 5, `${height.toFixed(1)} m clear`, 15, { 'font-weight': 650 });
+      }
+      if (district) {
+        for (const [station, height, label, align] of [
+          [cut.avenue, siteTerrainHeight(plan.terrain, ...at(cut.avenue)), 'S · 10 Avenue SW', 'start'],
+          [cut.river, plan.water.level, 'Bow River · N', 'end']
+        ]) {
+          const [x, y] = project(frame, station, height), px = x + margin, py = y + drawingY;
+          studyMark(svg, 'line', { x1: px, y1: py - 3, x2: px, y2: py - 26, stroke: rule });
+          text(px, py - 33, label, 14, { 'text-anchor': align, 'font-weight': 650 });
+        }
+      }
       text(margin, 40, 'POLY NATION  /  WEST VILLAGE SITE SECTIONS', 15, { 'font-weight': 700, 'letter-spacing': 1.4 });
       text(margin, 78, title, 32, { 'font-weight': 680 });
       text(margin, 106, note, 15);
@@ -948,7 +1005,7 @@ const openDrawingWorkspace = (() => {
       for (const y of [125, h - 65]) studyMark(svg, 'line', { x1: margin, y1: y, x2: w - margin, y2: y, stroke: rule });
       const elevations = `Ground floor ${(plan.floor + plan.terrain.datum).toFixed(2)} m` +
         (surfaces.length ? `  ·  District study water level ${(plan.water.level + plan.terrain.datum).toFixed(2)} m` : '');
-      text(margin, h - 38, `${elevations}  ·  Schematic section of the lower building`, 14);
+      text(margin, h - 38, `${elevations}  ·  Schematic site grades`, 14);
       const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 13 });
       drawScaleIndicator(indicator, frame.denominator, w - margin, h - 37, ink);
 

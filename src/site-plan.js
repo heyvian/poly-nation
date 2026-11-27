@@ -5,6 +5,8 @@ const WEST_VILLAGE_PLAN = {
   frame: [28, 67, 1168, 658],
   limits: [93, 222, 1130, 569],
   defaultPin: [740, 430],
+  // 10 Avenue SW traced on the studio master plan and identified on City ARP Map 1.6.
+  tenthAvenue: [[451, 529], [557, 531], [669, 532], [784, 533], [931, 534], [1069, 538], [1170, 541]],
   terrainCentre: { latitude: 51.049, longitude: -114.103 },
   terrainSize: 2800,
   sources: {
@@ -48,6 +50,18 @@ function westVillageInside(pin) {
   return (
     Number.isFinite(x) && Number.isFinite(y) && x >= left && x <= right && y >= top && y <= bottom
   );
+}
+
+function westVillageTenthAvenue(x, registration) {
+  const route = WEST_VILLAGE_PLAN.tenthAvenue.map((point) => westVillageToGround(point, registration)),
+    end = route.at(-1), meridian = clamp(x, Math.min(route[0][0], end[0]), Math.max(route[0][0], end[0]));
+  for (let i = 1; i < route.length; i++) {
+    const [a, b] = [route[i - 1], route[i]];
+    if (meridian < Math.min(a[0], b[0]) || meridian > Math.max(a[0], b[0])) continue;
+    const t = (meridian - a[0]) / (b[0] - a[0]);
+    return [meridian, a[1] + (b[1] - a[1]) * t];
+  }
+  return end;
 }
 
 // Detail placement highlights water intersections without silently shifting the pin.

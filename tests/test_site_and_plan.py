@@ -259,7 +259,7 @@ with serve_lab(root) as url, sync_playwright() as p:
       const ramps = plan.accesses.filter(route => route.kind === 'ramp');
       return plan.floor > siteTerrainMaximum(terrain, [0, 0], envelope) + 0.95 && spans.length > 0 &&
         plan.rows.every(row => row.supports.every(support => !plan.water.overlaps(row.at(support.at), 1.3))) &&
-        spans.every(span => plan.floor - SITE_PLATFORM_BEAM_TOP - span.depth >= plan.water.level + SITE_WATER_CLEARANCE - 1e-6) &&
+        spans.every(span => plan.floor - SITE_PLATFORM_BEAM_TOP - span.depth >= plan.water.level + 5 - 1e-6) &&
         ramps.length > 0 && ramps.every(({ nodes }) => nodes.slice(1).every(([station, y], i) =>
           Math.abs(y - nodes[i][1]) <= (station - nodes[i][0]) / 20 + 1e-6)) &&
         plan.accesses.some(route => route.kind === 'stair') && siteSectionCuts(plan).some(cut => cut.kind === 'canal-detail');
@@ -275,6 +275,11 @@ with serve_lab(root) as url, sync_playwright() as p:
     page.wait_for_function('window.drawingIncludesTerrain === false')
     page.locator('#drawingDocument').select_option('site-sections')
     expect(page.locator('#documentPages svg[data-site-section=foundation]')).to_have_count(1)
+    district = page.locator('#documentPages svg[data-site-section=district]')
+    expect(district).to_contain_text('North–south section looking west')
+    expect(district).to_contain_text('10 Avenue SW')
+    expect(district).to_contain_text('Bow River')
+    expect(district.locator('[data-site-context=overlay] path').first).to_be_attached()
     expect(page.locator('#printDocument')).to_be_enabled()
     page.evaluate('window.print = () => {}')
     page.locator('#printDocument').click()

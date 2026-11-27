@@ -2,7 +2,8 @@
 
 const SITE_PLATFORM_BEAM_TOP = 0.46;
 const SITE_DRY_BEAM_DEPTH = 0.42;
-const SITE_WATER_CLEARANCE = 0.80;
+const SITE_WATER_CLEARANCE = 5;
+const SITE_APPROACH_DECK_DEPTH = 0.22;
 
 function siteDiskPlanes([x, z], radius) {
   // Tangent half-planes enclose the full circular footprint.
@@ -153,16 +154,23 @@ function siteGirderRow(position, angle, offset, radius, water, terrain, reach) {
 function siteApproach(terrain, water, position, angle, start, offset, top, kind) {
   const at = siteLine(position, angle, offset), surfaceAt = (station) => siteTerrainHeight(terrain, ...at(station)),
     ramp = kind === 'ramp', width = ramp ? 1.9 : 2.05, junction = 1.55,
-    sightLimit = ramp ? 150 : 75;
+    sightLimit = ramp ? 250 : 140,
+    left = siteLine(position, angle, offset - width / 2), right = siteLine(position, angle, offset + width / 2),
+    wet = [at, left, right].flatMap((line) => water.spans(line, start, start + sightLimit)),
+    clearance = water.level + SITE_WATER_CLEARANCE + SITE_APPROACH_DECK_DEPTH;
   for (let distance = 4; distance <= sightLimit; distance += 0.75) {
     const end = start + distance, endPoint = at(end);
     if (endPoint.some((v) => Math.abs(v) > terrain.size / 2 - 2) || water.overlaps(endPoint, width * 0.8)) continue;
-    const grade = surfaceAt(end), rise = grade - top, level = Math.abs(rise) < 0.06,
+    const crossings = wet.filter(([from]) => from < end);
+    if (crossings.length && top < clearance - 1e-6) break;
+    // Stay level across any channel. Begin the incline after the last bank on the route.
+    const landingEnd = Math.max(start + junction, ...crossings.map(([, bank]) => bank + 0.9)),
+      grade = surfaceAt(end), rise = grade - top, level = Math.abs(rise) < 0.06,
       flights = ramp ? Math.max(1, Math.ceil(Math.abs(rise) * 20 / 9)) : Math.max(1, Math.ceil(Math.abs(rise) / 0.165)),
       landing = ramp ? junction : 0,
-      run = (distance - 2 * junction - (flights - 1) * landing) / flights;
+      run = (end - landingEnd - junction - (flights - 1) * landing) / flights;
     if (run < (ramp ? (Math.abs(rise) * 20) / flights : 0.30)) continue;
-    const nodes = [[start, top], [start + junction, top]];
+    const nodes = [[start, top], [landingEnd, top]];
     for (let i = 0; i < flights; i++) {
       const [last, y] = nodes.at(-1), nextY = top + rise * (i + 1) / flights;
       if (!ramp && !level) {
@@ -171,7 +179,6 @@ function siteApproach(terrain, water, position, angle, start, offset, top, kind)
       if (ramp && i < flights - 1) nodes.push([last + run + landing, nextY]);
     }
     nodes.push([end, grade]);
-    const left = siteLine(position, angle, offset - width / 2), right = siteLine(position, angle, offset + width / 2);
     const clear = nodes.every(([b, high], i) => {
       if (!i) return true;
       const [a, low] = nodes[i - 1];
@@ -181,7 +188,7 @@ function siteApproach(terrain, water, position, angle, start, offset, top, kind)
         const t = j / steps, station = a + (b - a) * t, y = low + t * (high - low);
         for (const point of [at(station), left(station), right(station)]) {
           if (water.overlaps(point)) {
-            if (y < water.level + 0.60) return false;
+            if (y < clearance - 1e-6) return false;
           } else if (y + (station > end - junction ? 0.15 : 0.05) < siteTerrainHeight(terrain, ...point))
             return false;
         }
@@ -197,7 +204,7 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: s
   const base = buildStorey(model, 0).base, angle = bearing * Math.PI / 180,
     radius = model.R + 3.15, reach = Math.max(110, radius * 2.6),
     envelope = Math.max(radius, Math.hypot(model.R + BUILD_SECTION.dockGap + MODULE.depth + 2.05, MODULE.width / 2 + 0.4)),
-    water = siteFoundationWater(surface, position, Math.max(235, reach + radius)),
+    water = siteFoundationWater(surface, position, Math.max(270 + radius, reach + radius)),
     anchor = water.anchor(radius), accessAngle = model.lobby.angle + angle,
     rowAngle = siteCrossingAngle(water, anchor, accessAngle + Math.PI / 2, reach),
     offsets = [-0.7, -0.35, 0, 0.35, 0.7].map((fraction) => radius * fraction);
@@ -215,7 +222,7 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: s
     groundAtPin = siteTerrainHeight(terrain, ...position),
     floor = Math.max(groundAtPin + grade + base,
       siteTerrainMaximum(terrain, position, envelope) + SITE_PLATFORM_BEAM_TOP + SITE_DRY_BEAM_DEPTH + 0.19,
-      anchor ? water.level + SITE_WATER_CLEARANCE + SITE_PLATFORM_BEAM_TOP + gridDepth : -Infinity),
+      water.overlaps(position, envelope) ? water.level + SITE_WATER_CLEARANCE + SITE_PLATFORM_BEAM_TOP + gridDepth : -Infinity),
     foundation = floor - base, moat = craneMoatBounds(model.crane),
     accesses = [];
   for (const [i, azimuth] of [accessAngle, accessAngle + Math.PI].entries()) {
@@ -226,7 +233,8 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: s
     }
   }
   return { position, angle, radius, foundation, floor, groundAtPin, water, rows, crossingOffset, anchor,
-    terrain, accesses, accessAngle, moat, unresolved: rows.some((row) => row.unresolved) };
+    terrain, accesses, accessAngle, moat, contextReach: Math.max(envelope, model.crane?.extent ?? 0),
+    unresolved: rows.some((row) => row.unresolved) };
 }
 
 function drawSiteFoundations(mesh, model, plan, extendRunway) {
@@ -298,7 +306,7 @@ function drawSiteFoundations(mesh, model, plan, extendRunway) {
     const half = route.width / 2,
       p = atStation(route, a, -half, y), q = atStation(route, a, half, y),
       r = atStation(route, b, half, next), s = atStation(route, b, -half, next),
-      lower = ([x, y, z]) => [x, y - 0.22, z];
+      lower = ([x, y, z]) => [x, y - SITE_APPROACH_DECK_DEPTH, z];
     if (b - a < 1e-5) {
       // A stair riser is vertical at the end of the tread.
       mesh.quad(p, q, r, s, paving);
@@ -379,9 +387,13 @@ function siteSectionCuts(plan) {
   const cuts = [foundation];
   if (channel) {
     const span = row.transfers.reduce((a, b) => a.to - a.from >= b.to - b.from ? a : b);
+    const underside = plan.floor - SITE_PLATFORM_BEAM_TOP - span.depth, clearance = underside - plan.water.level,
+      [a, b] = plan.water.spans(row.at, span.from, span.to)
+        .sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))[0] ?? [span.from, span.to];
     cuts.push({ kind: 'canal-detail', title: 'Canal crossing · Bank bearings and girder',
-      note: `Study span ${(span.to - span.from).toFixed(1)} m between dry-bank bearings. The section shows the clear channel below.`,
-      at: row.at, angle: row.angle, from: span.from - 5, to: span.to + 5 });
+      note: `Study span ${(span.to - span.from).toFixed(1)} m between dry-bank bearings. Clear height above the study water level is ${clearance.toFixed(1)} m.`,
+      at: row.at, angle: row.angle, from: span.from - 5, to: span.to + 5,
+      clearance: { station: (a + b) / 2, underside, height: clearance } });
   }
   return [...cuts, ...['ramp', 'stair'].flatMap((kind) => {
     const route = accesses.find((entry) => entry.requested === kind && entry.kind === kind) ??
@@ -400,8 +412,29 @@ function siteSectionCuts(plan) {
   })];
 }
 
+function siteDistrictCut(plan, surface, registration) {
+  if (!surface) return null;
+  const [x, z] = plan.position, [cutX, avenueZ] = westVillageTenthAvenue(x, registration),
+    angle = Math.PI / 2, offset = x - cutX, at = siteLine(plan.position, angle, offset),
+    avenue = avenueZ - z, half = plan.terrain.size / 2,
+    water = siteFoundationWater(surface, plan.position, plan.terrain.size * 2),
+    river = siteFoundationWater({ existing: surface.existing }, plan.position, plan.terrain.size * 2)
+      .spans(at, Math.max(avenue, -half - z), half - z)
+      .sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))[0];
+  if (!river) return null;
+  water.level = plan.water.level;
+  const shifted = Math.abs(offset) > 0.1;
+  return {
+    kind: 'district', title: 'Bow River to 10 Avenue SW',
+    note: `North–south section looking west${shifted ? ' through the nearest mapped avenue crossing' : ' through the building placement'}.`,
+    at, angle, water, avenue, river: (river[0] + river[1]) / 2,
+    from: Math.max(-half - z, Math.min(avenue - 22, -plan.contextReach - 8)),
+    to: Math.min(half - z, Math.max(river[1] + 22, plan.contextReach + 8))
+  };
+}
+
 function siteSectionGround(plan, cut, canalDepth) {
-  const { at, from, to } = cut, { terrain, water, moat } = plan,
+  const { at, from, to, water = plan.water } = cut, { terrain, moat } = plan,
     ground = (station) => siteTerrainHeight(terrain, ...at(station)),
     reaches = water.spans(at, from, to).map(([start, end]) => ({ start, end, level: water.level, depth: canalDepth }));
   if (moat) {

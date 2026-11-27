@@ -114,7 +114,7 @@ The public realm runs around the building, through its greenhouse and over its r
 
 The designer expanded the entrance plaza into a promenade connecting the two lobbies and the climbing approach. Patios, seating, planting, sports and gathering areas occupy islands along the loop. Nearby programmes inform the activity mix.
 
-At a West Village placement, the designer asked the ground floor to rise above the terrain and span any canal beneath the core. The site study suspends the lower deck on piers stepped to dry ground. Deeper transfer girders carry the deck between bank bearings where it crosses water. A raised promenade meets the lobby doors, with stair and ramp approaches to local grade. The sections draw the sampled terrain and the proposed channel under the same raised assembly. Water clearance, spans and footing dimensions are study assumptions.
+At a West Village placement, the designer asked the ground floor to rise above the terrain and span any canal beneath the core with at least 5 m between the study water level and the underside of the crossing. The site study suspends the lower deck on piers stepped to dry ground. Deeper transfer girders carry the deck between bank bearings where it crosses water. A raised promenade meets the lobby doors, with stair and ramp approaches to local grade. The sections draw the sampled terrain and the proposed channel under the same raised assembly. A west-facing section locates the project between the Bow River and 10 Avenue SW. Water levels, spans and footing dimensions remain schematic.
 
 ### A public roof
 

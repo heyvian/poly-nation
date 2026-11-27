@@ -1,5 +1,9 @@
 # Changelog
 
+## West Village district section
+- Increase clearance over district water to 5 m and keep entry crossings level above the channel before descending to grade.
+- Show the full building in pale linework and add an automatically scaled west-facing district section from the Bow River to 10 Avenue SW.
+
 ## Terrain-responsive West Village foundations
 - Raise the ground floor over the sampled module envelope. Step foundations to dry ground, span canal crossings between bank bearings, and connect the raised lobby entrances to grade.
 - Generate vector sections through the foundations, canal crossings and entrance approaches from the active Site placement.
