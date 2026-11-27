@@ -147,7 +147,8 @@ function siteTerrainHeight(terrain, x, z) {
     d = elevations[i + count + 1];
   const ground =
     fx + fz <= 1 ? a + (b - a) * fx + (c - a) * fz : d + (c - d) * (1 - fx) + (b - d) * (1 - fz);
-  return ground - datum;
+  const level = ground - datum;
+  return terrain.groundProfile ? terrain.groundProfile(x, z, level) : level;
 }
 
 function siteMoatFootprint(moat, [x, z]) {
@@ -160,6 +161,49 @@ function siteMoatFootprint(moat, [x, z]) {
     triangles.push([a, b, c], [a, c, d]);
   }
   return triangles;
+}
+
+function siteCanalOpening(plan) {
+  if (!plan?.anchor) return null;
+  const { terrain, surface, crossingSoffit: soffit } = plan,
+    cells = Math.max(terrain.count - 1, 32), study = siteWaterStudy(terrain, surface, cells),
+    cell = (coordinate) => clamp(Math.floor((0.5 - coordinate / terrain.size) * cells), 0, cells - 1),
+    roof = { x: 0, y: 1, z: 0, level: soffit };
+  function dryParts(points, stripMast = false) {
+    if (points.every((p) => p[1] >= soffit)) return [points];
+    if (stripMast) {
+      const above = { ...roof, y: -1, level: -soffit },
+        part = points.length === 2 ? clipDrawingLine(...points, [above]) : clipDrawingPolygon(points, above);
+      return part?.length >= points.length ? [part] : [];
+    }
+    const columns = points.map((p) => cell(p[0])), rows = points.map((p) => cell(p[2])), candidates = new Set();
+    for (let i = Math.min(...rows); i <= Math.max(...rows); i++)
+      for (let j = Math.min(...columns); j <= Math.max(...columns); j++)
+        for (const planes of study.index[i * cells + j]) candidates.add(planes);
+    if (!candidates.size) return [points];
+    const volumes = [...candidates].map((planes) => [...planes, roof]);
+    if (points.length === 3) return terrainOutsideSiteWater(points, volumes);
+    let segments = [points];
+    for (const volume of volumes) segments = segments.flatMap(([a, b]) => {
+      const wet = clipDrawingLine(a, b, volume);
+      if (!wet) return [[a, b]];
+      const differs = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) > 1e-6;
+      return [[a, wet[0]], [wet[1], b]].filter(([start, end]) => differs(start, end));
+    });
+    return segments;
+  }
+  function append(target, points, stripMast = false, translate = null) {
+    for (const polygon of dryParts(points, stripMast)) {
+      const vertices = translate ? polygon.map(translate) : polygon;
+      if (points.length === 2) target.push(...vertices[0], ...vertices[1]);
+      else for (let j = 1; j + 1 < vertices.length; j++) target.push(...vertices[0], ...vertices[j], ...vertices[j + 1]);
+    }
+  }
+  return { append, trimMesh(mesh, start) {
+    const added = mesh.solid.splice(start);
+    for (let i = 0; i < added.length; i += 30)
+      append(mesh.solid, [added.slice(i, i + 10), added.slice(i + 10, i + 20), added.slice(i + 20, i + 30)]);
+  } };
 }
 
 function siteAssemblyMesh(
@@ -181,13 +225,13 @@ function siteAssemblyMesh(
     includeFoundations = true
   } = {}
 ) {
-  const mesh = meshBuilder(), siteMoat = supportPlan?.moat;
+  const mesh = meshBuilder(), siteMoat = supportPlan?.moat, finishedTerrain = supportPlan?.terrain ?? terrain;
   if (terrain && (includeTerrain || includeFoundations && siteMoat)) {
     const { size, elevations, datum } = terrain,
       count = natural?.raster ? Math.max(terrain.count, 81) : terrain.count,
       low = Math.min(...elevations),
       high = Math.max(...elevations),
-      interval = high - low > 50 ? 5 : 2,
+      interval = high - low > 50 ? 5 : 2, step = size / (count - 1),
       contour = rgb('#879685'),
       surface = supportPlan?.surface ?? water,
       districtSurface = surface && (showWater || siteMoat || supportPlan?.boatBay ? surface : { ...surface, existing: [] }),
@@ -204,7 +248,7 @@ function siteAssemblyMesh(
     const points = Array.from({ length: count ** 2 }, (_, i) => {
       const x = (0.5 - (i % count) / (count - 1)) * size,
         z = (0.5 - Math.floor(i / count) / (count - 1)) * size;
-      return [x, siteTerrainHeight(terrain, x, z), z];
+      return [x, siteTerrainHeight(finishedTerrain, x, z), z];
     });
     function tintNatural(color, x, z) {
       if (!natural?.raster) return color;
@@ -245,23 +289,37 @@ function siteAssemblyMesh(
       for (let col = 0; col < count - 1; col++) {
         const i = row * count + col;
         const candidates = waterPlanes(row * (count - 1) + col);
-        const triangles = [
-          [points[i], points[i + count], points[i + 1]],
-          [points[i + 1], points[i + count], points[i + count + 1]]
-        ];
-        for (const triangle of triangles) {
+        const emit = (triangle) => {
           if (!candidates?.length) patch(...triangle);
           else
             for (const land of terrainOutsideSiteWater(triangle, candidates))
               for (let j = 1; j + 1 < land.length; j++) patch(land[0], land[j], land[j + 1]);
+        };
+        const [x, , z] = points[i];
+        if (supportPlan?.gradeReach && Math.hypot(x - step / 2 - position[0], z - step / 2 - position[1]) <
+            supportPlan.gradeReach + step * Math.SQRT1_2) {
+          // Locally subdivide the DEM so that small berms and dock pads can actually follow the adjusted grades.
+          const divisions = Math.min(50, Math.ceil(step / 1.8)), delta = step / divisions,
+            grid = Array.from({ length: (divisions + 1) ** 2 }, (_, j) => {
+              const px = x - j % (divisions + 1) * delta, pz = z - Math.floor(j / (divisions + 1)) * delta;
+              return [px, siteTerrainHeight(finishedTerrain, px, pz), pz];
+            });
+          for (let a = 0; a < divisions; a++) for (let b = 0; b < divisions; b++) {
+            const j = a * (divisions + 1) + b, below = j + divisions + 1;
+            emit([grid[j], grid[below], grid[j + 1]]);
+            emit([grid[j + 1], grid[below], grid[below + 1]]);
+          }
+        } else {
+          emit([points[i], points[i + count], points[i + 1]]);
+          emit([points[i + 1], points[i + count], points[i + count + 1]]);
         }
       }
     }
     if (siteMoat && moat) {
-      addSiteMoat(mesh, terrain, siteMoat, moat, study, supportPlan.water, {
+      addSiteMoat(mesh, finishedTerrain, siteMoat, moat, study, supportPlan.water, {
         showWater, canalDepth, includeTerrain, color: siteMoat.connected ? '#4a939e' : '#79a8b0'
       });
-    } else if (includeTerrain) addSiteWater(mesh, terrain, study, { showWater, canalDepth });
+    } else if (includeTerrain) addSiteWater(mesh, finishedTerrain, study, { showWater, canalDepth });
     if (includeTerrain && natural?.trees.length) {
       mesh.mark('OpenStreetMap mapped trees');
       const bark = rgb('#7e7057'),
@@ -275,7 +333,7 @@ function siteAssemblyMesh(
           )
         )
           continue;
-        const y = siteTerrainHeight(terrain, x, z),
+        const y = siteTerrainHeight(finishedTerrain, x, z),
           radius = height * 0.28;
         mesh.box(x, y, z, 0.28, height * 0.64, 0.28, 0, bark);
         const ring = (angle) => [
@@ -300,7 +358,9 @@ function siteAssemblyMesh(
     extendRunway = supportPlan && model.crane?.runway === 'elevated' &&
       assembly.groups.some(({ layer }) => layer === 'Crane_Elevated_Runway_Columns'),
     supportMoat = siteMoat && assembly.groups.some(({ layer }) => layer === 'Crane_Moat_Runway');
-  if (supportPlan && includeFoundations) drawSiteFoundations(mesh, model, supportPlan, extendRunway || supportMoat, canalDepth);
+  const dryGeometry = siteCanalOpening(supportPlan);
+  if (supportPlan && includeFoundations)
+    drawSiteFoundations(mesh, model, supportPlan, extendRunway || supportMoat, canalDepth, dryGeometry);
   if (relativeToBuilding) {
     // Drawings clip and align to the building datum, even when the wider site is visible.
     for (const kind of ['solid', 'glass', 'lines']) {
@@ -312,6 +372,13 @@ function siteAssemblyMesh(
       }
     }
   }
+  const world = ([x, y, z, nx, ny, nz, r, g, b, alpha]) => [
+      cos * x - sin * z + siteX, y + foundation, sin * x + cos * z + siteZ,
+      cos * nx - sin * nz, ny, sin * nx + cos * nz, r, g, b, alpha
+    ],
+    local = relativeToBuilding ? ([x, y, z, ...rest]) => [x - siteX, y - foundation, z - siteZ, ...rest] : null,
+    keepX = relativeToBuilding ? 0 : siteX, keepY = relativeToBuilding ? 0 : foundation,
+    keepZ = relativeToBuilding ? 0 : siteZ, openingTop = supportPlan ? supportPlan.crossingSoffit - foundation - 1e-7 : 0;
   for (let groupIndex = 0; groupIndex < assembly.groups.length; groupIndex++) {
     const group = assembly.groups[groupIndex],
       next = assembly.groups[groupIndex + 1];
@@ -320,28 +387,28 @@ function siteAssemblyMesh(
     if (extendRunway && group.layer === 'Crane_Elevated_Runway_Columns') continue;
     if (siteMoat && /^(Crane_Moat|Crane_Moat_Water|Crane_Moat_Runway_Piers|Crane_Moat_Guards)$/.test(group.layer)) continue;
     mesh.mark(group.layer, group.name);
-    // Model north is +Z. Rotating the building and its normals together keeps the
-    // source materials and named component layers available in both viewers.
+    const protectUpperDocks = /^(Crane_|Dock(?:ing)?_|Modules?_|Assembly_(?:Open_|Module_|Dock_))/.test(group.layer) &&
+      group.layer !== 'Assembly_Dock_Stack_Supports',
+      cut = dryGeometry && !protectUpperDocks,
+      stripMast = supportPlan?.mastCrossing && group.layer === 'Swing_Tower';
     for (const kind of ['solid', 'glass', 'lines']) {
       const vertices = assembly[kind],
         target = mesh[kind],
-        limit = next?.[kind] ?? vertices.length;
-      for (let i = group[kind]; i < limit; i += 10) {
-        const [x, y, z, nx, ny, nz, r, g, b, alpha] = vertices.slice(i, i + 10);
+        limit = next?.[kind] ?? vertices.length, count = kind === 'lines' ? 2 : 3;
+      for (let i = group[kind]; i < limit; i += count * 10) {
+        const start = target.length;
+        if (cut && Math.min(vertices[i + 1], vertices[i + 11], count === 3 ? vertices[i + 21] : Infinity) < openingTop) {
+          const points = Array.from({ length: count }, (_, j) => world(vertices.slice(i + j * 10, i + (j + 1) * 10)));
+          dryGeometry.append(target, points, stripMast, local);
+        } else {
+          for (let j = 0; j < count; j++) {
+            const k = i + j * 10, x = vertices[k], z = vertices[k + 2], nx = vertices[k + 3], nz = vertices[k + 5];
+            target.push(cos * x - sin * z + keepX, vertices[k + 1] + keepY, sin * x + cos * z + keepZ,
+              cos * nx - sin * nz, vertices[k + 4], sin * nx + cos * nz, vertices[k + 6], vertices[k + 7], vertices[k + 8], vertices[k + 9]);
+          }
+        }
         if (kind === 'lines' && assembly.textureStrokes?.has(i))
-          mesh.textureStrokes.add(target.length);
-        target.push(
-          cos * x - sin * z + (relativeToBuilding ? 0 : siteX),
-          y + (relativeToBuilding ? 0 : foundation),
-          sin * x + cos * z + (relativeToBuilding ? 0 : siteZ),
-          cos * nx - sin * nz,
-          ny,
-          sin * nx + cos * nz,
-          r,
-          g,
-          b,
-          alpha
-        );
+          for (let at = start; at < target.length; at += 20) mesh.textureStrokes.add(at);
       }
     }
   }

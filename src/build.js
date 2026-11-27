@@ -913,6 +913,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   // Dock plates, paired cantilevers and their tie-back show the relationship to the ring.
   for (const slot of dockSlots) {
     const storey = buildStorey(model, slot.f, slabThickness),
+      slotStructure = dockStructure === 'columns' && model.siteWetBays?.has(slot.j) ? 'side-truss' : dockStructure,
       occupied = slot.p !== EMPTY || slot.use === 'retail',
       angle = slot.angle,
       base = storey.base,
@@ -922,7 +923,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       front = foot + MODULE.depth;
     const location = (radius, side, y) => [radius * dx - side * dz, y, radius * dz + side * dx];
     if (layers.docks) {
-      if (dockStructure === 'side-truss' || dockStructure === 'side-portal')
+      if (slotStructure === 'side-truss' || slotStructure === 'side-portal')
         drawDockFrame(
           mesh,
           model,
@@ -930,10 +931,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
           storey,
           'Assembly_Dock_Connections',
           true,
-          dockStructure === 'side-portal',
+          slotStructure === 'side-portal',
           MODULE_CASSETTE_DEPTH
         );
-      else drawAlternativeDock(mesh, model, slot, storey, dockStructure, MODULE_CASSETTE_DEPTH);
+      else drawAlternativeDock(mesh, model, slot, storey, slotStructure, MODULE_CASSETTE_DEPTH);
       if (crane) drawDockInsertionGuides(mesh, model, slot, base);
     }
     if (layers.facade || layers.docks) drawDockClosure(mesh, model, slot, storey);
@@ -967,7 +968,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
         buildStorey(model, span.slot.f, slabThickness).base, preview);
   }
   if (layers.docks && (dockStructure === 'roof-hung' || dockStructure === 'columns'))
-    drawSharedDockSupports(mesh, model, dockSlots, dockStructure, slabThickness);
+    drawSharedDockSupports(mesh, model, dockStructure === 'columns' && model.siteWetBays
+      ? dockSlots.filter((slot) => !model.siteWetBays.has(slot.j)) : dockSlots, dockStructure, slabThickness);
 
   // The guard glazing belongs to the walking surfaces, independent of façade visibility.
   if (layers.slabs) {

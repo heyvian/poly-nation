@@ -35,6 +35,7 @@ const siteWorkspace = (() => {
     mode = 'plan',
     revision = 0,
     assembly = null,
+    assemblyOptions = null,
     supportCache = null,
     scene = null,
     building = null,
@@ -165,13 +166,21 @@ const siteWorkspace = (() => {
   }
 
   function rebuild(fit = false) {
-    if (!terrain || !assembly || mode !== 'terrain' || panel.hidden) return;
+    if (!terrain || !building || mode !== 'terrain' || panel.hidden) return;
+    const plan = supportPlan(building);
+    if (!assembly || assembly.sitePlan !== plan) {
+      const { assignments, layers } = assemblyOptions;
+      assembly = buildAssemblyMesh(sitePlacementModel(building, plan), layers, 0, {
+        assignments, view: { seed: state.seed }, programColors: false, structureView: false, finishJoints: false
+      });
+      assembly.sitePlan = plan;
+    }
     if (!renderer && !fallback) {
       context = canvas.getContext('webgl', { antialias: true, alpha: false });
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
-    scene = siteAssemblyMesh(assembly, terrain, { ...sceneOptions(), model: building, supportPlan: supportPlan(building) });
+    scene = siteAssemblyMesh(assembly, terrain, { ...sceneOptions(), model: building, supportPlan: plan });
     if (renderer) uploadWebGLMesh(context, renderer, scene);
     if (fit) fitCurrentView();
     present();
@@ -197,17 +206,21 @@ const siteWorkspace = (() => {
         const spans = supports.rows.reduce((count, row) => count + row.transfers.length, 0),
           piled = supports.perimeter.runs.length || supports.rows.some((row) => row.landward.length),
           landward = piled ? ' Landward stem walls bear on schematic piles.' : '',
-          structure = spans ? `${spans} clear-span ${spans === 1 ? 'girder' : 'girders'} on dry-bank supports.${landward}`
+          clearance = spans ? Math.min(...supports.rows.flatMap((row) => row.transfers.map(({ depth }) =>
+            supports.crossingSoffit - depth - supports.water.level))) : 0,
+          structure = spans ? `The level above spans the canal with ${clearance.toFixed(1)} m minimum study clearance.${landward}`
             : piled ? 'Landward stem walls bear on schematic piles.' : 'Footings follow the local grade.',
           access = supports.accesses.length < 4 ? ' Some lobby approaches need a different alignment to reach dry grade.' : '',
           dryArea = supports.lowerRooms.reduce((total, room) => total + room.area, 0),
           dry = dryArea > 0 ? ` ${Math.round(dryArea)} m² of additional lower-level programme.` : '',
           boat = supports.boatBay ? ` ${Math.round(supports.boatBay.area)} m² covered firehall boat bay.` +
             (supports.boatBay.route ? '' : ' The crew approach still needs an alignment.') : '',
+          modules = building.slots.filter((slot) => supports.omitted.has(slot.i) && (slot.p !== EMPTY || slot.use === 'retail')).length,
+          clearBays = supports.omitted.size ? ` ${supports.omitted.size} ground-level dock bays cleared at the water (${modules} enclosed modules).` : '',
           moat = supports.moat?.connected ? ' The moat shares the district water level.' : '',
           runway = (supports.runway ?? supports.moat?.runway)?.unresolved ? ' Long runway crossings need a separate span study.' : '';
         supportStatus.textContent = (supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' : structure) +
-          access + dry + boat + moat + runway;
+          access + clearBays + dry + boat + moat + runway;
       }
     } else {
       delete $('sitePlacementStatus').dataset.elevation;
@@ -466,6 +479,9 @@ const siteWorkspace = (() => {
     get drawingBearing() {
       return sceneOptions().bearing;
     },
+    placedModel(model) {
+      return sitePlacementModel(model, supportPlan(model));
+    },
     composeDrawing(mesh, model) {
       return terrain
         ? siteAssemblyMesh(mesh, terrain, { ...sceneOptions(), relativeToBuilding: true, model, supportPlan: supportPlan(model) })
@@ -474,15 +490,15 @@ const siteWorkspace = (() => {
     sectionStudy(model, assignments) {
       const plan = supportPlan(model);
       if (!plan) return null;
-      const { dockStructure, slabThickness } = buildViewLayers(),
+      const placed = sitePlacementModel(model, plan), { dockStructure, slabThickness } = buildViewLayers(),
         layers = { dockStructure, slabThickness, slabs: true, frame: true, facade: true,
           docks: true, modules: true, crane: Boolean(plan.moat || plan.runway), moduleInteriors: false },
         view = { ...state, craneStage: 'parked' },
-        building = buildAssemblyMesh(model, layers, Math.min(2, model.layers.length),
+        building = buildAssemblyMesh(placed, layers, Math.min(2, model.layers.length),
           { assignments, view, craneSettings: view }),
         placement = { ...sceneOptions(), relativeToBuilding: true, includeTerrain: false, model, supportPlan: plan },
         mesh = siteAssemblyMesh(building, terrain, placement),
-        overview = buildMesh(model, false, { ...view, floors: model.layers.length, inspect: 0, grid: false,
+        overview = buildMesh(placed, false, { ...view, floors: model.layers.length, inspect: 0, grid: false,
           xray: false, programEditing: false, showRooms: false, showFacade: true, showModules: true,
           roof: true, showRoofDeck: true, supports: false }),
         context = siteAssemblyMesh(overview, terrain, { ...placement, includeFoundations: false }),
@@ -490,6 +506,7 @@ const siteWorkspace = (() => {
       return { plan, mesh, context, district, surface: plan.surface, canalDepth: placement.canalDepth };
     },
     open(model, assignments) {
+      const modelChanged = building !== model;
       building = model;
       // Site shows the finished project, using the selected system and slab from Build.
       const { dockStructure, slabThickness } = buildViewLayers(),
@@ -500,16 +517,10 @@ const siteWorkspace = (() => {
           moduleInteriors: false
         },
         next = JSON.stringify([assignments, layers]);
-      if (assembly?.siteModel !== model || signature !== next) {
+      if (modelChanged || signature !== next) {
         signature = next;
-        assembly = buildAssemblyMesh(model, layers, 0, {
-          assignments,
-          view: { seed: state.seed },
-          programColors: false,
-          structureView: false,
-          finishJoints: false
-        });
-        assembly.siteModel = model;
+        assemblyOptions = { assignments, layers };
+        assembly = null;
         scene = null;
       }
       updatePlan();

@@ -1,5 +1,9 @@
 # Changelog
 
+## One-storey canal crossing
+- Set the dry ground floor near grade. Open its footprint over the canal and move the bank-to-bank transfer grid to the first elevated deck.
+- Clear intersecting ground-level dock bays in Site and site-inclusive drawings. Show the measured opening in the vector section set.
+
 ## West Village water and lower level
 - Join the crane moat to intersecting waterways at the district study level. Keep the elevated rails level over terrain-adjusted supports and strengthen ring spans at channel openings.
 - Fit separate lower-level programme into usable landward bays. Add a canal-fed firehall boat garage where the placement admits one. Show both in the vector site sections without changing the building programme totals.

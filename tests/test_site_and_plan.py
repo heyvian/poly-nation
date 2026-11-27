@@ -254,7 +254,6 @@ with serve_lab(root) as url, sync_playwright() as p:
       const water = {level: 1044, existing: [],
         proposed: [[[-6,-100], [6,-100], [6,100]], [[-6,-100], [6,100], [-6,100]]]};
       const plan = siteFoundationPlan(model, terrain, { position: [0,0], bearing: 24, grade: 0, water });
-      const envelope = model.R + BUILD_SECTION.dockGap + MODULE.depth + 2;
       const spans = plan.rows.flatMap(row => row.transfers);
       const ramps = plan.accesses.filter(route => route.kind === 'ramp');
       const mesh = meshBuilder();
@@ -265,14 +264,28 @@ with serve_lab(root) as url, sync_playwright() as p:
           .flatMap((x, j, points) => j % 10 === 0 ? [[x, points[j + 2]]] : []);
       });
       const cuts = siteSectionCuts(plan);
-      return plan.floor > siteTerrainMaximum(terrain, [0, 0], envelope) + 0.95 && spans.length > 0 &&
+      const source = meshBuilder(), concrete = rgb('#556f66'), top = plan.crossingSoffit - plan.foundation;
+      source.mark('Core_Test_Ground');
+      source.box(0, 0, 0, 20, top, 6, 0, concrete);
+      source.mark('Core_Test_Upper');
+      source.box(0, top, 0, 20, 0.24, 6, 0, concrete);
+      const clipped = siteAssemblyMesh({ ...source, H: 10, extent: 15 }, terrain,
+        { bearing: 0, supportPlan: plan, model, includeTerrain: false, includeFoundations: false });
+      const lower = clipped.solid.slice(0, clipped.groups[1].solid), placed = sitePlacementModel(model, plan);
+      const exactModules = placed.slots.every((slot, i) => plan.omitted.has(slot.i)
+        ? slot.f === 0 && slot.blocked && slot.p === EMPTY : slot === model.slots[i]);
+      return plan.floor < plan.water.level + 2 && Math.abs(plan.crossingDeck - plan.floor - modelFloorPitch(model)) < 1e-6 &&
+        exactModules && plan.omitted.size > 0 && spans.length > 0 && lower.length > 0 &&
+        plan.runway.lift > 0 && Math.abs(placed.crane.groundRail + plan.foundation - plan.runway.head) < 1e-6 &&
+        lower.every((x, i) => i % 10 || Math.abs(x) >= 6 - 1e-6 || lower[i + 1] >= plan.crossingSoffit - 1e-6) &&
+        clipped.solid.length - lower.length === source.solid.length - source.groups[1].solid &&
         landward.length > 0 && landward.every(point => !plan.water.overlaps(point, 5)) &&
         plan.rows.some(row => row.supports.some(support => support.bank && plan.water.overlaps(row.at(support.at), 5))) &&
         plan.rows.every(row => row.supports.every(support => !plan.water.overlaps(row.at(support.at), 1.3))) &&
-        spans.every(span => plan.floor - SITE_PLATFORM_BEAM_TOP - span.depth >= plan.water.level + 5 - 1e-6) &&
+        spans.every(span => plan.crossingSoffit - span.depth > plan.water.level + 2.7) &&
         ramps.length > 0 && ramps.every(({ nodes }) => nodes.slice(1).every(([station, y], i) =>
           Math.abs(y - nodes[i][1]) <= (station - nodes[i][0]) / 20 + 1e-6)) &&
-        plan.accesses.some(route => route.kind === 'stair') && cuts.some(cut => cut.kind === 'canal-detail') &&
+        cuts.some(cut => cut.kind === 'canal-detail') &&
         cuts.some(cut => cut.kind === 'piled-detail');
     }''')
     assert page.evaluate('''() => {

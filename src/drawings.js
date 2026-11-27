@@ -1000,7 +1000,7 @@ const openDrawingWorkspace = (() => {
         drawingY = detail ? 414 : 142,
         region = { width: w - 2 * margin - (cut.labels ? 280 : 0), height: h - drawingY - 65 },
         frame = renderDrawing(geometry, camera, [
-          plane, { normal, offset: offset - 5, flip: true },
+          plane, { normal, offset: offset - (kind === 'boat-garage' ? 1.55 : 5), flip: true },
           { normal: along, offset: to }, { normal: along, offset: from, flip: true },
           { normal: [0, 1, 0], offset: upper - plan.foundation }
         ], paper, 'auto', false, centeredPlacement(), false, pens, { region, focus, cutFill: true, scales }),
@@ -1351,9 +1351,10 @@ const openDrawingWorkspace = (() => {
           const { R, lobby, slots, feature } = sourceModel, crane = planModuleCrane(sourceModel, settings.craneRunway);
           model = { ...sourceModel, crane, plaza: designPlaza(R, lobby, slots, feature.climbing, crane) };
         }
-        const mesh = settings.source === 'build'
-          ? buildAssemblyMesh(model, buildViewLayers(), 0, preview)
-          : buildMesh(model, false, view, preview);
+        const placed = includeSite ? siteWorkspace.placedModel(model) : model,
+          mesh = settings.source === 'build'
+          ? buildAssemblyMesh(placed, buildViewLayers(), 0, preview)
+          : buildMesh(placed, false, view, preview);
         geometry = drawingGeometry(includeSite ? siteWorkspace.composeDrawing(mesh, model) : mesh, sourceModel);
         renderedGeometryMode = mode;
       }
