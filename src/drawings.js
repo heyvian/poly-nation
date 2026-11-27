@@ -180,7 +180,7 @@ const openDrawingWorkspace = (() => {
   const lobbyKey = (hub) => [hub.f, hub.band, hub.start.toFixed(5), ...hub.pair].join('/');
   const selectedLobby = (plane) =>
     plane?.lobbyKey &&
-    sourceModel?.circulation.hubs.find((hub) => hub.layout && lobbyKey(hub) === plane.lobbyKey);
+    (sourceModel ? coreLobbies(sourceModel.circulation) : []).find((hub) => hub.layout && lobbyKey(hub) === plane.lobbyKey);
   const focusedLobbyPlan = (plane = currentPlane()) =>
     settings.view === 'aligned' && plane?.axis === 'horizontal' ? selectedLobby(plane) : null;
   function lobbyPlanFrame(hub, includeSite) {
@@ -771,7 +771,7 @@ const openDrawingWorkspace = (() => {
   }
 
   function renderLobbyPages(paper) {
-    const hubs = sourceModel.circulation.hubs
+    const hubs = coreLobbies(sourceModel.circulation)
       .filter((hub) => hub.layout)
       .sort((a, b) => a.f - b.f || a.start - b.start);
     const views = settings.lobbyViews === 'both' ? ['axo', 'plan'] : [settings.lobbyViews],
@@ -792,7 +792,7 @@ const openDrawingWorkspace = (() => {
         az = heading + (direction * Math.PI) / 4,
         south = [-Math.cos(heading), 0, -Math.sin(heading)],
         level = studyFloorName(hub.f, sourceModel),
-        names = hub.pair.map((program) => P[program].name).join(' + ');
+        names = coreLobbyName(hub);
       return views.map((view) => {
         const isPlan = view === 'plan',
           projection = isPlan
@@ -966,7 +966,7 @@ const openDrawingWorkspace = (() => {
         settings.placement.modelUnits = true;
         saveDrawing();
       }
-      const lobbyTitle = lobby && `Shared lobby plan · Level ${lobby.f + 1}`,
+      const lobbyTitle = lobby && `${lobby.publicLobby ? coreLobbyName(lobby) : "Shared lobby"} plan · Level ${lobby.f + 1}`,
         { width, height, margin, denominator } = rendered,
         ruleY = height - margin * 1.8,
         textY = height - margin,
@@ -1226,13 +1226,13 @@ const openDrawingWorkspace = (() => {
     ])
       $(id).disabled = detail;
     $('drawingPlanes').hidden = detail;
-    const availableLobbies = sourceModel?.circulation.hubs.filter((hub) => hub.layout) ?? [];
+    const availableLobbies = (sourceModel ? coreLobbies(sourceModel.circulation) : []).filter((hub) => hub.layout);
     for (const id of ['drawingLobbyCut', 'drawingLobbyPlan']) {
       $(id + 'Field').hidden = detail;
       $(id).replaceChildren(
         new Option(availableLobbies.length ? 'Choose a shared lobby' : 'No shared lobbies in this design', ''),
         ...availableLobbies.map((hub) => new Option(
-          `Level ${hub.f + 1} · ${hub.pair.map((p) => P[p].name).join(' + ')}`, lobbyKey(hub)))
+          `Level ${hub.f + 1} · ${coreLobbyName(hub)}`, lobbyKey(hub)))
       );
       $(id).disabled = !availableLobbies.length;
     }
@@ -1407,7 +1407,7 @@ const openDrawingWorkspace = (() => {
     queueDrawing();
   };
   function applyLobbyCut(key, axis) {
-    const hub = sourceModel.circulation.hubs.find(
+    const hub = coreLobbies(sourceModel.circulation).find(
       (candidate) => candidate.layout && lobbyKey(candidate) === key
     );
     if (!hub) return;

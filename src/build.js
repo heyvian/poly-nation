@@ -815,9 +815,9 @@ function buildAssemblyMesh(model, layers, levels, preview) {
         }
       }
     }
-    if (layers.slabs || layers.walls) for (const hub of model.circulation.hubs) {
+    if (layers.slabs || layers.walls) for (const hub of coreLobbies(model.circulation)) {
       if (hub.f !== f || !hub.layout) continue;
-      mark(`Circulation_L${f + 1}_Shared_Lobby`, `Lobby ${hub.start.toFixed(3)}`);
+      mark(`Circulation_L${f + 1}_${hub.publicLobby ? "Public" : "Shared"}_Lobby`, `Lobby ${hub.start.toFixed(3)}`);
       drawSharedLobbyFloor(mesh, hub, base + 0.006);
       drawSharedLobby(mesh, hub, base + 0.006, preview.view?.seed, true);
     }

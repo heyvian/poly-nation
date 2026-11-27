@@ -47,7 +47,7 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
         region.lobbyRouteId === hub.lobbyId &&
         region.route === 'outerLanding'
           ? 'Corridor'
-          : '';
+          : hub.publicLobby && region.kind === 'bridgeAccess' ? 'Bridge approach' : '';
       contextSector(region, CIRCULATION_FLOOR_FINISH, 0, true, label);
     }
     mesh.mark('Core_Lobby_Context');
@@ -66,7 +66,7 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
       );
     }
   }
-  mesh.mark(`Circulation_L${hub.f + 1}_Shared_Lobby`);
+  mesh.mark(`Circulation_L${hub.f + 1}_${hub.publicLobby ? "Public" : "Shared"}_Lobby`);
   drawSharedLobbyFloor(mesh, hub, 0);
   drawSharedLobby(mesh, hub, 0, seed, true);
   return { geometry: drawingGeometry(mesh), labels };
@@ -192,13 +192,13 @@ function studyFloor(model, floor, kind) {
     );
   }
   if (!programme) {
-    for (const q of [...model.circulation.regions, ...model.circulation.hubs]) {
+    for (const q of [...model.circulation.regions, ...coreLobbies(model.circulation)]) {
       if (q.f !== floor) continue;
       if (q.kind === 'lobbyDivider') {
         put(studyArc(q.r, q.R, q.start, q.end), '#536157');
         continue;
       }
-      const key = q.kind === 'elevator' ? 'lift' : q.kind === 'hub' ? 'lobby' : 'corridor';
+      const key = q.kind === 'elevator' ? 'lift' : q.kind === 'hub' || q.publicLobby ? 'lobby' : 'corridor';
       put(
         studyArc(q.r, q.R, q.start, q.end),
         CIRCULATION_COLOURS[key],

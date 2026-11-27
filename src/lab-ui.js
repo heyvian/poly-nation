@@ -1218,7 +1218,8 @@ function update() {
       ['Corridors / links', m.circulation.corridorArea - m.circulation.bridgeArea, '#eee9da'],
       ['Atrium bridges / stairs', m.circulation.bridgeArea, '#d9bb87'],
       ['Elevator blocks', m.circulation.elevatorArea, '#777a91'],
-      ['Shared lobbies', m.circulation.hubArea, '#80509e']
+      ['Shared lobbies', m.circulation.hubArea, '#80509e'],
+      ['Public core lobbies', m.circulation.publicLobbyArea ?? 0, '#ab8cbd']
     ]) {
       if (value < 0.01) continue;
       rows += `<tr><td><i class="dot" style="background:${color}"></i>${name}</td><td>—</td><td>${fmt(value)}</td><td>—</td><td><b>${fmt(value)}</b></td><td>—</td></tr>`;
@@ -1362,6 +1363,8 @@ $('export').onclick = () => {
         roomPacking: m.circulation.roomPacking,
         regions: m.circulation.regions,
         hubs: m.circulation.hubs,
+        publicLobbies: m.circulation.publicLobbies,
+        publicLobbyArea: m.circulation.publicLobbyArea,
         doors: m.circulation.doors
       },
       coreRooms: m.rooms.map((s) => ({ ...s, program: P[s.id].id })),

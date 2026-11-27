@@ -15,4 +15,4 @@ Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve th
 
 `test_shared_lobbies.py` checks lobby fit for smaller programme pairs, aisle alignment on one- and two-corridor floors, stocked and wall-fitted shelves, furniture clearances, visitor routes, the lobby plan and section presets, lens stops, crop anchoring, black cut fills with open voids, and the contextual lobby drawing set with its local compass, scale, print pages and vector SVG export.
 
-`test_atrium_render.py` checks full shared lobbies on core and bridge routes, casework-supported quarter domes, wall-scribed benches, paper pendant placement, close zoom, reachable atrium stairs, bridge bearings, lighting controls and Render restoration.
+`test_atrium_render.py` checks full shared lobbies on core and bridge routes, casework-supported quarter domes, wall-scribed benches, paper pendant placement, furnished residual bays in the six-level seed 609 layout, close zoom, reachable atrium stairs, bridge bearings, lighting controls and Render restoration.

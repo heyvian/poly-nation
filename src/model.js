@@ -1512,6 +1512,113 @@ function preferredLobbyLayout(next, current) {
   return (nextNear && !currentNear) || (nextConnected && !currentConnected);
 }
 
+function coreLobbies(circulation) {
+  return [...circulation.hubs, ...(circulation.publicLobbies ?? [])];
+}
+
+function coreLobbyName(lobby) {
+  if (lobby.publicLobby) return lobby.access?.type === 'bridge' ? 'Bridge lobby' : 'Public lobby';
+  return lobby.pair.map((id) => P[id].name).join(' + ');
+}
+
+// Furnish only the surplus left after the final room, dock and slide layout. The
+// original bay keeps a radial lane and two end connections as public circulation.
+function furnishOpenCoreBays(circulation) {
+  const { regions, width } = circulation,
+    bridgeApproaches = regions.filter((q) => q.kind === 'bridgeAccess'),
+    publicLobbies = [];
+  const area = ({ r, R, start, end }) => (R ** 2 - r ** 2) * (end - start) / 2;
+  const piece = (q, geometry) => {
+    const shape = { ...q, ...geometry };
+    return { ...shape, area: area(shape) };
+  };
+
+  function fit(q, side) {
+    const laneEnd = (side < 0 ? q.start : q.end) - side * width / q.r,
+      start = side < 0 ? laneEnd : q.start,
+      end = side > 0 ? laneEnd : q.end,
+      apron = Math.max(1.25, width * 0.55),
+      r = q.r + apron,
+      R = q.R - apron;
+    if (R - r < 4.15 || (end - start) * r < 2.55) return null;
+    const radius = (r + R) / 2;
+    // Wide bays can use both halves of the shared-lobby furniture. Compact
+    // pockets use one full seating bay facing the clear passage.
+    for (const seatingSides of [[-1, 1], [side]]) {
+      const twoSided = seatingSides.length === 2,
+        passage = twoSided ? width * 0.8 : 0.92,
+        edge = passage / 2,
+        heading = twoSided ? (start + end) / 2 :
+          (side < 0 ? start : end) - side * Math.asin((edge + 0.10) / r),
+        axis = [Math.cos(heading), Math.sin(heading)],
+        origin = axis.map((component) => radius * component);
+      for (const tableRadius of [0.88, 0.76, 0.64]) {
+        const couchDepth = 0.78,
+          couchInner = tableRadius + 0.28,
+          couchOuter = couchInner + couchDepth,
+          shelfOuter = couchOuter + 0.24,
+          arch = shelfOuter + 0.13,
+          layout = { heading: (start + end) / 2, radius, origin, axis, passage, seatingSides,
+            tableRadius, couchDepth, couchInner, couchOuter, shelfOuter, arch };
+        const hub = piece(q, { r, R, start, end, kind: 'publicLobby', publicLobby: true, pair: [], doors: [], layout });
+        const fits = (along, across) => {
+          const [x, , z] = sharedLobbyPoint(hub, along, across, 0);
+          return sharedLobbyContains(hub, x, z, 0.055);
+        };
+        const seatFits = seatingSides.every((sign) =>
+          Array.from({ length: 25 }, (_, i) => i * Math.PI / 24).every((angle) =>
+            fits((shelfOuter + 0.065) * Math.cos(angle), sign * (edge + (shelfOuter + 0.065) * Math.sin(angle)))
+          )
+        );
+        if (!seatFits || ![-1, 1].every((sign) =>
+          [-edge, edge].every((across) => fits(sign * arch, across)))) continue;
+
+        layout.publicEntries = [
+          { angle: heading, radius: r, along: -arch, inside: true },
+          { angle: heading, radius: R, along: arch, inside: false }
+        ];
+        if (!twoSided)
+          layout.publicEntries.push({
+            angle: laneEnd, radius: radius / Math.cos(heading - laneEnd), along: 0, angular: side
+          });
+        return {
+          hub,
+          walk: [
+            piece(q, { R: r }),
+            piece(q, { r: R }),
+            piece(q, { r, R, start: side > 0 ? laneEnd : q.start, end: side < 0 ? laneEnd : q.end })
+          ]
+        };
+      }
+    }
+    return null;
+  }
+
+  circulation.regions = regions.flatMap((q) => {
+    if (q.kind !== 'residual' || q.area < 34) return [q];
+    const neighbours = [-1, 1].map((side) => ({
+      side, access: bridgeApproaches.find((a) => a.f === q.f &&
+        Math.min(a.R, q.R) - Math.max(a.r, q.r) > width &&
+        angDist(side < 0 ? q.start : q.end, side < 0 ? a.end : a.start) < 1e-7)
+    }));
+    neighbours.sort((a, b) => Number(Boolean(b.access)) - Number(Boolean(a.access)));
+    for (const { side, access } of neighbours) {
+      const plan = fit(q, side);
+      if (!plan) continue;
+      const { hub, walk } = plan;
+      hub.lobbyId = circulation.hubs.length + publicLobbies.length;
+      if (access) hub.access = { type: 'bridge', connected: true };
+      publicLobbies.push(hub);
+      return walk;
+    }
+    return [q];
+  });
+  circulation.publicLobbies = publicLobbies;
+  circulation.publicLobbyArea = publicLobbies.reduce((sum, lobby) => sum + lobby.area, 0);
+  circulation.area -= circulation.publicLobbyArea;
+  circulation.corridorArea -= circulation.publicLobbyArea;
+}
+
 function roomAt(rooms, angle) {
   for (const s of rooms) {
     if (mod(angle - s.start, TAU) < s.end - s.start + 1e-8) return s.id;
@@ -2489,6 +2596,7 @@ function derive(dockVariant = state.dockVariant) {
       ringArea + circulation.bridgeArea + court + count * MODULE.area + roofPlan.serviceArea,
     total = primary + retail + roofPlan.retailArea;
   const plaza = designPlaza(R, lobby, slots, feature.climbing);
+  furnishOpenCoreBays(circulation);
   const layout = {
     R,
     r,

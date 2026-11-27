@@ -1,5 +1,9 @@
 # Changelog
 
+## Public lobbies in open core bays
+- Fitted furnished lobbies into large leftover core bays and gave bridge-side arrivals first choice of orientation. Each bay keeps a full-width radial lane and connections at both ends.
+- Added the public lobbies to floor-area reporting, visitor routing, lighting and lobby drawings.
+
 ## Fitted lobby benches and paper lights
 - Filled the clear gaps between the curved casework and programme walls with continuous, wall-scribed upholstered benches. The fit respects the planters and routes through each arch.
 - Densified the overhead timber lattice while keeping the same support locations. Hung a paper ring pendant above the table, with coloured tabs inspired by the building's docking bays.

@@ -2634,7 +2634,8 @@ function lobbyCanopyPattern(hub, seed) {
   const { axis, couchOuter, passage, tableRadius } = hub.layout,
     sample = random(sharedLobbySeed(hub, seed) ^ 0x21bebc31);
   if (!axis || sample() >= 0.46) return null;
-  const sign = sample() < 0.5 ? -1 : 1,
+  const usualSide = sample() < 0.5 ? -1 : 1,
+    sign = hub.layout.seatingSides?.length === 1 ? hub.layout.seatingSides[0] : usualSide,
     radius = couchOuter + 0.123,
     angle = Math.PI / 2 + 0.005 + 0.012 / (couchOuter + 0.018),
     spread = tableRadius * 0.72,
@@ -2762,6 +2763,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     base = rgb('#374b43'),
     tabletop = rgb('#d9ba91'),
     lobbySeed = sharedLobbySeed(hub, seed),
+    seatingSides = hub.layout.seatingSides ?? [-1, 1],
     cabinetRandom = random(lobbySeed ^ 0x546b2829),
     contentsRandom = random(lobbySeed ^ 0x3c6ef372);
   const point = (along, across, up) => sharedLobbyPoint(hub, along, across, y + up);
@@ -2874,10 +2876,10 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       centreBottom = point(0, 0, bottom);
     // The rounded ends and straight aisle edges form one closed perimeter.
     const perimeter = [1, -1].flatMap((side) =>
-      Array.from({ length: steps + 1 }, (_, i) => {
+      seatingSides.includes(side) ? Array.from({ length: steps + 1 }, (_, i) => {
         const angle = ((side > 0 ? i : steps - i) * Math.PI) / steps;
         return [rugRadius * Math.cos(angle), side * (edge + rugRadius * Math.sin(angle))];
-      })
+      }) : [[side * rugRadius, side * edge], [-side * rugRadius, side * edge]]
     );
     for (let i = 0; i < perimeter.length; i++) {
       const from = perimeter[i],
@@ -2911,8 +2913,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       [couchInner - 0.065, couchInner - 0.018, rugBinding],
       [rugRadius - 0.065, rugRadius - 0.021, rugBinding]
     ]) {
-      arc(1, inner, outer, color);
-      arc(-1, inner, outer, color);
+      for (const sign of seatingSides) arc(sign, inner, outer, color);
       for (const [a, b] of [
         [-outer, -inner],
         [inner, outer]
@@ -2926,7 +2927,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
         );
     }
     // Wider tabs at the opposite ends refer to the two entrances through the core.
-    for (const sign of [-1, 1])
+    for (const sign of seatingSides)
       for (const dock of docks)
         arc(
           sign,
@@ -2951,7 +2952,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
   // lounge free so the public approaches can turn past the planted arches.
   function shelfLimit(sign, angle) {
     let low = shelfOuter,
-      high = shelfOuter + (hub.R - hub.r);
+      high = shelfOuter + (hub.publicLobby ? 0.28 : hub.R - hub.r);
     for (let i = 0; i < 12; i++) {
       const at = (low + high) / 2,
         along = at * Math.cos(angle),
@@ -2997,7 +2998,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
   mark(`Circulation_L${hub.f + 1}_Shared_Rugs`, `Woven lobby rug ${hub.start.toFixed(3)}`);
   drawRug();
   mark(`Circulation_L${hub.f + 1}_Shared_Furniture`, `Shared gathering ${hub.start.toFixed(3)}`);
-  for (const sign of [-1, 1]) {
+  for (const sign of seatingSides) {
     // A broad half-round table and a regular-depth upholstered seat face each other.
     strip(sign, 0.005, tableRadius, 0.69, 0.075, tabletop);
     block(0, sign * (edge + tableRadius * 0.48), 0.037, 0.29, 0.65, 0.32, base);
@@ -3112,8 +3113,8 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     `Circulation_L${hub.f + 1}_Shared_Shelving`,
     `Fitted timber casework ${hub.start.toFixed(3)}`
   );
-  for (const [side, bays] of shelves.entries()) {
-    const sign = side ? 1 : -1;
+  for (const sign of seatingSides) {
+    const bays = shelves[sign > 0 ? 1 : 0];
     for (const { start, end, outer, height, type, extraShelves, nook } of bays) {
       const low = type === 'seat',
         high = cabinetTop({ type, height, extraShelves }),
@@ -3173,7 +3174,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     mark(`Circulation_L${hub.f + 1}_Shared_Nook_Benches`, `Casework benches ${hub.start.toFixed(3)}`);
     for (const drawSeat of nookSeats) drawSeat();
   }
-  for (const [i, along] of [-arch, arch].entries()) {
+  for (const [i, along] of (hub.publicLobby ? [] : [-arch, arch]).entries()) {
     // Each programme owns the arch at the end where its room door meets the lobby.
     const door = hub.doors?.find((door) => Math.sign(door.along) === Math.sign(along)),
       programIndex = door?.program ?? hub.pair?.[i],
@@ -3186,7 +3187,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     drawLobbyArch(mesh, point, heading, along, edge, program, seed, assembly);
   }
   // The cabinet shoulder and the room wall define the full depth of each built-in seat.
-  for (const { sign, slices } of lobbyWallBenchRuns(hub, shelfLimit)) {
+  for (const { sign, slices } of (hub.publicLobby ? [] : lobbyWallBenchRuns(hub, shelfLimit))) {
     const first = slices[0].angle, last = slices.at(-1).angle;
     const edgeAt = (angle, edge) => {
       const index = clamp((slices.length - 1) * (angle - first) / (last - first), 0, slices.length - 1),
@@ -3253,6 +3254,8 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     mark(`Circulation_L${hub.f + 1}_Shared_Paper_Pendant`, `Poly Nation paper lantern ${hub.start.toFixed(3)}`);
     drawLobbyPendant(mesh, canopy.center, at(canopy.angle, canopy.pitch)[1]);
   }
+  // Open public bays have an unobstructed entrance. Only paired lobbies have planted thresholds.
+  if (hub.publicLobby) return;
   // Use a local random sequence so the same lobby keeps its plants in every workspace.
   const sample = random(lobbySeed);
   mark(`Circulation_L${hub.f + 1}_Shared_Planting`, `Lobby plants ${hub.start.toFixed(3)}`);
@@ -3413,7 +3416,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   }
   // Circulation uses cut-out spaces between the rooms, visible in plan and section.
   const circulation = m.circulation;
-  for (const q of [...circulation.regions, ...circulation.hubs]) {
+  for (const q of [...circulation.regions, ...coreLobbies(circulation)]) {
     if (!visible(q.f)) continue;
     if (q.kind === 'lobbyDivider') {
       const { base, soffit } = buildStorey(m, q.f);
@@ -3424,10 +3427,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const y = q.f * floorH + 0.46,
       kind = q.kind,
       isLift = kind === 'elevator',
-      isHub = kind === 'hub',
+      isHub = kind === 'hub' || q.publicLobby,
       color = isLift ? rgb('#777a91') : isHub ? rgb('#80509e') : CIRCULATION_FLOOR_FINISH;
     mark(
-      `Circulation_L${q.f + 1}_${isLift ? 'Lift_' + (q.block + 1) : isHub ? 'Shared_' + P[q.pair[0]].id + '_' + P[q.pair[1]].id : kind}`,
+      `Circulation_L${q.f + 1}_${isLift ? 'Lift_' + (q.block + 1) : q.publicLobby ? 'Public_Lobby' : isHub ? 'Shared_' + P[q.pair[0]].id + '_' + P[q.pair[1]].id : kind}`,
       `${kind}_${q.f + 1}_${q.start.toFixed(3)}`
     );
     if (isHub && q.layout) drawSharedLobbyFloor(b, q, y + 0.075);
@@ -4163,7 +4166,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           );
         }
       }
-      for (const q of [...m.circulation.regions, ...m.circulation.hubs]) {
+      for (const q of [...m.circulation.regions, ...coreLobbies(m.circulation)]) {
         if (q.kind === 'elevator' || !visible(q.f)) continue;
         const rad = (q.r + q.R) / 2,
           span = (q.end - q.start) * rad,
@@ -4174,10 +4177,12 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         for (let k = 0; k < count; k++) {
           const t = count === 1 ? 0.5 : (k + 0.3) / count,
             a = q.start + (q.end - q.start) * t;
+          const [x, , z] = q.publicLobby ? sharedLobbyPoint(q, (t - 0.5) * 2, 0, baseY) :
+            [rad * Math.cos(a), baseY, rad * Math.sin(a)];
           putPerson(
-            rad * Math.cos(a),
+            x,
             baseY,
-            rad * Math.sin(a),
+            z,
             a + (q.kind === 'hub' ? 0 : Math.PI / 2),
             rng() < 0.11 && q.kind !== 'hub'
           );

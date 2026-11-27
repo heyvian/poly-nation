@@ -109,6 +109,49 @@ with serve_lab(root) as url, sync_playwright() as p:
     }''')
     assert all(result.values()), result
 
+    saved_bays = page.evaluate('''() => {
+      const previous = state, placePublicLobbies = furnishOpenCoreBays;
+      state = { ...defaults(), seed: 609, dockVariant: 14, floors: 6, modules: 53, affinity: 0,
+        footprint: 4700, slideLength: 60, split: [80, 25, 89, 50, 26], vacancy: [16, 18, 40, 26], atriumBridges: 'radial',
+        relations: {'1-3':'repel', '1-4':'attract', '3-4':'attract', '0-2':'attract'},
+        cluster: [false, false, true, false, false], visitorCount: 52,
+        points: [[0.2218737284342448, -0.4040688266273306], [0.6245334201388889, 0.37901485667509194],
+          [-0.024652608235677085, -0.23005022321428573], [0.09039298163519965, 0.7519118365119485],
+          [0.26296140882703994, 0.32929518242844014]] };
+      try {
+        furnishOpenCoreBays = () => {};
+        const before = derive(), oldGraph = buildNavigation(before);
+        furnishOpenCoreBays = placePublicLobbies;
+        const after = derive(), graph = buildNavigation(after),
+          fitted = after.circulation.publicLobbies,
+          publicNodes = graph.nodes.filter(n => n.kind === 'publicLobby'),
+          bridges = fitted.filter(lobby => lobby.access?.type === 'bridge').map(lobby => lobby.f + 1);
+        const routes = (network) => network.nodes.filter(n => network.reachable.has(n.id) &&
+          ['room','lift','module','balcony','retail','garden'].includes(n.kind))
+          .map(n => [n.f, n.kind, n.slot, ...n.p].join('/')).sort().join('|');
+        const withinBays = fitted.every(lobby => {
+          const mesh = meshBuilder();
+          drawSharedLobby(mesh, lobby, 0, state.seed, true);
+          return mesh.groups.some(group => group.layer.endsWith('_Shared_Furniture')) &&
+            mesh.solid.every((x, i) => i % 10 !== 0 || sharedLobbyContains(lobby, x, mesh.solid[i + 2], -0.003));
+        });
+        const { total, corridorArea, hubArea, publicLobbyArea, elevatorArea } = after.circulation;
+        return {
+          fitted: fitted.length >= 6 && [2, 4, 5].every(level => bridges.includes(level)),
+          reachable: publicNodes.length === fitted.length && publicNodes.every(node =>
+            graph.reachable.has(node.id) && graph.edges[node.id].length >= 2) && routes(graph) === routes(oldGraph),
+          samePlan: JSON.stringify(after.rooms) === JSON.stringify(before.rooms) &&
+            JSON.stringify(after.slots) === JSON.stringify(before.slots) && before.total === after.total,
+          areaSum: Math.abs(total - corridorArea - hubArea - publicLobbyArea - elevatorArea) < 1e-6,
+          withinBays
+        };
+      } finally {
+        state = previous;
+        furnishOpenCoreBays = placePublicLobbies;
+      }
+    }''')
+    assert all(saved_bays.values()), saved_bays
+
     expect(page.locator('#openBuild + span + button')).to_have_text('Render')
     page.evaluate('window.designBeforeRender = model')
     page.evaluate('''() => {
