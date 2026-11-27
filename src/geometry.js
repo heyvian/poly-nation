@@ -768,12 +768,14 @@ const EXTERIOR_FINISHES = {
     stagger: true
   },
   stucco: {
-    name: 'Stucco',
+    name: 'Thin-coat stucco on reinforced board',
     short: 'Stucco',
     group: 'Earth and mineral',
     color: '#ded5bc',
     seam: '#aa9c80',
-    joint: 6
+    joint: 6,
+    texture: 'stucco',
+    module: true
   },
   'fiber-cement': {
     name: 'Fiber cement panels',
@@ -854,6 +856,14 @@ const EXTERIOR_FINISHES = {
     joint: 1.13,
     module: true
   },
+  'painted-tin': {
+    name: 'Painted ribbed tin siding', short: 'Painted tin', group: 'Metal', color: '#607b76',
+    seam: '#aab9af', joint: 0.52, texture: 'ribs', gloss: 0.16, module: true
+  },
+  'trailer-aluminum': {
+    name: 'Polished riveted aluminum sheet', short: 'Riveted aluminum', group: 'Metal', color: '#b8c6c7',
+    seam: '#859495', joint: 1.15, course: 0.85, texture: 'rivets', gloss: 0.52, module: true
+  },
   aluminum: {
     name: 'Aluminum standing-seam panels',
     short: 'Aluminum',
@@ -898,7 +908,9 @@ const EXTERIOR_FINISHES = {
     group: 'Glazing and composite panels',
     color: '#d7d4be',
     seam: '#a6a189',
-    course: 0.34
+    course: 0.23,
+    texture: 'lapping',
+    module: true
   },
   glazing: {
     name: 'Glazed curtain wall',
@@ -1094,6 +1106,17 @@ function drawFinishJoints(finish, length, height, point, line, surfaceColor, var
         start = (0.12 + sample() * 0.51) * height;
       line(point(x, start), point(x, start + height * (0.08 + sample() * 0.18)), accent);
     }
+  } else if (finish.texture === 'ribs' || finish.texture === 'lapping') {
+    const across = finish.texture === 'lapping', span = across ? height : length;
+    for (let at = 0.12; at < span; at += across ? 0.25 : 0.22)
+      line(across ? point(0, at) : point(at, 0), across ? point(length, at) : point(at, height), accent);
+  } else if (finish.texture === 'rivets' || finish.texture === 'stucco') {
+    const riveted = finish.texture === 'rivets';
+    for (let row = 0.12; row < height - 0.03; row += riveted ? 0.43 : 0.27)
+      for (let x = 0.10; x < length - 0.05; x += riveted ? 0.24 : 0.35) {
+        const y = row + (riveted ? 0 : (sample() - 0.5) * 0.14);
+        line(point(x, y), point(x + (riveted ? 0.025 : 0.045), y + (riveted ? 0 : 0.022)), accent);
+      }
   } else if (finish.texture === 'perforated') {
     for (let column = 0.25 + phase; column < length - 0.05; column += 0.48)
       for (let row = 0.3; row < height - 0.05; row += 0.44)

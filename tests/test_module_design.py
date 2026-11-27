@@ -39,14 +39,19 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     assert page.evaluate('JSON.stringify([state.seed, model.total, model.slots])') == massing
     results = page.evaluate('''() => {
       const assignments = materialWorkspace.assignments(), seed = state.seed,
-        withFixture = {...model, slots: PROGRAMS.flatMap((_, p) => Array.from({length: 23}, (_, j) =>
-          ({p, j, f: 0, i: p * 23 + j, angle: j * 0.1, use: 'empty', blocked: false})))},
+        withFixture = {...model, slots: PROGRAMS.flatMap((_, p) => Array.from({length: 93}, (_, j) =>
+          ({p, j, f: 0, i: p * 93 + j, angle: j * 0.1, use: 'empty', blocked: false})))},
         varied = {...assignments, moduleDesign: {enabled: true, similarity: {day: 0}}},
         plans = withFixture.slots.map((slot) => furnishedModulePlan(withFixture, slot, varied, seed)),
         daycare = withFixture.slots.filter(slot => P[slot.p].id === 'day'),
-        signature = plan => JSON.stringify([plan.values, plan.family, plan.length, plan.sideWindows]),
+        signature = plan => JSON.stringify([plan.values, plan.form, plan.sideWindows, plan.pattern, plan.palette]),
         shared = new Set(daycare.map(slot => signature(furnishedModulePlan(withFixture, slot, assignments, seed)))),
         mixed = new Set(daycare.map(slot => signature(furnishedModulePlan(withFixture, slot, varied, seed)))),
+        study = (similarity) => daycare.map(slot => furnishedModulePlan(withFixture, slot,
+          {...assignments, moduleDesign: {enabled: true, similarity: {day: similarity}}}, seed)),
+        moderate = study(45), formLock = study(70), finishes = (collection) =>
+          new Set(collection.map(plan => plan.values.facade)).size,
+        forms = (collection) => new Set(collection.map(plan => JSON.stringify(plan.form))).size,
         exposure = realizedModuleEnclosure(model, assignments, seed),
         takeoff = estimateMaterialAssemblies(model, assignments, DEFAULT_MATERIAL_RATES),
         preview = {assignments, view: {seed}}, layers = buildViewLayers(),
@@ -61,7 +66,7 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
           transom.push(...[1, 11, 21].map(offset => seatMesh.solid[i + offset]));
       }
       const roofPeaks = [];
-      for (const type of ['flat', 'gable', 'shed']) {
+      for (const type of MODULE_FORM_KINDS) {
         const index = plans.findIndex(plan => plan.roof === type);
         for (const enclosure of [true, false]) {
           const roofMesh = meshBuilder(), slot = {...withFixture.slots[index], angle: 0};
@@ -82,9 +87,16 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
       const boxBottom = Math.min(...Array.from({length: 36}, (_, i) => boxFloor.solid[10 * i + 1]));
       return {
         roofFits: roofPeaks.every(height => height <= MODULE.height + 1e-7) &&
-          Math.abs(boxBottom - storey.base - Math.max(...roofPeaks) - 0.10) < 1e-6,
+          boxBottom - storey.base - Math.max(...roofPeaks) >= 0.10 - 1e-6,
         lengths: [...new Set(plans.map(plan => plan.length))].sort((a, b) => a - b),
-        families: new Set(plans.map(plan => plan.family)).size,
+        families: new Set(plans.map(plan => plan.form.kind)).size,
+        materialCount: finishes(plans),
+        streams: plans.some(plan => plan.form.kind === 'streamliner' && plan.values.facade === 'trailer-aluminum' &&
+          moduleHalfAt(plan.form, plan.length) < plan.form.half - 0.35),
+        proportional: forms(moderate) < daycare.length / 2 && forms(formLock) === 1 &&
+          finishes(moderate) >= 10 && finishes(formLock) >= 10,
+        lightweight: ['cedar', 'vinyl', 'stucco', 'painted-tin', 'trailer-aluminum'].every(key =>
+          materialCompatible('facade', key, 'module') && plans.some(plan => plan.values.facade === key)),
         uses: [...new Set(plans.flatMap(plan => plan.zones.map(zone => zone.use)))],
         aligned: plans.every(plan => plan.doorWidth === plans[0].doorWidth && plan.doorHeight === plans[0].doorHeight),
         windowsFit: plans.every(plan => plan.sideWindows.every(windows => windows.every((window, i) =>
@@ -92,7 +104,7 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
           window.center + window.width / 2 <= plan.length - plan.wall &&
           (!i || window.center - window.width / 2 > windows[i - 1].center + windows[i - 1].width / 2)))),
         shared: shared.size, mixed: mixed.size,
-        measured: Math.abs(takeoff.studyTotal - model.total + exposure.terraces) < 1e-6,
+        measured: Math.abs(takeoff.studyTotal - model.total + exposure.unenclosed) < 1e-6 && exposure.unenclosed >= exposure.terraces,
         seated: Math.abs(Math.max(...transom) - storey.base + MODULE_CASSETTE_DEPTH) < 1e-6,
         mesh: ['Chassis', 'Skin', 'Dock_Collar', 'Interior_Partitions'].every(layer =>
           built.groups.some(group => group.layer === 'Assembly_Module_' + layer)),
@@ -103,10 +115,10 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     }''')
     assert 'overhang' not in results, results
     assert results['lengths'] == [9, 13.5, 18], results
-    assert results['families'] == 5, results
+    assert results['families'] == 11 and results['materialCount'] == 17, results
     assert {'bunk', 'office', 'crew', 'bed', 'bath', 'living', 'play', 'rinse'} <= set(results['uses']), results
     assert results['shared'] == 1 and results['mixed'] > 10, results
-    for check in ['aligned', 'windowsFit', 'measured', 'seated', 'roofFits', 'mesh', 'noRoofs', 'noModules', 'finite']:
+    for check in ['aligned', 'windowsFit', 'measured', 'streams', 'proportional', 'lightweight', 'seated', 'roofFits', 'mesh', 'noRoofs', 'noModules', 'finite']:
         assert results[check], results
     assert not errors, errors
-    print('Unique module lengths, program interiors, dock interface, Materials and Build controls passed.')
+    print('Eleven module forms, finish diversity, form-first similarity, envelope fit and workspace controls passed.')

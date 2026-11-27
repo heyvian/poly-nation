@@ -9,6 +9,7 @@
 | `simulation.js` | Circulation graph, occupancy, scoring, trials and optimization |
 | `materials-catalog.js`, `materials.js` | Material assignments, estimates, snapshot controls and the Materials canvas |
 | `workspaces.js` | Startup and workspace navigation |
+| `module-design.js`, `module-envelope.js`, `module-facade.js`, `module-mesh.js` | Seeded forms and finishes, shared enclosure profiles and takeoff, fitted façades and module interiors |
 | `module-crane.js` | Gantry and runway geometry, cassette transfer stages, load study and travel preview |
 | `build.js` | Experimental assembly, dock support and slab studies |
 | `render.js` | Render workspace, floor-by-floor interior fixture layout and light fields |

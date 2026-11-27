@@ -1,5 +1,9 @@
 # Changelog
 
+## Greater plug-in variety
+- Generate eleven module forms including rounded trailers, vaults, stepped lofts and sawtooth monitors. Added lightweight stucco, vinyl, painted tin and riveted aluminum to the façade study.
+- Similarity now aligns form before finish, colour and fenestration. The material area readout uses generated footprints and the chassis retains its standard dock interface.
+
 ## Traveling module crane
 - Added a roof gantry with an outboard tower, pickup and cradle-transfer stages, recessed dock guides, and an unloaded couch-swing preview.
 - Added elevated and moat runway studies, interlocked lobby drawbridges, a drawing override, and common paint for the crane and fixed steel swing mast.

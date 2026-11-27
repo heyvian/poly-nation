@@ -38,6 +38,8 @@ const CLADDING_STUDY = {
   corrugated: [8, 1, 'Light skin that can dent'],
   'insulated-panel': [18, 1.45, 'Insulated enclosure panels with a steel skin'],
   aluminum: [6, 1.5, 'Light skin that can dent'],
+  'painted-tin': [7, 1.18, 'Ribbed light metal skin on a backing frame'],
+  'trailer-aluminum': [6, 1.7, 'Formed sheets with riveted laps and local reinforcements'],
   zinc: [9, 1.9, 'Durable skin that can dent'],
   'weathering-steel': [18, 1.6, 'Thin metal cassettes with a developing patina'],
   'perforated-aluminum': [8, 1.9, 'Light metal screen on secondary supports'],
@@ -497,17 +499,17 @@ function estimateMaterialAssemblies(model, assignments, rates, seed = state.seed
         measure(core, 'facade', facade, (span.end - span.start) * model.R * wall.height);
       }
 
-  let terraceArea = 0;
+  let unenclosedArea = 0;
   for (const slot of model.slots) {
     if (slot.blocked || (slot.p === EMPTY && slot.use !== 'retail')) continue;
     const row = modules[slot.p] || other;
-    const { values, length } = moduleMaterialSelection(model, slot, assignments, seed);
+    const { values, form } = moduleMaterialSelection(model, slot, assignments, seed);
     row.count++;
-    terraceArea += (MODULE.depth - length) * MODULE.width;
+    unenclosedArea += MODULE.area - form.area;
     // The steel chassis and deck still span the full bay. Measure the gross
     // exterior walls against the enclosure length, excluding the open terrace.
     measure(row, 'structure', values.structure, MODULE.area);
-    measure(row, 'facade', values.facade, 2 * (MODULE.width + length) * MODULE.height);
+    measure(row, 'facade', values.facade, form.perimeter * MODULE.height);
     modulePairs.add(values.structure + '/' + values.facade);
     moduleSystems.add(values.structure);
   }
@@ -519,7 +521,7 @@ function estimateMaterialAssemblies(model, assignments, rates, seed = state.seed
   const leadingStructure = [...structureAreas].sort((a, b) => b[1] - a[1])[0];
   return {
     rows,
-    studyTotal: model.total - terraceArea,
+    studyTotal: model.total - unenclosedArea,
     total,
     mass,
     structuralCost,

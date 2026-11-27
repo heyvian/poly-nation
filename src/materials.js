@@ -598,9 +598,10 @@ const materialWorkspace = (() => {
       slider.value = moduleSimilarity(study.assignments, id);
       readout.value = slider.value + '%';
     }
+    $('moduleSimilarityHint').hidden = !enabled;
     const hint = $('moduleDesignArea');
     if (!enabled) {
-      hint.textContent = 'Vary cladding, openings and unit length within the standard dock.';
+      hint.textContent = 'Explore different silhouettes, claddings and windows within the same dock.';
       return;
     }
     const { enclosed, terraces, short } = realizedModuleEnclosure(study.model, study.assignments, study.view.seed);
