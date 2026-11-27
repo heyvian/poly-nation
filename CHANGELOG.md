@@ -1,5 +1,9 @@
 # Changelog
 
+## Gantry connections and cassette pickup
+- Tied the hoist heads and carriage guides into the traveling steelwork and kept overhead ties across gaps in the roof piers.
+- Matched four locking jaws to pickup sockets in the standard cassette chassis. Removed the rear couch swings and retained unloaded gantry travel.
+
 ## Shared seating at bridge landings
 - Prioritize groups of three to five inward-facing capsules and fit a continuous rug to the seat openings. Smaller pockets can fit pairs.
 - Verified the saved six-storey study and a two-group landing. Through routes keep their original paths and seating groups have their own approaches.

@@ -954,6 +954,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     drawFittedModule(mesh, slot, x, base, z, preview, plan, {
       assembly: true,
       enclosure: layers.facade,
+      craneLifting: Boolean(model.crane),
       interiors: layers.moduleInteriors ?? layers.walls,
       cover: layers.moduleRoofs ?? true
     });
@@ -1003,7 +1004,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   if (crane) {
     const paint = rgb(cranePaint(preview.assignments));
     drawCraneInfrastructure(mesh, model, crane, paint, full, cutY, cranePose);
-    if (cranePose) drawCraneGantry(mesh, model, crane, cranePose, paint);
+    if (cranePose) drawCraneGantry(mesh, crane, cranePose, paint);
   }
   const H = layers.swings && full ? ride.height : crane && full ? crane.head + crane.depth : (floors + Number(full)) * floorHeight;
   return { ...mesh, H, extent };
@@ -1079,10 +1080,11 @@ const openBuildWorkspace = (() => {
     showBuildGravityStudy(copy, assignments, dockStructure.value, copy.slabThickness, depth);
     $('buildCraneStudy').hidden = !copy.crane;
     if (!copy.crane) return;
-    const load = craneLoadStudy(copy, copy.crane, assignments);
+    const load = craneLoadStudy(copy, copy.crane, assignments), rig = craneCassetteRig();
     $('buildCraneEstimate').innerHTML = `
       <div class="crane-load-values">
         <div class="readout"><span>Reference cassette and rig</span><b>${(load.load / 9.81).toFixed(0)} t</b></div>
+        <div class="readout"><span>Chassis pickup stations</span><b>${(2 * rig.pickupOffset).toFixed(1)} m apart</b></div>
         <div class="readout"><span>Outer roof rail to outboard tower</span><b>${load.span.toFixed(1)} m</b></div>
         <div class="readout"><span>Outer roof rail reaction</span><b>${Math.round(load.rim)} kN</b></div>
         <div class="readout"><span>Outboard tower reaction</span><b>${Math.round(load.outer)} kN</b></div>

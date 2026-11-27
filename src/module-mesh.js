@@ -26,6 +26,7 @@ function drawFittedModule(mesh, slot, x, y, z, preview, plan, options = {}) {
     reference = `${slot.f + 1}/Slot_${slot.j}`;
   if (assembly) mesh.mark('Assembly_Module_Chassis', reference);
   box(0, MODULE.depth / 2, -MODULE_CASSETTE_DEPTH, MODULE.width, MODULE.depth, MODULE_CASSETTE_DEPTH, framing, true);
+  if (options.craneLifting) drawCraneLiftSockets(mesh, slot.angle, point(0, MODULE.depth / 2, 0));
   const deck = enclosure || interiors ? rgb('#c5b59c') : framing;
   for (let i = 1; i < form.stations.length; i++) {
     const a = form.stations[i - 1], b = form.stations[i], A = moduleHalfAt(form, a) - 0.025, B = moduleHalfAt(form, b) - 0.025;

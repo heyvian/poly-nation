@@ -1460,7 +1460,8 @@ function applySaved(data) {
   for (const [k, [a, b]] of Object.entries(ranges))
     if (typeof s[k] === 'number' && Number.isFinite(s[k])) d[k] = clamp(s[k], a, b);
   if (Object.hasOwn(BRIDGE_MODES, s.atriumBridges)) d.atriumBridges = s.atriumBridges;
-  if (Object.hasOwn(CRANE_STAGES, s.craneStage)) d.craneStage = s.craneStage;
+  if (s.craneStage === 'ride') d.craneStage = 'travel';
+  else if (Object.hasOwn(CRANE_STAGES, s.craneStage)) d.craneStage = s.craneStage;
   if (Object.hasOwn(CRANE_RUNWAYS, s.craneRunway)) d.craneRunway = s.craneRunway;
   d.craneFloor = Math.round(d.craneFloor);
   d.craneBearing = Math.round(d.craneBearing);

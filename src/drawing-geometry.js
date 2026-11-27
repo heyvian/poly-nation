@@ -33,7 +33,7 @@ function drawingOutlineBody({ layer, name }) {
   if (/^Infinite_Rinse_(Water_Slide|Slide_(Wall_Sleeve|Flang|Flashing|Bolt))/.test(layer))
     return 'Slide';
   if (/^Swing_(Tower|Crown|Boarding_Platform)/.test(layer)) return 'Swing tower';
-  if (/^Crane_(Traveling_Gantry|Hoist|Transfer_Carriage|Couch_Swings)/.test(layer)) return 'Traveling module gantry';
+  if (/^Crane_(Traveling_Gantry|Hoist|Transfer_Carriage|Lifting_Jaws)/.test(layer)) return 'Traveling module gantry';
   if (/^Climbing_L\d+_Wall$/.test(layer)) return 'Climbing wall';
   if (/^Roof_Commercial_Retail/.test(layer)) return name;
   if (/^(Atrium_(Glass|Roof_Ridge)|Assembly_Greenhouse)/.test(layer)) return 'Atrium roof';

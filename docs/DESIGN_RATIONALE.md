@@ -222,9 +222,9 @@ The designer brought each cable anchor down to the top of its own storey. The sh
 
 ### Moving a module beneath the stack
 
-The designer wanted the plug-ins to stay removable even when their neighbours above were occupied. A traveling steel lattice bridge follows two concentric tracks above the ring. Its outboard tower carries the long span independently of the building. The spreader lifts the cassette beyond the projecting balconies. At the selected level a guided cradle takes the load, and shallow rollers feed the cassette inward after the hoist releases. The roof collectors transfer the inboard wheel loads to piers between the docks.
+The designer wanted the plug-ins to stay removable even when their neighbours above were occupied. A traveling steel lattice bridge follows two concentric tracks above the ring. Its outboard tower carries the long span independently of the building. The spreader lifts the cassette beyond the projecting balconies. Four drop arms lock into the chassis sides at two stations 10.8 m apart, so the lift interface is shared by modules with different roof shapes. At the selected level a guided cradle takes the load, and shallow rollers feed the cassette inward after the hoist releases. The roof collectors transfer the inboard wheel loads to piers between the docks. Overhead ties connect the collectors across openings in the pier layout.
 
-The designer preferred an elevated outboard runway on spaced columns so people can pass underneath. The alternative puts the rails in a moat with drawbridges on the two lobby axes. The approach barriers close before a bridge lifts for a passing gantry. The crane and swing mast share a painted steel lattice. Couch swings on the building side ride with the gantry in a separate unloaded mode.
+The designer preferred an elevated outboard runway on spaced columns so people can pass underneath. The alternative puts the rails in a moat with drawbridges on the two lobby axes. The approach barriers close before a bridge lifts for a passing gantry. The crane and swing mast share a painted steel lattice. The designer removed the rear couch swings to clear the rooftop walk.
 
 ### A scale check
 

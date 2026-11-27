@@ -70,8 +70,8 @@ const materialWorkspace = (() => {
       if (stored?.model?.slots && stored.view && stored.assignments) {
         study = stored;
         const migrated = restoreLegacyCorridors(study.model.circulation);
-        if (!Object.hasOwn(study.model, 'crane')) {
-          study.model.crane = planModuleCrane(study.model);
+        if (!Object.hasOwn(study.model, 'crane') || (study.model.crane && !study.model.crane.roofTies)) {
+          study.model.crane = planModuleCrane(study.model, study.model.crane?.runway);
           saveStudy();
         } else if (migrated) saveStudy();
       }

@@ -3858,7 +3858,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         if (varied) {
           const plan = furnishedModulePlan(m, s, preview.assignments, view.seed, exterior.balconies.has(s.i)),
             foot = center - MODULE.depth / 2;
-          drawFittedModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), preview, plan);
+          drawFittedModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), preview, plan, { craneLifting: Boolean(m.crane) });
           if (exporting || view.supports)
             drawModuleDockCollar(b, s, foot * Math.cos(a), y, foot * Math.sin(a), plan, storey.head, !preview.structureView);
           if (plan.balcony) drawModuleBalcony(b, m, s, y, null, false, plan);
@@ -4163,7 +4163,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const paint = rgb(cranePaint(preview?.assignments));
     drawCraneInfrastructure(b, m, m.crane, paint, craneVisible, cutY, cranePose,
       !exporting && cranePose?.stage === 'ride');
-    if (cranePose) drawCraneGantry(b, m, m.crane, cranePose, paint);
+    if (cranePose) drawCraneGantry(b, m.crane, cranePose, paint);
   }
 
   // Conceptual users and animals: low-poly occupancy placeholders for scale and inclusivity.

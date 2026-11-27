@@ -2,10 +2,14 @@
 
 const CRANE_STAGES = {
   parked: 'Parked', pickup: '1 · Pick up at grade', hoist: '2 · Hoist beyond the stack',
-  transfer: '3 · Set onto the cradle', insert: '4 · Slide into the dock', ride: 'Unloaded couch-swings'
+  transfer: '3 · Set onto the cradle', insert: '4 · Slide into the dock', travel: 'Unloaded gantry travel'
 };
 const CRANE_PAINT = '#5d7971';
 const CRANE_RUNWAYS = { elevated: 'Elevated outboard runway', moat: 'Moat with drawbridges' };
+
+function craneCassetteRig() {
+  return { pickupOffset: MODULE.depth * 0.30, jawHalfWidth: MODULE.width / 2 + 0.42, pinHeight: -MODULE_CASSETTE_DEPTH / 2 };
+}
 
 function cranePaint(assignments) {
   return paintHex(assignments?.mast?.paintHex) || CRANE_PAINT;
@@ -24,7 +28,7 @@ function planModuleCrane(model, runway = 'elevated') {
     roofRail = roofPlan.y + 7.4,
     head = roofRail + 1.16,
     groundRail = runway === 'moat' ? -0.25 : 6.08,
-    supports = [],
+    supports = [], roofTies = [],
     swingAngle = model.circulation.bridgeAngle;
   if (rings.outside - rings.inside < 1.8 || rings.inside < 3.18) return null;
   for (let j = 0; j < slotN; j++) {
@@ -32,6 +36,8 @@ function planModuleCrane(model, runway = 'elevated') {
     // Choose piers between docking bays and route the ring beams over atrium
     // openings. The roof stairs share the inner edge at the swing axis.
     if (j % 2 && slotN >= 16) continue;
+    // High-level ties continue between the rings even where a post would obstruct an opening.
+    roofTies.push(angle);
     if (angDist(angle, swingAngle) < 2.35 / r ||
         lobbyHoles(model.lobby, 1).some(([a, half]) => angDist(a, angle) < half + 0.028) ||
         slide?.connections?.some((room) => angDist(room.angle, angle) < 1.22 / R)) continue;
@@ -39,10 +45,9 @@ function planModuleCrane(model, runway = 'elevated') {
   }
   return {
     dockTip, liftInner, liftOuter, liftCenter: (liftInner + liftOuter) / 2,
-    tower, runway, extent: tower + (runway === 'moat' ? 7.1 : 3.2), groundRail, groundGauge: 3.1, roofRail, head, supports,
+    tower, runway, extent: tower + (runway === 'moat' ? 7.1 : 3.2), groundRail, groundGauge: 3.1, roofRail, head, supports, roofTies,
     moatHalf: 4.25, gateAngles: [model.lobby.angle, model.lobby.angle + Math.PI],
-    roofInner: rings.inside, roofOuter: rings.outside, tail: Math.max(r + 0.32, R - roofPlan.walk * 0.62),
-    seatsAvailable: roofPlan.walk >= 1.85,
+    roofInner: rings.inside, roofOuter: rings.outside,
     width: 5.7, depth: clamp((tower - rings.outside) / 10, 3.75, 5.75)
   };
 }
@@ -70,7 +75,7 @@ function moduleCranePose(model, crane, settings = {}) {
     bearing = mod((settings.craneBearing ?? 316) * Math.PI / 180, TAU),
     install = ['pickup', 'hoist', 'transfer', 'insert'].includes(stage);
   if (!install)
-    return { stage: stage === 'ride' && !crane.seatsAvailable ? 'parked' : stage, angle: bearing, slot: null };
+    return { stage, angle: bearing, slot: null };
   const slots = model.slots.filter((slot) => slot.f === floor && craneDockClear(model, crane, slot)),
     slot = slots.sort((a, b) => angDist(a.angle, bearing) - angDist(b.angle, bearing))[0];
   if (!slot) return { stage: 'parked', angle: bearing, slot: null, blocked: true };
@@ -110,7 +115,7 @@ function craneFrame(mesh, angle) {
 
 function drawCraneInfrastructure(mesh, model, crane, paint, roofVisible, cutY = Infinity, pose = null, animate = false) {
   const { sector, mark } = mesh,
-    { roofInner, roofOuter, roofRail, supports } = crane,
+    { roofInner, roofOuter, roofRail, supports, roofTies } = crane,
     tread = rgb('#3e5552'), concrete = rgb('#aeb7aa');
   if (crane.runway === 'moat') drawCraneMoat(mesh, model, crane, paint, pose?.angle ?? 316 * Math.PI / 180, animate);
   else drawElevatedCraneRunway(mesh, crane, paint, cutY);
@@ -130,7 +135,7 @@ function drawCraneInfrastructure(mesh, model, crane, paint, roofVisible, cutY = 
     sector(radius - 0.36, radius + 0.36, 0, TAU, model.roofPlan.y - 0.80, 0.58, paint);
     sector(radius - 0.42, radius + 0.42, 0, TAU, roofRail - 0.96, 0.75, paint);
   }
-  mark('Crane_Roof_Bents', 'Steel runway posts and overhead radial ties');
+  mark('Crane_Roof_Bents', 'Steel runway posts and knee braces');
   for (const angle of supports) {
     const { block, member } = craneFrame(mesh, angle);
     const base = model.roofPlan.y;
@@ -138,11 +143,15 @@ function drawCraneInfrastructure(mesh, model, crane, paint, roofVisible, cutY = 
       block(radius, 0, base, 0.51, roofRail - 0.96 - base, 0.48, paint, true);
       block(radius, 0, base, 0.63, 0.15, 0.64, tread);
     }
-    member([roofInner, 0, roofRail - 0.69], [roofOuter, 0, roofRail - 0.69], 0.24, paint, 0.33);
     for (const side of [-1, 1]) {
       const from = side < 0 ? roofInner : roofOuter;
       member([from, 0, roofRail - 2.18], [from - side * 0.92, 0, roofRail - 0.77], 0.16, paint);
     }
+  }
+  mark('Crane_Roof_Ties', 'Overhead radial ties between roof collectors');
+  for (const angle of roofTies) {
+    const { member } = craneFrame(mesh, angle);
+    member([roofInner, 0, roofRail - 0.69], [roofOuter, 0, roofRail - 0.69], 0.24, paint, 0.33);
   }
   mark('Crane_Roof_Rails', 'Concentric rack and flanged wheel runways');
   for (const radius of [roofInner, roofOuter]) {
@@ -152,7 +161,7 @@ function drawCraneInfrastructure(mesh, model, crane, paint, roofVisible, cutY = 
   }
 }
 
-function drawCraneGantry(mesh, model, crane, pose, paint) {
+function drawCraneGantry(mesh, crane, pose, paint) {
   const { angle } = pose, { mark } = mesh,
     { block, member } = craneFrame(mesh, angle),
     dark = rgb('#3f5652'), steel = materialTint(paint, 1.24),
@@ -161,7 +170,9 @@ function drawCraneGantry(mesh, model, crane, pose, paint) {
     cross = crane.width / 2, foot = groundRail + 0.47,
     divisions = Math.ceil((tower - roofInner) / 3.9),
     bottom = (r) => head + 0.25 * (r - roofInner) / (tower - roofInner),
-    top = (r) => bottom(r) + depth * (0.55 + 0.45 * Math.sin(Math.PI * (r - roofInner) / (tower - roofInner)));
+    top = (r) => bottom(r) + depth * (0.55 + 0.45 * Math.sin(Math.PI * (r - roofInner) / (tower - roofInner))),
+    towerLeg = (radius, y) => radius + (tower - radius) * (y - foot) / (head - foot),
+    innerLeg = (y) => towerLeg(tower - groundGauge / 2, y);
   mark('Crane_Traveling_Gantry', 'Traveling double lattice bridge');
   for (const t of [-cross, cross]) {
     // Chords and a Warren web on both sides give the hoist a wide torsion box.
@@ -181,22 +192,22 @@ function drawCraneGantry(mesh, model, crane, pose, paint) {
     // The paired outboard legs carry vertical load into bogies on the two
     // grade rings. Leave the lift path open on the building side of this mast.
     for (const radius of [tower - groundGauge / 2, tower + groundGauge / 2]) {
-      const leg = (y) => radius + (tower - radius) * (y - foot) / (head - foot);
+      const leg = (y) => towerLeg(radius, y);
       member([leg(foot), t, foot], [leg(head), t, head], 0.42, paint, 0.48);
       for (let y = foot; y < head; y += 3.65) {
         const above = Math.min(head, y + 3.65);
         if (radius > tower) {
-          const inside = (height) => tower - groundGauge / 2 + groundGauge * (height - foot) / (2 * (head - foot));
           if (t > 0) member([leg(y), -cross, y], [leg(above), cross, above], 0.20, paint);
-          member([leg(y), t, y], [inside(above), t, above], 0.21, paint);
-          member([leg(y), t, y], [inside(y), t, y], 0.23, paint);
+          member([leg(y), t, y], [innerLeg(above), t, above], 0.21, paint);
+          member([leg(y), t, y], [innerLeg(y), t, y], 0.23, paint);
         }
       }
       bogie(radius, t, groundRail, 0.54);
     }
+    block(tower, t, head - 0.12, 0.63, bottom(tower) - head + 0.16, 0.66, paint, true);
     for (const radius of [roofInner, roofOuter]) {
       bogie(radius, t, roofRail, 0.43);
-      member([radius, t, roofRail + 0.39], [radius, t, bottom(radius)], 0.35, paint);
+      member([Math.sqrt(radius ** 2 - t ** 2), t, roofRail + 0.39], [radius, t, bottom(radius)], 0.35, paint);
     }
   }
   function bogie(radius, t, y, width) {
@@ -207,25 +218,19 @@ function drawCraneGantry(mesh, model, crane, pose, paint) {
       block(r + width * 0.45, at, y - 0.052, 0.31, 0.315, 0.09, dark);
     }
   }
-  mark('Crane_Hoist', 'Paired trolley drums and cassette spreader');
-  const rig = pose.onHook ? pose.payloadY + MODULE.height + 0.64 : roofRail - 1.40;
-  for (const r of [crane.liftCenter - 5.4, crane.liftCenter + 5.4]) {
-    block(r, 0, bottom(r) - 0.20, 4.70, 0.49, 1.03, dark);
-    block(r, 0, bottom(r) + 0.25, 1.88, 0.77, 0.84, amber);
-    for (const t of [-1.62, 1.62]) {
-      member([r, t, bottom(r) - 0.18], [r, t, rig + 0.17], 0.044, dark);
-      if (pose.onHook) member([r, t, rig], [r, t, pose.payloadY + MODULE.height], 0.042, dark);
-    }
-    block(r, 0, rig, 3.54, 0.20, 0.26, amber);
-  }
-  block(crane.liftCenter, 0, rig, 0.38, 0.22, 11.2, steel);
+  drawCraneHoist(mesh, block, member, bottom, crane, pose, dark, steel, amber);
 
   mark('Crane_Transfer_Carriage', 'Guided carriage and deployable insertion rails');
   const y = pose.onCradle ? pose.floorY : Math.max(0.72, groundRail + 0.83);
   for (const t of [-cross, cross]) {
-    const guideY = Math.max(groundRail + 0.40, pose.onCradle ? y - 0.38 : groundRail + 0.48);
-    member([tower - 2.18, t, guideY], [tower - 2.18, t, head - 0.22], 0.16, dark);
-    member([tower - 2.18, t, groundRail + 0.72], [tower - 1.52, t, groundRail + 0.72], 0.21, paint);
+    const guide = tower - 2.18, guideTop = head - 0.12;
+    member([guide, t, foot], [guide, t, guideTop], 0.18, dark);
+    for (let at = foot; at < guideTop; at += 3.65) {
+      member([guide, t, at], [innerLeg(at), t, at], 0.21, paint);
+      if (at + 3.65 < guideTop)
+        member([guide, t, at + 3.65], [innerLeg(at), t, at], 0.16, paint);
+    }
+    member([guide, t, guideTop], [innerLeg(head), t, head], 0.21, paint);
     const guideBottom = pose.onCradle ? Math.max(0.18, y - 3.05) : groundRail + 0.48,
       guideHead = Math.max(groundRail + 1.08, y + 0.33);
     block(tower - 2.18, t, guideBottom, 0.53, guideHead - guideBottom, 0.73, amber);
@@ -239,19 +244,64 @@ function drawCraneGantry(mesh, model, crane, pose, paint) {
       const r = a + (z - a) * j / 7;
       member([r, t, y - 0.22], [r, t, y - 0.22 - (y - 0.22 - low) * j / 7], 0.13, steel);
     }
-    const guide = t < 0 ? -1.74 : 1.74;
-    member([crane.dockTip - 0.22, guide, y - 0.26], [z, guide, y - 0.26], 0.16, dark);
-    block(crane.dockTip + 0.08, guide, y - 0.33, 0.34, 0.15, 0.64, amber);
+    const runner = t < 0 ? -1.74 : 1.74;
+    member([crane.dockTip - 0.22, runner, y - 0.26], [z, runner, y - 0.26], 0.16, dark);
+    block(crane.dockTip + 0.08, runner, y - 0.33, 0.34, 0.15, 0.64, amber);
   }
   if (pose.onCradle) for (let r = crane.dockTip + 1.05; r < crane.liftOuter; r += 2.0)
     block(r, 0, y - 0.33, 5.84, 0.13, 0.17, steel);
   if (pose.slot) drawCraneCassette(mesh, angle, pose, amber);
-  if (crane.seatsAvailable) drawCraneCouches(mesh, model, crane, pose, dark, paint);
   mark('Crane_Motion_End');
 }
 
+function drawCraneHoist(mesh, block, member, bottom, crane, pose, dark, steel, amber) {
+  const { pickupOffset, jawHalfWidth, pinHeight } = craneCassetteRig(),
+    inner = crane.liftCenter - pickupOffset, outer = crane.liftCenter + pickupOffset,
+    rig = pose.onHook ? pose.payloadY + MODULE.height + 0.64 : bottom(inner) - 1.06;
+  mesh.mark('Crane_Hoist', 'Mounted hoist heads and four-point cassette spreader');
+  for (const r of [inner, outer]) {
+    // The head spans between both lower chords. The hoist drums bolt to the crosshead.
+    block(r, 0, bottom(r) - 0.43, crane.width + 0.27, 0.39, 0.58, dark, true);
+    for (const t of [-jawHalfWidth, jawHalfWidth]) {
+      block(r, t, bottom(r) - 0.07, 0.42, 0.51, 0.76, amber);
+      member([r, t, bottom(r) - 0.43], [r, t, rig + 0.23], 0.041, dark);
+    }
+    block(r, 0, rig, 2 * jawHalfWidth + 0.24, 0.23, 0.26, amber, true);
+  }
+  for (const t of [-jawHalfWidth, jawHalfWidth])
+    block(crane.liftCenter, t, rig + 0.02, 0.18, 0.18, 2 * pickupOffset + 0.26, steel, true);
+
+  mesh.mark('Crane_Lifting_Jaws', pose.onHook ? 'Chassis-side drop arms and locking pins' : 'Folded lifting jaws');
+  for (const r of [inner, outer]) for (const side of [-1, 1]) {
+    const t = side * jawHalfWidth;
+    block(r, t, rig - 0.12, 0.28, 0.26, 0.34, steel);
+    if (!pose.onHook) {
+      block(r, t - side * 0.78, rig - 0.24, 1.66, 0.19, 0.20, dark);
+      continue;
+    }
+    const pinY = pose.payloadY + pinHeight, stroke = (rig - pinY) / 3;
+    // Overlapping sleeves retract before the arms fold against the crosshead.
+    for (const [i, width] of [0.18, 0.15, 0.12].entries()) {
+      const top = rig - i * stroke, end = Math.max(pinY, top - stroke - 0.20);
+      member([r, t, top], [r, t, end], width, i % 2 ? dark : steel);
+    }
+    // Positive engagement is into the side of the chassis at its mid-depth.
+    member([r, t, pinY], [r, side * (MODULE.width / 2 - 0.07), pinY], 0.11, dark, 0.10);
+  }
+}
+
+function drawCraneLiftSockets(mesh, angle, [x, y, z]) {
+  const { pickupOffset, pinHeight } = craneCassetteRig(), color = rgb('#394c48'),
+    cos = Math.cos(angle), sin = Math.sin(angle);
+  for (const d of [-pickupOffset, pickupOffset]) for (const side of [-1, 1]) {
+    const t = side * (MODULE.width / 2 - 0.05);
+    mesh.box(x + d * cos - t * sin, y + pinHeight - 0.07, z + d * sin + t * cos,
+      0.12, 0.14, 0.28, angle, color, true);
+  }
+}
+
 function drawCraneCassette(mesh, angle, pose, amber) {
-  const { block } = craneFrame(mesh, angle), r = pose.payloadStart + MODULE.depth / 2, y = pose.payloadY,
+  const { block, point } = craneFrame(mesh, angle), r = pose.payloadStart + MODULE.depth / 2, y = pose.payloadY,
     shell = rgb('#d7c398'), glazing = rgb('#91aca8'), frame = rgb('#626e66');
   mesh.mark('Crane_Demonstration_Module', '18 m reference cassette');
   block(r, 0, y - MODULE_CASSETTE_DEPTH, MODULE.width, MODULE_CASSETTE_DEPTH, MODULE.depth, frame, true);
@@ -259,42 +309,10 @@ function drawCraneCassette(mesh, angle, pose, amber) {
   block(r, 0, y + 3.31, MODULE.width - 0.03, 0.19, MODULE.depth, amber, true);
   for (const s of [-1, 1]) for (const offset of [-5.2, -1.7, 1.9, 5.5])
     block(r + offset, s * (MODULE.width / 2 - 0.02), y + 1.02, 0.025, 1.27, 1.55, glazing, true);
-  for (const d of [-5.4, 5.4]) for (const t of [-1.62, 1.62])
-    block(r + d, t, y + MODULE.height - 0.02, 0.23, 0.12, 0.21, frame);
+  drawCraneLiftSockets(mesh, angle, point(r, 0, y));
   if (pose.stage === 'pickup') {
     // The ground pickup uses removable crib rails on the service apron.
     for (const d of [-6.1, 6.1]) block(r + d, 0, 0.02, 4.94, 0.16, 0.48, frame);
-  }
-}
-
-function drawCraneCouches(mesh, model, crane, pose, dark, paint) {
-  const { block, member } = craneFrame(mesh, pose.angle),
-    y = model.roofPlan.y + 0.59, hanger = crane.roofRail - 0.25,
-    covered = rgb('#b49a76'), seat = rgb('#768e80');
-  mesh.mark('Crane_Couch_Swings', 'Unloaded passenger arm and two suspended couches');
-  for (const t of [-2.85, 2.85])
-    member([crane.tail, t, hanger], [crane.tail, t, crane.head + 0.13], 0.23, paint);
-  member([crane.tail, -3.20, hanger], [crane.tail, 3.20, hanger], 0.24, paint, 0.29);
-  for (const t of [-1.55, 1.55]) {
-    for (const offset of [-0.99, 0.99]) for (const side of [-1, 1])
-      member([crane.tail, t + offset * 0.71, hanger - 0.13],
-        [crane.tail + side * 0.32, t + offset, y + 0.11], 0.024, dark);
-    block(crane.tail, t, y, 2.12, 0.13, 0.67, dark, true);
-    block(crane.tail + 0.03, t, y + 0.13, 1.91, 0.11, 0.59, seat, true);
-    block(crane.tail - 0.29, t, y + 0.12, 2.04, 0.53, 0.105, covered, true);
-    for (const side of [-1, 1]) {
-      block(crane.tail, t + side * 0.99, y + 0.23, 0.082, 0.18, 0.65, dark);
-      // Keep the parked and lifting views seats-only. Riders are shown on
-      // the unloaded passenger demonstration, with feet above the promenade.
-      if (pose.stage !== 'ride') continue;
-      const at = t + side * 0.45, clothing = rgb(side < 0 ? '#b78179' : '#6d859d'), skin = rgb('#c29a7c');
-      block(crane.tail - 0.09, at, y + 0.24, 0.33, 0.41, 0.20, clothing);
-      block(crane.tail - 0.08, at, y + 0.65, 0.19, 0.22, 0.18, skin);
-      for (const offset of [-0.09, 0.09]) {
-        block(crane.tail + 0.21, at + offset, y + 0.17, 0.13, 0.14, 0.32, clothing);
-        block(crane.tail + 0.35, at + offset, y - 0.07, 0.11, 0.29, 0.12, dark);
-      }
-    }
   }
 }
 
@@ -309,18 +327,17 @@ function refreshCraneControls(model) {
     return;
   }
   const pose = moduleCranePose(model, crane, state), floor = $('craneFloor'), bearing = $('craneBearing');
-  control.querySelector('[value="ride"]').disabled = !crane.seatsAvailable;
   control.value = state.craneStage;
   $('craneRunway').value = state.craneRunway;
   floor.max = String(model.layers.length);
   floor.value = String(clamp(state.craneFloor, 1, model.layers.length));
-  floor.disabled = ['parked', 'ride'].includes(state.craneStage);
+  floor.disabled = ['parked', 'travel'].includes(state.craneStage);
   bearing.value = String(state.craneBearing);
   $('craneBearingValue').value = Math.round((pose.slot ? pose.angle * 180 / Math.PI : state.craneBearing) % 360) + '°';
   const above = pose.slot && model.slots.some((slot) => slot.f > pose.slot.f && slot.j === pose.slot.j && !slot.blocked && slot.p !== EMPTY);
   notice.textContent = pose.blocked ? 'This level has no clear insertion lane.'
     : pose.slot ? `Level ${pose.slot.f + 1} · Bay ${pose.slot.j + 1}${above ? ' · Occupied above' : ''}`
-      : pose.stage === 'ride' ? 'Unloaded travel preview shown in time-lapse.' : 'Bogie bridge parked on the runways.';
+      : pose.stage === 'travel' ? 'Unloaded gantry travel shown in time-lapse.' : 'Bogie bridge parked on the runways.';
 }
 
 function initCraneControls() {
@@ -376,7 +393,7 @@ function initCraneControls() {
 }
 
 function prepareCraneMotion(mesh) {
-  if (state.craneStage !== 'ride' || !model?.crane?.seatsAvailable) return;
+  if (state.craneStage !== 'travel' || !model?.crane) return;
   const start = mesh.groups.find((g) => g.layer === 'Crane_Traveling_Gantry'),
     end = mesh.groups.find((g) => g.layer === 'Crane_Motion_End');
   if (!start || !end) return;

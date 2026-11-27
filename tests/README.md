@@ -21,4 +21,4 @@ Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve th
 
 `test_module_design.py` checks all three enclosure lengths, eleven roof profiles, material variety, form-first similarity, the fixed dock interface, window bounds, area takeoff and restoration of Materials and Build controls.
 
-`test_module_crane.py` checks underside clearance, the separate lift and insertion sequences, both runway variants, drawbridge timing, paint persistence and the Drawings override.
+`test_module_crane.py` checks chassis pin fit, overhead ties across roof openings, underside clearance, the lift and insertion sequences, both runways, drawbridge timing, unloaded travel, paint persistence and the Drawings override.
