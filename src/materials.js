@@ -27,12 +27,50 @@ const materialWorkspace = (() => {
       $('materialStatus').textContent = 'This study could not be saved in browser storage.';
     }
   }
+  // Restore circulation in detached studies saved with the retired public
+  // lobbies. Keep the captured rooms, bridges and material assignments.
+  function restoreLegacyCorridors(circulation) {
+    if (!circulation?.publicLobbies) return false;
+    for (const hub of circulation.publicLobbies) {
+      const { f, r, R, start, end, area } = hub,
+        span = end - start,
+        regions = circulation.regions,
+        overlapsBay = (q) => q.f === f &&
+          angDist((q.start + q.end) / 2, (start + end) / 2) + (q.end - q.start) / 2 <= span / 2 + 1e-7,
+        aprons = hub.layout?.bridgeThrough ? regions.filter((q) => q.R === r && overlapsBay(q)) : [],
+        pairs = aprons.map((inner) => [inner, regions.find((q) => q.f === f && q.r === R &&
+          q.start === inner.start && q.end === inner.end)]),
+        width = aprons.reduce((total, q) => total + q.end - q.start, 0);
+      if (Math.abs(width - span) < 1e-7 && pairs.every(([, outer]) => outer)) {
+        const replaced = new Map();
+        for (const [inner, outer] of pairs) {
+          const restored = area * (inner.end - inner.start) / span;
+          replaced.set(inner, [{ ...inner, R: outer.R, area: inner.area + restored + outer.area }]);
+          replaced.set(outer, []);
+        }
+        circulation.regions = regions.flatMap((q) => replaced.get(q) ?? [q]);
+      } else {
+        // Earlier snapshots left an angular bypass beside the furnished bay.
+        // Fill its former seating footprint on the same corridor level.
+        regions.push({ f, r, R, start, end, area, kind: 'residual' });
+      }
+      circulation.area += area;
+      circulation.corridorArea += area;
+    }
+    delete circulation.publicLobbies;
+    delete circulation.publicLobbyArea;
+    return true;
+  }
+
   function restoreStudy() {
     try {
       const stored = JSON.parse(localStorage.getItem(storageKey), (_, value) =>
         value?.materialSnapshotSet ? new Set(value.materialSnapshotSet) : value
       );
-      if (stored?.model?.slots && stored.view && stored.assignments) study = stored;
+      if (stored?.model?.slots && stored.view && stored.assignments) {
+        study = stored;
+        if (restoreLegacyCorridors(study.model.circulation)) saveStudy();
+      }
     } catch {
       $('materialStatus').textContent = 'The saved material study could not be loaded.';
     }

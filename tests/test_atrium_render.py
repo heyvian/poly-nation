@@ -109,8 +109,8 @@ with serve_lab(root) as url, sync_playwright() as p:
     }''')
     assert all(result.values()), result
 
-    saved_bays = page.evaluate('''() => {
-      const previous = state, placePublicLobbies = furnishOpenCoreBays;
+    paired_lobbies = page.evaluate('''() => {
+      const previous = state;
       state = { ...defaults(), seed: 609, dockVariant: 14, floors: 6, modules: 53, affinity: 0,
         footprint: 4700, slideLength: 60, split: [80, 25, 89, 50, 26], vacancy: [16, 18, 40, 26], atriumBridges: 'radial',
         relations: {'1-3':'repel', '1-4':'attract', '3-4':'attract', '0-2':'attract'},
@@ -119,56 +119,59 @@ with serve_lab(root) as url, sync_playwright() as p:
           [-0.024652608235677085, -0.23005022321428573], [0.09039298163519965, 0.7519118365119485],
           [0.26296140882703994, 0.32929518242844014]] };
       try {
-        furnishOpenCoreBays = () => {};
-        const before = derive(), oldGraph = buildNavigation(before);
-        furnishOpenCoreBays = placePublicLobbies;
-        const after = derive(), graph = buildNavigation(after),
-          fitted = after.circulation.publicLobbies,
-          publicNodes = graph.nodes.filter(n => n.kind === 'publicLobby'),
-          bridges = fitted.filter(lobby => lobby.access?.type === 'bridge').map(lobby => lobby.f + 1);
-        const routes = (network) => network.nodes.filter(n => network.reachable.has(n.id) &&
-          ['room','lift','module','balcony','retail','garden'].includes(n.kind))
-          .map(n => [n.f, n.kind, n.slot, ...n.p].join('/')).sort().join('|');
-        const withinBays = fitted.every(lobby => {
-          const mesh = meshBuilder();
-          drawSharedLobby(mesh, lobby, 0, state.seed, true);
-          const i = mesh.groups.findIndex(group => group.layer.endsWith('_Shared_Furniture')),
-            furniture = mesh.solid.slice(mesh.groups[i].solid, mesh.groups[i + 1].solid),
-            { axis, origin, passage } = lobby.layout;
-          return [-1, 1].every(side => furniture.some((x, index) => {
-            const across = (x - origin[0]) * axis[1] - (furniture[index + 2] - origin[1]) * axis[0];
-            return index % 10 === 0 && side * across > passage / 2 + 0.8;
-          })) && mesh.solid.every((x, i) =>
-            i % 10 !== 0 || sharedLobbyContains(lobby, x, mesh.solid[i + 2], -0.003));
-        });
-        const throughRoutes = publicNodes.every(node => {
-          const links = graph.edges[node.id],
-            landing = links.find(edge => graph.nodes[edge.to].cell.R === node.cell.r),
-            corridor = links.find(edge => graph.nodes[edge.to].cell.r === node.cell.R);
-          if (!landing || !corridor || links.length !== 2) return false;
-          const direct = shortestPath(graph, landing.to, corridor.to, 'human', false),
-            network = { ...graph, edges: graph.edges.map((edges, id) =>
-              id === node.id ? [] : edges.filter(edge => edge.to !== node.id)) };
-          return direct?.length === 2 && direct[0].to === node.id &&
-            Boolean(shortestPath(network, landing.to, corridor.to, 'human', false));
-        });
-        const { total, corridorArea, hubArea, publicLobbyArea, elevatorArea } = after.circulation;
+        const plan = derive(), { circulation } = plan, graph = buildNavigation(plan),
+          { total, corridorArea, hubArea, elevatorArea, hubs } = circulation;
+        state = { ...state, relations: {} };
+        const neutral = derive();
         return {
-          fitted: fitted.length === 3 && [2, 4, 5].every(level => bridges.includes(level)),
-          reachable: publicNodes.length === fitted.length && publicNodes.every(node =>
-            graph.reachable.has(node.id) && graph.edges[node.id].length >= 2) && routes(graph) === routes(oldGraph),
-          samePlan: JSON.stringify(after.rooms) === JSON.stringify(before.rooms) &&
-            JSON.stringify(after.slots) === JSON.stringify(before.slots) && before.total === after.total,
-          areaSum: Math.abs(total - corridorArea - hubArea - publicLobbyArea - elevatorArea) < 1e-6,
-          withinBays,
-          throughRoutes
+          sharedOnly: hubs.length === 3 && hubs.every(hub => hub.pair.length === 2) &&
+            graph.nodes.filter(node => node.kind === 'hub' && graph.reachable.has(node.id)).length === hubs.length &&
+            !graph.nodes.some(node => node.kind === 'publicLobby'),
+          neutralOpen: neutral.circulation.hubs.length === 0 && neutral.circulation.bridges.length > 0,
+          openLandings: [2, 4, 5].every(level => circulation.regions.some(region =>
+            region.f === level - 1 && region.kind === 'bridgeAccess' && region.r === plan.r)),
+          areaSum: Math.abs(total - corridorArea - hubArea - elevatorArea) < 1e-6
         };
       } finally {
         state = previous;
-        furnishOpenCoreBays = placePublicLobbies;
       }
     }''')
-    assert all(saved_bays.values()), saved_bays
+    assert all(paired_lobbies.values()), paired_lobbies
+
+    # A legacy Materials snapshot has one cut bridge approach. Its three
+    # radial pieces should return to the exact corridor stored before the cut.
+    saved_approach = page.evaluate('''() => {
+      const snapshot = structuredClone(model), { circulation } = snapshot,
+        index = circulation.regions.findIndex(region => region.kind === 'bridgeAccess'),
+        original = circulation.regions[index],
+        { r, R } = original, width = (R - r) / 3;
+      const strip = (low, high, kind) => ({ ...original, r: low, R: high, kind,
+        area: (high ** 2 - low ** 2) * (original.end - original.start) / 2 });
+      const hub = { ...strip(r + width, R - width, 'publicLobby'), layout: { bridgeThrough: true } };
+      circulation.regions.splice(index, 1, strip(r, hub.r, 'bridgeAccess'), strip(hub.R, R, 'lobbyLanding'));
+      const area = circulation.corridorArea;
+      circulation.publicLobbies = [hub];
+      circulation.publicLobbyArea = hub.area;
+      circulation.area -= hub.area;
+      circulation.corridorArea -= hub.area;
+      localStorage.setItem('poly-nation-material-study-v1', JSON.stringify({model: snapshot,
+        view: {...state}, assignments: {moduleDesign: {enabled: true}}, notes: 'Captured materials'},
+        (_, value) => value instanceof Set ? {materialSnapshotSet: [...value]} : value));
+      return { original, area, hubs: circulation.hubs.length };
+    }''')
+    page.locator('#openMaterials').click()
+    expect(page.locator('#materialNotes')).to_have_value('Captured materials')
+    expect(page.locator('#uniqueModules')).to_be_checked()
+    assert page.evaluate('''({original, area, hubs}) => {
+      const stored = JSON.parse(localStorage.getItem('poly-nation-material-study-v1')),
+        {circulation} = stored.model,
+        joined = circulation.regions.find(region => region.f === original.f &&
+          region.start === original.start && region.end === original.end && region.r === original.r);
+      return !circulation.publicLobbies && joined?.kind === 'bridgeAccess' && joined.R === original.R &&
+        Math.abs(joined.area - original.area) < 1e-6 && Math.abs(area - circulation.corridorArea) < 1e-6 &&
+        circulation.hubs.length === hubs;
+    }''', saved_approach)
+    page.locator('#openMassing').click()
 
     expect(page.locator('#openBuild + span + button')).to_have_text('Render')
     page.evaluate('window.designBeforeRender = model')

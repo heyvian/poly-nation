@@ -84,8 +84,8 @@ function buildNavigation(m) {
     }
     connect(previous, end, null, 'atriumBridge');
   }
-  for (const q of coreLobbies(m.circulation)) {
-    const ids = addCell(q, q.publicLobby ? 'publicLobby' : 'hub');
+  for (const q of m.circulation.hubs) {
+    const ids = addCell(q, 'hub');
     if (q.layout?.axis && ids.length) nodes[ids[0]].p = sharedLobbyPoint(q, 0, 0, yFor(q.f));
     dest.push(...ids);
   }
@@ -242,7 +242,7 @@ function buildNavigation(m) {
     ], 'stairs');
   }
   const servicedHubs = new Map();
-  for (const c of cells) if (c.lobbyId != null && c.layout) servicedHubs.set(c.lobbyId, c);
+  for (const c of cells) if (c.kind === 'hub' && c.layout) servicedHubs.set(c.lobbyId, c);
   for (let i = 0; i < cells.length; i++)
     for (let j = i + 1; j < cells.length; j++) {
       const c = cells[i],
@@ -250,7 +250,7 @@ function buildNavigation(m) {
       if (c.f !== d.f) continue;
       // Lobby connections follow the clear aisle and its approaches. Generic sector
       // adjacency would leave corridor shortcuts into the rooms or across the couches.
-      if (c.sharedLobby || d.sharedLobby || servicedHubs.get(c.lobbyId) === c || servicedHubs.get(d.lobbyId) === d) continue;
+      if (c.sharedLobby || d.sharedLobby || (c.kind === 'hub' && c.layout) || (d.kind === 'hub' && d.layout)) continue;
       // Room-to-room connections are prohibited: shared hubs create a separate intermediary.
       if (c.kind === 'room' && d.kind === 'room') continue;
       // The atrium is accessible through the ground-floor lobby, not arbitrary rooms.
@@ -300,14 +300,13 @@ function buildNavigation(m) {
   for (const hub of servicedHubs.values()) {
     const entries = hub.layout.publicEntries ?? [{ ...hub.layout.publicEntry, radius: hub.R }],
       y = yFor(hub.f);
-    for (const { angle, along, radius, inside, route, angular } of entries) {
+    for (const { angle, along, radius, inside, route } of entries) {
       const access = cells.find(
         (c) =>
           c.f === hub.f &&
           c.kind === 'corridor' &&
-          (angular ? angDist(angular < 0 ? c.end : c.start, angle) < eps &&
-              radius >= c.r && radius <= c.R
-            : route ? c.lobbyRouteId === hub.lobbyId && c.route === route
+          (route
+            ? c.lobbyRouteId === hub.lobbyId && c.route === route
             : Math.abs((inside ? c.R : c.r) - radius) < eps) &&
           [angle, angle + TAU, angle - TAU].some(
             (value) => value >= c.start - eps && value <= c.end + eps
@@ -559,9 +558,6 @@ function dwellPoint(n, a) {
       TAU;
   let dx = 0.65 * Math.cos(phase),
     dz = 0.65 * Math.sin(phase);
-  if (n.kind === 'publicLobby')
-    return sharedLobbyPoint(n.cell, Math.cos(phase) * 0.7,
-      Math.sin(phase) * n.cell.layout.passage * 0.28, base[1]);
   if (n.cell) {
     const c = n.cell,
       rad = (c.r + c.R) / 2,
@@ -1072,7 +1068,7 @@ function advanceOccupancy(s, dt) {
             a.onClimb = false;
           }
           a.wait =
-            n.kind === 'hub' || n.kind === 'publicLobby'
+            n.kind === 'hub'
               ? 8 + 25 * (a.social || 0.3) + s.rng() * 9
               : ['swing', 'climbBase', 'climbTop'].includes(n.kind)
                 ? 18 + s.rng() * 8
@@ -1081,7 +1077,7 @@ function advanceOccupancy(s, dt) {
                   : ['garden', 'balcony', 'plaza', 'greenhouse', 'gazebo'].includes(n.kind)
                     ? 7 + s.rng() * 15
                     : 2 + s.rng() * 7;
-          if (n.kind === 'hub' || n.kind === 'publicLobby') {
+          if (n.kind === 'hub') {
             s.gather++;
             a.social = 0;
           }
@@ -1097,7 +1093,7 @@ function advanceOccupancy(s, dt) {
 }
 // Cross-pollination: bounded pair encounters, measured in simulation time, not render frames.
 const CP_LABELS = {
-  hub: 'Core lobbies',
+  hub: 'Shared lobby',
   room: 'Same room / module',
   garden: 'Garden / gazebo',
   plaza: 'Plaza / entrance lobby',
@@ -1131,7 +1127,6 @@ function scoreCategory(k) {
   return (
     {
       hub: 'hub',
-      publicLobby: 'hub',
       room: 'room',
       module: 'room',
       retail: 'room',
@@ -1380,7 +1375,6 @@ function trialLayout(model, trial) {
     bridges: circulation.bridges.length,
     stairs: circulation.stairs?.length ?? 0,
     junctionLobbies: circulation.hubs.filter((hub) => hub.access).length,
-    publicLobbies: circulation.publicLobbies?.length ?? 0,
     entry: trial.graph.entry != null,
     corridors: circulation.corridorArea,
     plaza: model.plaza.area,
@@ -1499,7 +1493,7 @@ function trialLogSections(record) {
         typeof layout.entry === 'boolean' ? (layout.entry ? 'Yes' : 'No') : null,
       'Corridor area': area(layout.corridors),
       'Shared lobbies': trialValue(record.hubs),
-      'Public core lobbies': trialValue(layout.publicLobbies),
+      ...(layout.publicLobbies > 0 && { 'Public core lobbies': trialValue(layout.publicLobbies) }),
       'Exterior plaza': area(layout.plaza),
       'Public roof': area(layout.roof),
       'Slide built': layout.slide === 0 ? 'Off' : metres(layout.slide),

@@ -1,5 +1,8 @@
 # Changelog
 
+## Program-led shared lobbies
+- Removed standalone public lobbies from vacant bridge approaches and restored those bays to circulation, including in saved Materials studies. Shared lobbies still form where attracted programs can meet.
+
 ## Individual plug-in modules
 - Added program similarity controls for seeded enclosures, claddings, openings, roof forms and short units with full-chassis terraces. Materials reports realized enclosed area and keeps the nominal massing allowances visible.
 - Shared the generated openings and dock interface with Build. Added room partitions and program-specific furniture, separate interior and roof visibility, and varied garden, balcony and shop details.

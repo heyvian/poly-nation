@@ -1512,129 +1512,6 @@ function preferredLobbyLayout(next, current) {
   return (nextNear && !currentNear) || (nextConnected && !currentConnected);
 }
 
-function coreLobbies(circulation) {
-  return [...circulation.hubs, ...(circulation.publicLobbies ?? [])];
-}
-
-function coreLobbyName(lobby) {
-  if (lobby.publicLobby) return lobby.access?.type === 'bridge' ? 'Bridge lobby' : 'Public lobby';
-  return lobby.pair.map((id) => P[id].name).join(' + ');
-}
-
-// Make the walk from bridge to corridor the centre of a full gathering room.
-// Use only sectors already assigned to open circulation and keep the inner
-// apron for the bridge bearing, glass edge and stair arrivals.
-function furnishOpenCoreBays(circulation) {
-  const { regions, bridges, width } = circulation,
-    publicLobbies = [],
-    replacements = new Map();
-  const piece = (q, geometry) => {
-    const shape = { ...q, ...geometry },
-      { r, R, start, end } = shape;
-    return { ...shape, area: (R ** 2 - r ** 2) * (end - start) / 2 };
-  };
-
-  for (const landing of regions.filter((q) => q.kind === 'bridgeAccess')) {
-    const bridge = bridges.find((q) => q.f === landing.f),
-      neighbours = regions.filter((q) => q.kind === 'residual' && q.f === landing.f &&
-        q.r === landing.r && q.R === landing.R && !replacements.has(q)),
-      opening = (landing.start + landing.end) / 2,
-      side = Math.sin(opening - bridge.heading) < 0 ? -1 : 1,
-      axis = [-side * Math.sin(bridge.heading), side * Math.cos(bridge.heading)],
-      normal = [Math.cos(bridge.heading), Math.sin(bridge.heading)],
-      onAxis = (radius) => {
-        const run = Math.sqrt(radius ** 2 - bridge.offset ** 2);
-        return axis.map((component, i) => component * run + normal[i] * bridge.offset);
-      },
-      footprint = [landing];
-    let { start, end } = landing;
-    // The available wings can straddle north. Compare their touching edges
-    // modulo a full turn while keeping the lobby footprint in one interval.
-    for (const direction of [-1, 1]) {
-      while (true) {
-        const adjacent = neighbours.find((q) => !footprint.includes(q) &&
-          angDist(direction < 0 ? q.end : q.start, direction < 0 ? start : end) < 1e-7);
-        if (!adjacent) break;
-        footprint.push(adjacent);
-        if (direction < 0) start -= adjacent.end - adjacent.start;
-        else end += adjacent.end - adjacent.start;
-      }
-    }
-    const r = landing.r + Math.max(1.55, width * 0.62),
-      R = landing.R - 0.65,
-      passage = Math.max(bridge.width, width * 0.8),
-      edge = passage / 2,
-      radius = (r + R) / 2;
-    if (R - r < 4.35 || (end - start) * radius < passage + 3.85) continue;
-    const inner = onAxis(r),
-      bridgeExit = Math.atan2(onAxis(R)[1], onAxis(R)[0]),
-      heading = (start + end) / 2,
-      angles = [0, 0.018, -0.018, 0.036, -0.036, 0.054, -0.054, 0.076, -0.076],
-      hull = piece(landing, { r, R, start, end, kind: 'publicLobby', publicLobby: true,
-        access: { type: 'bridge', connected: true }, pair: [], doors: [],
-        lobbyId: circulation.hubs.length + publicLobbies.length });
-    let accepted = null;
-    // Start straight off the bridge. An offset mouth can turn the route toward
-    // a wider bay while still lining the seating and arches up with both entries.
-    for (const shift of angles) {
-      const exit = bridgeExit + shift,
-        outer = [R * Math.cos(exit), R * Math.sin(exit)],
-        run = Math.hypot(outer[0] - inner[0], outer[1] - inner[1]),
-        aisle = outer.map((coordinate, i) => (coordinate - inner[i]) / run),
-        origin = inner.map((coordinate, i) => (coordinate + outer[i]) / 2);
-      if (angDist(exit, heading) >= (end - start) / 2) continue;
-      for (const tableRadius of [0.94, 0.80, 0.68, 0.60]) {
-        const couchDepth = 0.78,
-          couchInner = tableRadius + 0.28,
-          couchOuter = couchInner + couchDepth,
-          shelfOuter = couchOuter + 0.23,
-          arch = shelfOuter + 0.10,
-          layout = { heading, origin, axis: aisle, radius, passage,
-            tableRadius, couchDepth, couchInner, couchOuter, shelfOuter, arch,
-            bridgeThrough: true,
-            publicEntries: [
-              { angle: Math.atan2(inner[1], inner[0]), radius: r, along: -arch, inside: true },
-              { angle: exit, radius: R, along: arch, inside: false }
-            ]
-          },
-          hub = { ...hull, layout };
-        const fits = (along, across) => {
-          const [x, , z] = sharedLobbyPoint(hub, along, across, 0);
-          return sharedLobbyContains(hub, x, z, 0.045);
-        };
-        const fitsFurniture = [-1, 1].every((sign) =>
-          Array.from({ length: 25 }, (_, i) => i * Math.PI / 24).every((angle) =>
-            fits((shelfOuter + 0.065) * Math.cos(angle), sign * (edge + (shelfOuter + 0.065) * Math.sin(angle)))
-          )
-        );
-        const fitsMouths = (depth, breadth) => [-arch, arch].every((along) =>
-          [-1, 1].every((sign) =>
-            [-depth, depth].every((extra) => fits(along + extra, sign * (edge + breadth)))
-          )
-        );
-        if (!fitsFurniture || !fitsMouths(0.105, 0.17)) continue;
-        layout.plantedThresholds = fitsMouths(0.385, 0.805);
-        accepted = hub;
-        break;
-      }
-      if (accepted) break;
-    }
-    if (!accepted) continue;
-    publicLobbies.push(accepted);
-    // Remove the full middle section across the approach so the local walk
-    // goes through the lobby. Keep the apron at each end of every source bay.
-    for (const q of footprint) replacements.set(q, [
-      piece(q, { R: r }),
-      piece(q, { r: R, kind: q === landing ? 'lobbyLanding' : q.kind })
-    ]);
-  }
-  circulation.regions = regions.flatMap((q) => replacements.get(q) ?? [q]);
-  circulation.publicLobbies = publicLobbies;
-  circulation.publicLobbyArea = publicLobbies.reduce((sum, lobby) => sum + lobby.area, 0);
-  circulation.area -= circulation.publicLobbyArea;
-  circulation.corridorArea -= circulation.publicLobbyArea;
-}
-
 function roomAt(rooms, angle) {
   for (const s of rooms) {
     if (mod(angle - s.start, TAU) < s.end - s.start + 1e-8) return s.id;
@@ -2612,7 +2489,6 @@ function derive(dockVariant = state.dockVariant) {
       ringArea + circulation.bridgeArea + court + count * MODULE.area + roofPlan.serviceArea,
     total = primary + retail + roofPlan.retailArea;
   const plaza = designPlaza(R, lobby, slots, feature.climbing);
-  furnishOpenCoreBays(circulation);
   const layout = {
     R,
     r,

@@ -23,10 +23,10 @@ function makeRenderLighting(model, seed = 0) {
     for (let i = 0; i < segments; i++)
       lamp(q.f, radius, q.start + (q.end - q.start) * (i + 0.5) / segments, reach, q.kind ? 0.7 : 0.46);
   }
-  for (const hub of coreLobbies(model.circulation)) {
+  for (const hub of model.circulation.hubs) {
     if (!hub.layout) continue;
     const canopy = lobbyCanopyPattern(hub, seed);
-    for (const side of hub.layout.seatingSides ?? [-1, 1]) {
+    for (const side of [-1, 1]) {
       const paper = canopy?.sign === side;
       const [x, , z] = paper ? canopy.center :
         sharedLobbyPoint(hub, 0, side * (hub.layout.passage / 2 + 0.86), 0);
