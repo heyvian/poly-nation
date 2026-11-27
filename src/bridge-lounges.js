@@ -2,6 +2,10 @@
 
 const BRIDGE_SEAT_RADIUS = 1.06;
 const BRIDGE_COMPACT_SCALE = 0.92;
+const bridgeMatOutline = Array.from({ length: 48 }, (_, i) => {
+  const angle = i * TAU / 48;
+  return [Math.cos(angle), Math.sin(angle)];
+});
 const bridgeLoungeCache = new WeakMap();
 
 // Distance to a walking segment in the plane of the floor.
@@ -9,53 +13,6 @@ function bridgeSeatDistance(point, from, to) {
   const x = to[0] - from[0], z = to[1] - from[1],
     t = clamp(((point[0] - from[0]) * x + (point[1] - from[1]) * z) / (x * x + z * z || 1), 0, 1);
   return Math.hypot(point[0] - from[0] - t * x, point[1] - from[1] - t * z);
-}
-
-// Fit one textile to the conversation area and the mouths of the capsules.
-// A rounded convex outline connects the seats without filling the whole bay.
-function bridgeCourtRug(court, seats, inPocket) {
-  const points = [],
-    add = (x, z) => points.push([x, z]),
-    turn = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-  for (let i = 0; i < 12; i++) {
-    const angle = i * TAU / 12;
-    add(court[0] + 0.77 * Math.cos(angle), court[1] + 0.77 * Math.sin(angle));
-  }
-  for (const { p, heading, scale } of seats) {
-    const x = Math.cos(heading), z = Math.sin(heading);
-    for (const side of [-0.64, 0.64]) add(p[0] + scale * (0.19 * x - side * z), p[1] + scale * (0.19 * z + side * x));
-  }
-  points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const hull = (list) => {
-    const part = [];
-    for (const p of list) {
-      while (part.length > 1 && turn(part.at(-2), part.at(-1), p) <= 0) part.pop();
-      part.push(p);
-    }
-    return part.slice(0, -1);
-  };
-  const polygon = [...hull(points), ...hull(points.slice().reverse())],
-    lerp = (a, b, t) => [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])],
-    rounded = polygon.flatMap((a, i) => {
-      const b = polygon[(i + 1) % polygon.length];
-      return [lerp(a, b, 0.16), lerp(a, b, 0.84)];
-    });
-  for (const scale of [1, 0.94, 0.88, 0.82]) {
-    const rug = rounded.map((p) => lerp(court, p, scale));
-    if (rug.every((p, i) => {
-      const next = rug[(i + 1) % rug.length];
-      return inPocket(p) && inPocket(lerp(p, next, 0.5)) && inPocket(lerp(court, p, 0.5));
-    })) return rug;
-  }
-  return null;
-}
-
-function bridgeRugsOverlap(a, b) {
-  const separates = (first, second) => first.some(([x, z], i) => {
-    const [u, v] = first[(i + 1) % first.length];
-    return second.every(([px, pz]) => (u - x) * (pz - z) - (v - z) * (px - x) <= 0);
-  });
-  return !separates(a, b) && !separates(b, a);
 }
 
 function bridgeLounges(model, navigation = null) {
@@ -161,7 +118,7 @@ function fitBridgeLounges(model, { nodes, edges, reachable }) {
       { count: 2, opening: 180, radii: [1.48, 1.64, 1.84] }
     ];
     const courts = centers.sort((a, b) => b.priority - a.priority), selected = lounges.filter((lounge) => lounge.f === f),
-      available = seatsInPocket.slice(), inRugPocket = (side) => (p) => side * lateral(p) >= corridor / 2 + 0.08 && inFloor(p);
+      available = seatsInPocket.slice();
     // Give compact groups of three or more first choice of the landing.
     // Search irregular pockets before accepting a pair, then start again
     // with the remaining independent seating area.
@@ -197,9 +154,13 @@ function fitBridgeLounges(model, { nodes, edges, reachable }) {
       if (selected.some((group) => distance(group.court, court) < 3.12) || !seats.every((seat, i) =>
           clearLine(court, seat.entry) && occupied.every((other) => clears(other, [court, seat.entry], 0.42)) &&
           seats.slice(i + 1).every((other) => separate(seat, other, court)))) return null;
-      const rug = bridgeCourtRug(court, seats, inRugPocket(Math.sign(lateral(court))));
-      if (!rug || selected.some((group) => bridgeRugsOverlap(group.rug, rug))) return null;
-      return { court, rug, seats: seats.map(({ entry, ...seat }) => ({ ...seat, route: [anchor, court, entry] })) };
+      const [x, z] = court;
+      let matRadius = Math.min(Math.abs(lateral(court)) - corridor / 2 - 0.08,
+        ...seats.map(({ p, scale }) => distance(p, court) - 0.48 * scale));
+      while (matRadius >= 0.68 && !bridgeMatOutline.every(([u, v]) => inFloor([x + u * matRadius, z + v * matRadius])))
+        matRadius -= 0.08;
+      if (matRadius < 0.68 || selected.some((group) => distance(group.court, court) < group.matRadius + matRadius)) return null;
+      return { court, matRadius, seats: seats.map(({ entry, ...seat }) => ({ ...seat, route: [anchor, court, entry] })) };
     }
     function findCircle({ count, opening, radii }, scale) {
       for (const { p } of courts) {
@@ -262,12 +223,12 @@ function drawBridgeLounge(mesh, lounge, base) {
   const { quad, box, line, tri } = mesh,
     palette = ['#6e9290', '#957e9e', '#a58160', '#73897a'],
     walnut = rgb('#927058'), plinth = rgb('#526963');
-  mesh.mark(`Circulation_L${lounge.f + 1}_Bridge_Seating_Rug`, 'Fitted conversation rug');
+  mesh.mark(`Circulation_L${lounge.f + 1}_Bridge_Seating_Rug`, 'Round conversation mat');
   const [x, z] = lounge.court, y = base + 0.012, center = [x, y, z],
-    point = ([u, v], scale) => [x + scale * (u - x), y, z + scale * (v - z)],
+    point = ([u, v], scale) => [x + u * lounge.matRadius * scale, y, z + v * lounge.matRadius * scale],
     woven = rgb('#b0a0b9'), selvedge = rgb('#866f8f'), stitch = rgb('#c6b7c9');
-  for (let i = 0; i < lounge.rug.length; i++) {
-    const a = lounge.rug[i], b = lounge.rug[(i + 1) % lounge.rug.length];
+  for (let i = 0; i < bridgeMatOutline.length; i++) {
+    const a = bridgeMatOutline[i], b = bridgeMatOutline[(i + 1) % bridgeMatOutline.length];
     tri(center, point(b, 0.91), point(a, 0.91), woven);
     quad(point(a, 0.91), point(b, 0.91), point(b, 1), point(a, 1), selvedge);
     line(point(a, 0.95), point(b, 0.95), stitch);

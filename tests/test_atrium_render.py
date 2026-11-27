@@ -136,16 +136,14 @@ with serve_lab(root) as url, sync_playwright() as p:
                 bridgeSeatDistance(p, points(a), points(b)) >= radius + 0.56;
             }));
         }));
-        const rugsConnect = lounges.every(({ court, rug, seats, axis, passage }, i) => {
-          const inRug = ([px, pz]) => rug.every(([x, z], j) => {
-            const [u, v] = rug[(j + 1) % rug.length];
-            return (u - x) * (pz - z) - (v - z) * (px - x) >= -1e-6;
-          });
-          return inRug(court) && rug.every(([x, z]) => Math.abs(z * Math.cos(axis) - x * Math.sin(axis)) >= passage / 2) &&
-            seats.every(({ p, heading, scale, route }) => route.at(-2) === court &&
+        const roundMatGroups = lounges.every(({ f, court, matRadius, seats, axis, passage }, i) => {
+          const [x, z] = court;
+          return matRadius > 0 && Math.abs(z * Math.cos(axis) - x * Math.sin(axis)) >= passage / 2 + matRadius &&
+            seats.every(({ p, heading, route }) => route.at(-2) === court &&
               angDist(heading, Math.atan2(court[1] - p[1], court[0] - p[0])) < 1e-6 &&
-              inRug([p[0] + 0.69 * scale * Math.cos(heading), p[1] + 0.69 * scale * Math.sin(heading)])) &&
-            lounges.slice(i + 1).every(other => other.f !== lounges[i].f || !bridgeRugsOverlap(rug, other.rug));
+              Math.hypot(p[0] - x, p[1] - z) > matRadius) &&
+            lounges.slice(i + 1).every(other => other.f !== f ||
+              Math.hypot(other.court[0] - x, other.court[1] - z) >= matRadius + other.matRadius);
         });
         state = { ...state, bridgeSeating: false };
         const open = derive();
@@ -161,16 +159,18 @@ with serve_lab(root) as url, sync_playwright() as p:
             [1, 4].every(f => lounges.some(lounge => lounge.f === f && lounge.seats.length >= 3)) && seatNodes.length >= 10,
           usableSeats: seatNodes.length === lounges.reduce((count, lounge) => count + lounge.seats.length, 0) &&
             seatNodes.every(node => graph.reachable.has(node.id) && graph.edges[node.id].length === 1),
-          clearOfWalk, pathsUnchanged, rugsConnect,
+          clearOfWalk, pathsUnchanged, roundMatGroups,
           sameProgram: !bridgeLounges(open).length && open.total === plan.total &&
             JSON.stringify(open.rooms) === JSON.stringify(plan.rooms) && JSON.stringify(open.slots) === JSON.stringify(plan.slots),
           furniture: lounges.every(lounge => {
             const mesh = meshBuilder();
             drawBridgeLounge(mesh, lounge, 0);
-            const ys = mesh.solid.filter((_, i) => i % 10 === 1);
-            return ['_Bridge_Seating', '_Bridge_Seating_Rug'].every(layer =>
-              mesh.groups.some(group => group.layer.endsWith(layer))) && Math.max(...ys) === 2.12 &&
-              mesh.solid.every(Number.isFinite);
+            const [x, z] = lounge.court, [mat, furniture] = mesh.groups,
+              vertices = mesh.solid.slice(mat.solid, furniture.solid),
+              radii = vertices.flatMap((u, i) => i % 10 === 0 ? [Math.hypot(u - x, vertices[i + 2] - z)] : []),
+              ys = mesh.solid.filter((_, i) => i % 10 === 1);
+            return mat.layer.endsWith('_Bridge_Seating_Rug') && furniture.layer.endsWith('_Bridge_Seating') &&
+              Math.abs(Math.max(...radii) - lounge.matRadius) < 1e-6 && Math.max(...ys) === 2.12 && mesh.solid.every(Number.isFinite);
           }),
           openLandings: [2, 4, 5].every(level => circulation.regions.some(region =>
             region.f === level - 1 && region.kind === 'bridgeAccess' && region.r === plan.r)),

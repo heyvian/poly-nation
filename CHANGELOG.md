@@ -1,5 +1,8 @@
 # Changelog
 
+## Round mats for capsule groups
+- Give each inward-facing bridge seating group one round mat.
+
 ## Gantry connections and cassette pickup
 - Tied the hoist heads and carriage guides into the traveling steelwork and kept overhead ties across gaps in the roof piers.
 - Matched four locking jaws to pickup sockets in the standard cassette chassis. Removed the rear couch swings and retained unloaded gantry travel.

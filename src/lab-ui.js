@@ -1364,7 +1364,11 @@ $('export').onclick = () => {
         stairArea: m.circulation.stairArea,
         stairs: m.circulation.stairs,
         bridges: m.circulation.bridges,
-        bridgeSeating: bridgeLounges(m),
+        bridgeSeating: bridgeLounges(m).map(({ court, matRadius, ...lounge }) => ({
+          ...lounge,
+          court,
+          rug: bridgeMatOutline.map(([u, v]) => [court[0] + u * matRadius, court[1] + v * matRadius])
+        })),
         roomPacking: m.circulation.roomPacking,
         regions: m.circulation.regions,
         hubs: m.circulation.hubs,
