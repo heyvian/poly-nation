@@ -1,5 +1,8 @@
 # Changelog
 
+## Programme document set
+- Merge the programme schedule, floor and roof plans and axonometrics into one 11 × 17 landscape document. Pair plans at a common scale and restore saved Programme diagrams selections to the merged set.
+
 ## Larger shared lobby drawings
 - Tighten the crop around adjoining rooms and corridor approaches and add intermediate architectural scales. Populate every lobby axonometric with a walker and seated activities, including a reclining reader where the casework provides enough space.
 

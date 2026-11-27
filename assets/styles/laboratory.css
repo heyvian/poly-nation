@@ -695,6 +695,9 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 .study-table { overflow-x: auto; }
 .study-table table { width: 100%; }
 .study-page .study-grid svg { height: min(22vh, 58mm); }
+.study-page .study-plan-pair svg { height: auto; max-height: none; }
+.study-programme-exploded svg { max-height: min(68vh, 200mm); }
+.study-page .study-programme-axos svg { height: min(28vh, 95mm); }
 @media print {
  body.drawings-open.printing-floor-set #drawingsPhase { display: none !important; }
  body.drawings-open.printing-floor-set #floorPrintPages { display: block; }
@@ -705,6 +708,9 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  #documentPrintPages .study-page { print-color-adjust: exact; -webkit-print-color-adjust: exact; border: 0; padding: 10mm; break-after: page; }
  #documentPrintPages .study-page:last-child { break-after: auto; }
  #documentPrintPages .study-grid svg { height: 54mm; }
+ #documentPrintPages .study-plan-pair svg { height: auto; }
+ #documentPrintPages .study-programme-exploded svg { max-height: 205mm; }
+ #documentPrintPages .study-programme-axos svg { height: 95mm; }
 }
 .drawing-compass button { min-height: 26px; padding: 2px 4px; font-size: 11px; }
 .drawing-compass button[aria-pressed=true] { background: #294e3e; border-color: #294e3e; color: white; }

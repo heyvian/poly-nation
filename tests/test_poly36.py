@@ -287,7 +287,12 @@ with serve_lab(root) as url, sync_playwright() as p:
  detail.select_option('services')
  expect(page.locator('#drawingSheet [data-layer="Service routes"] polyline')).to_have_count(3)
  page.locator('#drawingDocument').select_option('programme')
- expect(page.locator('#documentPages .study-grid svg')).to_have_count(4)
+ expect(page.locator('#documentPages .study-programme-axos svg')).to_have_count(4)
+ expect(page.locator('#documentPages .study-programme-exploded svg')).to_have_count(1)
+ pairs = page.locator('#documentPages .study-plan-pair')
+ plan_counts = pairs.evaluate_all('pairs => pairs.map(pair => pair.querySelectorAll("svg").length)')
+ plan_count = page.evaluate('model.layers.length + 1')
+ assert plan_counts == [2] * (plan_count // 2) + ([1] if plan_count % 2 else [])
  assert page.locator('#documentPages table tbody tr').count() == page.locator('#schedule tr').count()
  page.locator('#openMassing').click()
  assert page.evaluate('JSON.stringify({state: {...state, slabThickness: 0.22}, camera})') == before_drawing

@@ -1,6 +1,7 @@
 'use strict';
 
-const DRAWING_DOCUMENTS = ['programme', 'program-diagrams', 'circulation', 'lobbies', 'structure', 'cranes'];
+const DRAWING_DOCUMENTS = ['programme', 'circulation', 'lobbies', 'structure', 'cranes'];
+const PROGRAMME_DRAWING_PAPER = { width: 17, height: 11 };
 const LOBBY_DRAWING_SCALES = [25, 50, 75, 100, 125, 150, 200, 250, 500];
 const CRANE_DRAWING_PAPER = { width: 17, height: 11 };
 const CRANE_STUDY_GUIDE = {
@@ -420,11 +421,13 @@ function studyFloor(model, floor, kind) {
 }
 
 // The document figures use analytical volumes. All footprints and floor assignments come from the plan.
-function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded = false } = {}) {
+function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded = false, planRadius } = {}) {
   const plan = floor !== undefined,
+    width = planRadius ? 610 : 780,
+    height = planRadius ? 610 : 510,
     svg = studySVG(
-      780,
-      510,
+      width,
+      height,
       plan
         ? studyFloorName(floor, model) + ' ' + kind + ' plan'
         : (exploded ? 'Exploded ' : '') + kind + ' axonometric'
@@ -435,23 +438,28 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
     plates = floors.map((level) => ({ level, shapes: studyFloor(model, level, kind) }));
   const raw = ([x, z], y) =>
     plan ? [-x, -z] : [dot([x, y, z], basis.right), -dot([x, y, z], basis.up)];
-  let minX = Infinity,
-    maxX = -Infinity,
-    minY = Infinity,
-    maxY = -Infinity;
-  for (const { level, shapes } of plates)
-    for (const shape of shapes)
-      for (const vertex of shape.points) {
-        const [x, y] = raw(vertex, level * stack + shape.height);
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-      }
-  const scale = Math.min(648 / (maxX - minX || 1), 438 / (maxY - minY || 1)),
+  let minX = planRadius ? -planRadius : Infinity,
+    maxX = planRadius ?? -Infinity,
+    minY = minX,
+    maxY = maxX;
+  if (!planRadius) {
+    for (const { level, shapes } of plates)
+      for (const shape of shapes)
+        for (const vertex of shape.points) {
+          const [x, y] = raw(vertex, level * stack + shape.height);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+  }
+  const scale = Math.min(
+      (planRadius ? width - 44 : 648) / (maxX - minX || 1),
+      (planRadius ? height - 44 : 438) / (maxY - minY || 1)
+    ),
     project = (vertex, y) => {
       const [x, z] = raw(vertex, y);
-      return [390 + (x - (minX + maxX) / 2) * scale, 255 + (z - (minY + maxY) / 2) * scale];
+      return [width / 2 + (x - (minX + maxX) / 2) * scale, height / 2 + (z - (minY + maxY) / 2) * scale];
     };
   function polygon(points, fill, opacity = 1) {
     studyMark(svg, 'polygon', {
@@ -511,7 +519,7 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
               x,
               y: y + 2.2,
               'text-anchor': 'middle',
-              'font-size': 7,
+              'font-size': planRadius ? 8 : 7,
               'font-weight': 650,
               fill: '#273b34'
             },
@@ -530,8 +538,9 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
     }
   }
   if (plan) {
+    const x = width - 53;
     studyMark(svg, 'path', {
-      d: 'M727 69V37L721 48M727 37L733 48',
+      d: `M${x} 69V37L${x - 6} 48M${x} 37L${x + 6} 48`,
       fill: 'none',
       stroke: STUDY_INK,
       'stroke-width': 1.7
@@ -539,7 +548,7 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
     studyMark(
       svg,
       'text',
-      { x: 727, y: 30, 'text-anchor': 'middle', fill: STUDY_INK, 'font-size': 12 },
+      { x, y: 30, 'text-anchor': 'middle', fill: STUDY_INK, 'font-size': 12 },
       'N'
     );
   }
@@ -744,20 +753,11 @@ function drawingSetPages(name, model, assignments) {
     }
     return list;
   }
-  function floorPages(kind) {
-    for (let i = 0; i <= model.layers.length; i++) {
-      const route = kind === 'circulation',
-        subtitle = route ? 'Circulation plan' : 'Programme plan',
-        note = route
-          ? i === 0
-            ? 'Opposing lobbies lead through the biofiltration atrium.'
-            : 'Corridors, lifts and any bridges at this level.'
-          : 'Internal rooms and external docks are shown on the same floor plan.';
-      add(`${studyFloorName(i, model)} · ${subtitle}`, note).append(
-        studyModelFigure(model, kind, { floor: i }),
-        legend(route ? routes : programmes)
-      );
-    }
+  function captionedStudy(label, svg) {
+    const figure = document.createElement('figure'), caption = document.createElement('figcaption');
+    caption.textContent = label;
+    figure.append(caption, svg);
+    return figure;
   }
   if (name === 'programme') {
     const page = add(
@@ -772,40 +772,51 @@ function drawingSetPages(name, model, assignments) {
     for (const node of table.querySelectorAll('[id]')) node.removeAttribute('id');
     wrapper.append(table);
     page.append(wrapper, units, legend(programmes));
-    floorPages('program');
+    const exploded = add(
+      'Programme · Exploded axonometric',
+      'The separated floor plates show the internal room layouts and external programme modules.'
+    );
+    exploded.classList.add('study-programme-exploded');
+    exploded.append(studyModelFigure(model, 'program', { exploded: true }), legend(programmes));
+
+    // Fit every plan to the full module envelope so paired levels and the roof share a scale.
+    const planRadius = Math.hypot(model.R + BUILD_SECTION.dockGap + MODULE.depth, MODULE.width / 2);
+    for (let first = 0; first <= model.layers.length; first += 2) {
+      const roofOnly = first === model.layers.length,
+        last = Math.min(first + 1, model.layers.length), pair = document.createElement('div'),
+        plans = add(roofOnly ? 'Programme · Roof plan' : 'Programme · Floor plans',
+          roofOnly ? 'Rooftop pavilions at the same scale as the floor plans.'
+            : 'Core rooms and exterior docks at a common scale across the document.');
+      pair.className = 'study-grid study-plan-pair';
+      for (let floor = first; floor <= last; floor++)
+        pair.append(captionedStudy(studyFloorName(floor, model), studyModelFigure(model, 'program', { floor, planRadius })));
+      plans.append(pair, legend(programmes));
+    }
+
     const views = add(
         'Programme axonometrics',
         'Four views around the ring show how the programmes occupy the exterior docks and core.'
       ),
       grid = document.createElement('div');
-    grid.className = 'study-grid';
+    grid.className = 'study-grid study-programme-axos';
     for (const [label, azimuth] of [
       ['NE', (3 * Math.PI) / 4],
       ['SE', (5 * Math.PI) / 4],
       ['SW', (7 * Math.PI) / 4],
       ['NW', Math.PI / 4]
-    ]) {
-      const figure = document.createElement('figure'),
-        caption = document.createElement('figcaption');
-      caption.textContent = label;
-      figure.append(studyModelFigure(model, 'program', { azimuth }), caption);
-      grid.append(figure);
-    }
+    ]) grid.append(captionedStudy(label, studyModelFigure(model, 'program', { azimuth })));
     views.append(grid, legend(programmes));
-  } else if (name === 'program-diagrams' || name === 'circulation') {
-    const route = name === 'circulation',
-      kind = route ? 'circulation' : 'program',
-      caption = route
-        ? 'Lobbies, corridors, lifts and bridges are shown in colour. Rooms and modules provide neutral context.'
-        : 'The separated floor plates show the internal room layouts and external programme modules.';
+  } else if (name === 'circulation') {
     add(
-      route ? 'Circulation · Exploded axonometric' : 'Programme · Exploded axonometric',
-      caption
-    ).append(
-      studyModelFigure(model, kind, { exploded: true }),
-      legend(route ? routes : programmes)
-    );
-    floorPages(kind);
+      'Circulation · Exploded axonometric',
+      'Lobbies, corridors, lifts and bridges are shown in colour. Rooms and modules provide neutral context.'
+    ).append(studyModelFigure(model, 'circulation', { exploded: true }), legend(routes));
+    for (let floor = 0; floor <= model.layers.length; floor++) {
+      add(`${studyFloorName(floor, model)} · Circulation plan`, floor === 0
+        ? 'Opposing lobbies lead through the biofiltration atrium.'
+        : 'Corridors, lifts and any bridges at this level.').append(
+        studyModelFigure(model, 'circulation', { floor }), legend(routes));
+    }
   } else {
     const layers = buildViewLayers();
     const demand = dockSupportDemand(

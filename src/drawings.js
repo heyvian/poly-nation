@@ -103,12 +103,13 @@ const openDrawingWorkspace = (() => {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey));
     if (saved && Array.isArray(saved.planes)) {
-      const previousElevation = ['front', 'side'].includes(saved.view);
+      const previousElevation = ['front', 'side'].includes(saved.view),
+        documentName = saved.document === 'program-diagrams' ? 'programme' : saved.document;
       settings = {
         ...settings,
         view: previousElevation ? 'elevation' : viewNames.includes(saved.view) ? saved.view : 'axo',
         detail: Object.hasOwn(CONNECTION_DETAIL_TITLES, saved.detail) ? saved.detail : '',
-        document: DRAWING_DOCUMENTS.includes(saved.document) ? saved.document : '',
+        document: DRAWING_DOCUMENTS.includes(documentName) ? documentName : '',
         lobbyDirection: saved.lobbyDirection === 'compass' ? 'compass' : 'centre',
         lobbyAzimuth:
           Number.isInteger(saved.lobbyAzimuth) && compassPoints[saved.lobbyAzimuth] ? saved.lobbyAzimuth : 5,
@@ -2017,11 +2018,12 @@ const openDrawingWorkspace = (() => {
   }
 
   function prepareDocumentPrint(pages) {
+    const { width, height } = settings.document === 'programme' ? PROGRAMME_DRAWING_PAPER : { width: 11, height: 8.5 };
     $('documentPrintPages').replaceChildren(
       ...[...pages.children].map((page) => page.cloneNode(true))
     );
     document.body.classList.add('printing-document-set');
-    pageStyle.textContent = '@page { size: letter landscape; margin: 0; }';
+    pageStyle.textContent = `@page { size: ${width}in ${height}in; margin: 0; }`;
   }
 
   exportButton.onclick = () => {
