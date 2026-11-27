@@ -140,10 +140,7 @@ function buildGravityStudy(
   let moduleWeight = moduleDeadLoad({ structure: 'steel-frame', facade: 'corrugated' });
   for (const slot of model.slots) {
     if (slot.blocked || (slot.p === EMPTY && slot.use !== 'retail')) continue;
-    const values =
-      slot.p === EMPTY
-        ? materialValues(assignments, 'commercial')
-        : materialValues(assignments, 'module', slot.p, materialSlotKey(model, slot));
+    const { values } = moduleMaterialSelection(model, slot, assignments, state.seed);
     moduleWeight = Math.max(moduleWeight, moduleDeadLoad(values));
   }
   function inertiaAt(fraction) {
@@ -355,7 +352,7 @@ function drawBuildBoardingStairs(mesh, model) {
 }
 
 // The removable module sits between permanent side trusses, clear of the bay below.
-function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, openPanels = false) {
+function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, openPanels = false, seat = 0.05) {
   const { dockGap, chordWidth, chordDepth } = BUILD_SECTION,
     { box, mark } = mesh,
     span = dockGap + MODULE.depth,
@@ -391,11 +388,13 @@ function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, op
       box(x, y - 0.23, z, 0.36, 0.46, 0.28, slot.angle, plates);
     }
   }
-  // Crossmembers carry a module or open deck between the two side frames.
+  // Recess the crossmember tops to receive the cassette without raising the
+  // fixed pedestrian threshold. The primary side chords retain their levels.
+  const seatY = storey.base - lower - seat - 0.10;
   for (const depth of [dockGap, span / 2, span])
     member(
-      point(-sideOffset, depth - span, 0),
-      point(sideOffset, depth - span, 0),
+      point(-sideOffset, depth - span, seatY),
+      point(sideOffset, depth - span, seatY),
       0.16,
       steel,
       0.2
@@ -417,7 +416,7 @@ function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, op
 }
 
 // Study alternatives retain the docking pitch, door and deck height of the baseline.
-function drawAlternativeDock(mesh, model, slot, storey, structure) {
+function drawAlternativeDock(mesh, model, slot, storey, structure, seat = null) {
   const { dockGap } = BUILD_SECTION,
     { mark, box } = mesh,
     span = dockGap + MODULE.depth,
@@ -430,7 +429,7 @@ function drawAlternativeDock(mesh, model, slot, storey, structure) {
   mark('Assembly_Dock_Connections', 'L' + (slot.f + 1) + '_Slot_' + slot.j);
   if (structure === 'box-floor') {
     const { depth } = DOCK_STRUCTURES[structure];
-    const [x, y, z] = point(0, -span / 2, -depth);
+    const [x, y, z] = point(0, -span / 2, -depth - (seat ?? 0));
     box(x, y, z, 3.8, depth, span, slot.angle, steel);
     for (const offset of [-1.72, 1.72])
       member(point(offset, -span, -0.16), point(offset, -span - back, -0.16), 0.27);
@@ -443,7 +442,8 @@ function drawAlternativeDock(mesh, model, slot, storey, structure) {
   for (const offset of [-side, side])
     member(point(offset, -span, railY), point(offset, 0, railY), 0.2, steel, 0.32);
   for (const depth of [-span + dockGap, -span / 2, -0.6])
-    member(point(-side, depth, -0.11), point(side, depth, -0.11), 0.17, steel, 0.2);
+    member(point(-side, depth, -(seat ?? 0.01) - 0.10),
+      point(side, depth, -(seat ?? 0.01) - 0.10), 0.17, steel, 0.2);
   if (!stay) return;
   mark('Assembly_Dock_Stays_L' + (slot.f + 1), 'Slot_' + slot.j);
   for (const offset of [-side, side])
@@ -905,6 +905,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     }
   }
   if (full && layers.roofRetail) drawCommercialPavilions(mesh, model.roofPlan, preview);
+  if (full && layers.slabs && preview.assignments.moduleDesign?.enabled)
+    drawVariedRoofGardens(mesh, model.roofPlan, preview.view.seed);
 
   const exterior = layers.modules ? moduleExteriorDetails(model, preview.view.seed) : null;
 
@@ -928,9 +930,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
           storey,
           'Assembly_Dock_Connections',
           true,
-          dockStructure === 'side-portal'
+          dockStructure === 'side-portal',
+          MODULE_CASSETTE_DEPTH
         );
-      else drawAlternativeDock(mesh, model, slot, storey, dockStructure);
+      else drawAlternativeDock(mesh, model, slot, storey, dockStructure, MODULE_CASSETTE_DEPTH);
     }
     if (layers.facade || layers.docks) drawDockClosure(mesh, model, slot, storey);
     if (!layers.modules) continue;
@@ -939,46 +942,27 @@ function buildAssemblyMesh(model, layers, levels, preview) {
         const [x, , z] = location((foot + front) / 2, 0, base),
           deckColor = rgb(VACANCY.find((use) => use.id === slot.use).color);
         mark(`Assembly_Open_${slot.use}_L${slot.f + 1}`, `Slot_${slot.j}`);
-        drawDockDeck(mesh, slot, x, base, z, angle, deckColor);
+        if (preview.assignments.moduleDesign?.enabled) drawVariedDockDeck(mesh, slot, x, base, z, preview.view.seed);
+        else drawDockDeck(mesh, slot, x, base, z, angle, deckColor, true);
       }
       continue;
     }
-    const values =
-      slot.p === EMPTY
-        ? materialValues(preview.assignments, 'commercial')
-        : materialValues(preview.assignments, 'module', slot.p, materialSlotKey(model, slot));
-    const system = STRUCTURAL_SYSTEMS[values.structure];
-    const chassis = rgb(
-      preview.programColors && PROGRAMS[slot.p] ? PROGRAMS[slot.p].color : system.color
-    );
-    if (layers.facade) {
-      mark('Assembly_Module_Skin', `${slot.f + 1}/Slot_${slot.j}`);
-      const [x, , z] = location((foot + front) / 2, 0, base);
-      drawMaterialModule(mesh, slot, x, base, z, preview, values);
-      if (exterior?.balconies.has(slot.i)) drawModuleBalcony(mesh, model, slot, base);
-      continue;
-    }
-    mark('Assembly_Module_Chassis', `${slot.f + 1}/Slot_${slot.j}`);
-    const half = MODULE.width / 2 - 0.13,
-      upper = base + MODULE.height;
-    at((foot + front) / 2, angle, base, MODULE.width, 0.15, MODULE.depth, chassis);
-    for (const side of [-half, half]) {
-      member(location(foot, side, upper), location(front, side, upper), 0.11, chassis);
-      for (let bay = 0; bay <= 3; bay++) {
-        const atBay = foot + (MODULE.depth * bay) / 3;
-        member(location(atBay, side, base), location(atBay, side, upper), 0.11, chassis, angle);
-        if (system.frame !== 'solid' && bay < 3 && (system.frame === 'brace' || bay !== 1))
-          member(
-            location(atBay, side, base),
-            location(atBay + MODULE.depth / 3, side, upper),
-            0.085,
-            chassis
-          );
-      }
-    }
-    for (const radius of [foot, front])
-      member(location(radius, -half, upper), location(radius, half, upper), 0.11, chassis);
-    if (exterior?.balconies.has(slot.i)) drawModuleBalcony(mesh, model, slot, base, null, false);
+    const plan = furnishedModulePlan(model, slot, preview.assignments, preview.view.seed,
+      exterior.balconies.has(slot.i));
+    const [x, , z] = location(foot, 0, base);
+    drawFittedModule(mesh, slot, x, base, z, preview, plan, {
+      assembly: true,
+      enclosure: layers.facade,
+      interiors: layers.moduleInteriors ?? layers.walls,
+      cover: layers.moduleRoofs ?? true
+    });
+    if (layers.docks) drawModuleDockCollar(mesh, slot, x, base, z, plan, storey.head, layers.facade);
+    if (plan.balcony) drawModuleBalcony(mesh, model, slot, base, null, false, plan);
+  }
+  if (layers.modules && layers.facade && preview.assignments.moduleDesign?.enabled) {
+    for (const span of exterior.laundry)
+      if (span.slot.f < floors) drawModuleLaundry(mesh, model, span,
+        buildStorey(model, span.slot.f, slabThickness).base, preview);
   }
   if (layers.docks && (dockStructure === 'roof-hung' || dockStructure === 'columns'))
     drawSharedDockSupports(mesh, model, dockSlots, dockStructure, slabThickness);
@@ -1026,6 +1010,8 @@ const BUILD_LAYERS = {
   facade: 'buildFacade',
   docks: 'buildDocks',
   modules: 'buildModules',
+  moduleInteriors: 'buildModuleInteriors',
+  moduleRoofs: 'buildModuleRoofs',
   slide: 'buildSlide',
   swings: 'buildSwings',
   roofRetail: 'buildRoofRetail'

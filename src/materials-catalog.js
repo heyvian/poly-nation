@@ -456,7 +456,7 @@ function assemblyLayerMarkup(values) {
 // CAD scenario rates are editable assumptions. Apply each layer's index to its own physical area.
 const DEFAULT_MATERIAL_RATES = { structure: 350, facade: 95 };
 
-function estimateMaterialAssemblies(model, assignments, rates) {
+function estimateMaterialAssemblies(model, assignments, rates, seed = state.seed) {
   const core = { label: 'Core ring', count: 1, cost: 0, mass: 0 };
   const modules = PROGRAMS.map((program) => ({ label: program.name, count: 0, cost: 0, mass: 0 }));
   const other = { label: 'Other enclosed modules', count: 0, cost: 0, mass: 0 };
@@ -497,14 +497,17 @@ function estimateMaterialAssemblies(model, assignments, rates) {
         measure(core, 'facade', facade, (span.end - span.start) * model.R * wall.height);
       }
 
-  const moduleWallArea = 2 * (MODULE.width + MODULE.depth) * MODULE.height;
+  let terraceArea = 0;
   for (const slot of model.slots) {
     if (slot.blocked || (slot.p === EMPTY && slot.use !== 'retail')) continue;
     const row = modules[slot.p] || other;
-    const values = materialValues(assignments, 'module', slot.p, materialSlotKey(model, slot));
+    const { values, length } = moduleMaterialSelection(model, slot, assignments, seed);
     row.count++;
+    terraceArea += (MODULE.depth - length) * MODULE.width;
+    // The steel chassis and deck still span the full bay. Measure the gross
+    // exterior walls against the enclosure length, excluding the open terrace.
     measure(row, 'structure', values.structure, MODULE.area);
-    measure(row, 'facade', values.facade, moduleWallArea);
+    measure(row, 'facade', values.facade, 2 * (MODULE.width + length) * MODULE.height);
     modulePairs.add(values.structure + '/' + values.facade);
     moduleSystems.add(values.structure);
   }
@@ -516,6 +519,7 @@ function estimateMaterialAssemblies(model, assignments, rates) {
   const leadingStructure = [...structureAreas].sort((a, b) => b[1] - a[1])[0];
   return {
     rows,
+    studyTotal: model.total - terraceArea,
     total,
     mass,
     structuralCost,

@@ -1233,8 +1233,10 @@ function moduleExteriorDetails(model, seed) {
 }
 
 // Vacant public decks use the same footprint in Massing and Build.
-function drawDockDeck({ box }, slot, x, y, z, angle, color) {
-  box(x, y, z, MODULE.width, 0.24, MODULE.depth, angle, color, true);
+function drawDockDeck({ box }, slot, x, y, z, angle, color, recessed = false) {
+  const thickness = recessed ? MODULE_CASSETTE_DEPTH : 0.24;
+  if (recessed) y -= 0.24;
+  box(x, y + 0.24 - thickness, z, MODULE.width, thickness, MODULE.depth, angle, color, true);
   const T = [-Math.sin(angle), Math.cos(angle)],
     D = [Math.cos(angle), Math.sin(angle)],
     rail = rgb('#687e73');
@@ -1275,34 +1277,46 @@ function moduleTipPoint(model, slot, base) {
   ];
 }
 
-function drawModuleBalcony(mesh, model, slot, base, pick = null, showDoor = true) {
+function drawModuleBalcony(mesh, model, slot, base, pick = null, showDoor = true, plan = null) {
   const { tri, quad, line, box, mark } = mesh,
     point = moduleTipPoint(model, slot, base),
-    slab = rgb('#c6bcaa'),
-    rail = rgb('#597368'),
-    radius = 1.65,
-    deck = 0.18,
+    userDeck = plan?.unique,
+    slab = rgb(userDeck && plan.broad > 0.49 ? '#b9a589' : '#c6bcaa'),
+    rail = rgb(userDeck && plan.broad < 0.4 ? '#786b63' : '#597368'),
+    radius = userDeck ? 1.53 + plan.broad * 0.43 : 1.65,
+    deckShape = userDeck && plan.broad > 0.53 ? 0.73 : 1,
+    deck = plan ? 0.005 : 0.18,
+    bottom = deck - 0.18,
     guard = 1.08,
     segments = 16;
   mark(`Module_Balconies_L${slot.f + 1}_${P[slot.p].id}`, `Slot_${slot.j}`, pick);
   const curve = (step, up) => {
     const angle = Math.PI * (step / segments - 0.5);
-    return point(radius * Math.sin(angle), radius * Math.cos(angle), up);
+    return point(radius * Math.sin(angle), radius * Math.cos(angle) ** deckShape, up);
   };
   for (let i = 0; i < segments; i++) {
-    const low = curve(i, 0),
-      nextLow = curve(i + 1, 0),
+    const low = curve(i, bottom),
+      nextLow = curve(i + 1, bottom),
       top = curve(i, deck),
       nextTop = curve(i + 1, deck);
-    tri(point(0, 0, 0), low, nextLow, slab);
+    tri(point(0, 0, bottom), low, nextLow, slab);
     tri(point(0, 0, deck), nextTop, top, slab);
     quad(low, top, nextTop, nextLow, slab);
     for (const up of [deck + 0.13, deck + guard]) line(curve(i, up), curve(i + 1, up), rail);
   }
-  quad(curve(segments, 0), curve(segments, deck), curve(0, deck), curve(0, 0), slab);
+  quad(curve(segments, bottom), curve(segments, deck), curve(0, deck), curve(0, bottom), slab);
   for (let i = 0; i <= segments; i += 2) {
     const [x, y, z] = curve(i, deck);
     box(x, y, z, 0.045, guard, 0.045, slot.angle, rail);
+  }
+  if (userDeck) {
+    const planter = point(0.69, 0.64, deck),
+      depth = plan.broad < 0.46 ? 0.52 : 0.38;
+    box(...planter, 0.57, 0.32, depth, slot.angle, slab);
+    if (plan.broad > 0.27) {
+      const foliage = point(0.69, 0.64, deck + 0.32);
+      box(...foliage, 0.48, 0.25 + plan.broad * 0.20, depth - 0.09, slot.angle, rgb('#829d78'));
+    }
   }
   if (!showDoor) return;
   // A glazed door marks the connection to the occupied module, above the balcony slab.
@@ -1325,10 +1339,14 @@ function drawModuleBalcony(mesh, model, slot, base, pick = null, showDoor = true
   }
 }
 
-function drawModuleLaundry(mesh, model, { slot, neighbor, side, seed }, base) {
+function drawModuleLaundry(mesh, model, { slot, neighbor, side, seed }, base, preview = null) {
   const { line, quad, mark } = mesh,
     half = MODULE.width / 2 + 0.025,
-    anchor = (at, direction) => moduleTipPoint(model, at, base)(direction * half, -3.8, 2.54),
+    compatibleDepth = preview?.assignments.moduleDesign?.enabled
+      ? Math.min(...[slot, neighbor].map((unit) =>
+        moduleMaterialSelection(model, unit, preview.assignments, preview.view.seed).length)) - MODULE.depth - 1.0
+      : -3.8,
+    anchor = (at, direction) => moduleTipPoint(model, at, base)(direction * half, compatibleDepth, 2.54),
     start = anchor(slot, side),
     end = anchor(neighbor, -side),
     length = Math.hypot(end[0] - start[0], end[2] - start[2]),
@@ -1537,6 +1555,10 @@ function drawCommercialPavilions(mesh, roof, preview) {
         for (const across of [-width / 2 + 0.08, width / 2 - 0.08])
           for (const along of [-depth / 2 + 0.08, depth / 2 - 0.08])
             part(across, along, y + 0.15, 0.16, 2.53, 0.16, frame);
+        continue;
+      }
+      if (preview?.assignments.moduleDesign?.enabled) {
+        drawVariedRoofShop(mesh, pavilion, preview, i, floor, part, point, width, depth, y, system, finish);
         continue;
       }
       part(0, 0, y, width, 2.72, depth, shell);
@@ -3837,7 +3859,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     for (const s of m.slots) {
       if (!visible(s.f) || s.blocked) continue;
       const storey = buildStorey(m, s.f);
-      if (exporting || view.supports) drawDockFrame(b, m, s, storey, `Docking_L${s.f + 1}_Frames`);
+      const varied = preview?.assignments.moduleDesign?.enabled;
+      if (exporting || view.supports)
+        drawDockFrame(b, m, s, storey, `Docking_L${s.f + 1}_Frames`, false, false,
+          varied ? MODULE_CASSETTE_DEPTH : undefined);
       if (s.p === EMPTY && s.use === 'empty' && !view.programEditing) continue;
       const a = s.angle,
         center = m.R + BUILD_SECTION.dockGap + MODULE.depth / 2,
@@ -3862,6 +3887,15 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         continue;
       }
       if (s.p !== EMPTY || s.use === 'retail') {
+        if (varied) {
+          const plan = furnishedModulePlan(m, s, preview.assignments, view.seed, exterior.balconies.has(s.i)),
+            foot = center - MODULE.depth / 2;
+          drawFittedModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), preview, plan);
+          if (exporting || view.supports)
+            drawModuleDockCollar(b, s, foot * Math.cos(a), y, foot * Math.sin(a), plan, storey.head, !preview.structureView);
+          if (plan.balcony) drawModuleBalcony(b, m, s, y, null, false, plan);
+          continue;
+        }
         if (values) drawMaterialModule(b, s, x, y, z, preview, values);
         else box(x, y, z, MODULE.width, MODULE.height, MODULE.depth, a, c, true);
         if (exterior.balconies.has(s.i))
@@ -3889,12 +3923,13 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         }
         continue;
       }
-      drawDockDeck(b, s, x, y, z, a, c);
+      if (varied) drawVariedDockDeck(b, s, x, y, z, view.seed);
+      else drawDockDeck(b, s, x, y, z, a, c);
     }
     // Clothes only appear while the neighboring module shells are visible.
     if (!preview?.structureView)
       for (const span of exterior.laundry)
-        if (visible(span.slot.f)) drawModuleLaundry(b, m, span, span.slot.f * floorH + 0.43);
+        if (visible(span.slot.f)) drawModuleLaundry(b, m, span, span.slot.f * floorH + 0.43, preview);
   }
 
   // Roof access, public park and retail. The atrium glass is not a walking surface.
@@ -3944,7 +3979,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       );
     }
     drawCommercialPavilions(b, p, preview);
-    for (const [i, q] of p.garden.entries()) {
+    if (preview?.assignments.moduleDesign?.enabled) drawVariedRoofGardens(b, p, view.seed);
+    else for (const [i, q] of p.garden.entries()) {
       const a = (q.start + q.end) / 2,
         rad = (q.r + q.R) / 2,
         ww = Math.min(3.4, (q.end - q.start) * rad * 0.82),
@@ -4232,7 +4268,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           const a = (i * TAU) / 10 + 0.2;
           putPerson(walkR * Math.cos(a), y, walkR * Math.sin(a), a + Math.PI / 2, false);
         }
-        for (const [i, q] of p.garden.entries()) {
+        if (preview?.assignments.moduleDesign?.enabled) drawVariedRoofGardens(b, p, view.seed);
+    else for (const [i, q] of p.garden.entries()) {
           if (i > 7) break;
           const a = (q.start + q.end) / 2,
             rad = (q.r + q.R) / 2;

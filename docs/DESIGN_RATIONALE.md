@@ -238,7 +238,7 @@ Steel, lightweight metal and engineered timber assemblies are material-study opt
 
 ### Programme and finish
 
-The designer wanted a recognizably different daycare edge. The material study varies bright glossy paint across those modules. It also tests finish and sheen on the slide. Related cladding tones make individual modules legible at building scale. The repeated frame and dock dimensions keep them part of the same system.
+The designer wanted a recognizably different daycare edge. The material study varies bright glossy paint across those modules. It also tests finish and sheen on the slide. The designer imagined the plug-ins arriving from different owners and builders, like mobile homes or converted construction units. Their cladding, window rhythm, roof shape, shutters, vents and insulation depth can vary. Half- and three-quarter-length enclosures leave outdoor terraces within the full docking bay. Firehall and Infinite Rinse read as families, while Daycare and Senior Care can be more individual. The ring-side doorway, service zone and chassis stay fixed. The designer’s residential and firehall plans inform the furnished layouts, with service spaces and a clear side aisle linking the entrance to rooms further out.
 
 ### Compare quantities
 

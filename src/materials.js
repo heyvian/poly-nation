@@ -1,6 +1,6 @@
 'use strict';
 
-// Work on a detached massing snapshot. Changing massing never mutates the material study. Changing massing never mutates the material study.
+// Work on a detached massing snapshot. Changing massing never mutates the material study.
 const materialWorkspace = (() => {
   const phase = $('materialsPhase');
   const materialCanvas = $('materialsCanvas');
@@ -268,7 +268,7 @@ const materialWorkspace = (() => {
   const percent = (ratio) => Math.round(ratio * 100) + '%';
   function updateMaterialAnalysis() {
     const { model, assignments, rates } = study;
-    const takeoff = estimateMaterialAssemblies(model, assignments, rates);
+    const takeoff = estimateMaterialAssemblies(model, assignments, rates, study.view.seed);
     $('materialCostTotal').textContent = '≈ ' + currency.format(takeoff.total) + ' CAD';
     $('materialCostRows').replaceChildren(
       ...takeoff.rows.map(({ label, count, cost }) => {
@@ -289,8 +289,8 @@ const materialWorkspace = (() => {
     const pods = takeoff.rows.slice(1).reduce((sum, row) => sum + row.count, 0);
     $('materialBuildingSummary').textContent =
       'The ' +
-      fmt(model.total) +
-      ' m² design includes a ' +
+      fmt(takeoff.studyTotal) +
+      ' m² study includes a ' +
       fmt(model.ringArea) +
       ' m² core ring and ' +
       pods +
@@ -351,7 +351,7 @@ const materialWorkspace = (() => {
       const modules = snapshot.slots
         .filter((slot) => slot.p === id)
         .map((slot) => ({
-          values: materialValues(assignments, 'module', id, materialSlotKey(snapshot, slot)),
+          values: moduleMaterialSelection(snapshot, slot, assignments, study.view.seed).values,
           quantity: 1
         }));
       const variants = assemblyVariants(modules, materialValues(assignments, 'module', id));
@@ -505,6 +505,53 @@ const materialWorkspace = (() => {
     for (const [field, id] of Object.entries(paletteIds)) refreshPalette(field, id);
     syncAssignment();
   }
+  const uniqueModules = $('uniqueModules');
+  const similarityFields = PROGRAMS.map((program) => {
+    const label = document.createElement('label'),
+      readout = document.createElement('output'), slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = '100';
+    slider.step = '1';
+    slider.setAttribute('aria-label', program.name + ' similarity');
+    slider.oninput = () => { readout.value = slider.value + '%'; };
+    slider.onchange = () => {
+      const settings = (study.assignments.moduleDesign ||= {});
+      (settings.similarity ||= {})[program.id] = slider.valueAsNumber;
+      applyModuleDesign();
+    };
+    label.append(program.name + ' similarity', readout, slider);
+    $('moduleSimilarity').append(label);
+    return { id: program.id, slider, readout };
+  });
+  function syncModuleDesign() {
+    const enabled = study.assignments.moduleDesign?.enabled === true;
+    uniqueModules.checked = enabled;
+    $('moduleSimilarity').hidden = !enabled;
+    for (const { id, slider, readout } of similarityFields) {
+      slider.value = moduleSimilarity(study.assignments, id);
+      readout.value = slider.value + '%';
+    }
+    const hint = $('moduleDesignArea');
+    if (!enabled) {
+      hint.textContent = 'Vary cladding, openings and unit length within the standard dock.';
+      return;
+    }
+    const { enclosed, terraces, short } = realizedModuleEnclosure(study.model, study.assignments, study.view.seed);
+    hint.textContent = fmt(enclosed) + ' m² enclosed in dock modules · ' + fmt(terraces) +
+      ' m² of terraces across ' + short + ' shortened units. Massing still books the full dock allowance.';
+  }
+  function applyModuleDesign() {
+    syncModuleDesign();
+    saveStudy();
+    refreshAssemblies();
+    rebuild();
+  }
+  uniqueModules.onchange = () => {
+    (study.assignments.moduleDesign ||= {}).enabled = uniqueModules.checked;
+    applyModuleDesign();
+  };
+
   function syncStudy() {
     $('materialSnapshot').textContent =
       'Massing snapshot · Seed ' +
@@ -522,6 +569,7 @@ const materialWorkspace = (() => {
     study.rates = { ...DEFAULT_MATERIAL_RATES, ...study.rates };
     $('returnToAssembly').hidden = false;
     syncTargets();
+    syncModuleDesign();
     refreshAssemblies();
     rebuild();
   }

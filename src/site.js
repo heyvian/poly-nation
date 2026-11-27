@@ -447,7 +447,8 @@ const siteWorkspace = (() => {
         layers = {
           dockStructure,
           slabThickness,
-          ...Object.fromEntries(Object.keys(BUILD_LAYERS).map((layer) => [layer, true]))
+          ...Object.fromEntries(Object.keys(BUILD_LAYERS).map((layer) => [layer, true])),
+          moduleInteriors: false
         },
         next = JSON.stringify([assignments, layers]);
       if (assembly?.siteModel !== model || signature !== next) {

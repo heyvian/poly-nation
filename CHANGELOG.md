@@ -1,5 +1,9 @@
 # Changelog
 
+## Individual plug-in modules
+- Added program similarity controls for seeded enclosures, claddings, openings, roof forms and short units with full-chassis terraces. Materials reports realized enclosed area and keeps the nominal massing allowances visible.
+- Shared the generated openings and dock interface with Build. Added room partitions and program-specific furniture, separate interior and roof visibility, and varied garden, balcony and shop details.
+
 ## Full bridge lobbies
 - Replaced side pockets with full two-sided public lobbies on feasible bridge approaches. Both arches align with the direct walk from the bridge to the outer corridor.
 - Fitted shallow cabinet returns to the bay edges and routed simulated bridge arrivals through the furnished aisle.

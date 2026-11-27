@@ -111,7 +111,8 @@ const openRenderWorkspace = (() => {
       layers = {
         ...buildViewLayers(),
         frame: true, walls: true, slabs: true, facade: true,
-        docks: modules.checked, modules: modules.checked, slide: true, swings: true, roofRetail: true
+        docks: modules.checked, modules: modules.checked, moduleInteriors: true, moduleRoofs: true,
+        slide: true, swings: true, roofRetail: true
       };
     assembly = buildAssemblyMesh(source, layers, visible, {
       assignments,
