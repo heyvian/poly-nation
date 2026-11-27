@@ -1,6 +1,7 @@
 'use strict';
 
 const DRAWING_DOCUMENTS = ['programme', 'program-diagrams', 'circulation', 'lobbies', 'structure', 'cranes'];
+const LOBBY_DRAWING_SCALES = [25, 50, 75, 100, 125, 150, 200, 250, 500];
 const CRANE_DRAWING_PAPER = { width: 17, height: 11 };
 const CRANE_STUDY_GUIDE = {
   elevated: 'The outboard tower rolls on twin steel ring girders. Spaced piers leave crossings below the runway.',
@@ -83,15 +84,15 @@ function craneStudyFocus(angle, inner, outer, bottom, top, halfWidth = 3.5) {
 }
 
 // Use the installed furnishings and a small window of the actual floor plan around them.
-function lobbyDrawingGeometry(model, hub, seed, includeContext) {
+function lobbyDrawingGeometry(model, hub, seed, includeContext, includePeople = false) {
   const mesh = meshBuilder(),
     labels = [];
   if (includeContext) {
-    const apron = model.circulation.width + 1.2,
+    const apron = Math.min(model.circulation.width, 2),
       radialMin = Math.max(model.r, hub.r - apron),
       radialMax = Math.min(model.R, hub.R + apron),
-      start = hub.start - (apron + 1.5) / hub.layout.radius,
-      end = hub.end + (apron + 1.5) / hub.layout.radius;
+      start = hub.start - apron / hub.layout.radius,
+      end = hub.end + apron / hub.layout.radius;
     function contextSector(region, color, top, circulation, label = '') {
       const r = Math.max(radialMin, region.r),
         R = Math.min(radialMax, region.R);
@@ -141,8 +142,108 @@ function lobbyDrawingGeometry(model, hub, seed, includeContext) {
   }
   mesh.mark(`Circulation_L${hub.f + 1}_Shared_Lobby`);
   drawSharedLobbyFloor(mesh, hub, 0);
-  drawSharedLobby(mesh, hub, 0, seed, true);
+  drawSharedLobby(mesh, hub, 0, seed, true,
+    includePeople ? (furniture) => drawLobbyDrawingActivity(mesh, hub, seed, furniture) : undefined);
   return { geometry: drawingGeometry(mesh), labels };
+}
+
+// Heights are relative to the floor for the walker and to the seat for seated figures.
+// Each pair describes height and distance forward from the hip.
+const LOBBY_FIGURE_POSES = {
+  walk: {
+    hip: [0.82, 0], shoulder: [1.37, 0.045], head: [1.43, 0.06],
+    knees: [[0.44, 0.20], [0.41, -0.19]], feet: [[0, 0.29], [0.13, -0.32]],
+    elbows: [[1.10, -0.16], [1.11, 0.23]], hands: [[0.91, -0.24], [0.96, 0.31]]
+  },
+  sit: {
+    hip: [0.085, 0], shoulder: [0.60, 0.14], head: [0.66, 0.18],
+    knees: [[0.075, 0.39], [0.075, 0.42]], feet: [[-0.49, 0.48], [-0.49, 0.51]],
+    elbows: [[0.29, 0.23], [0.35, 0.34]], hands: [[0.16, 0.36], [0.29, 0.61]]
+  },
+  recline: {
+    hip: [0.10, 0], shoulder: [0.18, -0.34], head: [0.19, -0.52],
+    knees: [[0.28, 0.28], [0.23, 0.32]], feet: [[0.02, 0.48], [0.04, 0.50]],
+    elbows: [[0.14, -0.11], [0.16, -0.13]], hands: [[0.35, -0.02], [0.35, -0.02]]
+  }
+};
+
+function drawLobbyDrawingFigure(mesh, origin, facing, pose, colours) {
+  const { hip, shoulder, head, knees, feet, elbows, hands } = LOBBY_FIGURE_POSES[pose],
+    [coat, skin, hair] = colours.map(rgb), trousers = rgb('#46545e'), shoes = rgb('#37403e'),
+    angle = Math.atan2(facing[2], facing[0]), side = [-facing[2], 0, facing[0]],
+    at = (across, [y, forward]) => [
+      origin[0] + across * side[0] + forward * facing[0], origin[1] + y,
+      origin[2] + across * side[2] + forward * facing[2]
+    ],
+    limb = (a, b, width, colour, depth = width) => drawAssemblyMember(mesh, a, b, width, colour, depth, angle);
+  limb(at(0, hip), at(0, shoulder), 0.33, coat, 0.21);
+  mesh.box(...at(0, head), 0.18, 0.20, 0.18, angle, skin);
+  mesh.box(...at(0, [head[0] + 0.16, head[1] - 0.01]), 0.19, 0.06, 0.19, angle, hair);
+  for (const [i, sign] of [-1, 1].entries()) {
+    const knee = at(sign * 0.10, knees[i]), foot = at(sign * 0.10, feet[i]), elbow = at(sign * 0.21, elbows[i]);
+    limb(at(sign * 0.10, hip), knee, 0.12, trousers);
+    limb(knee, [foot[0], foot[1] + 0.06, foot[2]], 0.098, trousers);
+    mesh.box(...foot, 0.10, 0.069, 0.20, angle, shoes);
+    limb(at(sign * 0.16, shoulder), elbow, 0.095, coat);
+    limb(elbow, at(sign * 0.16, hands[i]), 0.072, skin);
+  }
+  return at;
+}
+
+function drawLobbyDrawingActivity(mesh, hub, seed, { shelves, seatTop, canopy }) {
+  const { arch, passage, tableRadius, couchInner } = hub.layout, edge = passage / 2,
+    point = (along, across, y) => sharedLobbyPoint(hub, along, across, y),
+    onArc = (sign, radius, angle, y) => point(radius * Math.cos(angle), sign * (edge + radius * Math.sin(angle)), y),
+    heading = unit(sub(point(1, 0, 0), point(0, 0, 0))),
+    facingIn = (sign, angle) => unit(sub(onArc(sign, 0, angle, 0), onArc(sign, 1, angle, 0))),
+    mark = (name) => mesh.mark(`Circulation_L${hub.f + 1}_Shared_Lobby_Activity`, name),
+    gameSide = canopy ? -canopy.sign : 1,
+    direction = sharedLobbySeed(hub, seed) & 1 ? 1 : -1;
+  mark('Walking through the lobby');
+  drawLobbyDrawingFigure(mesh, point(direction * arch * 0.31, 0, 0.031),
+    heading.map((part) => part * direction), 'walk', ['#b76a48', '#a46747', '#46342c']);
+
+  // The lounge pose uses a continuous sofa and a low cabinet bay, with room behind the head.
+  const seats = shelves.flatMap((bays, side) => bays.map((bay, index) => {
+    const angle = (bay.start + bay.end) / 2;
+    return { nook: bay.nook, type: bay.type, angle, index, sign: side ? 1 : -1,
+      depth: Math.min(bay.outer(angle - 0.09), bay.outer(angle), bay.outer(angle + 0.09)) - couchInner };
+  }));
+  const reader = seats.find((seat) => seat.nook && seat.depth >= 1.14) ??
+    seats.find((seat) => seat.type === 'seat' && seat.depth >= 1.14);
+  if (reader) {
+    const { sign, angle } = reader, facing = facingIn(sign, angle);
+    mark('Reclining with a book in the reading nook');
+    const at = drawLobbyDrawingFigure(mesh, onArc(sign, couchInner + 0.49, angle, seatTop), facing,
+      'recline', ['#9c6879', '#b87f5f', '#574038']);
+    mesh.quad(at(-0.15, [0.44, -0.16]), at(0, [0.40, -0.20]), at(0, [0.38, -0.01]),
+      at(-0.15, [0.42, 0.04]), rgb('#e6ce9f'));
+    mesh.quad(at(0, [0.40, -0.20]), at(0.15, [0.44, -0.16]), at(0.15, [0.42, 0.04]),
+      at(0, [0.38, -0.01]), rgb('#f1e5ca'));
+  }
+  function sitter(sign, preferredBay, colours) {
+    const index = reader?.sign === sign && reader.index === preferredBay ? preferredBay + 1 : preferredBay,
+      angle = (index + 0.5) * Math.PI / 8;
+    return drawLobbyDrawingFigure(mesh, onArc(sign, couchInner + 0.35, angle, seatTop), facingIn(sign, angle), 'sit', colours);
+  }
+  mark('Playing a board game');
+  sitter(gameSide, 2, ['#6c82a2', '#d3a276', '#755545']);
+  sitter(gameSide, 5, ['#c09552', '#714e3c', '#42352f']);
+  const table = 0.766, board = (along, inset, y) => point(along, gameSide * (edge + inset), y),
+    boardCentre = tableRadius * 0.65, yaw = Math.atan2(heading[2], heading[0]);
+  mesh.box(...board(0, boardCentre, table), 0.42, 0.026, 0.42, yaw, rgb('#69493b'));
+  for (let row = 0; row < 4; row++)
+    for (let col = 0; col < 4; col++)
+      mesh.box(...board((col - 1.5) * 0.096, boardCentre + (row - 1.5) * 0.096, table + 0.025),
+        0.096, 0.008, 0.096, yaw, rgb((row + col) % 2 ? '#c29358' : '#ebd8a9'));
+  for (const [row, col, colour] of [[-1.5, -0.5, '#783c41'], [-0.5, 0.5, '#783c41'], [1.5, 0.5, '#4c745f'], [0.5, -1.5, '#4c745f']])
+    mesh.box(...board(col * 0.096, boardCentre + row * 0.096, table + 0.033), 0.049, 0.041, 0.049, yaw, rgb(colour));
+
+  mark('Having coffee');
+  const coffee = sitter(-gameSide, 4, ['#9f7951', '#dfb186', '#65493c']),
+    cup = coffee(0.15, [0.30, 0.625]);
+  mesh.box(...cup, 0.09, 0.105, 0.09, yaw, rgb('#e8ddd0'));
+  mesh.box(cup[0], cup[1] + 0.104, cup[2], 0.072, 0.006, 0.072, yaw, rgb('#725342'));
 }
 
 function studySVG(width, height, name) {

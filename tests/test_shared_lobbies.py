@@ -461,6 +461,16 @@ with serve_lab(root) as url, sync_playwright() as p:
     pages = page.locator('#documentPages .lobby-axo-page > svg')
     count = page.evaluate('model.circulation.hubs.length')
     expect(pages).to_have_count(2 * count)
+    assert page.evaluate('''() => model.circulation.hubs.every(hub => {
+      const mesh = meshBuilder();
+      drawSharedLobby(mesh, hub, 0, state.seed, true,
+        (furniture) => drawLobbyDrawingActivity(mesh, hub, state.seed, furniture));
+      const walker = mesh.groups.findIndex((group) => group.name === 'Walking through the lobby');
+      if (walker < 0) return false;
+      const from = mesh.groups[walker].solid, end = mesh.groups[walker + 1].solid;
+      return from < end && mesh.solid.slice(from, end).every((x, i, vertices) =>
+        i % 10 !== 0 || sharedLobbyContains(hub, x, vertices[i + 2]));
+    })''')
     axo, plan = pages.nth(0), pages.nth(1)
     expect(axo).to_have_attribute('data-lobby-view', 'axo')
     expect(plan).to_have_attribute('data-lobby-view', 'plan')
@@ -484,7 +494,7 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(plan).to_have_attribute('width', '17in')
     ratio = plan.locator('[data-scale-ratio]')
     denominator = int(ratio.get_attribute('data-scale-ratio'))
-    assert denominator in (25, 50, 100, 200, 250)
+    assert denominator in (25, 50, 75)
     expect(ratio).to_have_text(f'1:{denominator}')
     with page.expect_download() as drawing:
         page.get_by_role('button', name='Export lobby 1 plan as SVG').click()

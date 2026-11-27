@@ -2823,7 +2823,7 @@ function lobbyWallBenchRuns(hub, shelfLimit) {
 }
 
 // Split the circular furniture into two halves around the clear strip used by the occupancy graph.
-function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
+function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false, drawActivity) {
   const { mark, box, quad, tri, textureLine } = mesh,
     { axis, passage, tableRadius, couchInner, couchOuter, shelfOuter, arch } = hub.layout,
     heading = axis ? Math.atan2(-axis[0], axis[1]) : hub.layout.heading,
@@ -3335,6 +3335,7 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
       drawLobbyPlant(mesh, point, along, across, LOBBY_ARCH_SPRING + LOBBY_ARCH_RISE, sample);
     }
   }
+  drawActivity?.({ shelves, seatTop, canopy });
 }
 
 // Translate the derived plan into drawing geometry. Export uses the full model regardless of current cutaway.

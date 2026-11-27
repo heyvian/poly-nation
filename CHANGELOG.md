@@ -1,5 +1,8 @@
 # Changelog
 
+## Larger shared lobby drawings
+- Tighten the crop around adjoining rooms and corridor approaches and add intermediate architectural scales. Populate every lobby axonometric with a walker and seated activities, including a reclining reader where the casework provides enough space.
+
 ## Crane study drawing set
 - Use a wide four-point hoist and a handoff to fixed receiving guides. The inboard heads release first while the outboard pair supports the tail.
 - Print vector 11 × 17 landscape sheets for the elevated, moat and roof-only cranes. Use one shared cassette installation sheet with the retracted and attached hoist lines called out. Include the moat drawbridge sequence when selected.

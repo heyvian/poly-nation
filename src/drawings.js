@@ -788,13 +788,7 @@ const openDrawingWorkspace = (() => {
       colourOnly = settings.lobbyRender === 'colour',
       hybrid = settings.lobbyRender !== 'linework';
     return hubs.flatMap((hub, index) => {
-      const { geometry, labels } = lobbyDrawingGeometry(
-          sourceModel,
-          hub,
-          state.seed,
-          settings.lobbyContext
-        ),
-        origin = hub.layout.origin,
+      const origin = hub.layout.origin,
         // The axis to the building centre defines south for this lobby.
         heading = origin ? Math.atan2(origin[1], origin[0]) : hub.layout.heading,
         az = heading + (direction * Math.PI) / 4,
@@ -803,6 +797,7 @@ const openDrawingWorkspace = (() => {
         names = hub.pair.map((program) => P[program].name).join(' + ');
       return views.map((view) => {
         const isPlan = view === 'plan',
+          { geometry, labels } = lobbyDrawingGeometry(sourceModel, hub, state.seed, settings.lobbyContext, !isPlan),
           projection = isPlan
             ? `Plan · Local ${caption} at bottom`
             : `Axonometric · From local ${caption}`,
@@ -818,7 +813,7 @@ const openDrawingWorkspace = (() => {
             centeredPlacement(),
             hybrid,
             settings.pens,
-            { washLightness: colourOnly ? 0.08 : 0.49 }
+            { washLightness: colourOnly ? 0.08 : 0.49, scales: LOBBY_DRAWING_SCALES }
           ),
           tile = floorView(frame, title, 0, 0, true, { colourOnly, mapBasis: null }),
           [, area, , indicator] = tile.children;
