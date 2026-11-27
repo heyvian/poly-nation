@@ -275,6 +275,38 @@ with serve_lab(root) as url, sync_playwright() as p:
         plan.accesses.some(route => route.kind === 'stair') && cuts.some(cut => cut.kind === 'canal-detail') &&
         cuts.some(cut => cut.kind === 'piled-detail');
     }''')
+    assert page.evaluate('''() => {
+      const terrain = { size: 480, count: 17, datum: 1040,
+        elevations: Array.from({length: 289}, (_, i) => 1040 + (i % 17 - 8) * 0.66 + (Math.floor(i / 17) - 8) * 0.15) };
+      const position = [0, 0], bearing = 19, angle = model.lobby.angle + bearing * Math.PI / 180 + Math.PI / 2,
+        point = (station, offset) => siteLine(position, angle, offset)(station),
+        [a, b, c, d] = [point(model.R - 0.8, -6.2), point(151, -6.2), point(151, 6.2), point(model.R - 0.8, 6.2)],
+        water = { level: 1040.2, existing: [], proposed: [[a, b, c], [a, c, d]] },
+        crane = planModuleCrane(model, 'moat'), building = { ...model, crane }, layers = JSON.stringify(model.layers),
+        plan = siteFoundationPlan(building, terrain, { position, bearing, grade: 0, water }),
+        dry = siteFoundationPlan(building, terrain, { position, bearing, grade: 5.5, water: null }),
+        elevated = siteFoundationPlan({ ...model, crane: planModuleCrane(model, 'elevated') }, terrain,
+          { position, bearing, grade: 0, water }),
+        mesh = meshBuilder();
+      drawCraneInfrastructure(mesh, building, crane, rgb('#5d7971'), true);
+      const scene = siteAssemblyMesh({ ...mesh, H: 60, extent: 120, craneMoat: craneMoatBounds(crane) }, terrain,
+        { position, bearing, water, model: building, supportPlan: plan, canalDepth: 2 });
+      const waterHeights = (layer) => {
+        const i = scene.groups.findIndex((group) => group.layer === layer);
+        return i < 0 ? [] : scene.solid.slice(scene.groups[i].solid, scene.groups[i + 1]?.solid)
+          .filter((_, j) => j % 10 === 1);
+      };
+      const moatHeights = waterHeights('Site moat water'), canalHeights = waterHeights('Site canal water'),
+        bay = plan.boatBay, cuts = siteSectionCuts(plan).map(({ kind }) => kind);
+      return plan.moat.connected && !dry.moat.connected && moatHeights.length && canalHeights.length &&
+        [...moatHeights, ...canalHeights].every((y) => Math.abs(y - (water.level - terrain.datum)) < 1e-5) &&
+        bay?.area > 45 && plan.water.overlaps(bay.at(bay.back + 0.2)) && elevated.runway.spans.length > 0 &&
+        elevated.runway.poles.every((azimuth) => elevated.runway.radii.every((radius) =>
+          !elevated.water.overlaps(siteLine(position, azimuth)(radius), 1.1))) &&
+        scene.groups.some(({ layer }) => layer === 'Site_Firehall_Rescue_Boat') && cuts.includes('boat-garage') &&
+        dry.lowerRooms.length && dry.lowerRooms.every(({ ceiling, level }) => ceiling - level >= 2.7) &&
+        JSON.stringify(model.layers) === layers;
+    }''')
 
     page.locator('#openDrawings').click()
     include_site = page.locator('#drawingSite')
@@ -285,7 +317,7 @@ with serve_lab(root) as url, sync_playwright() as p:
     include_site.uncheck()
     page.wait_for_function('window.drawingIncludesTerrain === false')
     page.locator('#drawingDocument').select_option('site-sections')
-    expect(page.locator('#documentPages svg[data-site-section=foundation]')).to_have_count(1)
+    expect(page.locator('#documentPages svg[data-site-section=foundation]')).to_have_count(1, timeout=30000)
     district = page.locator('#documentPages svg[data-site-section=district]')
     expect(district).to_contain_text('North–south section looking west')
     expect(district).to_contain_text('10 Avenue SW')

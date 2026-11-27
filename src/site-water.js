@@ -18,8 +18,9 @@ function siteWaterStudy(terrain, aligned, cells) {
   const cell = (coordinate) =>
     clamp(Math.floor((0.5 - coordinate / terrain.size) * cells), 0, cells - 1);
   const key = ([x, z]) => x.toFixed(3) + '/' + z.toFixed(3);
-  for (const kind of ['existing', 'proposed']) {
-    for (const original of aligned[kind]) {
+  for (const source of ['existing', 'proposed', 'garage']) {
+    const kind = source === 'garage' ? 'proposed' : source;
+    for (const original of aligned[source] ?? []) {
       const points = original.map(([x, z]) => [x, level, z]);
       let polygon = points;
       for (const side of square) polygon = clipDrawingPolygon(polygon, side);
@@ -44,16 +45,20 @@ function siteWaterStudy(terrain, aligned, cells) {
       for (let i = 0; i < 3; i++) {
         const p = original[i],
           q = original[(i + 1) % 3],
-          id = [key(p), key(q)].sort().join('|');
+          id = (source === 'garage' ? 'garage/' : '') + [key(p), key(q)].sort().join('|');
         if (outlines.has(id)) outlines.delete(id);
-        else outlines.set(id, { p, q, kind });
+        else outlines.set(id, { p, q, kind, source });
       }
     }
   }
-  const banks = [];
-  for (const { p, q, kind } of outlines.values()) {
+  const banks = [],
+    garage = aligned.garage?.length ? siteFoundationWater({ garage: aligned.garage }, [0, 0], half * 2) : null,
+    district = garage ? siteFoundationWater({ ...aligned, garage: [] }, [0, 0], half * 2) : null;
+  for (const { p, q, kind, source } of outlines.values()) {
     const line = clipDrawingLine([p[0], level, p[1]], [q[0], level, q[1]], square);
-    if (line) banks.push({ line, kind });
+    if (!line) continue;
+    if (garage) banks.push(...siteDryBankParts({ line, kind }, source === 'garage' ? district : garage));
+    else banks.push({ line, kind });
   }
   return { level, faces, banks, index };
 }
@@ -79,7 +84,7 @@ function terrainOutsideSiteWater(triangle, waterPlanes) {
   return land;
 }
 
-function addSiteWater(mesh, terrain, study, { showWater, canalDepth }) {
+function addSiteWater(mesh, terrain, study, { showWater, canalDepth, waterColour, moat = false }) {
   if (!study?.faces.length) return;
   const proposedBed = ([x, level, z]) => [
       x,
@@ -97,11 +102,11 @@ function addSiteWater(mesh, terrain, study, { showWater, canalDepth }) {
     }
   }
   if (study.faces.some(({ kind }) => kind === 'proposed'))
-    faces('proposed', 'Site canal bed', '#a59b7c', proposedBed);
+    faces('proposed', moat ? 'Site moat bed' : 'Site canal bed', '#a59b7c', proposedBed);
   if (showWater) {
-    faces('existing', 'Site Bow River water', '#7cb2c4');
+    if (!moat) faces('existing', 'Site Bow River water', waterColour ?? '#7cb2c4');
     if (study.faces.some(({ kind }) => kind === 'proposed'))
-      faces('proposed', 'Site canal water', '#4a939e');
+      faces('proposed', moat ? 'Site moat water' : 'Site canal water', waterColour ?? '#4a939e');
   }
   mesh.mark('Site water banks');
   const clay = rgb('#9d9d81'),
@@ -127,4 +132,39 @@ function addSiteWater(mesh, terrain, study, { showWater, canalDepth }) {
       mesh.line([topP[0], topP[1] + 0.02, topP[2]], [topQ[0], topQ[1] + 0.02, topQ[2]], edge);
     }
   }
+}
+
+function siteDryBankParts({ line: [a, b], kind }, water) {
+  const length = Math.hypot(b[0] - a[0], b[2] - a[2]);
+  if (length < 0.01) return [];
+  const point = (station) => drawingMix(a, b, station / length),
+    wet = water.spans((station) => { const [x, , z] = point(station); return [x, z]; }, 0, length),
+    dry = [];
+  let start = 0;
+  for (const [from, to] of [...wet, [length, length]]) {
+    if (from - start > 0.01) dry.push({ line: [point(start), point(from)], kind });
+    start = to;
+  }
+  return dry;
+}
+
+function addSiteMoat(mesh, terrain, moat, annulus, district, water, { showWater, canalDepth, includeTerrain, color }) {
+  const depth = moat.connected ? canalDepth : MOAT_BED_DEPTH,
+    banks = moat.connected ? annulus.banks.flatMap((bank) => siteDryBankParts(bank, water)) : annulus.banks;
+  let faces = annulus.faces;
+  if (moat.connected && district && includeTerrain) {
+    const cells = Math.sqrt(district.index.length),
+      cell = (value) => clamp(Math.floor((0.5 - value / terrain.size) * cells), 0, cells - 1);
+    faces = faces.flatMap(({ polygon, kind }) => {
+      const xs = polygon.map(([x]) => x), zs = polygon.map(([, , z]) => z), candidates = new Set();
+      for (let i = cell(Math.max(...zs)); i <= cell(Math.min(...zs)); i++)
+        for (let j = cell(Math.max(...xs)); j <= cell(Math.min(...xs)); j++)
+          for (const planes of district.index[i * cells + j]) candidates.add(planes);
+      return terrainOutsideSiteWater(polygon, [...candidates]).map((piece) => ({ polygon: piece, kind }));
+    });
+  }
+  if (includeTerrain && district) addSiteWater(mesh, terrain, {
+    ...district, banks: moat.connected ? district.banks.flatMap((bank) => siteDryBankParts(bank, moat.footprint)) : district.banks
+  }, { showWater, canalDepth, waterColour: moat.connected ? color : undefined });
+  addSiteWater(mesh, terrain, { banks, faces }, { showWater, canalDepth: depth, waterColour: color, moat: true });
 }

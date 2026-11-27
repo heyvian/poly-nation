@@ -1,5 +1,10 @@
 # Changelog
 
+## West Village water and lower level
+- Join the crane moat to intersecting waterways at the district study level. Keep the elevated rails level over terrain-adjusted supports and strengthen ring spans at channel openings.
+- Fit separate lower-level programme into usable landward bays. Add a canal-fed firehall boat garage where the placement admits one. Show both in the vector site sections without changing the building programme totals.
+- Show piled bank bearings below the canal transfer girders. The support model remains schematic.
+
 ## Landward West Village foundations
 - Show continuous concrete stem walls and schematic piled grade beams beyond a 5 m horizontal setback from modeled waterways. Keep the canal bearings and clear spans open and add a landward foundation detail to the site section set.
 - Include an 11 × 17 vector cutaway axonometric of the foundations with local water and a full-building inset.

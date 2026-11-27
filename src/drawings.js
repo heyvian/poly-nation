@@ -953,6 +953,8 @@ const openDrawingWorkspace = (() => {
         ...(hasGradeLines || plan.perimeter.runs.length ? [['#b3b1a1', 'Concrete stem walls and piles']] : []),
         ...(crossing ? [['#546e65', 'Canal transfer girders']] : []),
         ...(plan.accesses.length ? [['#c7c0aa', 'Entry stairs and ramps']] : []),
+        ...(plan.lowerRooms.length ? [['#ac8d6f', 'Dry lower-level programme']] : []),
+        ...(plan.boatBay ? [['#935b4c', 'Firehall boat garage']] : []),
         ...(mesh.groups.some(({ layer }) => layer === 'Site Bow River water') ? [['#4a939e', 'Modeled water']] : [])
       ];
     for (const [i, [fill, label]] of legend.entries()) {
@@ -985,7 +987,7 @@ const openDrawingWorkspace = (() => {
     if (district) cuts.unshift(district);
     const sections = cuts.map((cut, index) => {
       const { title, note, at, angle, from, to, kind } = cut, [cx, cz] = plan.position,
-        detail = kind === 'canal-detail' || kind === 'piled-detail' || kind === 'approach', district = kind === 'district',
+        detail = ['canal-detail', 'piled-detail', 'approach', 'boat-garage', 'lower-programme'].includes(kind), district = kind === 'district',
         point = (station, height) => { const [x, z] = at(station); return [x - cx, height - plan.foundation, z - cz]; },
         along = [Math.cos(angle), 0, Math.sin(angle)], normal = [-along[2], 0, along[0]],
         offset = dot(point(0, 0), normal), plane = { normal, offset },

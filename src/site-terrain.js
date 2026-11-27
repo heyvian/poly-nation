@@ -150,17 +150,16 @@ function siteTerrainHeight(terrain, x, z) {
   return ground - datum;
 }
 
-function siteMoatExcavation(terrain, moat, [x, z], cells) {
-  if (!moat) return null;
-  const existing = [], at = (radius, i) => {
+function siteMoatFootprint(moat, [x, z]) {
+  const triangles = [], at = (radius, i) => {
     const angle = i * TAU / MOAT_SEGMENTS;
     return [x + radius * Math.cos(angle), z + radius * Math.sin(angle)];
   };
   for (let i = 0; i < MOAT_SEGMENTS; i++) {
-    const a = at(moat.inner, i), b = at(moat.outer, i), c = at(moat.outer, i + 1), d = at(moat.inner, i + 1);
-    existing.push([a, b, c], [a, c, d]);
+    const [a, b, c, d] = [at(moat.inner, i), at(moat.outer, i), at(moat.outer, i + 1), at(moat.inner, i + 1)];
+    triangles.push([a, b, c], [a, c, d]);
   }
-  return siteWaterStudy(terrain, { level: terrain.datum, existing, proposed: [] }, cells);
+  return triangles;
 }
 
 function siteAssemblyMesh(
@@ -182,19 +181,22 @@ function siteAssemblyMesh(
     includeFoundations = true
   } = {}
 ) {
-  const mesh = meshBuilder();
-  if (terrain && includeTerrain) {
+  const mesh = meshBuilder(), siteMoat = supportPlan?.moat;
+  if (terrain && (includeTerrain || includeFoundations && siteMoat)) {
     const { size, elevations, datum } = terrain,
       count = natural?.raster ? Math.max(terrain.count, 81) : terrain.count,
       low = Math.min(...elevations),
       high = Math.max(...elevations),
       interval = high - low > 50 ? 5 : 2,
       contour = rgb('#879685'),
-      study = siteWaterStudy(
-        terrain,
-        water && (showWater ? water : { ...water, existing: [] }),
-        count - 1
-      ), moat = siteMoatExcavation(terrain, assembly.craneMoat, position, count - 1);
+      surface = supportPlan?.surface ?? water,
+      districtSurface = surface && (showWater || siteMoat || supportPlan?.boatBay ? surface : { ...surface, existing: [] }),
+      study = includeTerrain || siteMoat?.connected ? siteWaterStudy(terrain, districtSurface, count - 1) : null,
+      moatBounds = siteMoat ?? assembly.craneMoat,
+      moat = moatBounds ? siteWaterStudy(terrain, {
+        level: datum + (siteMoat?.level ?? 0), existing: [],
+        proposed: siteMoat?.triangles ?? siteMoatFootprint(moatBounds, position)
+      }, count - 1) : null;
     const waterPlanes = (i) => {
       const excavation = moat?.index[i], district = study?.index[i];
       return excavation?.length && district?.length ? [...excavation, ...district] : excavation?.length ? excavation : district;
@@ -213,7 +215,7 @@ function siteAssemblyMesh(
         alpha = raster[at + 3] / 255;
       return color.map((channel, i) => (1 - alpha) * channel + (alpha * raster[at + i]) / 255);
     }
-    mesh.mark('Site terrain');
+    if (includeTerrain) mesh.mark('Site terrain');
     function patch(a, b, c) {
       const mean = (a[1] + b[1] + c[1]) / 3 + datum,
         t = (mean - low) / Math.max(1, high - low);
@@ -239,7 +241,7 @@ function siteAssemblyMesh(
         if (crossed.length === 2) mesh.line(crossed[0], crossed[1], contour);
       }
     }
-    for (let row = 0; row < count - 1; row++) {
+    for (let row = 0; includeTerrain && row < count - 1; row++) {
       for (let col = 0; col < count - 1; col++) {
         const i = row * count + col;
         const candidates = waterPlanes(row * (count - 1) + col);
@@ -255,8 +257,12 @@ function siteAssemblyMesh(
         }
       }
     }
-    addSiteWater(mesh, terrain, study, { showWater, canalDepth });
-    if (natural?.trees.length) {
+    if (siteMoat && moat) {
+      addSiteMoat(mesh, terrain, siteMoat, moat, study, supportPlan.water, {
+        showWater, canalDepth, includeTerrain, color: siteMoat.connected ? '#4a939e' : '#79a8b0'
+      });
+    } else if (includeTerrain) addSiteWater(mesh, terrain, study, { showWater, canalDepth });
+    if (includeTerrain && natural?.trees.length) {
       mesh.mark('OpenStreetMap mapped trees');
       const bark = rgb('#7e7057'),
         canopy = rgb(SITE_MAP_COLOURS.tree),
@@ -292,8 +298,9 @@ function siteAssemblyMesh(
     sin = Math.sin(angle),
     cos = Math.cos(angle),
     extendRunway = supportPlan && model.crane?.runway === 'elevated' &&
-      assembly.groups.some(({ layer }) => layer === 'Crane_Elevated_Runway_Columns');
-  if (supportPlan && includeFoundations) drawSiteFoundations(mesh, model, supportPlan, extendRunway);
+      assembly.groups.some(({ layer }) => layer === 'Crane_Elevated_Runway_Columns'),
+    supportMoat = siteMoat && assembly.groups.some(({ layer }) => layer === 'Crane_Moat_Runway');
+  if (supportPlan && includeFoundations) drawSiteFoundations(mesh, model, supportPlan, extendRunway || supportMoat, canalDepth);
   if (relativeToBuilding) {
     // Drawings clip and align to the building datum, even when the wider site is visible.
     for (const kind of ['solid', 'glass', 'lines']) {
@@ -311,6 +318,7 @@ function siteAssemblyMesh(
     if (group.layer === 'Reference') continue;
     if (supportPlan && /^(Assembly_Foundation$|Core_Foundation$|Crane_Cantilever_Pile_Caps$|(?:Public|Entrance|Opposite_Lobby)_Plaza_|Opposite_Lobby_Promenade|Climbing_Ground_Approach)/.test(group.layer)) continue;
     if (extendRunway && group.layer === 'Crane_Elevated_Runway_Columns') continue;
+    if (siteMoat && /^(Crane_Moat|Crane_Moat_Water|Crane_Moat_Runway_Piers|Crane_Moat_Guards)$/.test(group.layer)) continue;
     mesh.mark(group.layer, group.name);
     // Model north is +Z. Rotating the building and its normals together keeps the
     // source materials and named component layers available in both viewers.

@@ -148,7 +148,8 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
         return vertices.flatMap((x, j) => j % 10 === 0 ? [[Math.hypot(x, vertices[j + 2]), vertices[j + 1]]] : []);
       });
       const dry = points(layer => layer.includes('Plaza_') || layer === 'Opposite_Lobby_Promenade'),
-        water = points(layer => layer === 'Crane_Moat_Water'), tracks = points(layer => layer === 'Crane_Moat_Runway'),
+        water = points(layer => layer === 'Crane_Moat_Water'),
+        tracks = points(layer => /^Crane_Moat_Runway(?:_Piers)?$/.test(layer)),
         surface = Math.max(...water.map(point => point[1]));
       const graph = buildNavigation(model);
       return {

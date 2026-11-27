@@ -199,8 +199,15 @@ const siteWorkspace = (() => {
           landward = piled ? ' Landward stem walls bear on schematic piles.' : '',
           structure = spans ? `${spans} clear-span ${spans === 1 ? 'girder' : 'girders'} on dry-bank supports.${landward}`
             : piled ? 'Landward stem walls bear on schematic piles.' : 'Footings follow the local grade.',
-          access = supports.accesses.length < 4 ? ' Some lobby approaches need a different alignment to reach dry grade.' : '';
-        supportStatus.textContent = supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' + access : structure + access;
+          access = supports.accesses.length < 4 ? ' Some lobby approaches need a different alignment to reach dry grade.' : '',
+          dryArea = supports.lowerRooms.reduce((total, room) => total + room.area, 0),
+          dry = dryArea > 0 ? ` ${Math.round(dryArea)} m² of additional lower-level programme.` : '',
+          boat = supports.boatBay ? ` ${Math.round(supports.boatBay.area)} m² covered firehall boat bay.` +
+            (supports.boatBay.route ? '' : ' The crew approach still needs an alignment.') : '',
+          moat = supports.moat?.connected ? ' The moat shares the district water level.' : '',
+          runway = (supports.runway ?? supports.moat?.runway)?.unresolved ? ' Long runway crossings need a separate span study.' : '';
+        supportStatus.textContent = (supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' : structure) +
+          access + dry + boat + moat + runway;
       }
     } else {
       delete $('sitePlacementStatus').dataset.elevation;
@@ -469,7 +476,7 @@ const siteWorkspace = (() => {
       if (!plan) return null;
       const { dockStructure, slabThickness } = buildViewLayers(),
         layers = { dockStructure, slabThickness, slabs: true, frame: true, facade: true,
-          docks: true, modules: true, crane: Boolean(plan.moat), moduleInteriors: false },
+          docks: true, modules: true, crane: Boolean(plan.moat || plan.runway), moduleInteriors: false },
         view = { ...state, craneStage: 'parked' },
         building = buildAssemblyMesh(model, layers, Math.min(2, model.layers.length),
           { assignments, view, craneSettings: view }),
@@ -479,8 +486,8 @@ const siteWorkspace = (() => {
           xray: false, programEditing: false, showRooms: false, showFacade: true, showModules: true,
           roof: true, showRoofDeck: true, supports: false }),
         context = siteAssemblyMesh(overview, terrain, { ...placement, includeFoundations: false }),
-        district = siteDistrictCut(plan, surface, registration);
-      return { plan, mesh, context, district, surface, canalDepth: placement.canalDepth };
+        district = siteDistrictCut(plan, plan.surface, registration);
+      return { plan, mesh, context, district, surface: plan.surface, canalDepth: placement.canalDepth };
     },
     open(model, assignments) {
       building = model;

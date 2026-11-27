@@ -10,10 +10,13 @@ const CRANE_RUNWAYS = {
 };
 const MOAT_BRIDGE_WIDTH = 10;
 const MOAT_SEGMENTS = 144;
+const MOAT_WATER_LEVEL = -0.84;
+const MOAT_BED_DEPTH = 0.59;
 const MOAT_HINGE_HEIGHT = 0.24;
 const MOAT_BARRIER_HEIGHT = 0.92;
 const MOAT_BARRIER_POST = MOAT_BRIDGE_WIDTH / 2 + 0.25;
 const CRANE_BALLAST = 245; // kN, conceptual ballast over the inner bogies
+const CRANE_ELEVATED_GIRDER_DEPTH = 1.28;
 
 function craneCassetteRig() {
   return { pickupOffset: MODULE.depth * 0.30, jawHalfWidth: MODULE.width / 2 + 0.70, pinHeight: -MODULE_CASSETTE_DEPTH / 2 };
@@ -587,7 +590,7 @@ function moveCraneTo(mesh, angle, gl, renderer) {
 function drawElevatedCraneRunway(mesh, crane, paint, cutY) {
   const { sector, mark } = mesh, { tower, groundGauge, groundRail } = crane,
     dark = rgb('#3c5854'), concrete = rgb('#b4b8ac'), gauge = groundGauge / 2,
-    soffit = groundRail - 1.28;
+    soffit = groundRail - CRANE_ELEVATED_GIRDER_DEPTH;
   mark('Crane_Elevated_Runway_Columns', 'Spaced pier pairs and independent footings');
   const count = Math.ceil(TAU * tower / 12);
   for (let i = 0; i < count; i++) {
@@ -635,19 +638,23 @@ function drawCraneMoat(mesh, model, crane, paint, angle, animate) {
   const { tower, groundRail, groundGauge, gateAngles } = crane,
     { sector, mark, box } = mesh, { inner, outer } = craneMoatBounds(crane),
     bank = rgb('#b2b6a6'), wet = rgb('#79a8b0'), steel = rgb('#516763'), wood = rgb('#c2ac89'),
-    waterLevel = -0.84, beamBase = groundRail - 0.32, basinTop = -1.19,
+    waterLevel = MOAT_WATER_LEVEL, beamBase = groundRail - 0.32, basinTop = waterLevel - MOAT_BED_DEPTH + 0.24,
     walkway = MOAT_BRIDGE_WIDTH, deckWidth = walkway + 0.32;
   mark('Crane_Moat', 'Basin and retaining banks');
-  sector(inner, outer, 0, TAU, -1.43, 0.24, bank);
+  sector(inner, outer, 0, TAU, waterLevel - MOAT_BED_DEPTH, 0.24, bank);
   for (const radius of [inner + 0.20, outer - 0.20])
     sector(radius - 0.24, radius + 0.24, 0, TAU, -1.2, 1.40, bank);
   mark('Crane_Moat_Water', 'Continuous water below the runway');
   sector(inner + 0.40, outer - 0.40, 0, TAU, waterLevel - 0.025, 0.025, wet);
-  mark('Crane_Moat_Runway', 'Raised rail beams on discrete piers');
+  mark('Crane_Moat_Runway', 'Raised rail beams');
   const piers = Math.ceil(TAU * tower / 4.8);
-  for (const radius of [tower - groundGauge / 2, tower + groundGauge / 2]) {
+  const rails = [tower - groundGauge / 2, tower + groundGauge / 2];
+  for (const radius of rails) {
     sector(radius - 0.21, radius + 0.21, 0, TAU, beamBase, groundRail - 0.10 - beamBase, paint);
     sector(radius - 0.10, radius + 0.10, 0, TAU, groundRail - 0.10, 0.10, steel);
+  }
+  mark('Crane_Moat_Runway_Piers', 'Discrete piers beneath the moat rail beams');
+  for (const radius of rails) {
     for (let i = 0; i < piers; i++) {
       const theta = (i + 0.5) * TAU / piers, [x, , z] = mesh.ringPoint(radius, theta, basinTop);
       box(x, basinTop, z, 0.48, beamBase - basinTop, 0.44, theta, bank);
