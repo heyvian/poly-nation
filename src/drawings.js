@@ -90,6 +90,7 @@ const openDrawingWorkspace = (() => {
     sourceModel = null,
     sourceAssignments = {},
     lobbyPages = [],
+    sitePages = [],
     cranePages = [],
     craneRender = 0,
     materialSignature = '',
@@ -890,6 +891,79 @@ const openDrawingWorkspace = (() => {
     });
   }
 
+  function renderSiteSections() {
+    const study = siteWorkspace.sectionStudy(sourceModel, sourceAssignments);
+    if (!study) return [];
+    const { plan, mesh, canalDepth } = study, paper = SITE_SECTION_PAPER,
+      geometry = drawingGeometry(mesh, sourceModel), cuts = siteSectionCuts(plan),
+      w = paper.width * DRAWING_PIXELS_PER_INCH, h = paper.height * DRAWING_PIXELS_PER_INCH,
+      margin = 48, ink = '#223b35', rule = '#9aaea1', water = '#83afb8', earth = '#e6decb',
+      pens = drawingPens({ mode: 'component', widths: [0.31, 0.20, 0.13], colors: ['#3b5c51', '#54574e', '#8a9790'],
+        components: { core: 0, circulation: 0, docks: 1, modules: 2, rides: 2, site: 2 } });
+    return cuts.map((cut, index) => {
+      const { title, note, at, angle, from, to } = cut, [cx, cz] = plan.position,
+        point = (station, height) => { const [x, z] = at(station); return [x - cx, height - plan.foundation, z - cz]; },
+        along = [Math.cos(angle), 0, Math.sin(angle)], normal = [-along[2], 0, along[0]],
+        offset = dot(point(0, 0), normal),
+        { profile, surfaces } = siteSectionGround(plan, cut, canalDepth),
+        bottom = Math.min(...profile.map(([, y]) => y), plan.floor - 1.5) - 2.2,
+        upper = cut.crown ?? plan.floor + Math.min(cut.kind === 'canal-detail' ? 1.55 : 6.4,
+          modelFloorPitch(sourceModel) * sourceModel.layers.length),
+        focus = [from, to].flatMap((station) => [bottom, upper].map((y) => point(station, y))),
+        frame = renderDrawing(geometry, { az: angle + Math.PI / 2, el: 0 }, [
+          { normal, offset }, { normal, offset: offset - 5, flip: true },
+          { normal: along, offset: to }, { normal: along, offset: from, flip: true },
+          { normal: [0, 1, 0], offset: upper - plan.foundation }
+        ], paper, 'auto', false, centeredPlacement(), false, pens, {
+          region: { width: w - 2 * margin, height: h - 204 }, focus, cutFill: true,
+          scales: [50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 750, 1000]
+        }),
+        tile = floorView(frame, '', margin, 142), area = tile.children[0],
+        svg = studySVG(w, h, title), sheetNumber = 'PN–SI–' + String(index + 1).padStart(2, '0');
+      tile.replaceChildren(area);
+      const coordinates = (pairs) => pairs.map(([station, y]) => {
+          const xyz = point(station, y);
+          return (frame.originX + dot(xyz, frame.basis.right) * frame.scale).toFixed(2) + ',' +
+            (frame.originY - dot(xyz, frame.basis.up) * frame.scale).toFixed(2);
+        }).join(' '),
+        ground = studyMark(svg, 'g', {});
+      studyMark(ground, 'polygon', { points: coordinates([...profile, [to, bottom], [from, bottom]]), fill: earth });
+      for (const surface of surfaces) studyMark(ground, 'polygon', { points: coordinates(surface), fill: water });
+      studyMark(ground, 'polyline', { points: coordinates(profile), fill: 'none', stroke: '#746d55', 'stroke-width': 1.4 });
+      area.prepend(ground);
+      svg.classList.add('drawing-sheet');
+      svg.setAttribute('width', paper.width + 'in');
+      svg.setAttribute('height', paper.height + 'in');
+      svg.setAttribute('font-family', 'system-ui, sans-serif');
+      svg.dataset.siteSection = cut.kind;
+      studyMark(svg, 'rect', { width: w, height: h, fill: '#ffffff' });
+      svg.append(tile);
+      const text = (x, y, content, size, options = {}) => studyMark(svg, 'text', {
+        x, y, fill: ink, 'font-size': size, ...options
+      }, content);
+      text(margin, 40, 'POLY NATION  /  WEST VILLAGE SITE SECTIONS', 15, { 'font-weight': 700, 'letter-spacing': 1.4 });
+      text(margin, 78, title, 32, { 'font-weight': 680 });
+      text(margin, 106, note, 15);
+      text(w - margin, 40, sheetNumber, 16, { 'text-anchor': 'end' });
+      for (const y of [125, h - 65]) studyMark(svg, 'line', { x1: margin, y1: y, x2: w - margin, y2: y, stroke: rule });
+      const elevations = `Ground floor ${(plan.floor + plan.terrain.datum).toFixed(2)} m` +
+        (surfaces.length ? `  ·  District study water level ${(plan.water.level + plan.terrain.datum).toFixed(2)} m` : '');
+      text(margin, h - 38, `${elevations}  ·  Schematic section of the lower building`, 14);
+      const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 13 });
+      drawScaleIndicator(indicator, frame.denominator, w - margin, h - 37, ink);
+
+      const preview = document.createElement('figure'), button = document.createElement('button'), vector = () => svg.cloneNode(true);
+      preview.className = 'lobby-axo-page';
+      button.type = 'button';
+      button.textContent = 'Export SVG';
+      button.setAttribute('aria-label', `Export ${title} as SVG`);
+      button.onclick = () => downloadBlob(new XMLSerializer().serializeToString(vector()), 'image/svg+xml',
+        `poly-nation-${state.seed}-site-section-${index + 1}.svg`);
+      preview.append(button, svg);
+      return { preview, vector };
+    });
+  }
+
   async function renderCraneDocument(revision) {
     const target = $('documentPages'), feedback = $('craneSetStatus'),
       paper = CRANE_DRAWING_PAPER,
@@ -1092,17 +1166,21 @@ const openDrawingWorkspace = (() => {
     try {
       if (settings.document) {
         lobbyPages = settings.document === 'lobbies' ? renderLobbyPages(paper) : [];
+        sitePages = settings.document === 'site-sections' ? renderSiteSections() : [];
         const pages = settings.document === 'lobbies'
           ? lobbyPages.map(({ preview }) => preview)
-          : drawingSetPages(settings.document, sourceModel, sourceAssignments);
+          : settings.document === 'site-sections' ? sitePages.map(({ preview }) => preview)
+            : drawingSetPages(settings.document, sourceModel, sourceAssignments);
+        $('printDocument').disabled = !pages.length;
         if (!pages.length) {
           const message = document.createElement('p');
           message.className = 'hint';
-          message.textContent = 'No shared lobbies in this design. Set an Attract relationship in Massing to generate one where space allows.';
+          message.textContent = settings.document === 'site-sections'
+            ? 'Load live terrain in Site to generate sections for the current placement.'
+            : 'No shared lobbies in this design. Set an Attract relationship in Massing to generate one where space allows.';
           pages.push(message);
         }
         $('documentPages').replaceChildren(...pages);
-        $('printDocument').disabled = settings.document === 'lobbies' && !lobbyPages.length;
         $('drawingDocumentStage').scrollTop = 0;
         return;
       }
@@ -1141,7 +1219,7 @@ const openDrawingWorkspace = (() => {
         const mesh = settings.source === 'build'
           ? buildAssemblyMesh(model, buildViewLayers(), 0, preview)
           : buildMesh(model, false, view, preview);
-        geometry = drawingGeometry(includeSite ? siteWorkspace.composeDrawing(mesh) : mesh, sourceModel);
+        geometry = drawingGeometry(includeSite ? siteWorkspace.composeDrawing(mesh, model) : mesh, sourceModel);
         renderedGeometryMode = mode;
       }
       const camera = settings.detail ? null : viewCamera();
@@ -1540,7 +1618,7 @@ const openDrawingWorkspace = (() => {
   document.addEventListener('west-village-change', () => {
     if (panel.hidden) return;
     syncSettings();
-    if (settings.showSite) queueDrawing();
+    if (settings.showSite || settings.document === 'site-sections') queueDrawing();
   });
   $('drawingDetail').onchange = (event) => {
     settings.detail = event.target.value;
@@ -2053,6 +2131,12 @@ const openDrawingWorkspace = (() => {
       window.print();
       return;
     }
+    if (settings.document === 'site-sections') {
+      if (!sitePages.length) return;
+      prepareVectorPrint(sitePages.map(({ vector }) => vector()), SITE_SECTION_PAPER);
+      window.print();
+      return;
+    }
     if (settings.document === 'lobbies') {
       const button = $('printDocument'),
         prepared = lobbyPages,
@@ -2135,6 +2219,9 @@ const openDrawingWorkspace = (() => {
     if (settings.document === 'cranes') {
       if (cranePages.length && !$('printDocument').disabled)
         prepareVectorPrint(cranePages.map(({ vector }) => vector()), CRANE_DRAWING_PAPER);
+    }
+    else if (settings.document === 'site-sections') {
+      if (sitePages.length) prepareVectorPrint(sitePages.map(({ vector }) => vector()), SITE_SECTION_PAPER);
     }
     else if (settings.document === 'lobbies' && lobbyPages.length)
       prepareVectorPrint(

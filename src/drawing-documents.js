@@ -1,7 +1,8 @@
 'use strict';
 
-const DRAWING_DOCUMENTS = ['programme', 'circulation', 'lobbies', 'structure', 'cranes'];
+const DRAWING_DOCUMENTS = ['programme', 'circulation', 'lobbies', 'structure', 'cranes', 'site-sections'];
 const PROGRAMME_DRAWING_PAPER = { width: 17, height: 11 };
+const SITE_SECTION_PAPER = { width: 17, height: 11 };
 const LOBBY_DRAWING_SCALES = [25, 50, 75, 100, 125, 150, 200, 250, 500];
 const CRANE_DRAWING_PAPER = { width: 17, height: 11 };
 const CRANE_STUDY_GUIDE = {

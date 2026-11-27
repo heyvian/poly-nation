@@ -114,6 +114,8 @@ The public realm runs around the building, through its greenhouse and over its r
 
 The designer expanded the entrance plaza into a promenade connecting the two lobbies and the climbing approach. Patios, seating, planting, sports and gathering areas occupy islands along the loop. Nearby programmes inform the activity mix.
 
+At a West Village placement, the designer asked the ground floor to rise above the terrain and span any canal beneath the core. The site study suspends the lower deck on piers stepped to dry ground. Deeper transfer girders carry the deck between bank bearings where it crosses water. A raised promenade meets the lobby doors, with stair and ramp approaches to local grade. The sections draw the sampled terrain and the proposed channel under the same raised assembly. Water clearance, spans and footing dimensions are study assumptions.
+
 ### A public roof
 
 Both lifts reach the annular roof park. Paths, gardens and places to sit share the deck with independently placed shops. Empty bays can extend public life outward as balconies and gardens, alongside private module balconies.

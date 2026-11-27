@@ -11,6 +11,8 @@ const DRAWING_COMPONENTS = {
 
 // Model layer names cover both Massing and Build. Map them to the same drawing categories.
 function drawingComponent(layer) {
+  if (/^Site_(Foundation|Transfer)/.test(layer)) return 'core';
+  if (layer.startsWith('Site_Access_')) return 'circulation';
   if (/^(Swing_|Climbing_|Infinite_Rinse_(Water_Slide|Slide_))/.test(layer)) return 'rides';
   if (/^(Dock|Assembly_Dock|Crane_)/.test(layer)) return 'docks';
   if (/^(Modules_|Module_Balconies|Senior_Care_Laundry|Assembly_Module|Assembly_Open)/.test(layer))

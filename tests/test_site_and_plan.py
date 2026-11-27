@@ -132,6 +132,10 @@ with serve_lab(root) as url, sync_playwright() as p:
     verify_plan(page, '#buildPlan')
     page.locator('#openDrawings').click()
     expect(page.locator('#drawingSite')).to_be_disabled()
+    page.locator('#drawingDocument').select_option('site-sections')
+    expect(page.locator('#documentPages')).to_contain_text('Load live terrain')
+    expect(page.locator('#printDocument')).to_be_disabled()
+    page.locator('#drawingDocument').select_option('')
     page.locator('#openSite').click()
     svg = page.locator('#sitePlacementPlan')
     footprint = page.locator('#siteFootprint')
@@ -244,6 +248,22 @@ with serve_lab(root) as url, sync_playwright() as p:
         return at(58) && !at(64.25) && at(71);
       });
     }''')
+    assert page.evaluate('''() => {
+      const terrain = {size: 400, count: 9, datum: 1040,
+        elevations: Array.from({length: 81}, (_, i) => 1040 + (i % 9) * 0.9 + Math.floor(i / 9) * 0.6)};
+      const water = {level: 1044, existing: [],
+        proposed: [[[-6,-100], [6,-100], [6,100]], [[-6,-100], [6,100], [-6,100]]]};
+      const plan = siteFoundationPlan(model, terrain, { position: [0,0], bearing: 24, grade: 0, water });
+      const envelope = model.R + BUILD_SECTION.dockGap + MODULE.depth + 2;
+      const spans = plan.rows.flatMap(row => row.transfers);
+      const ramps = plan.accesses.filter(route => route.kind === 'ramp');
+      return plan.floor > siteTerrainMaximum(terrain, [0, 0], envelope) + 0.95 && spans.length > 0 &&
+        plan.rows.every(row => row.supports.every(support => !plan.water.overlaps(row.at(support.at), 1.3))) &&
+        spans.every(span => plan.floor - SITE_PLATFORM_BEAM_TOP - span.depth >= plan.water.level + SITE_WATER_CLEARANCE - 1e-6) &&
+        ramps.length > 0 && ramps.every(({ nodes }) => nodes.slice(1).every(([station, y], i) =>
+          Math.abs(y - nodes[i][1]) <= (station - nodes[i][0]) / 20 + 1e-6)) &&
+        plan.accesses.some(route => route.kind === 'stair') && siteSectionCuts(plan).some(cut => cut.kind === 'canal-detail');
+    }''')
 
     page.locator('#openDrawings').click()
     include_site = page.locator('#drawingSite')
@@ -253,6 +273,14 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(page.locator('#exportDrawing')).to_be_enabled()
     include_site.uncheck()
     page.wait_for_function('window.drawingIncludesTerrain === false')
+    page.locator('#drawingDocument').select_option('site-sections')
+    expect(page.locator('#documentPages svg[data-site-section=foundation]')).to_have_count(1)
+    expect(page.locator('#printDocument')).to_be_enabled()
+    page.evaluate('window.print = () => {}')
+    page.locator('#printDocument').click()
+    pdf = page.pdf(prefer_css_page_size=True, print_background=True)
+    assert b'/MediaBox [0 0 1224 792]' in pdf and b'/Subtype /Image' not in pdf
+    page.evaluate('window.dispatchEvent(new Event("afterprint"))')
     page.locator('#openSite').click()
     page.reload()
     expect(page.locator('#sitePhase')).to_be_visible()

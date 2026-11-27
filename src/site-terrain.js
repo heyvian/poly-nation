@@ -175,11 +175,14 @@ function siteAssemblyMesh(
     showContours = true,
     showWater = true,
     canalDepth = 2,
-    relativeToBuilding = false
+    relativeToBuilding = false,
+    supportPlan = null,
+    model = null,
+    includeTerrain = true
   } = {}
 ) {
   const mesh = meshBuilder();
-  if (terrain) {
+  if (terrain && includeTerrain) {
     const { size, elevations, datum } = terrain,
       count = natural?.raster ? Math.max(terrain.count, 81) : terrain.count,
       low = Math.min(...elevations),
@@ -283,10 +286,13 @@ function siteAssemblyMesh(
     }
   }
   const [siteX, siteZ] = position,
-    foundation = (terrain ? siteTerrainHeight(terrain, siteX, siteZ) : 0) + grade,
+    foundation = supportPlan?.foundation ?? (terrain ? siteTerrainHeight(terrain, siteX, siteZ) : 0) + grade,
     angle = (bearing * Math.PI) / 180,
     sin = Math.sin(angle),
-    cos = Math.cos(angle);
+    cos = Math.cos(angle),
+    extendRunway = supportPlan && model.crane?.runway === 'elevated' &&
+      assembly.groups.some(({ layer }) => layer === 'Crane_Elevated_Runway_Columns');
+  if (supportPlan) drawSiteFoundations(mesh, model, supportPlan, extendRunway);
   if (relativeToBuilding) {
     // Drawings clip and align to the building datum, even when the wider site is visible.
     for (const kind of ['solid', 'glass', 'lines']) {
@@ -302,6 +308,8 @@ function siteAssemblyMesh(
     const group = assembly.groups[groupIndex],
       next = assembly.groups[groupIndex + 1];
     if (group.layer === 'Reference') continue;
+    if (supportPlan && /^(Assembly_Foundation$|Core_Foundation$|Crane_Cantilever_Pile_Caps$|(?:Public|Entrance|Opposite_Lobby)_Plaza_|Opposite_Lobby_Promenade|Climbing_Ground_Approach)/.test(group.layer)) continue;
+    if (extendRunway && group.layer === 'Crane_Elevated_Runway_Columns') continue;
     mesh.mark(group.layer, group.name);
     // Model north is +Z. Rotating the building and its normals together keeps the
     // source materials and named component layers available in both viewers.

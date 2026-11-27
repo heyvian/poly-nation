@@ -604,6 +604,7 @@
     <option value="lobbies">Shared lobby drawings</option>
     <option value="structure">Structural load study</option>
     <option value="cranes">Crane study drawings</option>
+    <option value="site-sections">West Village site sections</option>
    </select>
   </label>
   <div id="craneDrawingControls" hidden>
@@ -908,10 +909,11 @@
    <label class="drawing-view-field">Rotation from north (°)
     <input id="siteBearing" type="number" min="0" max="359" value="0">
    </label>
-   <label class="drawing-view-field">Grade offset (m)
+   <label class="drawing-view-field">Minimum grade offset (m)
     <input id="siteGrade" type="number" min="-20" max="20" step="0.1" value="0">
    </label>
    <p id="sitePlacementStatus" role="status" class="hint"></p>
+   <p id="siteSupportStatus" class="hint" hidden></p>
   </section>
   <section class="site-control-group" aria-labelledby="siteTerrainTitle">
    <h3 id="siteTerrainTitle">Terrain study</h3>
@@ -933,7 +935,7 @@
   <details class="calc-details site-sources">
    <summary>Sources and registration</summary>
    <p id="siteRegistration" class="hint"></p>
-   <p class="hint">The study uses the Bow River outline and canal plan from the supplied sheets. One estimated water level is shared across the study. Canal depth and banks are schematic.</p>
+   <p class="hint">The study uses the supplied Bow River and canal outlines with one estimated water level. Foundations, canal clearance and entrance grades are schematic.</p>
    <p class="hint"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen Terrain Tiles</a> · <a href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener">Open-Meteo elevation fallback</a></p>
    <p class="hint">Map alignment and optional vegetation © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></p>
   </details>
@@ -1010,6 +1012,7 @@
 <script defer src="src/site-maps.js"></script>
 <script defer src="src/site-water.js"></script>
 <script defer src="src/site-terrain.js"></script>
+<script defer src="src/site-foundation.js"></script>
 <script defer src="src/site.js"></script>
 <script defer src="src/materials.js"></script>
 <script defer src="src/workspaces.js"></script>

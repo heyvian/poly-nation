@@ -1,5 +1,9 @@
 # Changelog
 
+## Terrain-responsive West Village foundations
+- Raise the ground floor over the sampled module envelope. Step foundations to dry ground, span canal crossings between bank bearings, and connect the raised lobby entrances to grade.
+- Generate vector sections through the foundations, canal crossings and entrance approaches from the active Site placement.
+
 ## Programme document set
 - Merge the programme schedule, floor and roof plans and axonometrics into one 11 × 17 landscape document. Pair plans at a common scale and restore saved Programme diagrams selections to the merged set.
 

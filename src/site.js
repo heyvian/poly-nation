@@ -35,6 +35,7 @@ const siteWorkspace = (() => {
     mode = 'plan',
     revision = 0,
     assembly = null,
+    supportCache = null,
     scene = null,
     building = null,
     signature = '',
@@ -146,6 +147,17 @@ const siteWorkspace = (() => {
     };
   }
 
+  function supportPlan(model) {
+    if (!terrain || !model) return null;
+    const options = sceneOptions(), placement = [...options.position, options.grade, options.bearing].join('/');
+    if (supportCache?.model !== model || supportCache.terrain !== terrain || supportCache.surface !== surface ||
+      supportCache.placement !== placement) {
+      const plan = siteFoundationPlan(model, terrain, options);
+      supportCache = { model, terrain, surface, placement, plan };
+    }
+    return supportCache.plan;
+  }
+
   function present() {
     if (panel.hidden || mode !== 'terrain' || !scene) return;
     if (renderer) paintWebGL(canvas, context, renderer, view);
@@ -159,7 +171,7 @@ const siteWorkspace = (() => {
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
-    scene = siteAssemblyMesh(assembly, terrain, sceneOptions());
+    scene = siteAssemblyMesh(assembly, terrain, { ...sceneOptions(), model: building, supportPlan: supportPlan(building) });
     if (renderer) uploadWebGLMesh(context, renderer, scene);
     if (fit) fitCurrentView();
     present();
@@ -173,12 +185,20 @@ const siteWorkspace = (() => {
 
   function syncStatus() {
     const position = westVillageToGround(pin, registration);
+    const supports = supportPlan(building), supportStatus = $('siteSupportStatus');
+    supportStatus.hidden = !supports;
     if (terrain) {
-      const elevation = terrain.datum + siteTerrainHeight(terrain, ...position),
-        offset = sceneOptions().grade;
+      const elevation = terrain.datum + siteTerrainHeight(terrain, ...position);
       $('sitePlacementStatus').dataset.elevation = elevation.toFixed(1);
-      $('sitePlacementStatus').textContent =
-        `Ground at pin ${elevation.toFixed(1)} m · building datum ${(elevation + offset).toFixed(1)} m.`;
+      $('sitePlacementStatus').textContent = supports
+        ? `Ground at pin ${elevation.toFixed(1)} m · ground floor ${(terrain.datum + supports.floor).toFixed(1)} m.`
+        : `Ground at pin ${elevation.toFixed(1)} m.`;
+      if (supports) {
+        const spans = supports.rows.reduce((count, row) => count + row.transfers.length, 0),
+          structure = spans ? `${spans} clear-span ${spans === 1 ? 'girder' : 'girders'} on dry-bank supports.` : 'Footings follow the local grade.',
+          access = supports.accesses.length < 4 ? ' Some lobby approaches need a different alignment to reach dry grade.' : '';
+        supportStatus.textContent = supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' + access : structure + access;
+      }
     } else {
       delete $('sitePlacementStatus').dataset.elevation;
       $('sitePlacementStatus').textContent = 'The pin is saved in the studio plan.';
@@ -240,7 +260,8 @@ const siteWorkspace = (() => {
       `rotate(${sceneOptions().bearing - adjustment})`
     );
     $('sitePlanHelp').textContent = conflicts
-      ? 'The footprint overlaps a waterway. Move the pin to compare another placement.'
+      ? terrain ? 'The footprint overlaps a waterway. Open 3D terrain to inspect the crossing supports.'
+        : 'The footprint overlaps a waterway. Load the terrain to study the crossing supports.'
       : 'Click inside the dashed boundary to place the building. Arrow keys move it 5 m.';
   }
 
@@ -435,10 +456,23 @@ const siteWorkspace = (() => {
     get drawingBearing() {
       return sceneOptions().bearing;
     },
-    composeDrawing(mesh) {
+    composeDrawing(mesh, model) {
       return terrain
-        ? siteAssemblyMesh(mesh, terrain, { ...sceneOptions(), relativeToBuilding: true })
+        ? siteAssemblyMesh(mesh, terrain, { ...sceneOptions(), relativeToBuilding: true, model, supportPlan: supportPlan(model) })
         : mesh;
+    },
+    sectionStudy(model, assignments) {
+      const plan = supportPlan(model);
+      if (!plan) return null;
+      const { dockStructure, slabThickness } = buildViewLayers(),
+        layers = { dockStructure, slabThickness, slabs: true, frame: true, facade: true,
+          docks: true, modules: true, crane: Boolean(plan.moat), moduleInteriors: false },
+        view = { ...state, craneStage: 'parked' },
+        building = buildAssemblyMesh(model, layers, Math.min(2, model.layers.length),
+          { assignments, view, craneSettings: view }),
+        mesh = siteAssemblyMesh(building, terrain, { ...sceneOptions(), relativeToBuilding: true,
+          includeTerrain: false, model, supportPlan: plan });
+      return { plan, mesh, canalDepth: sceneOptions().canalDepth };
     },
     open(model, assignments) {
       building = model;

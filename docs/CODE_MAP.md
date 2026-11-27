@@ -17,6 +17,7 @@
 | `connection-details.js` | Scaled connection contexts, exterior fitting profiles and demand annotations shared by both drawing outputs |
 | `site-plan.js`, `site-maps.js`, `site.js` | West Village plan coordinates, optional bridge registration and vegetation, placement, study controls and persistence |
 | `site-terrain.js`, `site-water.js` | Elevation sources, district mesh, proposed excavation and shared water surface |
+| `site-foundation.js` | Raised floor datum, dry piers and canal transfer spans, entrance approaches and site section profiles |
 | `rationale.js`, `rationale-page.js` | Shared deck controls and the standalone page entry point |
 
 - `defaults`, `state`, `PROGRAMS`, `MODULE`, `applySaved`: controls/defaults and backward-compatible persistence. Storage key `poly-nation-massing-lab-v2.5`; current exported JSON schema 17.
