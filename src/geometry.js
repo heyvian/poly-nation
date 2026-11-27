@@ -3350,14 +3350,22 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     slabThickness = m.slabThickness ?? BUILD_SECTION.slabThickness,
     H = view.floors * floorH;
   const extent = Math.max(m.R + MODULE.depth + 8, m.plaza ? m.plaza.outer + 2 : 0, m.crane?.extent ?? 0),
-    plane = Math.max(170, extent * 2.6);
+    plane = Math.max(170, extent * 2.6), craneMoat = craneMoatBounds(m.crane);
   mark('Reference');
   drawCraneGround(b, plane, ground, -0.22, m.crane);
   if (view.grid) {
-    let gridCol = rgb('#d3d9ce');
+    const gridCol = rgb('#d3d9ce'), end = extent + 10;
     for (let i = -Math.ceil(extent / 10) * 10; i <= extent + 10; i += 10) {
-      line([i, -0.19, -extent - 10], [i, -0.19, extent + 10], gridCol);
-      line([-extent - 10, -0.19, i], [extent + 10, -0.19, i], gridCol);
+      let spans = [[-end, end]];
+      if (craneMoat && Math.abs(i) < craneMoat.outer) {
+        const far = Math.sqrt(craneMoat.outer ** 2 - i ** 2), near = Math.sqrt(Math.max(0, craneMoat.inner ** 2 - i ** 2));
+        spans = [[-end, -far], [far, end]];
+        if (near) spans.push([-near, near]);
+      }
+      for (const [a, z] of spans) {
+        line([i, -0.19, a], [i, -0.19, z], gridCol);
+        line([a, -0.19, i], [z, -0.19, i], gridCol);
+      }
     }
   }
   mark('Core_Foundation');
@@ -4209,7 +4217,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const liveCrane = !exporting && !preview && ['parked', 'travel'].includes(view.craneStage) && craneVisible;
     drawCraneInfrastructure(b, m, m.crane, paint, craneVisible, cutY, cranePose, liveCrane);
     if (cranePose) drawCraneGantry(b, m.crane, cranePose, paint);
-  }
+  } else if (craneMoat) drawCraneMoat(b, m, m.crane, rgb(cranePaint(preview?.assignments)), view.craneBearing * Math.PI / 180, false);
 
   // Conceptual users and animals: low-poly occupancy placeholders for scale and inclusivity.
   if (exporting && (view.showPeople || view.showAnimals)) {
@@ -4384,6 +4392,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     groups,
     textureStrokes: b.textureStrokes,
     H: cut ? view.inspect * floorH : ride.height,
-    extent
+    extent,
+    craneMoat
   };
 }

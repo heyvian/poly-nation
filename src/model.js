@@ -2523,7 +2523,6 @@ function derive(dockVariant = state.dockVariant) {
     primary =
       ringArea + circulation.bridgeArea + court + count * MODULE.area + roofPlan.serviceArea,
     total = primary + retail + roofPlan.retailArea;
-  const plaza = designPlaza(R, lobby, slots, feature.climbing);
   if (state.bridgeSeating && circulation.bridges.length) circulation.bridgeLoungeSeed = state.seed;
   const layout = {
     R,
@@ -2566,11 +2565,11 @@ function derive(dockVariant = state.dockVariant) {
     lobby,
     blocked,
     circulation,
-    plaza,
     greenhouse: designGreenhouse(r, lobby, feature.ride),
     roofPlan
   };
   layout.crane = planModuleCrane(layout, state.craneRunway);
+  layout.plaza = designPlaza(R, lobby, slots, feature.climbing, layout.crane);
   return state.allocationMoves.length
     ? applyAllocationMoves(layout, state.allocationMoves, dockVariant) ?? layout
     : layout;
@@ -2687,7 +2686,7 @@ function applyAllocationMoves(original, moves, dockVariant) {
   layout.firehallUnplaced = firehall.unplaced;
   layout.firehallOmitted = firehall.omitted;
   layout.vacancyCounts = assignVacancies(activeSlots, layout.vacancyCounts[3]);
-  layout.plaza = designPlaza(layout.R, layout.lobby, layout.slots, layout.feature.climbing);
+  layout.plaza = designPlaza(layout.R, layout.lobby, layout.slots, layout.feature.climbing, layout.crane);
   layout.allocationApplied = (original.allocationApplied ?? 0) + moves.length;
   return layout;
 }
@@ -2722,17 +2721,20 @@ function designGreenhouse(radius, lobby, ride) {
 }
 
 // The lobby approaches stay between docks and open onto the continuous promenade.
-function designPlaza(R, lobby, slots, climb) {
+function designPlaza(R, lobby, slots, climb, crane, seed = state.seed) {
   const bays = lobbyBays(lobby),
     approachSpan = bays[0]?.span ?? 0,
     mouth = R + MODULE.depth + 2,
-    outer = mouth + 24,
+    moat = craneMoatBounds(crane),
+    outer = Math.min(mouth + 24, moat?.inner ?? Infinity),
     span = Math.max(approachSpan, Math.min(0.95, 32 / mouth)),
     walkRadius = mouth + 3.4,
-    rad = mouth + 15.0;
-  const n = Math.max(12, Math.min(24, Math.floor((TAU * rad) / 19))),
+    activityRadius = mouth + 15,
+    // Allow for the plan corners of the widest court and the deepest patio pad.
+    rad = moat ? Math.min(activityRadius, Math.sqrt((outer - 0.40) ** 2 - 8.5 ** 2) - 5.5) : activityRadius;
+  const n = Math.max(12, Math.min(24, Math.floor((TAU * activityRadius) / 19))),
     zones = [],
-    rng = random((state.seed ^ 0x8855aabc) >>> 0),
+    rng = random((seed ^ 0x8855aabc) >>> 0),
     themes = ['fountain', 'patio', 'picnic', 'play', 'green'];
   const ground = slots.filter((q) => q.f === 0 && !q.blocked && q.p >= 0 && q.p < 5);
   for (let i = 0; i < n; i++) {

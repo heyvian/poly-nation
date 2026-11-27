@@ -150,6 +150,19 @@ function siteTerrainHeight(terrain, x, z) {
   return ground - datum;
 }
 
+function siteMoatExcavation(terrain, moat, [x, z], cells) {
+  if (!moat) return null;
+  const existing = [], at = (radius, i) => {
+    const angle = i * TAU / MOAT_SEGMENTS;
+    return [x + radius * Math.cos(angle), z + radius * Math.sin(angle)];
+  };
+  for (let i = 0; i < MOAT_SEGMENTS; i++) {
+    const a = at(moat.inner, i), b = at(moat.outer, i), c = at(moat.outer, i + 1), d = at(moat.inner, i + 1);
+    existing.push([a, b, c], [a, c, d]);
+  }
+  return siteWaterStudy(terrain, { level: terrain.datum, existing, proposed: [] }, cells);
+}
+
 function siteAssemblyMesh(
   assembly,
   terrain,
@@ -177,7 +190,11 @@ function siteAssemblyMesh(
         terrain,
         water && (showWater ? water : { ...water, existing: [] }),
         count - 1
-      );
+      ), moat = siteMoatExcavation(terrain, assembly.craneMoat, position, count - 1);
+    const waterPlanes = (i) => {
+      const excavation = moat?.index[i], district = study?.index[i];
+      return excavation?.length && district?.length ? [...excavation, ...district] : excavation?.length ? excavation : district;
+    };
     const points = Array.from({ length: count ** 2 }, (_, i) => {
       const x = (0.5 - (i % count) / (count - 1)) * size,
         z = (0.5 - Math.floor(i / count) / (count - 1)) * size;
@@ -221,7 +238,7 @@ function siteAssemblyMesh(
     for (let row = 0; row < count - 1; row++) {
       for (let col = 0; col < count - 1; col++) {
         const i = row * count + col;
-        const candidates = study?.index[row * (count - 1) + col];
+        const candidates = waterPlanes(row * (count - 1) + col);
         const triangles = [
           [points[i], points[i + count], points[i + 1]],
           [points[i + 1], points[i + count], points[i + count + 1]]
@@ -243,7 +260,7 @@ function siteAssemblyMesh(
         cell = (value) => clamp(Math.floor((0.5 - value / size) * cells), 0, cells - 1);
       for (const { x, z, height } of natural.trees) {
         if (
-          study?.index[cell(z) * cells + cell(x)].some((planes) =>
+          waterPlanes(cell(z) * cells + cell(x))?.some((planes) =>
             planes.every((plane) => plane.x * x + plane.z * z <= plane.level)
           )
         )

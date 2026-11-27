@@ -129,6 +129,28 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     page.wait_for_function('!pending && model.crane.runway === "moat"')
     assert page.evaluate('JSON.stringify([model.total, model.rooms, model.slots])') == before
     assert page.evaluate('gpu.mesh.groups.filter(group => /^Crane_Drawbridge_[12]$/.test(group.layer)).length') == 2
+    waterfront = page.evaluate('''() => {
+      const mesh = gpu.mesh, { crane, plaza } = model, { inner, outer } = craneMoatBounds(crane);
+      const points = (match) => mesh.groups.flatMap((group, i) => {
+        if (!match(group.layer)) return [];
+        const vertices = mesh.solid.slice(group.solid, mesh.groups[i + 1]?.solid);
+        return vertices.flatMap((x, j) => j % 10 === 0 ? [[Math.hypot(x, vertices[j + 2]), vertices[j + 1]]] : []);
+      });
+      const dry = points(layer => layer.includes('Plaza_') || layer === 'Opposite_Lobby_Promenade'),
+        water = points(layer => layer === 'Crane_Moat_Water'), tracks = points(layer => layer === 'Crane_Moat_Runway'),
+        surface = Math.max(...water.map(point => point[1]));
+      const graph = buildNavigation(model);
+      return {
+        dry: dry.length > 0 && dry.every(([radius]) => radius <= inner + 1e-6) && plaza.outer <= inner,
+        navigation: graph.nodes.filter(node => node.kind === 'plaza' || node.kind === 'entry')
+          .every(({ p: [x, , z] }) => Math.hypot(x, z) < inner),
+        water: Math.min(...water.map(point => point[0])) < crane.tower - crane.groundGauge / 2 &&
+          Math.max(...water.map(point => point[0])) > crane.tower + crane.groundGauge / 2 && surface < crane.groundRail,
+        railPiers: tracks.some(([, y]) => y < surface) && tracks.some(([, y]) => Math.abs(y - crane.groundRail) < 1e-6) &&
+          outer - inner === 2 * crane.moatHalf
+      };
+    }''')
+    assert all(waterfront.values()), waterfront
     page.locator('#craneStage').select_option('parked')
     page.evaluate('''() => {
       window.scrubMesh = gpu.mesh;
@@ -168,7 +190,7 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     assert page.evaluate("cranePaint(materialWorkspace.assignments()) === '#976148'")
     assert page.evaluate("materialValues({mast:{structure:'concrete'}},'mast').structure === 'mast-steel-truss'")
     page.locator('#openBuild').click()
-    expect(page.locator('#buildCraneEstimate')).to_contain_text('recessed rail plinths')
+    expect(page.locator('#buildCraneEstimate')).to_contain_text('raised rail beams and piers in the moat')
     page.locator('#openDrawings').click()
     page.locator('#drawingCraneRunway').select_option('cantilever')
     page.locator('#drawingCraneBearing').fill('231')

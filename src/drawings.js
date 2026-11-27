@@ -938,8 +938,11 @@ const openDrawingWorkspace = (() => {
           programColors: settings.mode === 'combined' || settings.mode === 'program',
           finishJoints: settings.mode === 'material' || settings.mode === 'combined'
         };
-        const model = settings.craneRunway === 'design' ? sourceModel :
-          { ...sourceModel, crane: planModuleCrane(sourceModel, settings.craneRunway) };
+        let model = sourceModel;
+        if (settings.craneRunway !== 'design' && settings.craneRunway !== sourceModel.crane?.runway) {
+          const { R, lobby, slots, feature } = sourceModel, crane = planModuleCrane(sourceModel, settings.craneRunway);
+          model = { ...sourceModel, crane, plaza: designPlaza(R, lobby, slots, feature.climbing, crane) };
+        }
         const mesh = settings.source === 'build'
           ? buildAssemblyMesh(model, buildViewLayers(), 0, preview)
           : buildMesh(model, false, view, preview);

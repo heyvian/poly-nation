@@ -9,6 +9,7 @@ const CRANE_RUNWAYS = {
   elevated: 'Elevated outboard runway', moat: 'Moat with drawbridges', cantilever: 'Roof-only cantilever'
 };
 const MOAT_BRIDGE_WIDTH = 10;
+const MOAT_SEGMENTS = 144;
 const MOAT_HINGE_HEIGHT = 0.24;
 const MOAT_BARRIER_HEIGHT = 0.92;
 const MOAT_BARRIER_POST = MOAT_BRIDGE_WIDTH / 2 + 0.25;
@@ -648,34 +649,47 @@ function drawElevatedCraneRunway(mesh, crane, paint, cutY) {
 }
 
 function drawCraneGround(mesh, extent, ground, height, crane) {
-  if (crane?.runway !== 'moat') {
+  const moat = craneMoatBounds(crane);
+  if (!moat) {
     mesh.quad([-extent, height, -extent], [-extent, height, extent], [extent, height, extent], [extent, height, -extent], ground);
     return;
   }
-  const { tower, moatHalf } = crane;
-  for (const [r, R] of [[0, tower - moatHalf], [tower + moatHalf, extent * Math.SQRT2]]) {
-    for (let i = 0; i < 144; i++) {
-      const a = i * TAU / 144, b = (i + 1) * TAU / 144, pt = (radius, az) => mesh.ringPoint(radius, az, height);
+  for (const [r, R] of [[0, moat.inner], [moat.outer, extent * Math.SQRT2]]) {
+    for (let i = 0; i < MOAT_SEGMENTS; i++) {
+      const a = i * TAU / MOAT_SEGMENTS, b = (i + 1) * TAU / MOAT_SEGMENTS, pt = (radius, az) => mesh.ringPoint(radius, az, height);
       if (!r) mesh.tri(pt(0, a), pt(R, b), pt(R, a), ground);
       else mesh.quad(pt(r, a), pt(r, b), pt(R, b), pt(R, a), ground);
     }
   }
 }
 
+function craneMoatBounds(crane) {
+  return crane?.runway === 'moat' ? { inner: crane.tower - crane.moatHalf, outer: crane.tower + crane.moatHalf } : null;
+}
+
 function drawCraneMoat(mesh, model, crane, paint, angle, animate) {
-  const { tower, moatHalf, groundRail, groundGauge, gateAngles } = crane,
-    { sector, mark, box } = mesh, inner = tower - moatHalf, outer = tower + moatHalf,
-    bank = rgb('#b2b6a6'), wet = rgb('#81a8a7'), steel = rgb('#516763'), wood = rgb('#c2ac89'),
+  const { tower, groundRail, groundGauge, gateAngles } = crane,
+    { sector, mark, box } = mesh, { inner, outer } = craneMoatBounds(crane),
+    bank = rgb('#b2b6a6'), wet = rgb('#79a8b0'), steel = rgb('#516763'), wood = rgb('#c2ac89'),
+    waterLevel = -0.84, beamBase = groundRail - 0.32, basinTop = -1.19,
     walkway = MOAT_BRIDGE_WIDTH, deckWidth = walkway + 0.32;
-  mark('Crane_Moat', 'Recessed water, retaining banks and protected rail plinths');
+  mark('Crane_Moat', 'Basin and retaining banks');
   sector(inner, outer, 0, TAU, -1.43, 0.24, bank);
-  sector(inner + 0.11, outer - 0.11, 0, TAU, -0.87, 0.025, wet);
   for (const radius of [inner + 0.20, outer - 0.20])
     sector(radius - 0.24, radius + 0.24, 0, TAU, -1.2, 1.40, bank);
+  mark('Crane_Moat_Water', 'Continuous water below the runway');
+  sector(inner + 0.40, outer - 0.40, 0, TAU, waterLevel - 0.025, 0.025, wet);
+  mark('Crane_Moat_Runway', 'Raised rail beams on discrete piers');
+  const piers = Math.ceil(TAU * tower / 4.8);
   for (const radius of [tower - groundGauge / 2, tower + groundGauge / 2]) {
-    sector(radius - 0.45, radius + 0.45, 0, TAU, -1.21, groundRail + 1.11, bank);
+    sector(radius - 0.21, radius + 0.21, 0, TAU, beamBase, groundRail - 0.10 - beamBase, paint);
     sector(radius - 0.10, radius + 0.10, 0, TAU, groundRail - 0.10, 0.10, steel);
+    for (let i = 0; i < piers; i++) {
+      const theta = (i + 0.5) * TAU / piers, [x, , z] = mesh.ringPoint(radius, theta, basinTop);
+      box(x, basinTop, z, 0.48, beamBase - basinTop, 0.44, theta, bank);
+    }
   }
+  mark('Crane_Moat_Guards', 'Bank guards with openings at the drawbridges');
   for (const radius of [inner - 0.10, outer + 0.10])
     for (const [a, b] of openArcs(gateAngles.map((axis) => [axis, Math.asin((deckWidth / 2 + 0.20) / radius)])))
       for (let j = 0, n = Math.ceil((b - a) * radius / 3.1); j < n; j++) {

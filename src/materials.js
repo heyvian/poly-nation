@@ -69,11 +69,13 @@ const materialWorkspace = (() => {
       );
       if (stored?.model?.slots && stored.view && stored.assignments) {
         study = stored;
-        const migrated = restoreLegacyCorridors(study.model.circulation);
-        if (!Object.hasOwn(study.model, 'crane') || (study.model.crane && !Number.isFinite(study.model.crane.atriumClearRadius))) {
-          study.model.crane = planModuleCrane(study.model, study.model.crane?.runway);
-          saveStudy();
-        } else if (migrated) saveStudy();
+        const model = study.model, migrated = restoreLegacyCorridors(model.circulation),
+          refreshCrane = !Object.hasOwn(model, 'crane') || (model.crane && !Number.isFinite(model.crane.atriumClearRadius));
+        if (refreshCrane) model.crane = planModuleCrane(model, model.crane?.runway);
+        const moat = craneMoatBounds(model.crane), refreshPlaza = moat && model.plaza.outer > moat.inner;
+        if (refreshPlaza)
+          model.plaza = designPlaza(model.R, model.lobby, model.slots, model.feature.climbing, model.crane, study.view.seed);
+        if (migrated || refreshCrane || refreshPlaza) saveStudy();
       }
     } catch {
       $('materialStatus').textContent = 'The saved material study could not be loaded.';

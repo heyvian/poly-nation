@@ -1007,7 +1007,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     if (cranePose) drawCraneGantry(mesh, crane, cranePose, paint);
   }
   const H = layers.swings && full ? ride.height : crane && full ? crane.head + crane.depth : (floors + Number(full)) * floorHeight;
-  return { ...mesh, H, extent };
+  return { ...mesh, H, extent, craneMoat: craneMoatBounds(crane) };
 }
 
 const BUILD_LAYERS = {
@@ -1092,7 +1092,7 @@ const openBuildWorkspace = (() => {
           <div class="readout"><span>Outboard tower reaction</span><b>${Math.round(load.outer)} kN</b></div>`,
       loadPath = cantilever
         ? `The study assumes ${Math.round(load.ballast / 9.81)} t of ballast. Captured rollers engage the inner rail when the boom lifts that side. The deep collectors route uplift and compression to ring piers and tied pile caps.`
-        : `Twin roof rails distribute the roof-side reaction to annular collectors and piers. ${copy.crane.runway === 'moat' ? 'The recessed rail plinths' : 'The elevated runway beams and piers'} carry the outboard reaction.`;
+        : `Twin roof rails distribute the roof-side reaction to annular collectors and piers. ${copy.crane.runway === 'moat' ? 'The raised rail beams and piers in the moat' : 'The elevated runway beams and piers'} carry the outboard reaction.`;
     $('buildCraneEstimate').innerHTML = `
       <div class="crane-load-values">
         <div class="readout"><span>Reference cassette and rig</span><b>${(load.load / 9.81).toFixed(0)} t</b></div>

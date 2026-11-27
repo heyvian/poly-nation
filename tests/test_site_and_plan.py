@@ -224,6 +224,26 @@ with serve_lab(root) as url, sync_playwright() as p:
         outlines.lines.length > changed.lines.length && outlines.solid.join() === changed.solid.join() &&
         changed.solid[bay.solid + 1] > asDrawing.solid[origin + 1];
     }''')
+    assert page.evaluate('''() => {
+      const terrain = {size: 480, count: 9, datum: 1040, elevations: Array(81).fill(1040)};
+      const mesh = siteAssemblyMesh({...meshBuilder(), H: 10, extent: 65, craneMoat: { inner: 60, outer: 68.5 }},
+        terrain, { position: [24, -19], showWater: false, showContours: false });
+      const withinTerrain = (x, z) => {
+        for (let i = 0; i < mesh.solid.length; i += 30) {
+          const sides = [0, 10, 20].map((step, j) => {
+            const a = i + step, b = i + ((j + 1) % 3) * 10;
+            return (mesh.solid[b] - mesh.solid[a]) * (z - mesh.solid[a + 2]) -
+              (mesh.solid[b + 2] - mesh.solid[a + 2]) * (x - mesh.solid[a]);
+          });
+          if (sides.every(value => value > 1e-6) || sides.every(value => value < -1e-6)) return true;
+        }
+        return false;
+      };
+      return Array.from({length: 16}, (_, i) => i * TAU / 16 + 0.12).every(angle => {
+        const at = (r) => withinTerrain(24 + r * Math.cos(angle), -19 + r * Math.sin(angle));
+        return at(58) && !at(64.25) && at(71);
+      });
+    }''')
 
     page.locator('#openDrawings').click()
     include_site = page.locator('#drawingSite')

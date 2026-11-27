@@ -1,5 +1,8 @@
 # Changelog
 
+## Continuous moat water
+- End plaza paving and move amenities inside the inner bank. Fill the excavated ring with one continuous water surface under the pier-supported rails. Keep the moat clear where it meets the live terrain.
+
 ## Adjustable module spacing
 - Fit the perimeter bay count to a minimum gap measured at the ring-side doors. Show the fitted gap and per-floor bay count in Massing and record them in exports and trials.
 
