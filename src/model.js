@@ -54,6 +54,7 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
   UNUSED = 5,
   TAU = 2 * Math.PI,
   MODULE = { width: 4.5, depth: 18, height: 3.5, area: 81 },
+  MODULE_SPACING = { min: 0.6, max: 12, step: 0.1, initial: 0.9 },
   defaults = () => ({
     autoCore: true,
     floors: 4,
@@ -61,6 +62,7 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
     footprint: 4700,
     ringWidth: 10,
     modules: 110,
+    moduleSpacing: MODULE_SPACING.initial,
     affinity: 70,
     seed: 606,
     dockVariant: 0,
@@ -129,6 +131,9 @@ const BUILD_SECTION = {
   slabBase: 0.24,
   slabThickness: 0.22,
   dockGap: 0.65,
+  dockRailOffset: 0.14,
+  dockRootPlateWidth: 0.36,
+  dockRootPlateDepth: 0.28,
   rootDepth: 3.15,
   tipDepth: 0.6,
   chordWidth: 0.2,
@@ -185,7 +190,10 @@ const coreSpecs = [
   ['lobby', 'Combined lobby area', 0, 1000, 20, ' m²'],
   ['minRoomArea', 'Minimum core room area', 40, 200, 5, ' m²']
 ];
-const moduleSpecs = [['modules', 'Requested modules', 0, 300, 1, '']];
+const moduleSpecs = [
+  ['modules', 'Requested modules', 0, 300, 1, ''],
+  ['moduleSpacing', 'Minimum gap between modules', MODULE_SPACING.min, MODULE_SPACING.max, MODULE_SPACING.step, ' m']
+];
 // Create linked slider and numeric inputs. Send edits through the shared state and update queue.
 function slider(parent, spec) {
   const [id, title, min, max, step, suffix] = spec;
@@ -251,6 +259,8 @@ const refreshInputs = [
   slider('affinityField', ['affinity', 'Clustering strength', 0, 100, 5, '%']),
   slider('mixField', ['mix', 'Core cross-pollination', 0, 100, 5, '%'])
 ];
+for (const input of $('moduleSpacing').closest('.field').querySelectorAll('input'))
+  input.setAttribute('aria-describedby', 'moduleSpacingHint');
 refreshInputs.push(
   slider('simFields', ['simSpeed', 'Simulation speed', 1, 12, 1, '×']),
   slider('simFields', ['visitorCount', 'Human visitors', 8, 70, 1, ''])
@@ -488,7 +498,7 @@ function designAtriumBridges(r, lobby, liftHalf) {
 
 // Test each curved flight against the walking surfaces at both ends. Stairs inside
 // the atrium prefer existing public passages. A new lower passage is reserved only when needed.
-function designAtriumStairs(r, R, bridges, regions, lobby, pitch) {
+function designAtriumStairs(r, slotN, bridges, regions, lobby, pitch) {
   if (!bridges.length) return [];
   const width = 1.2,
     radius = r - width / 2,
@@ -498,7 +508,7 @@ function designAtriumStairs(r, R, bridges, regions, lobby, pitch) {
     treadDepths = Array.from({ length: 13 }, (_, i) => 0.285 + i * 0.01),
     offsets = [1, 0.88, 0.75, 0.62, 0.5, 0.38, 0.26],
     flights = [],
-    columnPitch = TAU / slotCapacity(R),
+    columnPitch = TAU / slotN,
     columnClearance = (angle) =>
       Math.abs(mod(angle, columnPitch) - columnPitch / 2) * (r + 0.42),
     passages = (f) => regions.filter((q) =>
@@ -589,7 +599,7 @@ function designAtriumStairs(r, R, bridges, regions, lobby, pitch) {
 }
 
 // Reserve the corridors, opposed lifts, and lobby voids before assigning room area.
-function circulationPlan(r, R, lobby, floorHeight) {
+function circulationPlan(r, R, lobby, floorHeight, slotN) {
   const width = R - r,
     cw = Math.min(state.corridorWidth, width * 0.38),
     dual = width >= 2 * cw + 8,
@@ -646,7 +656,7 @@ function circulationPlan(r, R, lobby, floorHeight) {
     );
     floorPlans.push({ arcs, bands, area });
   }
-  const stairs = designAtriumStairs(r, R, bridges, regions, lobby, floorHeight);
+  const stairs = designAtriumStairs(r, slotN, bridges, regions, lobby, floorHeight);
   for (const { f, bottom, passageHalf } of stairs) {
     if (!passageHalf) continue;
     const floor = f - 1;
@@ -2046,8 +2056,21 @@ function inventory(request, goals = goalsForRetail(0)) {
   }
   return counts;
 }
-function slotCapacity(R) {
-  return Math.max(1, Math.floor(TAU / (2 * Math.atan((MODULE.width + 0.9) / (2 * (R + 0.65))))));
+function moduleEntranceGap(R, slotN) {
+  if (slotN < 2) return null;
+  const halfPitch = Math.PI / slotN;
+  // Project the two closest chassis corners onto the line between the bays.
+  return 2 * (R + BUILD_SECTION.dockGap) * Math.sin(halfPitch) - MODULE.width * Math.cos(halfPitch);
+}
+
+function slotCapacity(R, minimumGap = MODULE_SPACING.initial) {
+  const entranceDiameter = 2 * (R + BUILD_SECTION.dockGap),
+    halfPitch = Math.atan2(MODULE.width, entranceDiameter) +
+      Math.asin(Math.min(1, minimumGap / Math.hypot(entranceDiameter, MODULE.width))),
+    { dockRailOffset, dockRootPlateWidth, dockRootPlateDepth } = BUILD_SECTION,
+    // The door-end gap sets the pitch. At tight radii the existing root plates can require more room.
+    platePitch = Math.atan2(MODULE.width / 2 + dockRailOffset + dockRootPlateWidth / 2, R - dockRootPlateDepth / 2);
+  return Math.max(1, Math.floor(Math.PI / Math.max(halfPitch, platePitch) + 1e-10));
 }
 // Solve the annular radius for the area budget, subject to the greenhouse and preferred ring width.
 function autoGeometry(coreTotal, rinseCore) {
@@ -2111,6 +2134,7 @@ function derive(dockVariant = state.dockVariant) {
       voidBudget = l * (levels - 1),
       roofPlan,
       circulation,
+      slotN,
       lobby;
     // Fit the roof and the net void above the two lobbies, including their upper gallery.
     for (let pass = 0; pass < 40; pass++) {
@@ -2149,7 +2173,8 @@ function derive(dockVariant = state.dockVariant) {
         blocked: new Set()
       };
       lobby.volume = (l + lobby.voidArea) * floorHeight;
-      circulation = circulationPlan(geom.r, geom.R, lobby, floorHeight);
+      slotN = slotCapacity(geom.R, state.moduleSpacing);
+      circulation = circulationPlan(geom.r, geom.R, lobby, floorHeight, slotN);
       roofPlan = designRoof(geom.R, geom.r, circulation, floorHeight);
       const need = roofPlan.area + 0.00002;
       const netVoid = lobby.voidArea - circulation.bridgeArea;
@@ -2162,7 +2187,6 @@ function derive(dockVariant = state.dockVariant) {
       court = Math.PI * r * r,
       ringArea = ringPer * state.floors - lobby.voidArea,
       programRing = ringArea - l,
-      slotN = slotCapacity(R),
       rawMax = slotN * state.floors;
     if (
       !roofPlan ||
@@ -2519,6 +2543,7 @@ function derive(dockVariant = state.dockVariant) {
     bandN,
     slots,
     slotN,
+    moduleEntranceGap: moduleEntranceGap(R, slotN),
     max,
     count,
     total,

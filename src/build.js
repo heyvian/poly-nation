@@ -353,12 +353,12 @@ function drawBuildBoardingStairs(mesh, model) {
 
 // The removable module sits between permanent side trusses, clear of the bay below.
 function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, openPanels = false, seat = 0.05) {
-  const { dockGap, chordWidth, chordDepth } = BUILD_SECTION,
+  const { dockGap, chordWidth, chordDepth, dockRailOffset, dockRootPlateWidth, dockRootPlateDepth } = BUILD_SECTION,
     { box, mark } = mesh,
     span = dockGap + MODULE.depth,
     lower = storey.base - chordDepth / 2,
     point = moduleTipPoint(model, slot, lower),
-    sideOffset = MODULE.width / 2 + 0.14,
+    sideOffset = MODULE.width / 2 + dockRailOffset,
     steel = rgb('#657b76'),
     web = rgb('#7c9088'),
     plates = rgb('#a87e5b'),
@@ -385,7 +385,7 @@ function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, op
     }
     for (const top of [false, true]) {
       const [x, y, z] = chord(0, top);
-      box(x, y - 0.23, z, 0.36, 0.46, 0.28, slot.angle, plates);
+      box(x, y - 0.23, z, dockRootPlateWidth, 0.46, dockRootPlateDepth, slot.angle, plates);
     }
   }
   // Recess the crossmember tops to receive the cassette without raising the

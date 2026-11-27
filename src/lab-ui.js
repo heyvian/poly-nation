@@ -1149,6 +1149,7 @@ function update() {
   $('lobbyBlocked').textContent = m.lobby.blocked.size + ' slots';
   $('plazaArea').textContent = fmt(m.plaza?.area || 0) + ' m²';
   $('slots').textContent = m.slotN;
+  $('actualModuleSpacing').textContent = m.moduleEntranceGap == null ? '—' : m.moduleEntranceGap.toFixed(2) + ' m';
   $('maxModules').textContent = m.max;
   $('blockedSlots').textContent = (m.feature?.blocked.size || 0) + ' slots';
   $('slideDetours').textContent = m.feature.slide?.facadeDetours?.length || 0;
@@ -1328,6 +1329,7 @@ $('export').onclick = () => {
         floorHeight: m.floorHeight,
         slabThickness: m.slabThickness,
         module: MODULE,
+        dockingGrid: { baysPerFloor: m.slotN, minimumEntranceGap: state.moduleSpacing, actualEntranceGap: m.moduleEntranceGap },
         ringAreaPerFloor: m.ringPer,
         netRingArea: m.ringArea,
         programRingArea: m.programRing,
@@ -1445,6 +1447,7 @@ function applySaved(data) {
     footprint: [100, 22000],
     ringWidth: [0.5, 35],
     modules: [0, 300],
+    moduleSpacing: [MODULE_SPACING.min, MODULE_SPACING.max],
     affinity: [0, 100],
     seed: [0, 4294967295],
     dockVariant: [0, 4294967295],
@@ -1469,6 +1472,7 @@ function applySaved(data) {
   if (Object.hasOwn(CRANE_RUNWAYS, s.craneRunway)) d.craneRunway = s.craneRunway;
   d.craneFloor = Math.round(d.craneFloor);
   d.craneBearing = Math.round(d.craneBearing);
+  d.moduleSpacing = Number(d.moduleSpacing.toFixed(1));
   for (const k of ['floors', 'modules', 'seed', 'dockVariant', 'inspect', 'visitorCount'])
     d[k] = Math.round(d[k]);
   for (const k of [

@@ -19,6 +19,6 @@ Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve th
 
 `test_atrium_render.py` checks full shared lobbies on core and bridge routes, casework-supported quarter domes, wall-scribed benches, paper pendant placement, shared program lobbies, capsule fit, two inward-facing groups of five, open bridge routes and the seating toggle in the six-level seed 609 layout, migration of saved Materials corridors, close zoom, reachable atrium stairs, bridge bearings, lighting controls and Render restoration.
 
-`test_module_design.py` checks all three enclosure lengths, sixteen roof families, mirrored slopes, structure and cladding variety, skylights, window shades, patio door types, the fixed dock interface, window and roof bounds, area takeoff and Materials and Build restoration.
+`test_module_design.py` checks entrance spacing and perimeter bay counts, all three enclosure lengths, sixteen roof families, mirrored slopes, structure and cladding variety, skylights, window shades, patio door types, the fixed dock interface, window and roof bounds, area takeoff and Materials and Build restoration.
 
 `test_module_crane.py` checks chassis pin fit, the lift and insertion stages, all three support systems, roof and swing clearances, roof-only reaction equilibrium, live positioning, 10 m bascule geometry and interlock, park-in-place and Drawings support and bearing overrides.

@@ -50,7 +50,7 @@ The designer put a mixed programme in the annulus and gave the full-height centr
 
 ### A repeatable bay
 
-A single module is 4.5 × 18 × 3.5 m in the study, with 81 m² of floor area. The original studio scheme also considered paired units. A standard bay lets occupied modules, small shops and public outdoor decks use a common attachment system.
+A single module is 4.5 × 18 × 3.5 m in the study, with 81 m² of floor area. The original studio scheme also considered paired units. A standard bay lets occupied modules, small shops and public outdoor decks use a common attachment system. The designer sets the minimum gap between module edges at the ring-side doors. The current radius determines how many equal bays fit around each floor.
 
 *Figure. Conceptual plan and module anatomy. The ring and its rooms endure; exterior units and uses can be reconfigured. Diagram not to scale.*
 

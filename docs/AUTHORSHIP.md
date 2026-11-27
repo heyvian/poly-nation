@@ -4,7 +4,7 @@
 
 | Design issue | Student direction | AI translation / contribution |
 |---|---|---|
-| Stable/adaptive system | Radial permanent framework, movable 81 m² modules, mixed permanent rooms, alternate vacant uses | Annular math, angular slots, discrete inventory solver, symbolic docking geometry |
+| Stable/adaptive system | Radial permanent framework, movable 81 m² modules, mixed permanent rooms, alternate vacant uses, minimum gap at module doors | Annular math, fitted angular slots, discrete inventory solver, symbolic docking geometry |
 | Program | Five uses and target quantities; original cap 20,000, then adjustable; individual core vs modular shares | Apportionment, automatic ring sizing, accounting stability, initial splits and room sizes as assumptions |
 | Topology | Attraction, repulsion, neutrality; all neutral initially; optional clustering for every program, off initially (generalized original firehall request) | Pair costs, node-distance magnitude, seeded room packing, simulated annealing and clustering bias |
 | Placement refinements | Ground-first Firehall module counts, same-floor Repel, direct edits | Dock eligibility, floor quotas, hover feedback and validation |

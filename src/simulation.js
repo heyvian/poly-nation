@@ -1390,6 +1390,8 @@ function trialLayout(model, trial) {
     floorHeight: model.floorHeight,
     footprint: Math.PI * model.R ** 2,
     width: model.width,
+    baysPerFloor: model.slotN,
+    moduleEntranceGap: model.moduleEntranceGap,
     lobby: lobby.area,
     bridges: circulation.bridges.length,
     stairs: circulation.stairs?.length ?? 0,
@@ -1464,6 +1466,7 @@ function trialLogSections(record) {
       'Preferred ring width': metres(settings.ringWidth),
       'Minimum room area setting': area(settings.minRoomArea),
       'Modules requested': trialValue(settings.modules),
+      'Minimum gap at module doors': trialValue(settings.moduleSpacing, ' m', 1),
       'Module arrangement': settings.dockVariant ? 'Variation ' + settings.dockVariant : 'Original'
     },
     'Circulation and play': {
@@ -1502,6 +1505,8 @@ function trialLogSections(record) {
       'Floor-to-floor height': trialValue(layout.floorHeight, ' m', 2),
       'Outer footprint': area(layout.footprint),
       'Actual ring width': metres(layout.width),
+      'Bays per floor': trialValue(layout.baysPerFloor),
+      'Actual gap at module doors': trialValue(layout.moduleEntranceGap, ' m', 2),
       'Core and greenhouse area': area(record.core),
       'Core rooms': trialValue(record.rooms),
       'Modules installed': trialValue(record.modules)

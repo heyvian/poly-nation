@@ -1,5 +1,8 @@
 # Changelog
 
+## Adjustable module spacing
+- Fit the perimeter bay count to a minimum gap measured at the ring-side doors. Show the fitted gap and per-floor bay count in Massing and record them in exports and trials.
+
 ## Three crane supports and live positioning
 - Scrub or enter a gantry bearing, park during unloaded travel, and choose a separate bearing and support on a drawing.
 - Widened the moat drawbridges to 10 m clear and modeled the girder deck, hinge bearings, counterweights and approach interlock.

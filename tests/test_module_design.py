@@ -18,6 +18,38 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(url)
     massing = page.evaluate('JSON.stringify([state.seed, model.total, model.slots])')
+    page.locator('#design-panel-1-tab').click()
+    spacing = page.get_by_role('spinbutton', name='Minimum gap between modules (m)')
+    expect(spacing).to_have_value('0.9')
+    before = page.evaluate('model.slotN')
+    spacing.fill('4.2')
+    spacing.press('Enter')
+    page.wait_for_function('(previous) => !pending && state.moduleSpacing === 4.2 && model.slotN < previous', arg=before)
+    fitted = page.evaluate('''() => {
+      const { R, slotN, slots, max, moduleEntranceGap } = model, theta = slots[1].angle,
+        radius = R + BUILD_SECTION.dockGap, half = MODULE.width / 2,
+        measure = angle => Math.hypot(radius * Math.cos(angle) + half * Math.sin(angle) - radius,
+          radius * Math.sin(angle) - half * Math.cos(angle) - half),
+        measured = measure(theta);
+      return {
+        bays: String(slotN), clearance: measured.toFixed(2) + ' m',
+        fits: measured >= state.moduleSpacing && Math.abs(measured - moduleEntranceGap) < 1e-8 &&
+          measure(TAU / (slotN + 1)) < state.moduleSpacing,
+        inventory: slots.length === state.floors * slotN && max === slots.filter(slot => !slot.blocked).length &&
+          slots.every(slot => !slot.blocked || slot.p === EMPTY) && model.total <= state.areaCap + 1e-6,
+        scale: slotCapacity(42, 4.2) > slotCapacity(26, 4.2)
+      };
+    }''')
+    assert fitted['fits'] and fitted['inventory'] and fitted['scale'], fitted
+    expect(page.locator('#slots')).to_have_text(fitted['bays'])
+    expect(page.locator('#actualModuleSpacing')).to_have_text(fitted['clearance'])
+    page.wait_for_function('JSON.parse(localStorage.getItem(STORAGE_KEY))?.state.moduleSpacing === 4.2')
+    page.reload()
+    page.locator('#design-panel-1-tab').click()
+    expect(spacing).to_have_value('4.2')
+    spacing.fill('0.9')
+    spacing.press('Enter')
+    page.wait_for_function('(baseline) => !pending && JSON.stringify([state.seed, model.total, model.slots]) === baseline', arg=massing)
     page.locator('#openMaterials').click()
     page.locator('#uniqueModules').check()
     shades = page.get_by_role('checkbox', name='Window awnings and shades')
@@ -149,4 +181,4 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
                   'noRoofs', 'noModules', 'finite', 'timberCabin', 'mirroredRoofs', 'roofLight', 'options', 'variedDoors']:
         assert results[check], results
     assert not errors, errors
-    print('Module forms and claddings, roof handedness, skylights, shades, door diversity, envelope fit and restoration passed.')
+    print('Perimeter spacing, module forms, roof and door variety, envelope fit and restoration passed.')
