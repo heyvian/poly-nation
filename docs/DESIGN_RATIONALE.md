@@ -96,7 +96,7 @@ Where two attracted rooms have enough space, their shared lobby becomes the rout
 
 ### Places to pause at bridge landings
 
-The designer sketched a second kind of gathering space formed by the approach to a bridge and the rooms around it. Where the programme plan leaves a deep shoulder, a small group of seating capsules occupies the recess. Each holds three people under a tall curved back and has a small attached table. Where the recess is wide enough, several capsules face inward around a small woven rug. The gap between them leads from the bridge approach into the group. A wider landing can have several independent circles. Narrower pockets offer individual capsules that can turn toward the activity or away from it. Warm timber and muted upholstery relate them to the shared program lobbies. The room edges frame the walk from the bridge to the ring, with clear access to adjacent doors and stairs.
+The designer sketched a second kind of gathering space formed by the approach to a bridge and the rooms around it. Where the programme plan leaves a deep shoulder, a small group of seating capsules occupies the recess. Each holds three people under a tall curved back and has a small attached table. The layout prioritizes inward-facing groups of three to five capsules, with an opening from the bridge approach. Each group shares a woven rug shaped by the position of the capsule openings. A wider landing can hold several independent groups, and tighter pockets can fit pairs. Slightly narrower capsules help larger groups fit some recesses. Warm timber and muted upholstery relate them to the shared program lobbies. The room edges frame the walk from the bridge to the ring, with clear access to adjacent doors and stairs.
 
 ### A local bypass
 

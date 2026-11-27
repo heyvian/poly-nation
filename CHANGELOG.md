@@ -1,5 +1,9 @@
 # Changelog
 
+## Shared seating at bridge landings
+- Prioritize groups of three to five inward-facing capsules and fit a continuous rug to the seat openings. Smaller pockets can fit pairs.
+- Verified the saved six-storey study and a two-group landing. Through routes keep their original paths and seating groups have their own approaches.
+
 ## Greater plug-in variety
 - Generate eleven module forms including rounded trailers, vaults, stepped lofts and sawtooth monitors. Added lightweight stucco, vinyl, painted tin and riveted aluminum to the façade study.
 - Similarity now aligns form before finish, colour and fenestration. The material area readout uses generated footprints and the chassis retains its standard dock interface.

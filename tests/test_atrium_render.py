@@ -126,16 +126,27 @@ with serve_lab(root) as url, sync_playwright() as p:
           pathsUnchanged = baseGraph.edges.every((edges, id) =>
             JSON.stringify(edges) === JSON.stringify(graph.edges[id].filter(edge => edge.to < baseGraph.nodes.length))),
           points = (a) => [a[0], a[2]];
-        const clearOfWalk = lounges.every(({ f, seats, axis, passage }) => seats.every(({ p }) => {
+        const clearOfWalk = lounges.every(({ f, seats, axis, passage }) => seats.every(({ p, scale }) => {
           const lateral = Math.abs(p[1] * Math.cos(axis) - p[0] * Math.sin(axis)),
-            y = f * modelFloorPitch(plan) + 0.54;
-          return lateral >= passage / 2 + BRIDGE_SEAT_RADIUS && baseGraph.edges.flat().every(({ path }) =>
+            y = f * modelFloorPitch(plan) + 0.54, radius = BRIDGE_SEAT_RADIUS * scale;
+          return lateral >= passage / 2 + radius && baseGraph.edges.flat().every(({ path }) =>
             path.slice(1).every((b, i) => {
               const a = path[i];
               return Math.min(a[1], b[1]) > y + 0.21 || Math.max(a[1], b[1]) < y - 0.21 ||
-                bridgeSeatDistance(p, points(a), points(b)) >= BRIDGE_SEAT_RADIUS + 0.56;
+                bridgeSeatDistance(p, points(a), points(b)) >= radius + 0.56;
             }));
         }));
+        const rugsConnect = lounges.every(({ court, rug, seats, axis, passage }, i) => {
+          const inRug = ([px, pz]) => rug.every(([x, z], j) => {
+            const [u, v] = rug[(j + 1) % rug.length];
+            return (u - x) * (pz - z) - (v - z) * (px - x) >= -1e-6;
+          });
+          return inRug(court) && rug.every(([x, z]) => Math.abs(z * Math.cos(axis) - x * Math.sin(axis)) >= passage / 2) &&
+            seats.every(({ p, heading, scale, route }) => route.at(-2) === court &&
+              angDist(heading, Math.atan2(court[1] - p[1], court[0] - p[0])) < 1e-6 &&
+              inRug([p[0] + 0.69 * scale * Math.cos(heading), p[1] + 0.69 * scale * Math.sin(heading)])) &&
+            lounges.slice(i + 1).every(other => other.f !== lounges[i].f || !bridgeRugsOverlap(rug, other.rug));
+        });
         state = { ...state, bridgeSeating: false };
         const open = derive();
         state = { ...state, relations: {} };
@@ -147,17 +158,18 @@ with serve_lab(root) as url, sync_playwright() as p:
           neutralOpen: neutral.circulation.hubs.length === 0 && neutral.circulation.bridges.length > 0,
           clusters: [...new Set(lounges.map(lounge => lounge.f + 1))].join() === '2,4,5' &&
             lounges.every(({seats}) => seats.length >= 2 && seats.length <= 5) &&
-            lounges.some(({seats}) => seats.some((a, i) => seats.slice(i + 1).some(b => angDist(a.heading, b.heading) > 2))),
+            [1, 4].every(f => lounges.some(lounge => lounge.f === f && lounge.seats.length >= 3)) && seatNodes.length >= 10,
           usableSeats: seatNodes.length === lounges.reduce((count, lounge) => count + lounge.seats.length, 0) &&
             seatNodes.every(node => graph.reachable.has(node.id) && graph.edges[node.id].length === 1),
-          clearOfWalk, pathsUnchanged,
+          clearOfWalk, pathsUnchanged, rugsConnect,
           sameProgram: !bridgeLounges(open).length && open.total === plan.total &&
             JSON.stringify(open.rooms) === JSON.stringify(plan.rooms) && JSON.stringify(open.slots) === JSON.stringify(plan.slots),
           furniture: lounges.every(lounge => {
             const mesh = meshBuilder();
             drawBridgeLounge(mesh, lounge, 0);
             const ys = mesh.solid.filter((_, i) => i % 10 === 1);
-            return mesh.groups.some(group => group.layer.endsWith('_Bridge_Seating')) && Math.max(...ys) === 2.12 &&
+            return ['_Bridge_Seating', '_Bridge_Seating_Rug'].every(layer =>
+              mesh.groups.some(group => group.layer.endsWith(layer))) && Math.max(...ys) === 2.12 &&
               mesh.solid.every(Number.isFinite);
           }),
           openLandings: [2, 4, 5].every(level => circulation.regions.some(region =>
@@ -185,7 +197,7 @@ with serve_lab(root) as url, sync_playwright() as p:
         courts = fitBridgeLounges(footprint, routes).filter(lounge => lounge.seats.length === 5);
       return courts.length === 2 && courts[0].court[1] * courts[1].court[1] < 0 &&
         courts.every(({ court, seats }) => seats.every(({ p, heading, route }) =>
-          angDist(heading, Math.atan2(court[1] - p[1], court[0] - p[0])) < 1e-6 && route[1] === court));
+          angDist(heading, Math.atan2(court[1] - p[1], court[0] - p[0])) < 1e-6 && route.at(-2) === court));
     }''')
     assert circles
 
