@@ -1,5 +1,9 @@
 # Changelog
 
+## Full bridge lobbies
+- Replaced side pockets with full two-sided public lobbies on feasible bridge approaches. Both arches align with the direct walk from the bridge to the outer corridor.
+- Fitted shallow cabinet returns to the bay edges and routed simulated bridge arrivals through the furnished aisle.
+
 ## Public lobbies in open core bays
 - Fitted furnished lobbies into large leftover core bays and gave bridge-side arrivals first choice of orientation. Each bay keeps a full-width radial lane and connections at both ends.
 - Added the public lobbies to floor-area reporting, visitor routing, lighting and lobby drawings.

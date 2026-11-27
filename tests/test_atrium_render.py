@@ -132,18 +132,36 @@ with serve_lab(root) as url, sync_playwright() as p:
         const withinBays = fitted.every(lobby => {
           const mesh = meshBuilder();
           drawSharedLobby(mesh, lobby, 0, state.seed, true);
-          return mesh.groups.some(group => group.layer.endsWith('_Shared_Furniture')) &&
-            mesh.solid.every((x, i) => i % 10 !== 0 || sharedLobbyContains(lobby, x, mesh.solid[i + 2], -0.003));
+          const i = mesh.groups.findIndex(group => group.layer.endsWith('_Shared_Furniture')),
+            furniture = mesh.solid.slice(mesh.groups[i].solid, mesh.groups[i + 1].solid),
+            { axis, origin, passage } = lobby.layout;
+          return [-1, 1].every(side => furniture.some((x, index) => {
+            const across = (x - origin[0]) * axis[1] - (furniture[index + 2] - origin[1]) * axis[0];
+            return index % 10 === 0 && side * across > passage / 2 + 0.8;
+          })) && mesh.solid.every((x, i) =>
+            i % 10 !== 0 || sharedLobbyContains(lobby, x, mesh.solid[i + 2], -0.003));
+        });
+        const throughRoutes = publicNodes.every(node => {
+          const links = graph.edges[node.id],
+            landing = links.find(edge => graph.nodes[edge.to].cell.R === node.cell.r),
+            corridor = links.find(edge => graph.nodes[edge.to].cell.r === node.cell.R);
+          if (!landing || !corridor || links.length !== 2) return false;
+          const direct = shortestPath(graph, landing.to, corridor.to, 'human', false),
+            network = { ...graph, edges: graph.edges.map((edges, id) =>
+              id === node.id ? [] : edges.filter(edge => edge.to !== node.id)) };
+          return direct?.length === 2 && direct[0].to === node.id &&
+            Boolean(shortestPath(network, landing.to, corridor.to, 'human', false));
         });
         const { total, corridorArea, hubArea, publicLobbyArea, elevatorArea } = after.circulation;
         return {
-          fitted: fitted.length >= 6 && [2, 4, 5].every(level => bridges.includes(level)),
+          fitted: fitted.length === 3 && [2, 4, 5].every(level => bridges.includes(level)),
           reachable: publicNodes.length === fitted.length && publicNodes.every(node =>
             graph.reachable.has(node.id) && graph.edges[node.id].length >= 2) && routes(graph) === routes(oldGraph),
           samePlan: JSON.stringify(after.rooms) === JSON.stringify(before.rooms) &&
             JSON.stringify(after.slots) === JSON.stringify(before.slots) && before.total === after.total,
           areaSum: Math.abs(total - corridorArea - hubArea - publicLobbyArea - elevatorArea) < 1e-6,
-          withinBays
+          withinBays,
+          throughRoutes
         };
       } finally {
         state = previous;

@@ -1521,98 +1521,114 @@ function coreLobbyName(lobby) {
   return lobby.pair.map((id) => P[id].name).join(' + ');
 }
 
-// Furnish only the surplus left after the final room, dock and slide layout. The
-// original bay keeps a radial lane and two end connections as public circulation.
+// Make the walk from bridge to corridor the centre of a full gathering room.
+// Use only sectors already assigned to open circulation and keep the inner
+// apron for the bridge bearing, glass edge and stair arrivals.
 function furnishOpenCoreBays(circulation) {
-  const { regions, width } = circulation,
-    bridgeApproaches = regions.filter((q) => q.kind === 'bridgeAccess'),
-    publicLobbies = [];
-  const area = ({ r, R, start, end }) => (R ** 2 - r ** 2) * (end - start) / 2;
+  const { regions, bridges, width } = circulation,
+    publicLobbies = [],
+    replacements = new Map();
   const piece = (q, geometry) => {
-    const shape = { ...q, ...geometry };
-    return { ...shape, area: area(shape) };
+    const shape = { ...q, ...geometry },
+      { r, R, start, end } = shape;
+    return { ...shape, area: (R ** 2 - r ** 2) * (end - start) / 2 };
   };
 
-  function fit(q, side) {
-    const laneEnd = (side < 0 ? q.start : q.end) - side * width / q.r,
-      start = side < 0 ? laneEnd : q.start,
-      end = side > 0 ? laneEnd : q.end,
-      apron = Math.max(1.25, width * 0.55),
-      r = q.r + apron,
-      R = q.R - apron;
-    if (R - r < 4.15 || (end - start) * r < 2.55) return null;
-    const radius = (r + R) / 2;
-    // Wide bays can use both halves of the shared-lobby furniture. Compact
-    // pockets use one full seating bay facing the clear passage.
-    for (const seatingSides of [[-1, 1], [side]]) {
-      const twoSided = seatingSides.length === 2,
-        passage = twoSided ? width * 0.8 : 0.92,
-        edge = passage / 2,
-        heading = twoSided ? (start + end) / 2 :
-          (side < 0 ? start : end) - side * Math.asin((edge + 0.10) / r),
-        axis = [Math.cos(heading), Math.sin(heading)],
-        origin = axis.map((component) => radius * component);
-      for (const tableRadius of [0.88, 0.76, 0.64]) {
+  for (const landing of regions.filter((q) => q.kind === 'bridgeAccess')) {
+    const bridge = bridges.find((q) => q.f === landing.f),
+      neighbours = regions.filter((q) => q.kind === 'residual' && q.f === landing.f &&
+        q.r === landing.r && q.R === landing.R && !replacements.has(q)),
+      opening = (landing.start + landing.end) / 2,
+      side = Math.sin(opening - bridge.heading) < 0 ? -1 : 1,
+      axis = [-side * Math.sin(bridge.heading), side * Math.cos(bridge.heading)],
+      normal = [Math.cos(bridge.heading), Math.sin(bridge.heading)],
+      onAxis = (radius) => {
+        const run = Math.sqrt(radius ** 2 - bridge.offset ** 2);
+        return axis.map((component, i) => component * run + normal[i] * bridge.offset);
+      },
+      footprint = [landing];
+    let { start, end } = landing;
+    // The available wings can straddle north. Compare their touching edges
+    // modulo a full turn while keeping the lobby footprint in one interval.
+    for (const direction of [-1, 1]) {
+      while (true) {
+        const adjacent = neighbours.find((q) => !footprint.includes(q) &&
+          angDist(direction < 0 ? q.end : q.start, direction < 0 ? start : end) < 1e-7);
+        if (!adjacent) break;
+        footprint.push(adjacent);
+        if (direction < 0) start -= adjacent.end - adjacent.start;
+        else end += adjacent.end - adjacent.start;
+      }
+    }
+    const r = landing.r + Math.max(1.55, width * 0.62),
+      R = landing.R - 0.65,
+      passage = Math.max(bridge.width, width * 0.8),
+      edge = passage / 2,
+      radius = (r + R) / 2;
+    if (R - r < 4.35 || (end - start) * radius < passage + 3.85) continue;
+    const inner = onAxis(r),
+      bridgeExit = Math.atan2(onAxis(R)[1], onAxis(R)[0]),
+      heading = (start + end) / 2,
+      angles = [0, 0.018, -0.018, 0.036, -0.036, 0.054, -0.054, 0.076, -0.076],
+      hull = piece(landing, { r, R, start, end, kind: 'publicLobby', publicLobby: true,
+        access: { type: 'bridge', connected: true }, pair: [], doors: [],
+        lobbyId: circulation.hubs.length + publicLobbies.length });
+    let accepted = null;
+    // Start straight off the bridge. An offset mouth can turn the route toward
+    // a wider bay while still lining the seating and arches up with both entries.
+    for (const shift of angles) {
+      const exit = bridgeExit + shift,
+        outer = [R * Math.cos(exit), R * Math.sin(exit)],
+        run = Math.hypot(outer[0] - inner[0], outer[1] - inner[1]),
+        aisle = outer.map((coordinate, i) => (coordinate - inner[i]) / run),
+        origin = inner.map((coordinate, i) => (coordinate + outer[i]) / 2);
+      if (angDist(exit, heading) >= (end - start) / 2) continue;
+      for (const tableRadius of [0.94, 0.80, 0.68, 0.60]) {
         const couchDepth = 0.78,
           couchInner = tableRadius + 0.28,
           couchOuter = couchInner + couchDepth,
-          shelfOuter = couchOuter + 0.24,
-          arch = shelfOuter + 0.13,
-          layout = { heading: (start + end) / 2, radius, origin, axis, passage, seatingSides,
-            tableRadius, couchDepth, couchInner, couchOuter, shelfOuter, arch };
-        const hub = piece(q, { r, R, start, end, kind: 'publicLobby', publicLobby: true, pair: [], doors: [], layout });
+          shelfOuter = couchOuter + 0.23,
+          arch = shelfOuter + 0.10,
+          layout = { heading, origin, axis: aisle, radius, passage,
+            tableRadius, couchDepth, couchInner, couchOuter, shelfOuter, arch,
+            bridgeThrough: true,
+            publicEntries: [
+              { angle: Math.atan2(inner[1], inner[0]), radius: r, along: -arch, inside: true },
+              { angle: exit, radius: R, along: arch, inside: false }
+            ]
+          },
+          hub = { ...hull, layout };
         const fits = (along, across) => {
           const [x, , z] = sharedLobbyPoint(hub, along, across, 0);
-          return sharedLobbyContains(hub, x, z, 0.055);
+          return sharedLobbyContains(hub, x, z, 0.045);
         };
-        const seatFits = seatingSides.every((sign) =>
+        const fitsFurniture = [-1, 1].every((sign) =>
           Array.from({ length: 25 }, (_, i) => i * Math.PI / 24).every((angle) =>
             fits((shelfOuter + 0.065) * Math.cos(angle), sign * (edge + (shelfOuter + 0.065) * Math.sin(angle)))
           )
         );
-        if (!seatFits || ![-1, 1].every((sign) =>
-          [-edge, edge].every((across) => fits(sign * arch, across)))) continue;
-
-        layout.publicEntries = [
-          { angle: heading, radius: r, along: -arch, inside: true },
-          { angle: heading, radius: R, along: arch, inside: false }
-        ];
-        if (!twoSided)
-          layout.publicEntries.push({
-            angle: laneEnd, radius: radius / Math.cos(heading - laneEnd), along: 0, angular: side
-          });
-        return {
-          hub,
-          walk: [
-            piece(q, { R: r }),
-            piece(q, { r: R }),
-            piece(q, { r, R, start: side > 0 ? laneEnd : q.start, end: side < 0 ? laneEnd : q.end })
-          ]
-        };
+        const fitsMouths = (depth, breadth) => [-arch, arch].every((along) =>
+          [-1, 1].every((sign) =>
+            [-depth, depth].every((extra) => fits(along + extra, sign * (edge + breadth)))
+          )
+        );
+        if (!fitsFurniture || !fitsMouths(0.105, 0.17)) continue;
+        layout.plantedThresholds = fitsMouths(0.385, 0.805);
+        accepted = hub;
+        break;
       }
+      if (accepted) break;
     }
-    return null;
+    if (!accepted) continue;
+    publicLobbies.push(accepted);
+    // Remove the full middle section across the approach so the local walk
+    // goes through the lobby. Keep the apron at each end of every source bay.
+    for (const q of footprint) replacements.set(q, [
+      piece(q, { R: r }),
+      piece(q, { r: R, kind: q === landing ? 'lobbyLanding' : q.kind })
+    ]);
   }
-
-  circulation.regions = regions.flatMap((q) => {
-    if (q.kind !== 'residual' || q.area < 34) return [q];
-    const neighbours = [-1, 1].map((side) => ({
-      side, access: bridgeApproaches.find((a) => a.f === q.f &&
-        Math.min(a.R, q.R) - Math.max(a.r, q.r) > width &&
-        angDist(side < 0 ? q.start : q.end, side < 0 ? a.end : a.start) < 1e-7)
-    }));
-    neighbours.sort((a, b) => Number(Boolean(b.access)) - Number(Boolean(a.access)));
-    for (const { side, access } of neighbours) {
-      const plan = fit(q, side);
-      if (!plan) continue;
-      const { hub, walk } = plan;
-      hub.lobbyId = circulation.hubs.length + publicLobbies.length;
-      if (access) hub.access = { type: 'bridge', connected: true };
-      publicLobbies.push(hub);
-      return walk;
-    }
-    return [q];
-  });
+  circulation.regions = regions.flatMap((q) => replacements.get(q) ?? [q]);
   circulation.publicLobbies = publicLobbies;
   circulation.publicLobbyArea = publicLobbies.reduce((sum, lobby) => sum + lobby.area, 0);
   circulation.area -= circulation.publicLobbyArea;

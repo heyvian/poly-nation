@@ -3174,7 +3174,43 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     mark(`Circulation_L${hub.f + 1}_Shared_Nook_Benches`, `Casework benches ${hub.start.toFixed(3)}`);
     for (const drawSeat of nookSeats) drawSeat();
   }
-  for (const [i, along] of (hub.publicLobby ? [] : [-arch, arch]).entries()) {
+  if (hub.layout.bridgeThrough) for (const sign of seatingSides) {
+    // A shallow cabinet return closes the gap from the curved casework to the
+    // edge of the bay. Its depth is measured in the direction of walking.
+    const halfDepth = 0.35,
+      start = shelfLimit(sign, Math.PI / 2) + 0.003,
+      ends = [-halfDepth, halfDepth].map((along) => {
+        let low = start, high = start + (hub.end - hub.start) * hub.R;
+        for (let i = 0; i < 14; i++) {
+          const at = (low + high) / 2,
+            [x, , z] = point(along, sign * (edge + at), 0);
+          if (sharedLobbyContains(hub, x, z, 0.03)) low = at;
+          else high = at;
+        }
+        return low;
+      });
+    if (Math.min(...ends) - start < 0.19) continue;
+    mark(`Circulation_L${hub.f + 1}_Public_Lobby_Casework_Return`, `Bridge lobby fitted cabinet ${hub.start.toFixed(3)}`);
+    const outline = [[-halfDepth, start], [halfDepth, start], [halfDepth, ends[1]], [-halfDepth, ends[0]]];
+    const face = sign > 0 ? quad : (a, b, c, d, color) => quad(d, c, b, a, color);
+    const panels = (low, high, color) => {
+      const lower = outline.map(([along, across]) => point(along, sign * (edge + across), low)),
+        upper = outline.map(([along, across]) => point(along, sign * (edge + across), high));
+      face(...upper, color);
+      face(...lower.slice().reverse(), color);
+      for (let i = 0; i < 4; i++) {
+        const next = (i + 1) % 4;
+        face(lower[i], lower[next], upper[next], upper[i], color);
+      }
+    };
+    panels(0.05, 0.73, rgb('#9a7858'));
+    panels(0.73, 0.78, timber);
+    if (assembly) for (const along of [-halfDepth + 0.002, halfDepth - 0.002])
+      for (let across = start + 0.44; across < Math.min(...ends) - 0.07; across += 0.49)
+        textureLine(point(along, sign * (edge + across), 0.102),
+          point(along, sign * (edge + across), 0.715), rgb('#735940'));
+  }
+  for (const [i, along] of (hub.publicLobby && !hub.layout.bridgeThrough ? [] : [-arch, arch]).entries()) {
     // Each programme owns the arch at the end where its room door meets the lobby.
     const door = hub.doors?.find((door) => Math.sign(door.along) === Math.sign(along)),
       programIndex = door?.program ?? hub.pair?.[i],
@@ -3254,8 +3290,8 @@ function drawSharedLobby(mesh, hub, y, seed = 0, assembly = false) {
     mark(`Circulation_L${hub.f + 1}_Shared_Paper_Pendant`, `Poly Nation paper lantern ${hub.start.toFixed(3)}`);
     drawLobbyPendant(mesh, canopy.center, at(canopy.angle, canopy.pitch)[1]);
   }
-  // Open public bays have an unobstructed entrance. Only paired lobbies have planted thresholds.
-  if (hub.publicLobby) return;
+  // Plant the bridge thresholds only where the full planter and foliage envelope fits.
+  if (hub.publicLobby && !hub.layout.plantedThresholds) return;
   // Use a local random sequence so the same lobby keeps its plants in every workspace.
   const sample = random(lobbySeed);
   mark(`Circulation_L${hub.f + 1}_Shared_Planting`, `Lobby plants ${hub.start.toFixed(3)}`);
