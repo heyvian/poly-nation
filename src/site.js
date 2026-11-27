@@ -480,7 +480,7 @@ const siteWorkspace = (() => {
           roof: true, showRoofDeck: true, supports: false }),
         context = siteAssemblyMesh(overview, terrain, { ...placement, includeFoundations: false }),
         district = siteDistrictCut(plan, surface, registration);
-      return { plan, mesh, context, district, canalDepth: placement.canalDepth };
+      return { plan, mesh, context, district, surface, canalDepth: placement.canalDepth };
     },
     open(model, assignments) {
       building = model;

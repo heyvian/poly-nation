@@ -2,6 +2,7 @@
 
 ## Landward West Village foundations
 - Show continuous concrete stem walls and schematic piled grade beams beyond a 5 m horizontal setback from modeled waterways. Keep the canal bearings and clear spans open and add a landward foundation detail to the site section set.
+- Include an 11 × 17 vector cutaway axonometric of the foundations with local water and a full-building inset.
 
 ## West Village district section
 - Increase clearance over district water to 5 m and keep entry crossings level above the channel before descending to grade.

@@ -891,6 +891,81 @@ const openDrawingWorkspace = (() => {
     });
   }
 
+  function siteDrawingPreview(svg, title, index) {
+    const preview = document.createElement('figure'), button = document.createElement('button'), vector = () => svg.cloneNode(true);
+    preview.className = 'lobby-axo-page';
+    button.type = 'button';
+    button.textContent = 'Export SVG';
+    button.setAttribute('aria-label', `Export ${title} as SVG`);
+    button.onclick = () => downloadBlob(new XMLSerializer().serializeToString(vector()), 'image/svg+xml',
+      `poly-nation-${state.seed}-site-${svg.dataset.siteSection === 'axo' ? 'foundation-axo' : 'section-' + (index + 1)}.svg`);
+    preview.append(button, svg);
+    return { preview, vector };
+  }
+
+  function renderSiteFoundationAxo(study, context, scales, pale, index) {
+    const paper = SITE_SECTION_PAPER, { plan, surface, canalDepth } = study,
+      w = paper.width * DRAWING_PIXELS_PER_INCH, h = paper.height * DRAWING_PIXELS_PER_INCH,
+      margin = 48, right = 1070, ink = '#223b35', rule = '#a9b9b3', top = 143,
+      { mesh, reach } = siteFoundationAxo(sourceModel, plan, surface, canalDepth),
+      layers = drawingGeometry(mesh, sourceModel, { include: ({ layer }) => layer !== 'Site_Foundation_Platform' }),
+      crossing = plan.rows.find((row) => row.transfers.length),
+      camera = { az: (crossing?.angle ?? plan.accessAngle) + 0.92, el: 0.46 },
+      planes = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].map((normal) => ({ normal, offset: reach })),
+      pens = drawingPens({ mode: 'component', widths: [0.20, 0.16, 0.13], colors: ['#475851', '#526861', '#8b9489'],
+        components: { core: 0, circulation: 1, docks: 0, modules: 1, rides: 1, site: 2 } }),
+      frame = renderDrawing(layers, camera, planes, paper, 'auto', false, centeredPlacement(), true, pens,
+        { region: { width: right - margin - 24, height: h - 229 }, washLightness: 0.28, scales }),
+      overview = renderDrawing(context, camera, [], paper, 'auto', false, centeredPlacement(), false, pale,
+        { region: { width: w - right - margin, height: 350 }, scales }),
+      main = floorView(frame, '', margin, top + 20), key = floorView(overview, '', right, top + 56),
+      [area] = main.children, colours = area.querySelector('[data-layer="Colour wash"]'),
+      title = 'Hybrid foundations · Cutaway axonometric', svg = studySVG(w, h, title);
+    colours.replaceChildren(...frame.exportFills().map(({ fill, d }) => svgElement('path', { fill, d })));
+    markSvgLayer(colours, 'Colour fills');
+    main.replaceChildren(area);
+    key.replaceChildren(key.children[0]);
+    key.dataset.siteContext = 'inset';
+    svg.classList.add('drawing-sheet');
+    svg.setAttribute('width', paper.width + 'in');
+    svg.setAttribute('height', paper.height + 'in');
+    svg.setAttribute('font-family', 'system-ui, sans-serif');
+    svg.dataset.siteSection = 'axo';
+    studyMark(svg, 'rect', { width: w, height: h, fill: '#ffffff' });
+    svg.append(main, key);
+    const text = (x, y, content, size, options = {}) => studyMark(svg, 'text', {
+        x, y, fill: ink, 'font-size': size, ...options
+      }, content),
+      scale = (view, end, baseline, north) => {
+        const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 13 });
+        drawScaleIndicator(indicator, view.denominator, end, baseline, ink, north ? view.basis : null);
+      };
+    text(margin, 40, 'POLY NATION  /  WEST VILLAGE SITE SECTIONS', 15, { 'font-weight': 700, 'letter-spacing': 1.4 });
+    text(margin, 78, title, 32, { 'font-weight': 680 });
+    text(margin, 106, 'The ground and deck are cut away to expose the supporting walls, girders and piles.', 15);
+    text(w - margin, 40, 'PN–SI–' + String(index + 1).padStart(2, '0'), 16, { 'text-anchor': 'end' });
+    for (const y of [125, h - 65]) studyMark(svg, 'line', { x1: margin, y1: y, x2: w - margin, y2: y, stroke: rule });
+    studyMark(svg, 'line', { x1: right - 12, y1: 142, x2: right - 12, y2: h - 86, stroke: rule });
+    text(right + 8, top + 26, 'Building context', 16, { 'font-weight': 680 });
+    scale(overview, w - margin, top + 394);
+    const hasGradeLines = plan.rows.some((row) => row.landward.length),
+      legend = [
+        ...(hasGradeLines || plan.perimeter.runs.length ? [['#b3b1a1', 'Concrete stem walls and piles']] : []),
+        ...(crossing ? [['#546e65', 'Canal transfer girders']] : []),
+        ...(plan.accesses.length ? [['#c7c0aa', 'Entry stairs and ramps']] : []),
+        ...(mesh.groups.some(({ layer }) => layer === 'Site Bow River water') ? [['#4a939e', 'Modeled water']] : [])
+      ];
+    for (const [i, [fill, label]] of legend.entries()) {
+      const y = top + 447 + i * 32;
+      studyMark(svg, 'rect', { x: right + 8, y: y - 13, width: 16, height: 15, fill });
+      text(right + 34, y, label, 15);
+    }
+    if (hasGradeLines) text(right + 8, top + 459 + legend.length * 32, 'Dashed lines mark local grade.', 14);
+    text(margin, h - 38, `Ground floor ${(plan.floor + plan.terrain.datum).toFixed(2)} m  ·  Schematic foundation geometry`, 14);
+    scale(frame, w - margin, h - 37, true);
+    return siteDrawingPreview(svg, title, index);
+  }
+
   function renderSiteSections() {
     const study = siteWorkspace.sectionStudy(sourceModel, sourceAssignments);
     if (!study) return [];
@@ -908,7 +983,7 @@ const openDrawingWorkspace = (() => {
         components: { core: 0, circulation: 0, docks: 1, modules: 2, rides: 2, site: 2 } }),
       pale = drawingPens({ widths: [0.14], colors: ['#abb2af'] });
     if (district) cuts.unshift(district);
-    return cuts.map((cut, index) => {
+    const sections = cuts.map((cut, index) => {
       const { title, note, at, angle, from, to, kind } = cut, [cx, cz] = plan.position,
         detail = kind === 'canal-detail' || kind === 'piled-detail' || kind === 'approach', district = kind === 'district',
         point = (station, height) => { const [x, z] = at(station); return [x - cx, height - plan.foundation, z - cz]; },
@@ -1016,16 +1091,10 @@ const openDrawingWorkspace = (() => {
       const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 13 });
       drawScaleIndicator(indicator, frame.denominator, w - margin, h - 37, ink);
 
-      const preview = document.createElement('figure'), button = document.createElement('button'), vector = () => svg.cloneNode(true);
-      preview.className = 'lobby-axo-page';
-      button.type = 'button';
-      button.textContent = 'Export SVG';
-      button.setAttribute('aria-label', `Export ${title} as SVG`);
-      button.onclick = () => downloadBlob(new XMLSerializer().serializeToString(vector()), 'image/svg+xml',
-        `poly-nation-${state.seed}-site-section-${index + 1}.svg`);
-      preview.append(button, svg);
-      return { preview, vector };
+      return siteDrawingPreview(svg, title, index);
     });
+    sections.push(renderSiteFoundationAxo(study, contextGeometry, scales, pale, sections.length));
+    return sections;
   }
 
   async function renderCraneDocument(revision) {

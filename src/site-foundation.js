@@ -452,6 +452,50 @@ function drawSiteFoundations(mesh, model, plan, extendRunway) {
   }
 }
 
+function siteFoundationAxo(model, plan, surface, canalDepth) {
+  const mesh = meshBuilder(), [x, z] = plan.position,
+    reach = Math.max(plan.radius, ...plan.rows.flatMap((row) => row.transfers.flatMap(({ from, to }) =>
+      [Math.hypot(row.offset, from), Math.hypot(row.offset, to)]))) + 9,
+    limits = [
+      { x: 1, y: 0, z: 0, level: x + reach }, { x: -1, y: 0, z: 0, level: -x + reach },
+      { x: 0, y: 0, z: 1, level: z + reach }, { x: 0, y: 0, z: -1, level: -z + reach }
+    ],
+    water = siteWaterStudy(plan.terrain, surface, 1);
+  if (water) {
+    // Cut the same registered water and banks to the local view. Omit the solid earth surface to reveal the piles.
+    const faces = water.faces.map((face) => ({ ...face, polygon: limits.reduce(clipDrawingPolygon, face.polygon) }))
+        .filter(({ polygon }) => polygon.length >= 3),
+      banks = water.banks.flatMap(({ line, kind }) => {
+        const clipped = clipDrawingLine(...line, limits);
+        return clipped ? [{ line: clipped, kind }] : [];
+      });
+    addSiteWater(mesh, plan.terrain, { faces, banks }, { showWater: true, canalDepth });
+  }
+  drawSiteFoundations(mesh, model, plan, false);
+
+  mesh.mark('Site axonometric grade', 'Dashed local grade at the concrete stem walls');
+  const grade = rgb('#6d6757');
+  for (const row of plan.rows) {
+    for (const { from, to } of row.landward) {
+      const at = (station, side) => {
+        const [x, z] = row.at(station), px = x - side * 0.20 * Math.sin(row.angle),
+          pz = z + side * 0.20 * Math.cos(row.angle);
+        return [px, siteTerrainHeight(plan.terrain, px, pz) + 0.025, pz];
+      };
+      for (let station = from; station < to - 0.15; station += 1.3)
+        for (const side of [-1, 1]) mesh.line(at(station, side), at(Math.min(station + 0.73, to), side), grade);
+    }
+  }
+  for (const vertices of [mesh.solid, mesh.glass, mesh.lines]) {
+    for (let i = 0; i < vertices.length; i += 10) {
+      vertices[i] -= x;
+      vertices[i + 1] -= plan.foundation;
+      vertices[i + 2] -= z;
+    }
+  }
+  return { mesh, reach };
+}
+
 function siteSectionCuts(plan) {
   const { rows, crossingOffset, radius, accesses } = plan,
     row = rows.find((item) => item.offset === crossingOffset && item.transfers.length) ??
