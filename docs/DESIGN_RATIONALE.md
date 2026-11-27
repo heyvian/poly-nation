@@ -220,6 +220,12 @@ The baseline model uses paired tapered side trusses. The designer questioned how
 
 The designer brought each cable anchor down to the top of its own storey. The shallow angle gives a slimmer side elevation and a larger horizontal reaction. A bolted end-plate receiver meets the perimeter ring. From there, adjacent stays can share a radial collector on the floor grid. The ring transfer and connections require engineering design. The roof-hung study returns the upper reaction into a collector below the public deck so the rooftop shops and routes stay clear. The moment joint and inboard tie need design. Tip posts shift support to the plaza edge.
 
+### Moving a module beneath the stack
+
+The designer wanted the plug-ins to stay removable even when their neighbours above were occupied. A traveling steel lattice bridge follows two concentric tracks above the ring. Its outboard tower carries the long span independently of the building. The spreader lifts the cassette beyond the projecting balconies. At the selected level a guided cradle takes the load, and shallow rollers feed the cassette inward after the hoist releases. The roof collectors transfer the inboard wheel loads to piers between the docks.
+
+The designer preferred an elevated outboard runway on spaced columns so people can pass underneath. The alternative puts the rails in a moat with drawbridges on the two lobby axes. The approach barriers close before a bridge lifts for a passing gantry. The crane and swing mast share a painted steel lattice. Couch swings on the building side ride with the gantry in a separate unloaded mode.
+
 ### A scale check
 
 The dock projects 18.65 m in the model. In the reference gravity study a fitted-out enclosed module is about 20.5 t before people and snow. With the assumptions used for the default model, a saturated garden produces about 7.6 MN·m at the core face as a free cantilever. The same-storey stay study gives a tension near 1 MN per cable. The 220, 260 and 300 mm slab variants explore floor depth around roughly 2.7 m radial-beam spacing at the default rim. These are schematic order-of-magnitude checks for comparing load paths.

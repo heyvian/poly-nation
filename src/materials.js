@@ -69,7 +69,11 @@ const materialWorkspace = (() => {
       );
       if (stored?.model?.slots && stored.view && stored.assignments) {
         study = stored;
-        if (restoreLegacyCorridors(study.model.circulation)) saveStudy();
+        const migrated = restoreLegacyCorridors(study.model.circulation);
+        if (!Object.hasOwn(study.model, 'crane')) {
+          study.model.crane = planModuleCrane(study.model);
+          saveStudy();
+        } else if (migrated) saveStudy();
       }
     } catch {
       $('materialStatus').textContent = 'The saved material study could not be loaded.';
@@ -504,6 +508,29 @@ const materialWorkspace = (() => {
     });
     $('paintSamples').replaceChildren(...samples);
   }
+  function syncCranePaint() {
+    const palette = $('cranePaintPalette');
+    palette.hidden = scope.value !== 'mast';
+    if (palette.hidden) return;
+    const color = cranePaint(study.assignments);
+    $('cranePaintPicker').value = color;
+    $('cranePaintHex').value = color;
+    $('cranePaintHex').setCustomValidity('');
+    $('resetCranePaint').hidden = !paintHex(study.assignments.mast?.paintHex);
+  }
+  $('cranePaintPicker').onchange = (event) => changePaint('paintHex', event.target.value);
+  $('resetCranePaint').onclick = () => changePaint('paintHex', '');
+  const craneHex = $('cranePaintHex');
+  craneHex.oninput = () => craneHex.setCustomValidity('');
+  craneHex.onchange = () => {
+    const color = paintHex(craneHex.value);
+    craneHex.setCustomValidity(color || !craneHex.value.trim() ? '' : 'Enter a three- or six-digit hex colour.');
+    if (craneHex.reportValidity()) changePaint('paintHex', color);
+  };
+  craneHex.onkeydown = (event) => {
+    if (event.key === 'Enter') craneHex.blur();
+  };
+
   $('materialPaint').onchange = (event) => changePaint('paint', event.target.value);
   $('materialPaintSheen').onchange = (event) => changePaint('sheen', event.target.value);
 
@@ -532,6 +559,7 @@ const materialWorkspace = (() => {
     }
     syncPaint(assignment, program);
     syncSlidePaint();
+    syncCranePaint();
     syncAssemblyHeaders();
   }
   function syncTargets() {
@@ -620,7 +648,7 @@ const materialWorkspace = (() => {
   function refreshPalette(field, id) {
     const family = materialFamily(),
       catalogue = MATERIAL_CATALOGUES[field],
-      entries = Object.entries(catalogue).filter(([key]) => materialCompatible(field, key, family)),
+      entries = family === 'mast' ? [] : Object.entries(catalogue).filter(([key]) => materialCompatible(field, key, family)),
       filters = $(field + 'Families'),
       previous = filters.value,
       groups = [...new Set(entries.map(([, preset]) => preset.group))];

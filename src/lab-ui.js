@@ -437,12 +437,7 @@ function animateSwingFrame(now) {
   const dt = swingLast ? Math.max(0, Math.min(0.6, (now - swingLast) / 1000)) : 0;
   swingLast = now;
   const mesh = software ? softwareMesh : gpu?.mesh;
-  const showingModel =
-    !document.body.classList.contains('dr-open') &&
-    !document.body.classList.contains('materials-open') &&
-    !document.body.classList.contains('drawings-open') &&
-    !document.body.classList.contains('build-open') &&
-    !document.body.classList.contains('render-open');
+  const showingModel = !$('massingPhase').hidden;
   if (mesh && !document.hidden) {
     let changed = false;
     // Keep simulation time running in the auxiliary views without drawing the hidden model.
@@ -470,6 +465,12 @@ function animateSwingFrame(now) {
         rotateSwingMesh(mesh, !software);
         changed = true;
       }
+    }
+    if (showingModel && mesh.craneMotion && now - craneAnimation.last >= (software ? 135 : 36)) {
+      const elapsed = craneAnimation.last ? Math.min(0.25, (now - craneAnimation.last) / 1000) : 0;
+      craneAnimation.last = now;
+      animateCraneMotion(mesh, elapsed, gl, gpu);
+      changed = true;
     }
     if (changed) draw();
   } else simLast = now;
@@ -806,12 +807,14 @@ function upload(m) {
   if (software) {
     softwareMesh = mesh;
     prepareSwingMesh(softwareMesh);
+    prepareCraneMotion(softwareMesh);
     refreshPopulation();
     drawSoftware();
     return;
   }
   if (!gl || !gpu) return;
   prepareSwingMesh(mesh);
+  prepareCraneMotion(mesh);
   uploadWebGLMesh(gl, gpu, mesh);
   refreshPopulation();
   draw();
@@ -1048,6 +1051,7 @@ function update() {
   if (programEditing) syncProgrammingHint(model);
   refreshTrialDashboard();
   const m = model;
+  refreshCraneControls(m);
   const c = m.feature.climbing,
     s = m.feature.slide;
   $('climbSize').textContent = c
@@ -1313,6 +1317,7 @@ $('export').onclick = () => {
         comparisons: cpHistory
       },
       units: 'meters, square meters',
+      crane: m.crane,
       state,
       geometry: {
         outerFootprint: Math.PI * m.R * m.R,
@@ -1446,6 +1451,8 @@ function applySaved(data) {
     lobby: [0, 1000],
     corridorWidth: [1.5, 5],
     areaCap: [5000, 50000],
+    craneBearing: [0, 359],
+    craneFloor: [1, 10],
     minRoomArea: [40, 200],
     simSpeed: [1, 12],
     visitorCount: [8, 70]
@@ -1453,6 +1460,10 @@ function applySaved(data) {
   for (const [k, [a, b]] of Object.entries(ranges))
     if (typeof s[k] === 'number' && Number.isFinite(s[k])) d[k] = clamp(s[k], a, b);
   if (Object.hasOwn(BRIDGE_MODES, s.atriumBridges)) d.atriumBridges = s.atriumBridges;
+  if (Object.hasOwn(CRANE_STAGES, s.craneStage)) d.craneStage = s.craneStage;
+  if (Object.hasOwn(CRANE_RUNWAYS, s.craneRunway)) d.craneRunway = s.craneRunway;
+  d.craneFloor = Math.round(d.craneFloor);
+  d.craneBearing = Math.round(d.craneBearing);
   for (const k of ['floors', 'modules', 'seed', 'dockVariant', 'inspect', 'visitorCount'])
     d[k] = Math.round(d[k]);
   for (const k of [

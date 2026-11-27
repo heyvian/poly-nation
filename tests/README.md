@@ -6,6 +6,7 @@ python tests/test_poly36.py
 python tests/test_poly36_features.py
 python tests/test_materials_editing.py
 python tests/test_module_design.py
+python tests/test_module_crane.py
 python tests/test_site_and_plan.py
 python tests/test_connections.py
 python tests/test_shared_lobbies.py
@@ -19,3 +20,5 @@ Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve th
 `test_atrium_render.py` checks full shared lobbies on core and bridge routes, casework-supported quarter domes, wall-scribed benches, paper pendant placement, shared program lobbies, capsule fit, two inward-facing groups of five, open bridge routes and the seating toggle in the six-level seed 609 layout, migration of saved Materials corridors, close zoom, reachable atrium stairs, bridge bearings, lighting controls and Render restoration.
 
 `test_module_design.py` checks all three enclosure lengths, program-specific rooms, the fixed dock interface, window bounds, similarity extremes, area takeoff, and restoration of Materials and Build controls.
+
+`test_module_crane.py` checks underside clearance, the separate lift and insertion sequences, both runway variants, drawbridge timing, paint persistence and the Drawings override.

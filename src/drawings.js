@@ -72,6 +72,7 @@ const openDrawingWorkspace = (() => {
       perspectiveFade: 55,
       cutFill: true,
       source: 'massing',
+      craneRunway: 'design',
       showSite: false,
       planSheet: 'single',
       glazing: false,
@@ -116,6 +117,7 @@ const openDrawingWorkspace = (() => {
             ? 315
             : 225,
         source: saved.source === 'build' ? 'build' : 'massing',
+        craneRunway: Object.hasOwn(CRANE_RUNWAYS, saved.craneRunway) ? saved.craneRunway : 'design',
         sectionProjection: saved.sectionProjection === 'perspective' ? 'perspective' : 'orthographic',
         sectionLens: clamp(Number(saved.sectionLens) || 35, 8, 200),
         perspectiveFade: Number.isFinite(saved.perspectiveFade) ? clamp(saved.perspectiveFade, 0, 100) : 55,
@@ -908,7 +910,7 @@ const openDrawingWorkspace = (() => {
         return;
       }
       const includeSite = settings.showSite && siteWorkspace.hasTerrain,
-        mode = settings.source + '/' + settings.mode + '/' + (includeSite ? siteWorkspace.revision : 'building');
+        mode = `${settings.source}/${settings.mode}/${settings.craneRunway}/${includeSite ? siteWorkspace.revision : 'building'}`;
       if (!settings.detail && (!geometry || renderedGeometryMode !== mode)) {
         const view = {
           ...state,
@@ -921,18 +923,22 @@ const openDrawingWorkspace = (() => {
           showFacade: true,
           showModules: true,
           showRoofDeck: true,
-          roof: true
+          roof: true,
+          craneStage: 'parked'
         };
         const preview = {
           assignments: sourceAssignments,
           view,
           structureView: false,
+          craneSettings: view,
           programColors: settings.mode === 'combined' || settings.mode === 'program',
           finishJoints: settings.mode === 'material' || settings.mode === 'combined'
         };
+        const model = settings.craneRunway === 'design' ? sourceModel :
+          { ...sourceModel, crane: planModuleCrane(sourceModel, settings.craneRunway) };
         const mesh = settings.source === 'build'
-          ? buildAssemblyMesh(sourceModel, buildViewLayers(), 0, preview)
-          : buildMesh(sourceModel, false, view, preview);
+          ? buildAssemblyMesh(model, buildViewLayers(), 0, preview)
+          : buildMesh(model, false, view, preview);
         geometry = drawingGeometry(includeSite ? siteWorkspace.composeDrawing(mesh) : mesh, sourceModel);
         renderedGeometryMode = mode;
       }
@@ -998,7 +1004,9 @@ const openDrawingWorkspace = (() => {
       footerRule.setAttribute('y2', ruleY);
       footerTitle.setAttribute('x', margin);
       footerTitle.setAttribute('y', textY);
-      footerTitle.textContent = 'Poly Nation · ' + viewLabel;
+      const runwayLabel = !settings.detail && settings.craneRunway !== 'design'
+        ? (settings.craneRunway === 'moat' ? ' · Moat runway' : ' · Elevated runway') : '';
+      footerTitle.textContent = 'Poly Nation · ' + viewLabel + runwayLabel;
       // Elevations and upright sections have an edge-on plan. Their footer only needs the scale.
       const mapBasis = camera && Math.abs(camera.el) > 0.01 ? orbitBasis(camera) : null;
       drawScaleIndicator(footerScale, denominator, width - margin, textY, sheetText, mapBasis);
@@ -1218,6 +1226,7 @@ const openDrawingWorkspace = (() => {
     for (const id of [
       'drawingView',
       'drawingSource',
+      'drawingCraneRunway',
       'drawingRendering',
       'drawingGlazing',
       'addDrawingPlane',
@@ -1237,6 +1246,7 @@ const openDrawingWorkspace = (() => {
       $(id).disabled = !availableLobbies.length;
     }
     $('drawingSource').value = settings.source;
+    $('drawingCraneRunway').value = settings.craneRunway;
     syncSiteControl();
     $('drawingPlanSheet').value = settings.planSheet;
     syncCompass();
@@ -1303,6 +1313,10 @@ const openDrawingWorkspace = (() => {
   };
   $('drawingSource').onchange = (event) => {
     settings.source = event.target.value;
+    queueDrawing();
+  };
+  $('drawingCraneRunway').onchange = (event) => {
+    settings.craneRunway = event.target.value;
     queueDrawing();
   };
   $('drawingSite').onchange = (event) => {
@@ -1805,7 +1819,7 @@ const openDrawingWorkspace = (() => {
     downloadBlob(
       new XMLSerializer().serializeToString(vectorDrawingSheet()),
       'image/svg+xml',
-      `poly-nation-${state.seed}-${view}-${settings.paper}-1-${rendered.denominator}.svg`
+      `poly-nation-${state.seed}-${view}${settings.craneRunway === 'design' || settings.detail ? '' : '-' + settings.craneRunway}-${settings.paper}-1-${rendered.denominator}.svg`
     );
   };
   printButton.onclick = () => {

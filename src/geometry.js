@@ -576,14 +576,6 @@ function buildSwing(b, ride, pose) {
 }
 // Permanent construction and lightweight module families share one comparison library.
 const STRUCTURAL_SYSTEMS = {
-  'mast-painted-steel': {
-    name: 'Painted steel tube',
-    short: 'Steel tube',
-    group: 'Metal',
-    color: '#c78b51',
-    frame: 'solid',
-    feature: true
-  },
   'mast-steel-truss': {
     name: 'Braced steel lattice mast',
     short: 'Steel lattice',
@@ -941,7 +933,7 @@ const EXTERIOR_FINISHES = {
 const MATERIAL_CATALOGUES = { structure: STRUCTURAL_SYSTEMS, facade: EXTERIOR_FINISHES };
 const ACCESSORY_MATERIALS = {
   slide: { facade: ['slide-enamel', 'slide-stainless', 'slide-composite'] },
-  mast: { structure: ['mast-painted-steel', 'mast-steel-truss', 'concrete'] }
+  mast: { structure: ['mast-steel-truss'] }
 };
 
 function materialCompatible(field, key, family) {
@@ -1593,44 +1585,35 @@ function drawCommercialPavilions(mesh, roof, preview) {
   }
 }
 
-// Show the chosen mast structure independently of the rotating crown.
-function drawSwingMast(b, ride, height, preview) {
-  const { mark, sector, box, line, ringPoint } = b;
-  const key = preview
-      ? materialValues(preview.assignments, 'mast').structure
-      : 'mast-painted-steel',
-    color = rgb(STRUCTURAL_SYSTEMS[key].color),
-    radius = ride.towerRadius;
-  mark('Swing_Tower');
-  if (key === 'mast-steel-truss') {
-    const base = Math.min(height, ride.roofLevel + 0.16),
-      posts = 6,
-      radial = radius * 0.87;
-    sector(0, radius, 0, TAU, 0, base, color);
-    if (base >= height) return;
-    const bays = Math.max(1, Math.ceil((height - base) / 3.4));
-    for (let i = 0; i < posts; i++) {
-      const a = (i * TAU) / posts,
-        next = a + TAU / posts;
-      const [x, , z] = ringPoint(radial, a, base);
-      box(x, base, z, 0.15, height - base, 0.15, a, color);
-      for (let bay = 0; bay < bays; bay++) {
-        const low = base + ((height - base) * bay) / bays,
-          high = base + ((height - base) * (bay + 1)) / bays;
-        line(ringPoint(radial, a, low), ringPoint(radial, next, low), color);
-        line(ringPoint(radial, a, low), ringPoint(radial, next, high), color);
-      }
-    }
-    sector(0, radius, 0, TAU, height - 0.15, 0.15, color);
-    return;
+// Steel lattice is continuous from the foundation to the rotating crown.
+// Solid collars couple the bridge bearings and seal the glazing at the mast.
+function drawSwingMast(mesh, model, height, preview) {
+  const { mark, sector, ringPoint } = mesh, ride = model.feature.ride,
+    radius = ride.towerRadius, color = rgb(cranePaint(preview?.assignments)),
+    posts = 6, radial = radius * 0.88,
+    chord = Math.min(0.30, radius * 0.19), bays = Math.max(1, Math.ceil((height - 0.34) / 3.65));
+  mark('Swing_Tower', 'Fixed steel lattice mast');
+  sector(0, radius, 0, TAU, 0, Math.min(height, 0.34), color);
+  function member(a, y, b, z, width) {
+    drawAssemblyMember(mesh, ringPoint(radial, a, y), ringPoint(radial, b, z), width, color);
   }
-  sector(0, radius, 0, TAU, 0, height, color);
-  if (key === 'mast-painted-steel') {
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * TAU) / 6;
-      line(ringPoint(radius, angle, 0), ringPoint(radius, angle, height), rgb('#9c704d'));
+  for (let i = 0; i < posts; i++) {
+    const a = i * TAU / posts, b = (i + 1) * TAU / posts;
+    member(a, 0.23, a, height, chord);
+    for (let j = 0; j < bays; j++) {
+      const low = 0.26 + (height - 0.26) * j / bays, top = 0.26 + (height - 0.26) * (j + 1) / bays;
+      member(a, low, b, low, chord * 0.63);
+      member(j % 2 ? b : a, low, j % 2 ? a : b, top, chord * 0.53);
     }
   }
+  for (const bridge of model.circulation.bridges ?? []) {
+    const bottom = bridge.f * modelFloorPitch(model) + 0.535 - atriumBridgeDepth(model.r, bridge);
+    if (bottom - 0.68 < height) sector(radial - chord, radius, 0, TAU, bottom - 0.68,
+      Math.min(0.72, height - bottom + 0.68), color);
+  }
+  const collar = ride.roofLevel - 0.56;
+  if (collar < height) sector(radial - chord, radius, 0, TAU, collar, Math.min(0.74, height - collar), color);
+  if (height >= ride.height - 1e-6) sector(0, radius, 0, TAU, height - 0.17, 0.17, color);
 }
 
 // The bridge edges and swing stairs use the same glass guards.
@@ -3299,16 +3282,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   const floorH = modelFloorPitch(m),
     slabThickness = m.slabThickness ?? BUILD_SECTION.slabThickness,
     H = view.floors * floorH;
-  const extent = Math.max(m.R + MODULE.depth + 8, m.plaza ? m.plaza.outer + 2 : 0),
+  const extent = Math.max(m.R + MODULE.depth + 8, m.plaza ? m.plaza.outer + 2 : 0, m.crane?.extent ?? 0),
     plane = Math.max(170, extent * 2.6);
   mark('Reference');
-  quad(
-    [-plane, -0.22, -plane],
-    [-plane, -0.22, plane],
-    [plane, -0.22, plane],
-    [plane, -0.22, -plane],
-    ground
-  );
+  drawCraneGround(b, plane, ground, -0.22, m.crane);
   if (view.grid) {
     let gridCol = rgb('#d3d9ce');
     for (let i = -Math.ceil(extent / 10) * 10; i <= extent + 10; i += 10) {
@@ -3353,6 +3330,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   const visible = (f) => exporting || !view.inspect || f < view.inspect;
   const cut = !exporting && view.inspect > 0,
     cutY = cut ? buildStorey(m, view.inspect - 1).soffit : Infinity;
+  const craneVisible = Boolean(m.crane && (exporting || (!cut && view.showRoofDeck && !view.programEditing))),
+    cranePose = craneVisible ? moduleCranePose(m, m.crane, exporting ? {} : view) : null;
   for (let f = 0; f < view.floors; f++) {
     if (!visible(f)) continue;
     const y = f * floorH + 0.22;
@@ -3823,9 +3802,12 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       if (!visible(s.f) || s.blocked) continue;
       const storey = buildStorey(m, s.f);
       const varied = preview?.assignments.moduleDesign?.enabled;
-      if (exporting || view.supports)
+      if (exporting || view.supports) {
         drawDockFrame(b, m, s, storey, `Docking_L${s.f + 1}_Frames`, false, false,
-          varied ? MODULE_CASSETTE_DEPTH : undefined);
+          varied || m.crane ? MODULE_CASSETTE_DEPTH : undefined);
+        if (m.crane) drawDockInsertionGuides(b, m, s, storey.base);
+      }
+      if (cranePose?.slot?.i === s.i) continue;
       if (s.p === EMPTY && s.use === 'empty' && !view.programEditing) continue;
       const a = s.angle,
         center = m.R + BUILD_SECTION.dockGap + MODULE.depth / 2,
@@ -3892,7 +3874,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     // Clothes only appear while the neighboring module shells are visible.
     if (!preview?.structureView)
       for (const span of exterior.laundry)
-        if (visible(span.slot.f)) drawModuleLaundry(b, m, span, span.slot.f * floorH + 0.43, preview);
+        if (visible(span.slot.f) && ![span.slot.i, span.neighbor.i].includes(cranePose?.slot?.i)) drawModuleLaundry(b, m, span, span.slot.f * floorH + 0.43, preview);
   }
 
   // Roof access, public park and retail. The atrium glass is not a walking surface.
@@ -4082,7 +4064,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   }
   // Central swing tower, platform and glass annulus. Open-air deck (not enclosed area).
   const ride = m.feature.ride;
-  drawSwingMast(b, ride, cut ? Math.min(cutY, ride.height) : ride.height, preview);
+  drawSwingMast(b, m, cut ? Math.min(cutY, ride.height) : ride.height, preview);
   if (exporting || !view.inspect) {
     drawSwingAboveRoof(b, m);
     const pitch = ride.roofPitch,
@@ -4154,6 +4136,12 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     }
   }
   drawWaterSlide(b, m.feature.slide, preview, cut ? cutY : Infinity);
+  if (m.crane && !view.programEditing) {
+    const paint = rgb(cranePaint(preview?.assignments));
+    drawCraneInfrastructure(b, m, m.crane, paint, craneVisible, cutY, cranePose,
+      !exporting && cranePose?.stage === 'ride');
+    if (cranePose) drawCraneGantry(b, m, m.crane, cranePose, paint);
+  }
 
   // Conceptual users and animals: low-poly occupancy placeholders for scale and inclusivity.
   if (exporting && (view.showPeople || view.showAnimals)) {

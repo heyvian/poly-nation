@@ -598,6 +598,13 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
  border-radius: 4px;
 }
 #bridgeSeatSetting[hidden] { display: none; }
+.module-crane-fields { display: grid; gap: 5px; margin-top: 8px; }
+.module-crane-fields[hidden] { display: none; }
+.module-crane-fields select { width: 100%; }
+.module-crane-fields input[type=number] { width: 6em; }
+.module-crane-fields output { font-weight: 650; }
+.crane-load-values { margin: 8px 0; }
+#resetCranePaint[hidden] { display: none; }
 .bridge-status {
  flex-basis: 100%;
  color: var(--muted);

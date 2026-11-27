@@ -1,5 +1,9 @@
 # Changelog
 
+## Traveling module crane
+- Added a roof gantry with an outboard tower, pickup and cradle-transfer stages, recessed dock guides, and an unloaded couch-swing preview.
+- Added elevated and moat runway studies, interlocked lobby drawbridges, a drawing override, and common paint for the crane and fixed steel swing mast.
+
 ## Seating pockets at bridge landings
 - Fit three-seat capsules beside bridge approaches. Where space allows, up to five turn inward around a woven centre, with room for multiple independent groups. The route, door clearances and stairs stay open.
 - Added a bridge seating toggle and optional simulation stops at the open side of each capsule.

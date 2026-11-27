@@ -20,6 +20,7 @@ function rememberWorkspace(workspace) {
 
 // Start after every workspace and its helpers have loaded.
 initProgrammingEditor();
+initCraneControls();
 initGL();
 restoreSaved();
 initCrossUI();

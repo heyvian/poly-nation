@@ -79,6 +79,10 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
     slideLength: 40,
     climbWidth: 10,
     atriumBridges: 'off',
+    craneStage: 'parked',
+    craneRunway: 'elevated',
+    craneBearing: 316,
+    craneFloor: 2,
     bridgeSeating: true,
     lobby: 240,
     relations: {},
@@ -2541,6 +2545,7 @@ function derive(dockVariant = state.dockVariant) {
     greenhouse: designGreenhouse(r, lobby, feature.ride),
     roofPlan
   };
+  layout.crane = planModuleCrane(layout, state.craneRunway);
   return state.allocationMoves.length
     ? applyAllocationMoves(layout, state.allocationMoves, dockVariant) ?? layout
     : layout;

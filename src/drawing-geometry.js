@@ -12,7 +12,7 @@ const DRAWING_COMPONENTS = {
 // Model layer names cover both Massing and Build. Map them to the same drawing categories.
 function drawingComponent(layer) {
   if (/^(Swing_|Climbing_|Infinite_Rinse_(Water_Slide|Slide_))/.test(layer)) return 'rides';
-  if (/^(Dock|Assembly_Dock)/.test(layer)) return 'docks';
+  if (/^(Dock|Assembly_Dock|Crane_)/.test(layer)) return 'docks';
   if (/^(Modules_|Module_Balconies|Senior_Care_Laundry|Assembly_Module|Assembly_Open)/.test(layer))
     return 'modules';
   if (
@@ -33,6 +33,7 @@ function drawingOutlineBody({ layer, name }) {
   if (/^Infinite_Rinse_(Water_Slide|Slide_(Wall_Sleeve|Flang|Flashing|Bolt))/.test(layer))
     return 'Slide';
   if (/^Swing_(Tower|Crown|Boarding_Platform)/.test(layer)) return 'Swing tower';
+  if (/^Crane_(Traveling_Gantry|Hoist|Transfer_Carriage|Couch_Swings)/.test(layer)) return 'Traveling module gantry';
   if (/^Climbing_L\d+_Wall$/.test(layer)) return 'Climbing wall';
   if (/^Roof_Commercial_Retail/.test(layer)) return name;
   if (/^(Atrium_(Glass|Roof_Ridge)|Assembly_Greenhouse)/.test(layer)) return 'Atrium roof';

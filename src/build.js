@@ -609,15 +609,11 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     dockSlots = model.slots.filter((slot) => slot.f < floors && !slot.blocked),
     stayAxes =
       layers.docks && dockStructure === 'cable-stayed' ? stayCollectorAxes(model, dockSlots) : null,
-    extent = model.plaza.outer + 2;
+    crane = layers.crane ? model.crane : null,
+    cranePose = full && crane ? moduleCranePose(model, crane, preview.craneSettings) : null,
+    extent = Math.max(model.plaza.outer + 2, crane?.extent ?? 0);
   mark('Reference');
-  quad(
-    [-extent * 3, -0.18, -extent * 3],
-    [-extent * 3, -0.18, extent * 3],
-    [extent * 3, -0.18, extent * 3],
-    [extent * 3, -0.18, -extent * 3],
-    rgb('#e4e8df')
-  );
+  drawCraneGround(mesh, extent * 3, rgb('#e4e8df'), -0.18, crane);
 
   const member = (a, b, width, color, angle) =>
     drawAssemblyMember(mesh, a, b, width, color, width, angle);
@@ -855,7 +851,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     floorFrame(model.roofPlan.y - slabThickness, [], null, floors);
   }
   if (layers.swings) {
-    drawSwingMast(mesh, ride, Math.min(cutY, ride.height), preview);
+    drawSwingMast(mesh, model, Math.min(cutY, ride.height), preview);
     if (full) drawSwingAboveRoof(mesh, model, true);
   }
   // The boarding deck closes the inner ring when visible. Otherwise the roof shows its glazed cap.
@@ -938,9 +934,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
           MODULE_CASSETTE_DEPTH
         );
       else drawAlternativeDock(mesh, model, slot, storey, dockStructure, MODULE_CASSETTE_DEPTH);
+      if (crane) drawDockInsertionGuides(mesh, model, slot, base);
     }
     if (layers.facade || layers.docks) drawDockClosure(mesh, model, slot, storey);
-    if (!layers.modules) continue;
+    if (!layers.modules || cranePose?.slot?.i === slot.i) continue;
     if (!occupied) {
       if (slot.use !== 'empty') {
         const [x, , z] = location((foot + front) / 2, 0, base),
@@ -965,7 +962,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   }
   if (layers.modules && layers.facade && preview.assignments.moduleDesign?.enabled) {
     for (const span of exterior.laundry)
-      if (span.slot.f < floors) drawModuleLaundry(mesh, model, span,
+      if (span.slot.f < floors && ![span.slot.i, span.neighbor.i].includes(cranePose?.slot?.i)) drawModuleLaundry(mesh, model, span,
         buildStorey(model, span.slot.f, slabThickness).base, preview);
   }
   if (layers.docks && (dockStructure === 'roof-hung' || dockStructure === 'columns'))
@@ -1003,7 +1000,12 @@ function buildAssemblyMesh(model, layers, levels, preview) {
         );
     drawSlideLandings(mesh, model, slideTube, floors, slabThickness);
   }
-  const H = layers.swings && full ? ride.height : (floors + Number(full)) * floorHeight;
+  if (crane) {
+    const paint = rgb(cranePaint(preview.assignments));
+    drawCraneInfrastructure(mesh, model, crane, paint, full, cutY, cranePose);
+    if (cranePose) drawCraneGantry(mesh, model, crane, cranePose, paint);
+  }
+  const H = layers.swings && full ? ride.height : crane && full ? crane.head + crane.depth : (floors + Number(full)) * floorHeight;
   return { ...mesh, H, extent };
 }
 
@@ -1018,6 +1020,7 @@ const BUILD_LAYERS = {
   moduleRoofs: 'buildModuleRoofs',
   slide: 'buildSlide',
   swings: 'buildSwings',
+  crane: 'buildCrane',
   roofRetail: 'buildRoofRetail'
 };
 function buildViewLayers() {
@@ -1074,6 +1077,18 @@ const openBuildWorkspace = (() => {
       ? clamp(waterDepth.valueAsNumber, 0, 10)
       : 1;
     showBuildGravityStudy(copy, assignments, dockStructure.value, copy.slabThickness, depth);
+    $('buildCraneStudy').hidden = !copy.crane;
+    if (!copy.crane) return;
+    const load = craneLoadStudy(copy, copy.crane, assignments);
+    $('buildCraneEstimate').innerHTML = `
+      <div class="crane-load-values">
+        <div class="readout"><span>Reference cassette and rig</span><b>${(load.load / 9.81).toFixed(0)} t</b></div>
+        <div class="readout"><span>Outer roof rail to outboard tower</span><b>${load.span.toFixed(1)} m</b></div>
+        <div class="readout"><span>Outer roof rail reaction</span><b>${Math.round(load.rim)} kN</b></div>
+        <div class="readout"><span>Outboard tower reaction</span><b>${Math.round(load.outer)} kN</b></div>
+        <div class="readout"><span>Reference bridge bending</span><b>${(load.moment / 1000).toFixed(1)} MN·m</b></div>
+      </div>
+      <p class="hint">Static comparison with ${load.bridgeWeight.toFixed(0)} kN/m for the bridge. Twin roof rails distribute the roof-side reaction to annular collectors and piers. ${copy.crane.runway === 'moat' ? 'The recessed rail plinths' : 'The elevated runway beams and piers'} carry the outboard reaction. A full study needs moving loads, lateral restraint, braking, wind and site foundations.</p>`;
   }
   function saveLayers() {
     // Keep both checked and unchecked choices. Older settings still inherit the defaults.
@@ -1095,7 +1110,8 @@ const openBuildWorkspace = (() => {
       view: { seed: state.seed },
       programColors: false,
       structureView: false,
-      finishJoints: Boolean(renderer)
+      finishJoints: Boolean(renderer),
+      craneSettings: state
     });
     if (renderer) uploadWebGLMesh(context, renderer, assembly);
     if (center && assembly.groups.length > 1) fitModel(assembly, view, canvas);
@@ -1151,7 +1167,7 @@ const openBuildWorkspace = (() => {
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
-    const next = JSON.stringify(materialAssignments);
+    const next = JSON.stringify([materialAssignments, state.craneStage, state.craneBearing, state.craneFloor]);
     if (source === model) {
       if (signature === next) present();
       else {
