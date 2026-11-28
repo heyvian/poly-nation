@@ -180,5 +180,49 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     for check in ['aligned', 'windowsFit', 'measured', 'streams', 'proportional', 'lightweight', 'seated', 'roofFits', 'mesh',
                   'noRoofs', 'noModules', 'finite', 'timberCabin', 'mirroredRoofs', 'roofLight', 'options', 'variedDoors']:
         assert results[check], results
+    assert page.evaluate('''() => {
+      // Trace the actual meshes along the centreline and near both jambs.
+      // A clear centre point alone would miss a tapered or recessed opening.
+      const R = 12, ring = {...model, R, width: 6}, foot = dockFootRadius(ring),
+        slot = {...model.slots.find(slot => slot.p !== EMPTY), f: 1, angle: 1.12},
+        storey = buildStorey(ring, slot.f), level = dockWalkLevel(storey),
+        axis = craneFrame(meshBuilder(), slot.angle), assignments = {moduleDesign: {enabled: true}},
+        seeds = Array.from({length: 44}, (_, i) => i + 600);
+      function blocks(mesh, origin, end) {
+        const direction = sub(end, origin);
+        for (let i = 0; i < mesh.solid.length; i += 30) {
+          const a = mesh.solid.slice(i, i + 3), b = sub(mesh.solid.slice(i + 10, i + 13), a),
+            c = sub(mesh.solid.slice(i + 20, i + 23), a), n = cross(direction, c), divisor = dot(b, n);
+          if (Math.abs(divisor) < 1e-9) continue;
+          const from = sub(origin, a), u = dot(from, n) / divisor, q = cross(from, b),
+            v = dot(direction, q) / divisor, t = dot(c, q) / divisor;
+          if (u >= -1e-8 && v >= -1e-8 && u + v <= 1 + 1e-8 && t >= 0 && t <= 1) return true;
+        }
+        return false;
+      }
+      const [x, , z] = axis.point(foot, 0, level), start = R - facadeThickness(ring) - 0.1,
+        through = (mesh, u, y) => blocks(mesh, axis.point(start, u, level + y), axis.point(foot + 1.30, u, level + y)),
+        open = (mesh) => [-0.695, 0, 0.695].every((u) => [0.007, 1.1, 2.195].every((y) => !through(mesh, u, y))),
+        sill = meshBuilder(), nominal = meshBuilder(), vacant = meshBuilder(), deck = meshBuilder();
+      drawDockPassage(sill, ring, slot, storey, true, true);
+      drawDockClosure(nominal, ring, slot, storey, true);
+      drawDockPassage(nominal, ring, slot, storey, true, true);
+      drawNominalDockModule(nominal, slot, x, storey.base, z, rgb('#779688'));
+      drawDockClosure(vacant, ring, slot, storey, false);
+      const balcony = {...slot, p: EMPTY, use: 'balcony'};
+      drawDockPassage(deck, ring, balcony, storey, false, true);
+      drawDockClosure(deck, ring, balcony, storey, true);
+      const [bx, , bz] = axis.point(foot + MODULE.depth / 2, 0, level);
+      drawDockDeck(deck, balcony, bx, storey.base, bz, slot.angle, rgb('#9fae9f'));
+      const supported = (mesh, r) => blocks(mesh, axis.point(r, 0, level + 0.002), axis.point(r, 0, level - 0.002));
+      return open(nominal) && open(deck) && through(vacant, 0, 1.1) && through(nominal, 0.73, 1.1) &&
+        through(nominal, 0, 2.201) && supported(sill, R + 0.02) && supported(sill, foot - 0.01) &&
+        supported(deck, foot + 0.9) && seeds.every((seed) => {
+          const plan = furnishedModulePlan(ring, slot, assignments, seed), mesh = meshBuilder();
+          drawDockPassage(mesh, ring, slot, storey, true, true);
+          drawFittedModule(mesh, slot, x, storey.base, z, {assignments, view: {seed}}, plan, {interiors: true});
+          return open(mesh) && supported(mesh, foot + 0.9) && through(mesh, 0.73, 1.1) && through(mesh, 0, 2.201);
+        });
+    }''')
     assert not errors, errors
     print('Perimeter spacing, module forms, roof and door variety, envelope fit and restoration passed.')

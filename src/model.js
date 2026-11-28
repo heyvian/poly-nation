@@ -153,6 +153,51 @@ function modelFloorPitch(model) {
 }
 const OUTER_WALL_THICKNESS = 0.5;
 const facadeThickness = (m) => Math.min(OUTER_WALL_THICKNESS, m.width * 0.45);
+const DOCK_ENTRY = {
+  width: 1.40, height: 2.20, jamb: 0.05, header: 0.045,
+  coreWidth: 1.80, coreHeight: 2.30, coreJamb: 0.10, shutterPocket: 0.19,
+  landing: 1.60, finish: 0.006
+};
+
+function dockFootRadius(model) {
+  return model.R + BUILD_SECTION.dockGap;
+}
+
+function dockOpeningHalf(model) {
+  const inside = model.R - facadeThickness(model);
+  return Math.asin((DOCK_ENTRY.coreWidth / 2 + DOCK_ENTRY.coreJamb) / inside);
+}
+
+function dockWalkLevel(storey) {
+  return storey.base + DOCK_ENTRY.finish;
+}
+
+function dockOpeningHead(storey) {
+  return Math.min(storey.head, dockWalkLevel(storey) + DOCK_ENTRY.coreHeight + DOCK_ENTRY.shutterPocket);
+}
+
+function dockInUse(slot) {
+  return slot.siteCanalLookout || slot.p !== EMPTY || slot.use !== 'empty';
+}
+
+function reserveDocksWithoutClearApproach(circulation, radius, width, slotN, blocked) {
+  const ring = { R: radius, width }, inside = radius - facadeThickness(ring) - 0.01,
+    half = dockOpeningHalf(ring), publicEdges = new Map();
+  for (const q of circulation.regions) {
+    if (q.R < radius - 1e-6 || q.r >= inside || q.kind === 'elevator' || q.kind === 'lobbyDivider') continue;
+    if (!publicEdges.has(q.f)) publicEdges.set(q.f, []);
+    publicEdges.get(q.f).push([(q.start + q.end) / 2, (q.end - q.start) / 2]);
+  }
+  for (let f = 0; f < state.floors; f++) {
+    const gaps = openArcs(publicEdges.get(f) ?? []);
+    for (let j = 0; j < slotN; j++) {
+      const angle = j * TAU / slotN;
+      if (gaps.some(([a, b]) => angDist(angle, (a + b) / 2) < (b - a) / 2 + half - 1e-6))
+        blocked.add(f * slotN + j);
+    }
+  }
+}
+
 // Preferred gross program-zone sizes. The global minimum is enforced by the packing pass.
 const FIREHALL = PROGRAMS.findIndex((program) => program.id === 'fire');
 const ROOM_RANGES = [
@@ -2285,6 +2330,7 @@ function derive(dockVariant = state.dockVariant) {
       const budget = rawMax - count - k,
         junctionPlan = Object.values(state.relations).includes('attract') ? structuredClone(roomPlan) : null;
       formSharedLobbies(roomPlan, slotN, blocked, budget);
+      reserveDocksWithoutClearApproach(roomPlan.circulation, R, width, slotN, blocked);
       const hubs = roomPlan.circulation.hubs;
       if (junctionPlan && hubs.length >= 2) {
         const junctionBlocks = new Set([
@@ -2293,6 +2339,7 @@ function derive(dockVariant = state.dockVariant) {
           ...(feature.climbing?.blocked || [])
         ]);
         formSharedLobbies(junctionPlan, slotN, junctionBlocks, budget, true);
+        reserveDocksWithoutClearApproach(junctionPlan.circulation, R, width, slotN, junctionBlocks);
         if (k <= retailWant(rawMax - junctionBlocks.size - count) &&
             preferredLobbyLayout(junctionPlan.circulation.hubs, hubs))
           return { layout: junctionPlan, feature, blocked: junctionBlocks };

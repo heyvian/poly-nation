@@ -116,12 +116,12 @@ function moduleSkylight(form, sample) {
 function furnishedModulePlan(model, slot, assignments, seed, tipBalcony = false) {
   const design = moduleMaterialSelection(model, slot, assignments, seed),
     { program, length, form, unique, broad, windowStyle } = design,
-    // The 1.95 m dock threshold and the module door share the centre line.
-    doorWidth = 1.5, doorHeight = 2.26,
+    doorWidth = DOCK_ENTRY.width + 2 * DOCK_ENTRY.jamb,
+    doorHeight = DOCK_ENTRY.finish + DOCK_ENTRY.height + DOCK_ENTRY.header,
     wall = design.values.structure === 'stacked-timber' ? 0.23 : form.kind === 'streamliner' ? 0.15 : form.kind === 'hip' ? 0.26 : 0.18,
     inside = form.half - wall,
-    aisleEdge = -inside + 1.13,
-    entry = 1.45,
+    aisleEdge = -inside + 1.18,
+    entry = DOCK_ENTRY.landing,
     usable = length - entry - Math.max(wall + 0.06, Math.min(form.nose + 0.10, length === 9 ? 1.15 : 1.78)),
     fireBunks = program === 'fire' && model.slots.filter((other) =>
       other.p === slot.p && other.i < slot.i && !other.blocked).length % 2 === 0,

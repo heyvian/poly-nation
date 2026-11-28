@@ -12,8 +12,40 @@ function moduleParts(mesh, slot, x, base, z) {
   return { point, box };
 }
 
+// The paired leaves are shown slid clear of the opening on the room side.
+function drawModuleEntryDoor({ box }, wall) {
+  const { width, height, jamb, header, finish } = DOCK_ENTRY,
+    trim = rgb('#586962'), leaf = rgb('#899a8d'), handle = rgb('#c1b59a'), half = width / 2;
+  for (const side of [-1, 1]) {
+    box(side * (half + jamb / 2), wall / 2, finish, jamb, wall, height, trim);
+    const panel = half - 0.018, center = side * (half + jamb + panel / 2), hinge = wall + 0.026;
+    for (const y of [finish + 0.018, finish + height - 0.075])
+      box(center, hinge, y, panel, 0.052, 0.055, trim);
+    for (const edge of [-1, 1]) box(center + edge * (panel - 0.042) / 2, hinge, finish + 0.072,
+      0.042, 0.052, height - 0.146, trim);
+    box(center, hinge, finish + 0.072, panel - 0.084, 0.036, 0.89, leaf);
+    box(center, hinge, finish + 0.96, panel - 0.080, 0.022, height - 1.035, rgb('#a7bcb5'));
+    box(side * (half + jamb + 0.10), hinge + 0.032, finish + 0.97, 0.026, 0.036, 0.13, handle);
+  }
+  box(0, wall / 2, finish + height, width + 2 * jamb, wall, header, trim);
+}
+
+function drawNominalDockModule(mesh, slot, x, base, z, color, gloss = 0, enclosure = true) {
+  const local = moduleParts(mesh, slot, x, base, z), { box } = local,
+    { width, height, depth } = MODULE,
+    { width: opening, height: clearHeight, jamb, header, finish, landing } = DOCK_ENTRY,
+    rough = opening + 2 * jamb, top = finish + clearHeight + header;
+  box(0, depth / 2, finish - MODULE_CASSETTE_DEPTH, width, depth, MODULE_CASSETTE_DEPTH, color);
+  if (!enclosure) return;
+  box(0, (landing + depth) / 2, finish, width, depth - landing, height - finish, color, true, gloss);
+  for (const side of [-1, 1])
+    box(side * (width + rough) / 4, landing / 2, finish, (width - rough) / 2, landing, height - finish, color, false, gloss);
+  box(0, landing / 2, top, rough, landing, height - top, color, false, gloss);
+  drawModuleEntryDoor(local, 0.18);
+}
+
 function drawFittedModule(mesh, slot, x, y, z, preview, plan, options = {}) {
-  const { box, point } = moduleParts(mesh, slot, x, y, z),
+  const local = moduleParts(mesh, slot, x, y, z), { box, point } = local,
     { values, wall, length, ceiling, patio, form } = plan,
     { assembly = false, enclosure = !preview.structureView, interiors = false, cover = true } = options,
     system = STRUCTURAL_SYSTEMS[values.structure],
@@ -30,7 +62,8 @@ function drawFittedModule(mesh, slot, x, y, z, preview, plan, options = {}) {
   const deck = enclosure || interiors ? rgb('#c5b59c') : framing;
   for (let i = 1; i < form.stations.length; i++) {
     const a = form.stations[i - 1], b = form.stations[i], A = moduleHalfAt(form, a) - 0.025, B = moduleHalfAt(form, b) - 0.025;
-    mesh.quad(point(-A, a, 0.003), point(A, a, 0.003), point(B, b, 0.003), point(-B, b, 0.003), deck);
+    const level = DOCK_ENTRY.finish;
+    mesh.quad(point(-A, a, level), point(A, a, level), point(B, b, level), point(-B, b, level), deck);
   }
   if (patio) {
     if (assembly) mesh.mark('Assembly_Module_Terrace', reference);
@@ -44,6 +77,10 @@ function drawFittedModule(mesh, slot, x, y, z, preview, plan, options = {}) {
   elevation(true, 1, plan.sideWindows[1]);
   elevation(false, -1, [{ center: 0, width: plan.doorWidth, bottom: 0, top: plan.doorHeight, door: true, dock: true }]);
   elevation(false, 1, [plan.endOpening]);
+  if (enclosure) {
+    if (assembly) mesh.mark('Assembly_Module_Entry', reference);
+    drawModuleEntryDoor(local, wall);
+  }
   if (cover) {
     if (assembly) mesh.mark('Assembly_Module_Roof', reference);
     const { profile, stations } = form, { skylight } = plan,
@@ -237,9 +274,9 @@ function drawFurnishedModuleInterior(mesh, slot, x, y, z, plan, reference) {
 // Unoccupied docks keep their shared walking surface and supports. Vary the
 // furnishings inside the guards and keep one strip clear from the ring entry.
 function drawVariedDockDeck(mesh, slot, x, y, z, seed) {
-  const depth = MODULE.depth, angle = slot.angle,
+  const depth = MODULE.depth, angle = slot.angle, floor = y + DOCK_ENTRY.finish,
     footX = x - Math.cos(angle) * depth / 2, footZ = z - Math.sin(angle) * depth / 2,
-    { box } = moduleParts(mesh, slot, footX, y, footZ),
+    { box } = moduleParts(mesh, slot, footX, floor, footZ),
     rng = random(dockDesignSeed(seed, slot)), garden = slot.use === 'garden',
     deck = rgb(rng() < 0.5 ? '#beb49b' : '#aeb4aa'), rail = rgb('#697f76'),
     timber = rgb('#b69873'), plants = ['#92a67b', '#6a885e', '#9db294'];
@@ -268,26 +305,6 @@ function drawVariedDockDeck(mesh, slot, x, y, z, seed) {
       box(0, along, 2.38, 4.31, 0.12, 0.12, timber);
     for (const side of [-1, 1]) box(side * 2.03, 15.86, 2.26, 0.14, 4.02, 0.14, timber);
   }
-}
-
-// The removable collar uses the same doorway on every unit. Its lower
-// service cassette is shown separately from the clear pedestrian opening.
-function drawModuleDockCollar(mesh, slot, x, y, z, plan, head, enclosure) {
-  const { box } = moduleParts(mesh, slot, x, y, z),
-    { dockGap } = BUILD_SECTION, middle = -dockGap / 2, depth = dockGap + 0.048,
-    width = plan.doorWidth / 2 + 0.07, clearHeight = Math.min(plan.doorHeight, head - y - 0.06),
-    gasket = rgb('#526864'), casing = rgb('#8a9a8e');
-  mesh.mark('Assembly_Module_Dock_Collar', `${slot.f + 1}/Slot_${slot.j}`);
-  box(0, middle, -0.077, width * 2 + 0.13, depth, 0.077, casing);
-  if (enclosure) {
-    for (const side of [-1, 1]) box(side * width, middle, 0, 0.12, depth, clearHeight, casing);
-    box(0, middle, clearHeight, width * 2 + 0.12, depth, 0.095, casing);
-    for (const end of [-dockGap + 0.02, -0.016]) {
-      for (const side of [-1, 1]) box(side * width, end, 0, 0.135, 0.033, clearHeight, gasket);
-      box(0, end, clearHeight - 0.01, width * 2 + 0.14, 0.033, 0.112, gasket);
-    }
-  }
-  box(0.57, middle, -0.21, 0.32, depth * 0.96, 0.14, gasket);
 }
 
 // Small variants share the same bounded rooftop footprint and skids. The

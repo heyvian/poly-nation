@@ -15,7 +15,8 @@ function buildNavigation(m, includeBridgeSeats = true) {
     roofWild = [],
     floorH = modelFloorPitch(m),
     roofLevel = m.layers.length,
-    yFor = (f) => (f === roofLevel ? m.roofPlan.y + 0.082 : f * floorH + 0.54);
+    walkingBase = dockWalkLevel(buildStorey(m, 0)) + 0.004,
+    yFor = (f) => (f === roofLevel ? m.roofPlan.y + 0.082 : f * floorH + walkingBase);
   const xyz = (r, a, y) => [r * Math.cos(a), y, r * Math.sin(a)];
   function node(p, kind, meta = {}) {
     const id = nodes.length;
@@ -345,10 +346,10 @@ function buildNavigation(m, includeBridgeSeats = true) {
   }
   // Occupied modules and adaptive public decks are accessible destinations through their dock doors.
   for (const slot of m.slots) {
-    if (slot.blocked || (slot.p === EMPTY && slot.use === 'empty')) continue;
+    if (slot.blocked || !dockInUse(slot)) continue;
     const a = slot.angle,
       f = slot.f,
-      cr = m.R - 0.55;
+      cr = m.R - Math.max(0.55, facadeThickness(m) + 0.018), foot = dockFootRadius(m);
     const portal = cells.filter(
       (c) =>
         c.f === f &&
@@ -370,14 +371,14 @@ function buildNavigation(m, includeBridgeSeats = true) {
               ? 'garden'
               : 'balcony',
       y = yFor(f),
-      rad = m.R + MODULE.depth * 0.53 + 0.65,
+      rad = foot + MODULE.depth * 0.53,
       id = node(xyz(rad, a, y), kind, {
         f,
         program: slot.p >= 0 && slot.p < 5 ? slot.p : undefined,
         slot: slot.i
       });
     const path = pathWithin(c, a, cr);
-    connect(c.node, id, [...path, xyz(m.R + 0.68, a, y), nodes[id].p]);
+    connect(c.node, id, [...path, xyz(foot, a, y), nodes[id].p]);
     dest.push(id);
   }
   // A roof bridge connects the walking ring to the ride boarding platform.
@@ -566,6 +567,7 @@ function buildNavigation(m, includeBridgeSeats = true) {
     outerWild,
     roofWild,
     floorHeight: floorH,
+    walkingBase,
     roofLevel,
     reachable
   };
@@ -1185,7 +1187,7 @@ function agentZone(a, s) {
   const [x, y, z] = a.p,
     r = Math.hypot(x, z),
     theta = mod(Math.atan2(z, x), TAU),
-    f = Math.min(g.roofLevel, Math.max(0, Math.round((y - 0.54) / g.floorHeight)));
+    f = Math.min(g.roofLevel, Math.max(0, Math.round((y - g.walkingBase) / g.floorHeight)));
   const ids = [t.from, t.to].filter((i) => i != null);
   for (const i of ids) {
     const n = g.nodes[i],

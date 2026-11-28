@@ -216,6 +216,8 @@ The permanent ring and dock structure retain capacity for change. A module can l
 
 The designer sketched a two-leaf closure that drops to seal an empty bay and folds overhead when the threshold is in use. Permanent support continues past vacant bays and carries gardens and balconies. The dock frame stops where the slide, entrances and climbing wall need space. Columns sit between bays, and radial members follow the dock grid.
 
+The curved wall opening steps into parallel jambs on the dock axis. A continuous sill carries the corridor finish through the 1.80 m clear collar to the module’s 1.40 × 2.20 m clear sliding doorway. The first 1.60 m inside the module gives the centered entrance room to turn into the side aisle. An open-deck threshold uses guards at the exposed edges. The generator checks that the public corridor reaches across the whole opening before allocating a bay.
+
 ### A wall face and a load path
 
 The baseline model uses paired tapered side trusses. The designer questioned how their depth and diagonals compete with windows. The study compares open-panel side frames, a shallow box floor, same-storey cable stays, roof-hung rods and outer posts. Deep underfloor options were removed after they occupied the bays below. The designer asked for the dock jambs, roof crane posts and foundations to line up. Short links carry the dock reactions into the perimeter columns on the bay dividers. Straight radial beams connect those columns to an inner stack on the same axis. Ring girders bridge local gaps, and the floor diaphragm takes lateral loads to braced bays or shear walls at the two lift enclosures.

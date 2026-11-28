@@ -31,7 +31,7 @@ function drawingOutlineBody({ layer, name }) {
   // Separate pods by storey and dock. Keep a pod's balcony and skin in the same body.
   if (/^(Modules|Module_Balconies|Assembly_Open)_/.test(layer))
     return `Module ${layer.match(/_L(\d+)(?:_|$)/)[1]}/${name}`;
-  if (/^Assembly_Module_(Skin|Chassis)$/.test(layer)) return `Module ${name}`;
+  if (/^Assembly_Module_(Skin|Chassis|Entry|Dock_Collar)$/.test(layer)) return `Module ${name}`;
   if (/^Infinite_Rinse_(Water_Slide|Slide_(Wall_Sleeve|Flang|Flashing|Bolt))/.test(layer))
     return 'Slide';
   if (/^Swing_(Tower|Crown|Boarding_Platform)/.test(layer)) return 'Swing tower';

@@ -1186,7 +1186,7 @@ function drawStructureBays(system, length, height, point, line) {
 }
 
 function drawMaterialModule(b, slot, x, y, z, preview, values) {
-  const { box, line } = b;
+  const { line } = b;
   const { width, height, depth } = MODULE;
   const angle = slot.angle;
   const tangent = [-Math.sin(angle), Math.cos(angle)];
@@ -1213,18 +1213,8 @@ function drawMaterialModule(b, slot, x, y, z, preview, values) {
     : paint?.colors
       ? rgb(paint.colors[mod(slot.j + 2 * slot.f + preview.view.seed, paint.colors.length)])
       : finishColor(finish, slot.p, preview, variation);
-  box(
-    x,
-    y,
-    z,
-    width,
-    framing ? 0.16 : height,
-    depth,
-    angle,
-    color,
-    true,
-    paint?.colors ? paint.gloss : 0
-  );
+  const [footX, , footZ] = point(0, -depth / 2, 0);
+  drawNominalDockModule(b, slot, footX, y, footZ, color, paint?.colors ? paint.gloss : 0, !framing);
   if (preview.structureView ? !framing : !preview.finishJoints) return;
   const elevation = framing
     ? (length, locate) => drawStructureBays(system, length, height, locate, line)
@@ -1240,8 +1230,11 @@ function drawMaterialModule(b, slot, x, y, z, preview, values) {
         );
   for (const side of [-1, 1]) {
     elevation(depth, (d, up) => point(side * (width / 2 + 0.025), d - depth / 2, up), 69 * side);
-    elevation(width, (w, up) => point(w - width / 2, side * (depth / 2 + 0.025), up), 175 * side);
   }
+  elevation(width, (w, up) => point(w - width / 2, depth / 2 + 0.025, up), 175);
+  const rough = DOCK_ENTRY.width / 2 + DOCK_ENTRY.jamb, wing = width / 2 - rough;
+  for (const start of [-width / 2, rough])
+    elevation(wing, (w, up) => point(start + w, -depth / 2 - 0.002, up), -175);
 }
 
 // Seed the exterior details from the study's variation and its current dock assignments.
@@ -1292,34 +1285,33 @@ function moduleExteriorDetails(model, seed) {
 }
 
 // Vacant public decks use the same footprint in Massing and Build.
-function drawDockDeck({ box }, slot, x, y, z, angle, color, recessed = false) {
-  const thickness = recessed ? MODULE_CASSETTE_DEPTH : 0.24;
-  if (recessed) y -= 0.24;
-  box(x, y + 0.24 - thickness, z, MODULE.width, thickness, MODULE.depth, angle, color, true);
+function drawDockDeck({ box }, slot, x, base, z, angle, color) {
+  const thickness = MODULE_CASSETTE_DEPTH, y = base + DOCK_ENTRY.finish;
+  box(x, y - thickness, z, MODULE.width, thickness, MODULE.depth, angle, color, true);
   const T = [-Math.sin(angle), Math.cos(angle)],
     D = [Math.cos(angle), Math.sin(angle)],
     rail = rgb('#687e73');
   for (const side of [-1, 1]) {
     const tx = x + side * 2.15 * T[0],
       tz = z + side * 2.15 * T[1];
-    box(tx, y + 1.12, tz, 0.09, 0.1, MODULE.depth, angle, rail);
+    box(tx, y + 1.02, tz, 0.09, 0.08, MODULE.depth, angle, rail);
     for (const d of [-8.7, -3, 3, 8.7])
-      box(tx + d * D[0], y + 0.24, tz + d * D[1], 0.07, 0.9, 0.07, angle, rail);
+      box(tx + d * D[0], y, tz + d * D[1], 0.07, 1.06, 0.07, angle, rail);
   }
-  box(x + 8.92 * D[0], y + 1.12, z + 8.92 * D[1], 4.32, 0.1, 0.09, angle, rail);
+  box(x + 8.92 * D[0], y + 1.02, z + 8.92 * D[1], 4.32, 0.08, 0.09, angle, rail);
   if (slot.use === 'garden') {
     for (const d of [-5.8, 0, 5.8])
       for (const side of [-1, 1]) {
         const tx = x + d * D[0] + side * 1.35 * T[0],
           tz = z + d * D[1] + side * 1.35 * T[1];
-        box(tx, y + 0.25, tz, 1.2, 0.34, 4.1, angle, rgb('#69875d'), true);
-        box(tx, y + 0.59, tz, 0.95, 0.28, 3.7, angle, rgb('#8bb276'));
+        box(tx, y + 0.01, tz, 1.2, 0.34, 4.1, angle, rgb('#69875d'), true);
+        box(tx, y + 0.35, tz, 0.95, 0.28, 3.7, angle, rgb('#8bb276'));
       }
   } else {
     for (const d of [-5, 5]) {
       const tx = x + d * D[0] + 1.38 * T[0],
         tz = z + d * D[1] + 1.38 * T[1];
-      box(tx, y + 0.24, tz, 0.55, 0.48, 2.6, angle, rgb('#c6ae8b'), true);
+      box(tx, y, tz, 0.55, 0.48, 2.6, angle, rgb('#c6ae8b'), true);
     }
   }
 }
@@ -1470,14 +1462,15 @@ function drawModuleLaundry(mesh, model, { slot, neighbor, side, seed }, base, pr
 function coreFacadeSpans(
   model,
   floor,
-  { base: y, head, soffit } = buildStorey(model, floor),
+  storey = buildStorey(model, floor),
   slidePortals = null
 ) {
-  const fullHeightHoles = lobbyHoles(model.lobby, floor),
+  const { base: y, soffit } = storey, head = dockOpeningHead(storey),
+    half = dockOpeningHalf(model), fullHeightHoles = lobbyHoles(model.lobby, floor),
     doorHoles = [];
   for (const slot of model.slots)
     if (slot.f === floor && !slot.blocked)
-      doorHoles.push([slot.angle, Math.min(0.45, 1.1 / model.R)]);
+      doorHoles.push([slot.angle, half]);
   for (const connection of model.feature.slide?.connections || []) {
     if (connection.floor !== floor) continue;
     const portal = slidePortals?.find((entry) => entry.floor === floor);
@@ -1677,7 +1670,7 @@ function drawSwingMast(mesh, model, height, preview) {
     }
   }
   for (const bridge of model.circulation.bridges ?? []) {
-    const bottom = bridge.f * modelFloorPitch(model) + 0.535 - atriumBridgeDepth(model.r, bridge);
+    const bottom = dockWalkLevel(buildStorey(model, bridge.f)) - atriumBridgeDepth(model.r, bridge);
     if (bottom - 0.68 < height) sector(radial - chord, radius, 0, TAU, bottom - 0.68,
       Math.min(0.72, height - bottom + 0.68), color);
   }
@@ -3469,7 +3462,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   // Symbolic biofiltration beds and paths, all within the central courtyard.
   const rr = m.r;
   if (m.greenhouse) {
-    drawGreenhouseGround(b, m, 0.535);
+    drawGreenhouseGround(b, m, dockWalkLevel(buildStorey(m, 0)));
   } else {
     // Preserve the original bed layout for saved studies and layouts without lobby atriums.
     const num = Math.max(2, Math.min(6, Math.floor(rr / 5))),
@@ -3590,7 +3583,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       sector(q.r, q.R, q.start, q.end, base, !exporting && view.xray ? 0.2 : soffit - base, rgb('#a89e8e'));
       continue;
     }
-    const y = q.f * floorH + 0.46,
+    const y = dockWalkLevel(buildStorey(m, q.f)) - 0.075,
       kind = q.kind,
       isLift = kind === 'elevator',
       isHub = kind === 'hub',
@@ -3632,11 +3625,11 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     }
   }
   for (const lounge of bridgeLounges(m))
-    if (visible(lounge.f)) drawBridgeLounge(b, lounge, lounge.f * floorH + 0.535);
+    if (visible(lounge.f)) drawBridgeLounge(b, lounge, dockWalkLevel(buildStorey(m, lounge.f)));
   // Upper bridges span the atrium, with open landings into dedicated core passages.
   for (const bridge of circulation.bridges ?? []) {
     if (!visible(bridge.f)) continue;
-    const top = bridge.f * floorH + 0.535;
+    const top = dockWalkLevel(buildStorey(m, bridge.f));
     mark(`Atrium_Bridge_L${bridge.f + 1}`);
     drawAtriumBridge(b, rr, bridge, top, rgb('#d9bb87'), bridge.f === 1 ? m.siteCanalLookouts : undefined);
     mark(`Atrium_Bridge_Bearing_L${bridge.f + 1}`);
@@ -3645,23 +3638,23 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   for (const stair of circulation.stairs ?? []) {
     if (!visible(stair.f) || !visible(stair.f - 1)) continue;
     mark(`Atrium_Stair_L${stair.f + 1}`, `Bridge stair to level ${stair.f}`);
-    drawAtriumStair(b, rr, stair, stair.f * floorH + 0.535,
-      (stair.f - 1) * floorH + 0.535, rgb('#d9bb87'));
+    drawAtriumStair(b, rr, stair, dockWalkLevel(buildStorey(m, stair.f)),
+      dockWalkLevel(buildStorey(m, stair.f - 1)), rgb('#d9bb87'));
   }
   for (let floor = 1; floor < view.floors; floor++) {
     if (!visible(floor)) continue;
-    const y = floor * floorH + 0.535;
+    const y = dockWalkLevel(buildStorey(m, floor));
     mark(`Atrium_Edge_Railings_L${floor + 1}`);
     for (const [start, end] of atriumGuardSpans(m, floor)) curvedGlassGuard(rr, y, start, end);
   }
   if (view.floors > 1 && visible(1) && m.siteCanalLookouts?.length) {
-    drawCanalLookouts(b, m.siteCanalLookouts.filter(({ type }) => type !== 'dock'), floorH + 0.535);
+    drawCanalLookouts(b, m.siteCanalLookouts.filter(({ type }) => type !== 'dock'), dockWalkLevel(buildStorey(m, 1)));
     drawCanalLookouts(b, m.siteCanalLookouts.filter(({ type }) => type === 'dock'), buildStorey(m, 1).base);
   }
   // Separate room thresholds and paired shared doors: diagrammatic lines, not detailed door openings.
   for (const d of circulation.doors) {
     if (!visible(d.f)) continue;
-    const y = d.f * floorH + 0.56,
+    const y = dockWalkLevel(buildStorey(m, d.f)) + 0.012,
       co = rgb(d.kind === 'shared' ? '#5d805f' : '#66786f');
     mark(`Circulation_L${d.f + 1}_Doors`);
     if (d.kind === 'shared') {
@@ -3671,24 +3664,6 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       const w = (d.width || 1.2) / 2 / Math.max(1, d.r);
       line(ringPoint(d.r, d.angle - w, y), ringPoint(d.r, d.angle + w, y), co);
     }
-  }
-  // Accessible connection from the dock frame to the outer corridor; each occupied slot has a discrete threshold.
-  for (const s of m.slots) {
-    if (!visible(s.f) || s.blocked || (s.p === EMPTY && s.use === 'empty')) continue;
-    if (!exporting && !view.showModules) continue;
-    mark(`Circulation_L${s.f + 1}_Dock_Thresholds`, `Dock_${s.j}`);
-    const a = s.angle,
-      rad = m.R + 0.325;
-    box(
-      rad * Math.cos(a),
-      s.f * floorH + 0.46,
-      rad * Math.sin(a),
-      Math.min(2.0, MODULE.width),
-      0.08,
-      0.7,
-      a,
-      rgb('#eee9da')
-    );
   }
   // Each lobby atrium opens toward the plaza and the greenhouse, with no intermediate floor.
   const l = m.lobby;
@@ -3701,7 +3676,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       frame = rgb('#ac9271'),
       glaze = rgb('#c7dbd9');
     mark(i ? 'Opposite_Lobby_Atrium' : 'Entrance_Lobby');
-    sector(m.r, m.R, a, z, base, 0.08, rgb('#e5d3ae'));
+    sector(m.r, m.R, a, z, base, dockWalkLevel(buildStorey(m, 0)) - base, rgb('#e5d3ae'));
     if (l.gallery && visible(1)) {
       mark('Lobby_Atrium_Upper_Gallery', 'Level 2 corridor bridge');
       sector(l.gallery, m.R + 0.12, a, z, buildStorey(m, 1).underside, slabThickness, slab);
@@ -3710,7 +3685,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         for (let j = 0; j < n; j++) {
           const left = a + ((z - a) * j) / n,
             right = a + ((z - a) * (j + 1)) / n,
-            railBase = floorH + 0.53,
+            railBase = dockWalkLevel(buildStorey(m, 1)),
             railTop = railBase + 1.1;
           quad(
             ringPoint(radius, left, railBase),
@@ -3980,10 +3955,13 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           varied || m.crane ? MODULE_CASSETTE_DEPTH : undefined);
         if (m.crane) drawDockInsertionGuides(b, m, s, storey.base);
       }
-      if (cranePose?.slot?.i === s.i || s.siteCanalLookout) continue;
-      if (s.p === EMPTY && s.use === 'empty' && !view.programEditing) continue;
-      const a = s.angle,
-        center = m.R + BUILD_SECTION.dockGap + MODULE.depth / 2,
+      if (cranePose?.slot?.i === s.i) continue;
+      const installed = dockInUse(s), enclosed = s.p !== EMPTY || s.use === 'retail';
+      if (!installed && !view.programEditing) continue;
+      if (installed) drawDockPassage(b, m, s, storey, enclosed,
+        exporting || view.showFacade && !view.xray && !preview?.structureView);
+      if (s.siteCanalLookout) continue;
+      const a = s.angle, foot = dockFootRadius(m), center = foot + MODULE.depth / 2,
         x = center * Math.cos(a),
         z = center * Math.sin(a),
         y = storey.base;
@@ -4007,16 +3985,13 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       if (s.p !== EMPTY || s.use === 'retail') {
         const detailed = values && (EXTERIOR_FINISHES[values.facade].detailed || STRUCTURAL_SYSTEMS[values.structure].logs);
         if (varied || detailed) {
-          const plan = furnishedModulePlan(m, s, preview.assignments, view.seed, exterior.balconies.has(s.i)),
-            foot = center - MODULE.depth / 2;
+          const plan = furnishedModulePlan(m, s, preview.assignments, view.seed, exterior.balconies.has(s.i));
           drawFittedModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), preview, plan, { craneLifting: Boolean(m.crane) });
-          if (exporting || view.supports)
-            drawModuleDockCollar(b, s, foot * Math.cos(a), y, foot * Math.sin(a), plan, storey.head, !preview.structureView);
           if (plan.balcony) drawModuleBalcony(b, m, s, y, null, false, plan);
           continue;
         }
         if (values) drawMaterialModule(b, s, x, y, z, preview, values);
-        else box(x, y, z, MODULE.width, MODULE.height, MODULE.depth, a, c, true);
+        else drawNominalDockModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), c);
         if (exterior.balconies.has(s.i))
           drawModuleBalcony(
             b,
@@ -4027,7 +4002,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
             !preview?.structureView
           );
         if (s.use === 'retail') {
-          const ra = m.R + 0.65 + MODULE.depth + 0.01;
+          const ra = foot + MODULE.depth + 0.01;
           box(
             ra * Math.cos(a),
             y + 0.32,
@@ -4168,7 +4143,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         else sector(inner, m.R, ...span, y, height, wall);
       }
       for (const slot of m.slots)
-        if (slot.f === f && !slot.blocked) drawDockClosure(b, m, slot, storey);
+        if (slot.f === f && !slot.blocked)
+          drawDockClosure(b, m, slot, storey, dockInUse(slot) && cranePose?.slot?.i !== slot.i);
     }
 
   // Full-height outdoor climbing wall. The reserved dock strip stays unoccupied.
@@ -4370,7 +4346,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           span = (q.end - q.start) * rad,
           depth = q.R - q.r;
         if (span < 1.5 || depth < 1.2) continue;
-        const baseY = q.f * floorH + 0.54,
+        const baseY = dockWalkLevel(buildStorey(m, q.f)) + 0.004,
           count = span > 7 ? 2 : 1;
         for (let k = 0; k < count; k++) {
           const t = count === 1 ? 0.5 : (k + 0.3) / count,
@@ -4418,7 +4394,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         lowPolyDog(
           box,
           rad * Math.cos(a),
-          q.f * floorH + 0.54,
+          dockWalkLevel(buildStorey(m, q.f)) + 0.004,
           rad * Math.sin(a),
           a + Math.PI / 2,
           { s: 0.8 + rng() * 0.24, col: indoorDogs % 2 ? '#b79269' : '#9c8672' }

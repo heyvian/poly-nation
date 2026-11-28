@@ -66,7 +66,7 @@ function craneStudyGeometry(model, view, detail, assignments = {}) {
     });
   return drawingGeometry(mesh, model, {
     include: ({ layer }) => /^Crane_/.test(layer) || (detail
-      ? /^(Assembly_(Floor_|Roof_Deck|Exterior_Walls|Module_(Chassis|Skin|Roof)|Dock_)|Dock_Closure_)/.test(layer)
+      ? /^(Assembly_(Floor_|Roof_Deck|Exterior_Walls|Module_(Chassis|Skin|Roof|Entry|Dock_Collar)|Dock_)|Dock_Closure_)/.test(layer)
       : /^(Core_(Foundation|L\d+_Slab)|Facade_|Modules_L|Roof_(Public_Deck|Lift_|Commercial_Retail)|Atrium_(Glass|Roof_Ridge)|Swing_Tower|Public_Plaza_(Paving|Promenade)|(?:Entrance|Opposite_Lobby)_Plaza_(?:Elevated_Walk|(?:Inner|Outer)_Court)|Infinite_Rinse_Water_Slide)/.test(layer)),
     component: craneStudyComponent
   });

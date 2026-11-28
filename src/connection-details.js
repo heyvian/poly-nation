@@ -483,7 +483,7 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
     cut(gap, -0.075, 0.09, floorDepth - 0.075, 'steel');
     cut(gap, -floorDepth + 0.065, 1.03, 0.065, 'steel');
     line(0, 0, gap, 0, 'outline');
-    line(0.08, 0.045, gap - 0.08, 0.045, 'fine');
+    line(0.08, -0.045, gap - 0.08, -0.045, 'fine');
     line(gap, 0, gap, 0.73, 'outline');
     line(gap + 0.09, 0, gap + 0.09, 0.73, 'outline');
     line(gap - 0.06, 0.73, gap + 0.15, 0.73, 'faint');
@@ -530,7 +530,7 @@ function drawConnectionContext(detail, model, layers, demand, pen) {
     fittingPen(pen, 0.25, -0.26).nut(-0.068, 0.068, 0.043);
     fittingPen(pen, 0.25, -0.412).plate(-0.072, -0.039, 0.144, 0.078);
     dim(1.77, -floorDepth, 0, '500 mm');
-    callout('Removable threshold cover', -2.25, 0.61, 0.22, 0.044);
+    callout('Flush removable threshold', -2.25, 0.61, 0.22, 0);
     callout('Power and data plug', -2.25, 0.35, 0.25, -0.13);
     callout('Isolated water coupling', -2.25, -0.82, 0.25, -0.26);
     callout('Gravity drain to core stack', -2.25, -1.08, 0.25, -0.412);

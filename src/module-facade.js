@@ -175,12 +175,12 @@ function drawModuleElevation(mesh, plan, point, box, angle, appearance, options)
     }
     skinPart(a, b, 0, bottom);
     skinPart(a, b, top, ceiling);
+    if (dock) continue;
     if (aperture.shape === 'round' || aperture.shape === 'rounded') {
       drawShapedModuleWindow(mesh, locate, aperture, side ? sign < 0 : sign > 0, wall, skin, trim, glass, gloss);
     } else {
       for (const jamb of [a + 0.024, b - 0.024]) part(jamb, -0.035, bottom, 0.048, 0.105, top - bottom, trim);
       part(center, -0.035, top - 0.042, width, 0.105, 0.042, trim);
-      if (dock) continue;
       if (door) {
         drawModulePatioDoor(mesh, locate, part, aperture, wall, skin, trim, glass);
         continue;

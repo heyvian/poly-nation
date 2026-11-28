@@ -1,5 +1,9 @@
 # Changelog
 
+## Aligned module entrances
+- Coordinate the core jambs, folding closure, collar, level sill and module doorway across Massing, Materials, Build and Drawings.
+- Guard the public-deck thresholds and reserve bays where the circulation cannot serve the full opening.
+
 ## Public canal lookouts
 - Compare an atrium viewing bay, an open-air dock over the canal, or both. The solid walking strip, panels and adjoining floor share a finished level.
 - Add a vector section of each active lookout type to the West Village site set.
