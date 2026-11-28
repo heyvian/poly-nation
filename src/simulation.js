@@ -433,11 +433,12 @@ function buildNavigation(m, includeBridgeSeats = true) {
   const p = m.plaza,
     axis = l.angle;
   if (p && lobby != null) {
-    entry = node(xyz(p.outer - 0.55, axis, 0.205), 'entry', { f: 0 });
+    const arrival = p.arrivals?.[0], outer = arrival?.end ?? p.outer;
+    entry = node(xyz(outer - 0.55, axis, 0.205), 'entry', { f: 0 });
     const mouth = node(xyz(p.mouth, axis, 0.205), 'plaza', { f: 0 }),
-      door = node(xyz(m.R + 0.09, axis, 0.3), 'plaza', { f: 0 });
-    connect(entry, mouth);
-    connect(mouth, door);
+      door = node(xyz(m.R + 0.09, axis, arrival ? yFor(0) : 0.3), 'plaza', { f: 0 });
+    connect(entry, mouth, arrival ? [nodes[entry].p, xyz(m.crane.tower, axis, 0.205), nodes[mouth].p] : null);
+    connect(mouth, door, arrival ? [nodes[mouth].p, xyz(m.R + 9.5, axis, 0.205), nodes[door].p] : null);
     connect(door, lobby);
     dest.push(mouth, door);
     outdoor.push(entry, mouth, door);
@@ -480,15 +481,21 @@ function buildNavigation(m, includeBridgeSeats = true) {
   const nearestLoop = (a) => loop[Math.round((mod(a - axis, TAU) / TAU) * loopN) % loopN];
   if (entry != null) connect(entry, loop[0]);
   if (oppositeLobby != null) {
-    const rear = bays[1].angle,
+    const rear = bays[1].angle, arrival = p.arrivals?.[1],
       mouth = node(xyz(p.mouth, rear, 0.205), 'plaza', { f: 0 }),
-      door = node(xyz(m.R + 0.09, rear, 0.3), 'plaza', { f: 0 }),
+      door = node(xyz(m.R + 0.09, rear, arrival ? yFor(0) : 0.3), 'plaza', { f: 0 }),
       near = nearestLoop(rear);
     connect(near, mouth, [nodes[near].p, xyz(p.walkRadius, rear, 0.205), nodes[mouth].p]);
-    connect(mouth, door);
+    connect(mouth, door, arrival ? [nodes[mouth].p, xyz(m.R + 9.5, rear, 0.205), nodes[door].p] : null);
     connect(door, oppositeLobby);
     dest.push(mouth, door);
     outdoor.push(mouth, door);
+    if (arrival) {
+      const forecourt = node(xyz(arrival.end - 0.55, rear, 0.205), 'plaza', { f: 0, landscape: 'forecourt' });
+      connect(mouth, forecourt, [nodes[mouth].p, xyz(m.crane.tower, rear, 0.205), nodes[forecourt].p]);
+      dest.push(forecourt);
+      outdoor.push(forecourt);
+    }
   }
   for (const q of p.zones) {
     const a = q.angle,

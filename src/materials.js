@@ -72,7 +72,8 @@ const materialWorkspace = (() => {
         const model = study.model, migrated = restoreLegacyCorridors(model.circulation),
           refreshCrane = !Object.hasOwn(model, 'crane') || (model.crane && !Number.isFinite(model.crane.atriumClearRadius));
         if (refreshCrane) model.crane = planModuleCrane(model, model.crane?.runway);
-        const moat = craneMoatBounds(model.crane), refreshPlaza = moat && model.plaza.outer > moat.inner;
+        const moat = craneMoatBounds(model.crane), refreshPlaza = moat && model.plaza.outer > moat.inner ||
+          model.crane?.runway === 'elevated' && !Array.isArray(model.plaza.arrivals);
         if (refreshPlaza)
           model.plaza = designPlaza(model.R, model.lobby, model.slots, model.feature.climbing, model.crane, study.view.seed);
         if (migrated || refreshCrane || refreshPlaza) saveStudy();
@@ -97,7 +98,8 @@ const materialWorkspace = (() => {
       supports: true,
       showRoofDeck: true,
       showFacade: true,
-      roof: true
+      roof: true,
+      ...(state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : {})
     };
     const currentSlots = new Set(
       study.model.slots

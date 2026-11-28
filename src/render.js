@@ -117,6 +117,7 @@ const openRenderWorkspace = (() => {
     assembly = buildAssemblyMesh(source, layers, visible, {
       assignments,
       view: { seed: state.seed },
+      craneSettings: state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : undefined,
       finishJoints: Boolean(renderer)
     });
     drawRenderFixtures(assembly, source, lighting, visible);
@@ -139,7 +140,8 @@ const openRenderWorkspace = (() => {
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
-    const next = JSON.stringify([materials, buildViewLayers().dockStructure]);
+    const next = JSON.stringify([materials, buildViewLayers().dockStructure,
+      state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : null]);
     if (model === source && next === signature) return present();
     const changed = source !== model, previous = level.value;
     source = model;

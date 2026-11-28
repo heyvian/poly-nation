@@ -673,7 +673,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       layers.docks && dockStructure === 'cable-stayed' ? stayCollectorAxes(model, dockSlots) : null,
     crane = layers.crane ? model.crane : null,
     cranePose = full && crane ? moduleCranePose(model, crane, preview.craneSettings) : null,
-    extent = Math.max(model.plaza.outer + 2, crane?.extent ?? 0);
+    extent = Math.max(model.plaza.outer + 2, ...(model.plaza.arrivals ?? []).map(({ end }) => end + 3), crane?.extent ?? 0);
   mark('Reference');
   drawCraneGround(mesh, extent * 3, rgb('#e4e8df'), -0.18, crane);
 
@@ -1062,6 +1062,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     drawCraneInfrastructure(mesh, model, crane, paint, full, cutY, infrastructurePose, false, !layers.frame);
     if (cranePose) drawCraneGantry(mesh, crane, cranePose, paint);
   }
+  if (layers.slabs) drawElevatedArrivals(mesh, model);
   const H = layers.swings && full ? ride.height : crane && full ? crane.head + crane.depth : (floors + Number(full)) * floorHeight;
   return { ...mesh, H, extent, craneMoat: craneMoatBounds(crane) };
 }
@@ -1179,7 +1180,7 @@ const openBuildWorkspace = (() => {
       programColors: false,
       structureView: false,
       finishJoints: Boolean(renderer),
-      craneSettings: state
+      craneSettings: state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : state
     });
     if (renderer) uploadWebGLMesh(context, renderer, assembly);
     if (center && assembly.groups.length > 1) fitModel(assembly, view, canvas);
@@ -1235,7 +1236,8 @@ const openBuildWorkspace = (() => {
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
-    const next = JSON.stringify([materialAssignments, state.craneStage, state.craneBearing, state.craneFloor]);
+    const next = JSON.stringify([materialAssignments, state.craneStage,
+      state.craneStage === 'caterpillar' ? craneCaterpillarPreview().craneBearing : state.craneBearing, state.craneFloor]);
     if (source === model) {
       if (signature === next) present();
       else {

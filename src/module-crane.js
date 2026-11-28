@@ -2,7 +2,8 @@
 
 const CRANE_STAGES = {
   parked: 'Parked', pickup: '1 · Pick up at grade', hoist: '2 · Hoist beyond the stack',
-  transfer: '3 · Engage the dock guides', insert: '4 · Feed into the dock', travel: 'Unloaded gantry travel'
+  transfer: '3 · Engage the dock guides', insert: '4 · Feed into the dock', travel: 'Unloaded gantry travel',
+  caterpillar: 'Caterpillar ride'
 };
 const CRANE_PAINT = '#5d7971';
 const CRANE_RUNWAYS = {
@@ -17,6 +18,17 @@ const MOAT_BARRIER_HEIGHT = 0.92;
 const MOAT_BARRIER_POST = MOAT_BRIDGE_WIDTH / 2 + 0.25;
 const CRANE_BALLAST = 245; // kN, conceptual ballast over the inner bogies
 const CRANE_ELEVATED_GIRDER_DEPTH = 1.28;
+const ELEVATED_ARRIVAL_WIDTH = 10.4;
+const CATERPILLAR_COLOURS = ['#b96c58', '#cf9e59', '#899872', '#5f8882', '#ab7b7d'];
+const craneTravelStage = (stage) => stage === 'travel' || stage === 'caterpillar';
+
+function elevatedRunwaySupports(crane) {
+  const count = Math.ceil(TAU * crane.tower / 12), pitch = TAU / count,
+    half = Math.asin((ELEVATED_ARRIVAL_WIDTH / 2 + 0.9) / (crane.tower - crane.groundGauge / 2)),
+    regular = Array.from({ length: count }, (_, i) => (i + 0.5) * pitch)
+      .filter((angle) => crane.gateAngles.every((gate) => angDist(gate, angle) > half + pitch * 0.25));
+  return [...regular, ...crane.gateAngles.flatMap((gate) => [mod(gate - half, TAU), mod(gate + half, TAU)])].sort((a, b) => a - b);
+}
 
 function craneCassetteRig() {
   return { pickupOffset: MODULE.depth * 0.30, jawHalfWidth: MODULE.width / 2 + 0.70, pinHeight: -MODULE_CASSETTE_DEPTH / 2 };
@@ -75,7 +87,7 @@ function planModuleCrane(model, runway = 'elevated') {
   if (supports.length < 3) return null;
   return {
     dockTip, liftInner, liftOuter, liftCenter: (liftInner + liftOuter) / 2,
-    tower, runway, extent: tower + (runway === 'moat' ? 7.1 : 3.2), groundRail, groundGauge: 3.1, roofRail, head, supports, roofTies,
+    tower, runway, extent: tower + (runway === 'moat' ? 7.1 : runway === 'elevated' ? 6 : 3.2), groundRail, groundGauge: 3.1, roofRail, head, supports, roofTies,
     moatHalf: 4.25, gateAngles: [model.lobby.angle, model.lobby.angle + Math.PI],
     roofInner, roofOuter, atriumClearRadius,
     width: 5.7, depth: cantilever ? clamp((tower - rings.outside) / 5.6, 6.5, 9.0) :
@@ -104,7 +116,8 @@ function craneDockClear(model, crane, slot) {
 }
 
 function moduleCranePose(model, crane, settings = {}) {
-  const stage = Object.hasOwn(CRANE_STAGES, settings.craneStage) ? settings.craneStage : 'parked',
+  const requested = settings.craneStage, stage = requested === 'caterpillar' && crane.runway !== 'elevated'
+      ? 'travel' : Object.hasOwn(CRANE_STAGES, requested) ? requested : 'parked',
     floor = clamp((settings.craneFloor || 1) - 1, 0, model.layers.length - 1),
     bearing = mod((settings.craneBearing ?? 316) * Math.PI / 180, TAU),
     install = ['pickup', 'hoist', 'transfer', 'insert'].includes(stage);
@@ -262,7 +275,7 @@ function craneHoistStations(crane, pose) {
   return [-pickupOffset, pickupOffset].map((offset) => {
     const radius = center + offset, boomY = craneBoomUnderside(crane, radius),
       engaged = Boolean(pose.slot && (offset > 0 || pose.inboardHook));
-    return { radius, boomY, pinY: engaged ? pose.payloadY + pinHeight : boomY - 1.45, engaged };
+    return { radius, boomY, pinY: engaged ? pose.payloadY + pinHeight : boomY - (pose.stage === 'caterpillar' ? 0.97 : 1.45), engaged };
   });
 }
 
@@ -350,6 +363,69 @@ function drawCraneGantry(mesh, crane, pose, paint) {
 
   if (pose.slot) drawCraneCassette(mesh, angle, pose, amber);
   mark('Crane_Motion_End');
+  if (pose.stage === 'caterpillar' && crane.runway === 'elevated') drawCraneCaterpillar(mesh, crane, angle);
+}
+
+function craneCaterpillarPose(crane, heading) {
+  return CATERPILLAR_COLOURS.map((colour, i) => {
+    const angle = mod(heading + (7.0 + i * 3.95) / crane.tower, TAU), wave = angle * 16, sway = angle * 11 + 0.35;
+    return { angle, colour, shift: 2.65 * Math.sin(sway),
+      lift: 2.10 + 1.08 * Math.sin(wave) + 0.16 * Math.sin(wave * 2 + 0.70),
+      pitch: 0.18 * Math.cos(wave), roll: -0.17 * Math.sin(sway) };
+  });
+}
+
+function drawCraneCaterpillar(mesh, crane, heading) {
+  const { tower, groundRail: track, groundGauge } = crane, steel = rgb('#50635b'), dark = rgb('#394a43'),
+    pale = rgb('#d5bd91'), cars = craneCaterpillarPose(crane, heading),
+    at = (angle, along) => craneFrame(mesh, angle).point(tower, along, track + 0.40);
+  mesh.mark('Crane_Caterpillar_Pusher', 'Gantry pushes the coupled bogies ahead of it');
+  for (const [i, car] of cars.entries()) {
+    const previous = cars[i - 1];
+    drawAssemblyMember(mesh, previous ? at(previous.angle, 1.29) : at(heading, crane.width / 2), at(car.angle, -1.29), 0.15, steel);
+  }
+  for (const [i, car] of cars.entries()) {
+    const { angle, shift, lift, pitch, roll } = car, { block, point } = craneFrame(mesh, angle),
+      frame = track + 0.48, height = track + lift;
+    mesh.mark('Crane_Caterpillar_Bogies', `Car ${i + 1} · captured rail chassis`);
+    block(tower, 0, track + 0.29, groundGauge + 0.54, 0.19, 2.72, steel);
+    for (const radius of [tower - groundGauge / 2, tower + groundGauge / 2]) for (const t of [-0.96, 0.96]) {
+      const r = Math.sqrt(radius ** 2 - t ** 2);
+      block(r, t, track, 0.26, 0.32, 0.42, dark);
+      block(r + 0.19, t, track - 0.13, 0.13, 0.411, 0.42, steel);
+    }
+    mesh.mark('Crane_Caterpillar_Linkages', `Car ${i + 1} · lift and cross-slide`);
+    for (const side of [-1, 1]) {
+      const t = side * 0.68, joint = point(tower + shift * 0.45, t, (frame + height) / 2);
+      for (const r of [-0.45, 0.45])
+        drawAssemblyMember(mesh, point(tower + r, t, frame), joint, 0.15, steel);
+      drawAssemblyMember(mesh, joint, point(tower + shift, t, height + Math.sin(pitch) * t + 0.08), 0.18, dark);
+    }
+    const cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll),
+      cabin = (u, y, t) => point(tower + shift + u * cr - (y * cp + t * sp) * sr,
+        t * cp - y * sp, height + u * sr + (y * cp + t * sp) * cr),
+      hull = [[-0.84,-1.40], [0.84,-1.40], [1.17,-0.92], [1.17,0.91], [0.80,1.48],
+        [-0.80,1.48], [-1.17,0.91], [-1.17,-0.92]], shell = rgb(car.colour);
+    mesh.mark('Crane_Caterpillar_Cars', `Car ${i + 1} · articulated cabin`);
+    for (let k = 0; k < hull.length; k++) {
+      const [u, t] = hull[k], [v, q] = hull[(k + 1) % hull.length];
+      mesh.quad(cabin(u * 0.89, 0, t * 0.90), cabin(v * 0.89, 0, q * 0.90), cabin(v, 0.51, q), cabin(u, 0.51, t), shell);
+      mesh.tri(cabin(0, 0.51, 0), cabin(u, 0.51, t), cabin(v, 0.51, q), pale);
+    }
+    for (const row of [-0.63, 0.56]) {
+      mesh.quad(cabin(-0.93, 0.65, row - 0.44), cabin(0.93, 0.65, row - 0.44),
+        cabin(0.93, 0.65, row + 0.03), cabin(-0.93, 0.65, row + 0.03), steel);
+      mesh.quad(cabin(-0.93, 0.51, row - 0.43), cabin(-0.93, 1.20, row - 0.47),
+        cabin(0.93, 1.20, row - 0.47), cabin(0.93, 0.51, row - 0.43), shell);
+    }
+    for (const side of [-1, 1]) {
+      for (const t of [-0.99, 0.97])
+        drawAssemblyMember(mesh, cabin(side * 1.09, 0.44, t), cabin(side * 1.09, 1.03, t), 0.055, dark);
+      drawAssemblyMember(mesh, cabin(side * 1.09, 1.03, -0.99), cabin(side * 1.09, 1.03, 0.97), 0.06, dark);
+    }
+    mesh.quad(cabin(-0.79, 0.77, 1.42), cabin(0.79, 0.77, 1.42), cabin(0.80, 0.50, 1.48), cabin(-0.80, 0.50, 1.48), shell);
+  }
+  mesh.mark('Crane_Caterpillar_End');
 }
 
 function drawCraneHoist(mesh, block, member, crane, pose, dark, steel, amber) {
@@ -409,7 +485,11 @@ function drawCraneCassette(mesh, angle, pose, amber) {
   }
 }
 
-const craneAnimation = { angle: 0, last: 0 };
+const craneAnimation = { angle: 0, last: 0, paused: false };
+
+function craneCaterpillarPreview() {
+  return { craneStage: 'caterpillar', craneBearing: craneDegrees(state.craneBearing * Math.PI / 180 + craneAnimation.angle) };
+}
 
 function craneDegrees(angle) {
   return mod(Math.round(angle * 180 / Math.PI), 360);
@@ -421,7 +501,8 @@ function showCranePosition(model, pose) {
   const above = pose.slot && model.slots.some((slot) => slot.f > pose.slot.f && slot.j === pose.slot.j && !slot.blocked && slot.p !== EMPTY);
   let message = pose.blocked ? 'This level has no clear insertion lane.'
     : pose.slot ? `Level ${pose.slot.f + 1} · Bay ${pose.slot.j + 1}${above ? ' · Occupied above' : ''}`
-      : pose.stage === 'travel' ? 'Unloaded gantry travel' : 'Parked';
+      : pose.stage === 'caterpillar' ? (craneAnimation.paused ? 'Caterpillar ride paused' : 'Caterpillar ride · Five cars')
+        : pose.stage === 'travel' ? 'Unloaded gantry travel' : 'Parked';
   if (crane.runway === 'moat') {
     const axis = crane.gateAngles.find((a) => barrierLift(crane, a, pose.angle) < Math.PI / 2);
     if (axis != null) {
@@ -435,15 +516,20 @@ function showCranePosition(model, pose) {
 }
 
 function refreshCraneControls(model) {
-  const crane = model?.crane, control = $('craneStage'), floor = $('craneFloor');
+  const crane = model?.crane, control = $('craneStage'), floor = $('craneFloor'), park = $('parkCrane'),
+    elevated = state.craneRunway === 'elevated';
+  if (!control.options.length || Boolean(control.querySelector('option[value="caterpillar"]')) !== elevated)
+    control.replaceChildren(...Object.entries(CRANE_STAGES).filter(([stage]) => stage !== 'caterpillar' || elevated)
+      .map(([key, label]) => new Option(label, key)));
   $('craneRunway').value = state.craneRunway;
   control.value = state.craneStage;
   for (const id of ['craneStage', 'craneBearing', 'craneBearingDegrees', 'focusCrane']) $(id).disabled = !crane;
-  $('parkCrane').hidden = !crane || state.craneStage !== 'travel';
+  park.hidden = !crane || !craneTravelStage(state.craneStage);
+  park.textContent = state.craneStage === 'caterpillar' ? (craneAnimation.paused ? 'Resume ride' : 'Pause ride') : 'Park here';
   $('craneBearing').value = $('craneBearingDegrees').value = String(state.craneBearing);
   floor.max = String(model?.layers.length ?? 1);
   floor.value = String(clamp(state.craneFloor, 1, model?.layers.length ?? 1));
-  floor.disabled = !crane || ['parked', 'travel'].includes(state.craneStage);
+  floor.disabled = !crane || state.craneStage === 'parked' || craneTravelStage(state.craneStage);
   if (!crane) {
     $('craneBearingValue').value = '—';
     $('craneStatus').textContent = state.craneRunway === 'cantilever'
@@ -454,15 +540,73 @@ function refreshCraneControls(model) {
   showCranePosition(model, moduleCranePose(model, crane, state));
 }
 
+function elevatedArrivalWidth(arrival, station) {
+  const progress = clamp((station - arrival.mouth) / 3, 0, 1);
+  return arrival.throat + (arrival.width - arrival.throat) * progress;
+}
+
+function drawElevatedArrivalCourt(mesh, arrival, heightAt, position = [0, 0], prefix = 'Entrance_Plaza', court = 'Outer') {
+  const { angle, courtStart, end, width, courtWidth } = arrival,
+    { point } = craneFrame(mesh, angle), lawn = rgb('#8b9c79'), stone = rgb('#b6afa0'), seat = rgb('#a97e58'),
+    at = (r, t, offset) => {
+      const [x, y, z] = point(r, t, heightAt(r) + offset);
+      return [x + position[0], y, z + position[1]];
+    },
+    block = (r, t, offset, width, height, depth, material) => {
+      const [x, y, z] = at(r, t, offset);
+      mesh.box(x, y, z, width, height, depth, angle, material, true);
+    };
+  if (end - courtStart < 4.5) return;
+  mesh.mark(`${prefix}_${court}_Court`, court === 'Outer' ? 'Gathering terraces beyond the gantry' : 'Planted seating between the gantry and lobby');
+  for (const side of [-1, 1]) {
+    const t = side * width / 2, edge = side * courtWidth / 2;
+    const left = Math.min(t, edge), right = Math.max(t, edge);
+    mesh.quad(at(courtStart, left, 0), at(courtStart, right, 0), at(end, right, 0), at(end, left, 0), stone);
+    const middle = (courtStart + end) / 2;
+    block(middle, side * (width / 2 + 2.1), 0.01, 2.45, 0.42, Math.min(4.2, (end - courtStart) / 3), stone);
+    block(middle, side * (width / 2 + 2.1), 0.43, 2.15, 0.12, Math.min(3.9, (end - courtStart) / 3), lawn);
+    for (const r of [courtStart + 1.9, end - 1.9]) {
+      const offset = side * (width / 2 + 1.35);
+      block(r, offset, 0.01, 0.38, 0.41, 2.65, stone);
+      block(r, offset, 0.42, 0.72, 0.11, 2.9, seat);
+    }
+    for (const r of [courtStart + 0.3, end - 0.3])
+      mesh.line(at(r, t, 0.026), at(r, edge, 0.026), lawn);
+  }
+}
+
+function drawElevatedArrivals(mesh, model) {
+  for (const [index, arrival] of (model.plaza?.arrivals ?? []).entries()) {
+    const { angle, mouth, end } = arrival, start = model.R,
+      prefix = index ? 'Opposite_Lobby_Plaza' : 'Entrance_Plaza',
+      { point } = craneFrame(mesh, angle), threshold = buildStorey(model, 0).base,
+      flat = 0.21, landing = Math.min(start + 9.5, mouth),
+      heightAt = (radius) => flat + (threshold - flat) * clamp((landing - radius) / (landing - start), 0, 1),
+      paving = rgb('#dcc29c'), border = rgb('#a88c68'), stations = [start, landing, mouth, mouth + 3, end];
+    drawElevatedArrivalCourt(mesh, arrival, heightAt, undefined, prefix);
+    drawElevatedArrivalCourt(mesh, { ...arrival, ...arrival.innerCourt }, heightAt, undefined, prefix, 'Inner');
+    mesh.mark(`${prefix}_Elevated_Walk`, 'Continuous walk from the outer forecourt through the runway portal');
+    for (let i = 1; i < stations.length; i++) {
+      const a = stations[i - 1], b = stations[i];
+      if (b - a < 0.01) continue;
+      const halfA = elevatedArrivalWidth(arrival, a) / 2, halfB = elevatedArrivalWidth(arrival, b) / 2,
+        vertex = (r, t) => point(r, t, heightAt(r) + 0.008);
+      mesh.quad(vertex(a, -halfA), vertex(a, halfA), vertex(b, halfB), vertex(b, -halfB), paving);
+      for (const side of [-1, 1]) mesh.line(vertex(a, side * halfA), vertex(b, side * halfB), border);
+    }
+  }
+}
+
 function initCraneControls() {
   const select = $('craneStage');
-  select.replaceChildren(...Object.entries(CRANE_STAGES).map(([key, label]) => new Option(label, key)));
   const runway = $('craneRunway');
   runway.replaceChildren(...Object.entries(CRANE_RUNWAYS).map(([key, label]) => new Option(label, key)));
   runway.onchange = () => {
     state.craneRunway = runway.value;
+    if (state.craneRunway !== 'elevated' && state.craneStage === 'caterpillar') state.craneStage = 'travel';
     craneAnimation.angle = 0;
     craneAnimation.last = 0;
+    craneAnimation.paused = false;
     scheduleUpdate();
   };
   let frame = 0;
@@ -474,6 +618,7 @@ function initCraneControls() {
     state.craneBearing = Number($('craneBearing').value);
     craneAnimation.angle = 0;
     craneAnimation.last = 0;
+    craneAnimation.paused = false;
     refreshCraneControls(model);
     if (model && !pending) upload(model);
     queueSave();
@@ -502,6 +647,13 @@ function initCraneControls() {
   $('craneBearingDegrees').onchange = (event) => setBearing(event.target.valueAsNumber);
   $('parkCrane').onclick = () => {
     const requested = state.craneBearing * Math.PI / 180 + craneAnimation.angle;
+    if (state.craneStage === 'caterpillar') {
+      craneAnimation.paused = !craneAnimation.paused;
+      craneAnimation.last = 0;
+      refreshCraneControls(model);
+      showCranePosition(model, { angle: requested, stage: 'caterpillar' });
+      return;
+    }
     $('craneBearing').value = String(craneDegrees(requested));
     select.value = 'parked';
     change();
@@ -516,15 +668,15 @@ function initCraneControls() {
       upload(model);
     }
     const pose = moduleCranePose(model, crane, state), current = software ? softwareMesh : gpu?.mesh,
-      angle = pose.angle + (pose.stage === 'travel' ? craneAnimation.angle : 0),
+      angle = pose.angle + (craneTravelStage(pose.stage) ? craneAnimation.angle : 0),
       { point } = craneFrame(current, angle), aspect = canvas.clientWidth / canvas.clientHeight,
-      pivot = modelViewPivot(current), corners = [];
+      pivot = modelViewPivot(current), corners = [], ride = pose.stage === 'caterpillar';
     // A side-on oblique reads the lift column and insertion direction in one view.
     camera.az = angle + 0.96;
     camera.el = 0.34;
     const { right, up } = orbitBasis(camera);
-    for (const radius of [crane.roofInner - 2, crane.tower + 3])
-      for (const t of [-4, 4]) for (const y of [0, crane.head + crane.depth + 1])
+    for (const radius of [ride ? crane.tower - 6 : crane.roofInner - 2, crane.tower + (ride ? 6 : 3)])
+      for (const t of [-4, ride ? 26 : 4]) for (const y of [0, ride ? crane.groundRail + 12 : crane.head + crane.depth + 1])
         corners.push(sub(point(radius, t, y), pivot));
     const x = corners.map((p) => dot(p, right)), y = corners.map((p) => dot(p, up)),
       half = Math.max((Math.max(...x) - Math.min(...x)) / aspect, Math.max(...y) - Math.min(...y)) * 0.59;
@@ -537,7 +689,7 @@ function initCraneControls() {
 }
 
 function prepareCraneMotion(mesh) {
-  if (!['parked', 'travel'].includes(state.craneStage) || !model?.crane) return;
+  if (!(state.craneStage === 'parked' || craneTravelStage(state.craneStage)) || !model?.crane) return;
   const start = mesh.groups.find((g) => g.layer === 'Crane_Traveling_Gantry'),
     end = mesh.groups.find((g) => g.layer === 'Crane_Motion_End');
   if (!start || !end) return;
@@ -545,6 +697,8 @@ function prepareCraneMotion(mesh) {
     source: mesh[kind].slice(start[kind], end[kind]) }));
   const crane = model.crane;
   mesh.craneBaseBearing = state.craneBearing * Math.PI / 180;
+  const train = mesh.groups.find(({ layer }) => layer === 'Crane_Caterpillar_Pusher');
+  if (train) mesh.craneCaterpillar = { crane, start: train.solid };
   if (crane.runway === 'moat') {
     mesh.craneGateMotion = crane.gateAngles.map((axis, i) => {
       const capture = (layer) => {
@@ -558,14 +712,14 @@ function prepareCraneMotion(mesh) {
       return { axis, ranges: capture('Crane_Drawbridge'), barriers: [-1, 1].map(range) };
     });
   }
-  moveCraneTo(mesh, mesh.craneBaseBearing + (state.craneStage === 'travel' ? craneAnimation.angle : 0));
+  moveCraneTo(mesh, mesh.craneBaseBearing + (craneTravelStage(state.craneStage) ? craneAnimation.angle : 0));
 }
 
 function animateCraneMotion(mesh, dt, gl, renderer) {
   craneAnimation.angle = mod(craneAnimation.angle + dt * TAU / 58, TAU);
   const angle = state.craneBearing * Math.PI / 180 + craneAnimation.angle;
   moveCraneTo(mesh, angle, gl, renderer);
-  if ($('moduleCraneControls').open) showCranePosition(model, { angle, stage: 'travel' });
+  if ($('moduleCraneControls').open) showCranePosition(model, { angle, stage: state.craneStage });
 }
 
 function moveCraneTo(mesh, angle, gl, renderer) {
@@ -584,6 +738,15 @@ function moveCraneTo(mesh, angle, gl, renderer) {
       gl.bufferSubData(gl.ARRAY_BUFFER, start * 4, new Float32Array(target.slice(start, start + source.length)));
     }
   }
+  if (mesh.craneCaterpillar) {
+    const { crane, start } = mesh.craneCaterpillar, train = meshBuilder();
+    drawCraneCaterpillar(train, crane, angle);
+    for (let i = 0; i < train.solid.length; i++) mesh.solid[start + i] = train.solid[i];
+    if (gl && renderer) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, renderer.buffers.solid);
+      gl.bufferSubData(gl.ARRAY_BUFFER, start * 4, new Float32Array(train.solid));
+    }
+  }
 }
 
 // The elevated pair carries both bogie lines on continuous steel girders.
@@ -594,8 +757,8 @@ function drawElevatedCraneRunway(mesh, crane, paint, cutY) {
     soffit = groundRail - CRANE_ELEVATED_GIRDER_DEPTH;
   mark('Crane_Elevated_Runway_Columns', 'Spaced pier pairs and independent footings');
   const count = Math.ceil(TAU * tower / 12);
-  for (let i = 0; i < count; i++) {
-    const { block } = craneFrame(mesh, (i + 0.5) * TAU / count);
+  for (const angle of elevatedRunwaySupports(crane)) {
+    const { block } = craneFrame(mesh, angle);
     for (const radius of [tower - gauge, tower + gauge]) {
       block(radius, 0, -0.07, 1.32, 0.31, 1.21, concrete);
       block(radius, 0, 0.24, 0.64, Math.max(0, Math.min(soffit, cutY) - 0.24), 0.62, paint, true);

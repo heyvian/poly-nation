@@ -1007,7 +1007,7 @@ const openDrawingWorkspace = (() => {
         focus = [from, to].flatMap((station) => [bottom, detail || loadPath ? upper : Math.max(upper, contextTop + 3)].map((y) => point(station, y))),
         drawingY = detail ? 414 : 142,
         region = { width: w - 2 * margin - (cut.notes ? 315 : cut.labels ? 280 : 0), height: h - drawingY - 65 },
-        frame = renderDrawing(loadPath || mast ? structureGeometry : geometry, camera, [
+        frame = renderDrawing(loadPath || mast || cut.elevatedArrival ? structureGeometry : geometry, camera, [
           plane, { normal, offset: offset - (kind === 'boat-garage' ? 1.55 : mast ? 2.5 : loadPath ? 3.8 : 5), flip: true },
           { normal: along, offset: to }, { normal: along, offset: from, flip: true },
           { normal: [0, 1, 0], offset: upper - plan.foundation }
@@ -1236,6 +1236,25 @@ const openDrawingWorkspace = (() => {
           });
           add(page);
         }
+        if (support === 'elevated') {
+          const gate = model.plaza.arrivals[0]?.angle ?? crane.gateAngles[0], rideHeading = gate - 14.8 / crane.tower,
+            trainScene = meshBuilder(), paint = rgb(cranePaint(sourceAssignments)),
+            page = sheet('Caterpillar ride / Elevated runway', 'The traveling gantry pushes coupled cars above the public walk.', support, 'caterpillar');
+          drawElevatedCraneRunway(trainScene, crane, paint, Infinity);
+          drawElevatedArrivals(trainScene, model);
+          drawCraneGantry(trainScene, crane, { angle: rideHeading, stage: 'caterpillar' }, paint);
+          const geometry = drawingGeometry(trainScene, model, { component: craneStudyComponent }),
+            train = craneStudyFocus(gate, crane.tower - 7, crane.tower + 7, -0.4, crane.groundRail + 6, 19),
+            approach = craneStudyFocus(gate, Math.max(model.R, crane.tower - 21), model.plaza.arrivals[0]?.end ?? crane.tower + 18,
+              -0.4, crane.groundRail + 6, 13);
+          tile(page.svg, geometry, { az: gate + 0.24, el: 0.13 }, { ...sequenceTile(0), focus: train,
+            title: 'Rise and dip above level rails', note: 'Articulated supports move the cabins above the bogies.' });
+          tile(page.svg, geometry, { az: gate, el: Math.PI / 2 }, { ...sequenceTile(1), focus: train,
+            title: 'Side-to-side motion', note: 'Cabins overhang the track as the bogies follow the twin rails.' });
+          tile(page.svg, geometry, { az: gate + 0.8, el: 0.44 }, { ...sequenceTile(2), w: width - 2 * margin, focus: approach,
+            title: 'Forecourt and entrance portal', note: 'The lobby axis continues from the outer court under the elevated track.' });
+          add(page);
+        }
       }
       const installation = models.find(({ bay }) => bay);
       if (installation) {
@@ -1350,8 +1369,10 @@ const openDrawingWorkspace = (() => {
         return;
       }
       const includeSite = settings.showSite && siteWorkspace.hasTerrain,
-        craneBearing = settings.craneBearing ?? state.craneBearing,
-        mode = `${settings.source}/${settings.mode}/${settings.craneRunway}/${craneBearing}/${includeSite ? siteWorkspace.revision : 'building'}`;
+        runway = settings.craneRunway === 'design' ? sourceModel.crane?.runway : settings.craneRunway,
+        caterpillar = runway === 'elevated' && state.craneStage === 'caterpillar',
+        craneBearing = settings.craneBearing ?? (caterpillar ? craneCaterpillarPreview().craneBearing : state.craneBearing),
+        mode = `${settings.source}/${settings.mode}/${settings.craneRunway}/${craneBearing}/${caterpillar}/${includeSite ? siteWorkspace.revision : 'building'}`;
       if (!settings.detail && (!geometry || renderedGeometryMode !== mode)) {
         const view = {
           ...state,
@@ -1365,7 +1386,7 @@ const openDrawingWorkspace = (() => {
           showModules: true,
           showRoofDeck: true,
           roof: true,
-          craneStage: 'parked',
+          craneStage: caterpillar ? 'caterpillar' : 'parked',
           craneBearing
         };
         const preview = {

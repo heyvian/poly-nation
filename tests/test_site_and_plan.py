@@ -295,7 +295,8 @@ with serve_lab(root) as url, sync_playwright() as p:
         plan.rows.some(row => row.supports.some(support => support.bank && plan.water.overlaps(row.at(support.at), 5))) &&
         plan.rows.every(row => row.supports.every(support => !plan.water.overlaps(row.at(support.at), 1.3))) &&
         spans.every(span => plan.crossingSoffit - span.depth > plan.water.level + 2.7) &&
-        !blocked && flat.accesses.length === 2 && [flat, plan].every((site) =>
+        !blocked && flat.accesses.length === 2 && flat.accesses.every((walk) => walk.arrival &&
+          walk.nodes.at(-1)[0] > model.crane.tower && walk.courts.length === 2) && [flat, plan].every((site) =>
           site.accesses.every(({ at, threshold, kind, nodes }) => kind === 'walk' &&
             Math.abs(nodes[0][1] - site.floor) < 1e-6 &&
             Math.abs(siteTerrainHeight(site.terrain, ...at(threshold)) - site.floor) < 0.04 &&

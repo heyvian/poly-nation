@@ -2780,6 +2780,12 @@ function designPlaza(R, lobby, slots, climb, crane, seed = state.seed) {
       );
     if (candidates.length) candidates[0].kind = theme;
   }
+  const arrivals = crane?.runway === 'elevated' ? bays.map(({ angle, span }) => ({
+    angle, mouth, throat: clamp(2 * R * Math.sin(span / 2) - 0.30, 1.8, ELEVATED_ARRIVAL_WIDTH),
+    width: ELEVATED_ARRIVAL_WIDTH, courtWidth: 24, courtStart: Math.max(outer, crane.tower + 4.6),
+    end: Math.max(outer + 14, crane.tower + 18),
+    innerCourt: { courtStart: walkRadius + 3.1, end: crane.tower - 3.5, courtWidth: 21 }
+  })) : [];
   return {
     angle: lobby.angle,
     approachSpan,
@@ -2790,10 +2796,12 @@ function designPlaza(R, lobby, slots, climb, crane, seed = state.seed) {
     extension: 24,
     walkRadius,
     zones,
+    arrivals,
     area:
       Math.PI * (outer * outer - mouth * mouth) +
       0.5 * (mouth * mouth - R * R) * lobby.span +
-      (climb ? 0.5 * (mouth * mouth - climb.face * climb.face) * 2 * climb.half : 0)
+      (climb ? 0.5 * (mouth * mouth - climb.face * climb.face) * 2 * climb.half : 0) +
+      arrivals.reduce((sum, { width, courtWidth, courtStart, end }) => sum + width * (courtStart - outer) + courtWidth * (end - courtStart), 0)
   };
 }
 // Firehall docks start at grade. Higher floors are limited by both their own available

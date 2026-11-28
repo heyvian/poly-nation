@@ -3350,7 +3350,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   const floorH = modelFloorPitch(m),
     slabThickness = m.slabThickness ?? BUILD_SECTION.slabThickness,
     H = view.floors * floorH;
-  const extent = Math.max(m.R + MODULE.depth + 8, m.plaza ? m.plaza.outer + 2 : 0, m.crane?.extent ?? 0),
+  const extent = Math.max(m.R + MODULE.depth + 8, m.plaza ? m.plaza.outer + 2 : 0,
+      ...(m.plaza?.arrivals ?? []).map(({ end }) => end + 3), m.crane?.extent ?? 0),
     plane = Math.max(170, extent * 2.6), craneMoat = craneMoatBounds(m.crane);
   mark('Reference');
   drawCraneGround(b, plane, ground, -0.22, m.crane);
@@ -3698,6 +3699,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       mark('Opposite_Lobby_Promenade', 'Connection to the atrium crossing');
       sector(p.mouth, p.outer, rear.angle - pathHalf, rear.angle + pathHalf, 0.182, 0.015, walk);
     }
+    drawElevatedArrivals(b, m);
     mark('Entrance_Plaza_Paving', 'Paving joints and perimeter');
     for (let i = 0; i <= 5; i++) {
       const r = p.mouth + ((p.outer - p.mouth) * i) / 5;
@@ -4215,7 +4217,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   drawWaterSlide(b, m.feature.slide, preview, cut ? cutY : Infinity);
   if (m.crane && !view.programEditing) {
     const paint = rgb(cranePaint(preview?.assignments));
-    const liveCrane = !exporting && !preview && ['parked', 'travel'].includes(view.craneStage) && craneVisible;
+    const liveCrane = !exporting && !preview && (view.craneStage === 'parked' || craneTravelStage(view.craneStage)) && craneVisible;
     drawCraneInfrastructure(b, m, m.crane, paint, craneVisible, cutY, cranePose, liveCrane);
     if (cranePose?.slot) drawDockInsertionGuides(b, m, cranePose.slot, cranePose.floorY);
     if (cranePose) drawCraneGantry(b, m.crane, cranePose, paint);

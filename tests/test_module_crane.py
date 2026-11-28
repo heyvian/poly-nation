@@ -136,6 +136,32 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     }''')
     assert all(result.values()), result
 
+    page.locator('#craneStage').select_option('caterpillar')
+    expect(page.locator('#craneStatus')).to_contain_text('Caterpillar ride')
+    page.wait_for_function('gpu.mesh.craneCaterpillar && craneAnimation.angle > 0.01')
+    page.locator('#parkCrane').click()
+    expect(page.locator('#parkCrane')).to_have_text('Resume ride')
+    caterpillar = page.evaluate('''() => {
+      const { crane, plaza } = model, mesh = gpu.mesh, graph = buildNavigation(model),
+        train = craneCaterpillarPose(crane, 0), other = craneCaterpillarPose(crane, 0.21),
+        poles = elevatedRunwaySupports(crane), roof = crane.groundRail;
+      const tracks = mesh.groups.findIndex(group => group.layer === 'Crane_Elevated_Runway'),
+        railHeights = mesh.solid.slice(mesh.groups[tracks].solid, mesh.groups[tracks + 1].solid).filter((_, i) => i % 10 === 1);
+      const through = graph.nodes.find(node => node.landscape === 'forecourt');
+      return {
+        cars: train.length === 5 && mesh.groups.filter(group => group.layer === 'Crane_Caterpillar_Cars').length === 5,
+        motion: train.every((car, i) => car.angle > 0 && car.lift !== other[i].lift && car.shift !== other[i].shift) &&
+          [...train, ...other].some(car => Math.abs(car.shift) > crane.groundGauge / 2),
+        track: Math.max(...railHeights) === roof && Math.min(...railHeights) >= roof - CRANE_ELEVATED_GIRDER_DEPTH - 1e-6,
+        entrances: plaza.arrivals.length === 2 && plaza.arrivals.every(({ angle, width, end }) => end > crane.tower + 12 &&
+          poles.every((pier) => angDist(pier, angle) * (crane.tower - crane.groundGauge / 2) > width / 2)),
+        flow: Math.hypot(graph.nodes[graph.entry].p[0], graph.nodes[graph.entry].p[2]) > crane.tower &&
+          through && graph.reachable.has(through.id) && Math.hypot(through.p[0], through.p[2]) > crane.tower,
+        paused: craneAnimation.paused
+      };
+    }''')
+    assert all(caterpillar.values()), caterpillar
+
     page.locator('#craneRunway').select_option('moat')
     page.wait_for_function('!pending && model.crane.runway === "moat"')
     assert page.evaluate('JSON.stringify([model.total, model.rooms, model.slots])') == before
@@ -179,6 +205,7 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     page.wait_for_function('craneAnimation.angle > 0.02 && gpu.mesh.craneGateMotion.length === 2')
     assert page.evaluate("!gpu.mesh.groups.some(group => group.layer === 'Crane_Demonstration_Module')")
     assert not page.locator('#craneStage option[value="ride"]').count()
+    assert not page.locator('#craneStage option[value="caterpillar"]').count()
     assert page.evaluate("!gpu.mesh.groups.some(group => group.layer === 'Crane_Couch_Swings')")
     page.locator('#parkCrane').click()
     expect(page.locator('#craneStage')).to_have_value('parked')
@@ -222,9 +249,9 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
     page.locator('#openDrawings').click()
     page.locator('#drawingDocument').select_option('cranes')
     sheets = page.locator('#documentPages svg[data-crane-view]')
-    expect(page.locator('#craneSetStatus')).to_have_text('8 sheets ready.', timeout=90000)
+    expect(page.locator('#craneSetStatus')).to_have_text('9 sheets ready.', timeout=90000)
     assert sheets.evaluate_all("pages => pages.map(page => page.dataset.craneView)") == [
-        'axo', 'elevation', 'axo', 'elevation', 'axo', 'elevation', 'installation', 'drawbridge'
+        'axo', 'elevation', 'caterpillar', 'axo', 'elevation', 'axo', 'elevation', 'installation', 'drawbridge'
     ]
     docking = page.locator('#documentPages svg[data-crane-view="installation"]')
     expect(docking).to_contain_text('Reeled up to trolley')
@@ -233,7 +260,7 @@ with serve_lab(Path(__file__).resolve().parents[1]) as url, sync_playwright() as
       page.getAttribute('height') === '11in' && !page.querySelector('image') && page.querySelector('[data-scale-ratio]'))''')
     page.evaluate('window.print = () => {}')
     page.locator('#printDocument').click()
-    assert page.locator('#floorPrintPages > svg[data-crane-view]').count() == 8
+    assert page.locator('#floorPrintPages > svg[data-crane-view]').count() == 9
     page.evaluate('window.dispatchEvent(new Event("afterprint"))')
     page.locator('#drawingCraneSetSupport').select_option('moat')
     expect(page.locator('#craneSetStatus')).to_have_text('4 sheets ready.', timeout=90000)

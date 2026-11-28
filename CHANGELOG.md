@@ -1,5 +1,10 @@
 # Changelog
 
+## Caterpillar ride and elevated-track entrances
+- Add five linked, articulated passenger cars and a pause control for the motion study on the level elevated rails.
+- Clear both lobby axes beneath the runway and extend them through planted forecourts beyond the track. Adapt the walks to dry terrain in Site.
+- Add a vector crane sheet for the ride and entrance portal.
+
 ## Ground-floor lobby entries
 - Grade the dry public lobby approaches to meet the ground floor with level landings and a maximum 1:20 study slope. Show those walks in the site sections and flag entrances needing realignment.
 

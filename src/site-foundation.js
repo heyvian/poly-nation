@@ -222,17 +222,31 @@ function siteDryWalk(water, position, angle, start, end, width) {
   return !water.overlapsFootprint([left(start), left(end), right(end), right(start)]);
 }
 
-function siteLobbyWalk(terrain, water, position, angle, threshold, start, top, width) {
+function siteLobbyWalk(terrain, water, position, angle, threshold, start, top, width, arrival = null) {
   const at = siteLine(position, angle), landing = start + 1.8;
-  for (let distance = 5; distance <= 140; distance += 1) {
+  for (let distance = Math.max(5, (arrival?.end ?? start) - start + 1); distance <= 140; distance += 1) {
     const end = start + distance, point = at(end);
     if (point.some((value) => Math.abs(value) > terrain.size / 2 - width)) break;
     if (!siteDryWalk(water, position, angle, threshold, end, width + 0.5)) break;
     const grade = siteTerrainHeight(terrain, ...point);
-    if (Math.abs(grade - top) <= (end - landing) / 20 + 1e-6)
-      return { at, angle, width, kind: 'walk', threshold, nodes: [[start, top], [landing, top], [end, grade]] };
+    if (Math.abs(grade - top) <= (end - landing) / 20 + 1e-6) {
+      const nodes = [[start, top], [landing, top], [end, grade]], courts = arrival ?
+        [['Outer', arrival], ['Inner', { ...arrival, ...arrival.innerCourt }]].filter(([, court]) =>
+          court.end - court.courtStart >= 4.5 && siteDryWalk(water, position, angle, court.courtStart, court.end, court.courtWidth + 0.3)) : [];
+      if (arrival) for (const station of [arrival.mouth + 0.01, arrival.mouth + 3])
+        if (station > landing && station < end) nodes.splice(nodes.length - 1, 0, [station, top + (grade - top) * (station - landing) / (end - landing)]);
+      return { at, angle, width, kind: 'walk', threshold, nodes, arrival, courts };
+    }
   }
   return null;
+}
+
+function siteWalkHeight(nodes, station) {
+  const next = nodes.findIndex(([along]) => along >= station);
+  if (next < 0) return nodes.at(-1)[1];
+  if (next === 0) return nodes[0][1];
+  const [a, y] = nodes[next - 1], [b, h] = nodes[next];
+  return y + (h - y) * (station - a) / (b - a);
 }
 
 function siteLobbyGrade(terrain, routes, [x, z]) {
@@ -241,18 +255,14 @@ function siteLobbyGrade(terrain, routes, [x, z]) {
   }));
   return (px, pz, natural) => {
     let grade = terrain.groundProfile?.(px, pz, natural) ?? natural;
-    for (const { cos, sin, width, nodes, threshold, gradeEnd } of walks) {
+    for (const { cos, sin, width, nodes, threshold, gradeEnd, arrival, courts } of walks) {
       const dx = px - x, dz = pz - z, station = dx * cos + dz * sin, offset = dz * cos - dx * sin,
-        [end, last] = nodes.at(-1),
-        blend = 1 - Math.max(Math.max(0, station - (gradeEnd ?? end), threshold - station) / 1.8, (Math.abs(offset) - width / 2 - 0.6) / 2.5, 0);
+        end = nodes.at(-1)[0], lane = arrival ? elevatedArrivalWidth(arrival, station) : width,
+        apron = courts?.find(([, { courtStart, end }]) => courtStart - 0.75 <= station && station <= end + 0.75)?.[1],
+        cross = apron?.courtWidth ?? lane,
+        blend = 1 - Math.max(Math.max(0, station - (gradeEnd ?? end), threshold - station) / 1.8, (Math.abs(offset) - cross / 2 - 0.6) / 2.5, 0);
       if (blend <= 0) continue;
-      const next = nodes.findIndex(([along]) => along >= station);
-      let level = last;
-      if (next === 0) level = nodes[0][1];
-      else if (next > 0) {
-        const [a, y] = nodes[next - 1], [b, h] = nodes[next];
-        level = y + (h - y) * (station - a) / (b - a);
-      }
+      const level = siteWalkHeight(nodes, station);
       grade += (level - 0.035 - grade) * blend;
     }
     return grade;
@@ -318,7 +328,8 @@ function siteMoatPlan(bounds, position, surface, terrain, water, foundation) {
 function siteRunwaySupports(crane, position, angle, water, pitch) {
   const { tower, groundGauge } = crane, count = Math.ceil(TAU * tower / pitch),
     radii = [tower - groundGauge / 2, tower + groundGauge / 2],
-    poles = Array.from({ length: count }, (_, i) => (i + 0.5) * TAU / count + angle)
+    stations = crane.runway === 'elevated' ? elevatedRunwaySupports(crane) : Array.from({ length: count }, (_, i) => (i + 0.5) * TAU / count),
+    poles = stations.map((azimuth) => azimuth + angle)
       .filter((azimuth) => radii.every((radius) => !water.overlaps(siteLine(position, azimuth)(radius), 1.3))),
     spans = poles.flatMap((from, i) => {
       const to = poles[i + 1] ?? poles[0] + TAU, length = (to - from) * tower;
@@ -567,7 +578,9 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
         nodes: [[start, floor], [bridge, deck]],
       } });
     } else {
-      const walk = siteLobbyWalk(terrace, water, position, azimuth, threshold, start, floor, width);
+      const arrival = model.plaza.arrivals?.[i], through = arrival && siteLobbyWalk(terrace, water, position, azimuth,
+        threshold, start, floor, arrival.width, { ...arrival, angle: azimuth }),
+        walk = through || siteLobbyWalk(terrace, water, position, azimuth, threshold, start, floor, width);
       if (walk) accesses.push({ ...walk, entrance: i });
     }
   }
@@ -590,7 +603,7 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
     omitted: ground?.omitted ?? new Set(), wetBays: ground?.wetBays ?? new Set(), mastCrossing, mastRadius, mastSeats,
     grid, columns, lateralBays, transferredColumns, foundationRings, crane,
     terrain: finishedTerrain, gradeReach, surface, accesses, accessAngle, moat, perimeter, runway, boatBay, lowerRooms,
-    contextReach: Math.max(envelope, model.crane?.extent ?? 0),
+    contextReach: Math.max(envelope, model.crane?.extent ?? 0, ...(model.plaza.arrivals ?? []).map(({ end }) => end)),
     unresolved: rows.some((row) => row.unresolved) || [...columns, ...lateralBays.flatMap(({ ends }) => ends)]
       .some(({ wet, transfer }) => wet && !transfer) ||
       mastCrossing && mastSeats.length < 2 };
@@ -814,9 +827,10 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
     return [x - Math.sin(route.angle) * across, y, z + Math.cos(route.angle) * across];
   };
   function slab(route, a, y, b, next) {
-    const half = route.width / 2,
-      p = atStation(route, a, -half, y), q = atStation(route, a, half, y),
-      r = atStation(route, b, half, next), s = atStation(route, b, -half, next),
+    const halfA = (route.arrival ? elevatedArrivalWidth(route.arrival, a) : route.width) / 2,
+      halfB = (route.arrival ? elevatedArrivalWidth(route.arrival, b) : route.width) / 2,
+      p = atStation(route, a, -halfA, y), q = atStation(route, a, halfA, y),
+      r = atStation(route, b, halfB, next), s = atStation(route, b, -halfB, next),
       lower = ([x, y, z]) => [x, y - SITE_APPROACH_DECK_DEPTH, z];
     if (b - a < 1e-5) {
       // A stair riser is vertical at the end of the tread.
@@ -903,14 +917,16 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
     }
     box(center + length * 0.03, across, level + 0.30, 1.0, 0.79, Math.min(1.25, length / 3), red);
   }
-  mesh.mark('Site_Access_Lobby_Walks', 'Graded approaches to the ground-floor lobbies');
   for (const access of plan.accesses) {
+    mesh.mark('Site_Access_Lobby_Walks', 'Graded approaches to the ground-floor lobbies');
     for (const route of access.innerWalk ? [access.innerWalk, access] : [access]) {
       for (let i = 1; i < route.nodes.length; i++) {
         const [a, y] = route.nodes[i - 1], [b, h] = route.nodes[i];
         slab(route, a, y, b, h);
       }
     }
+    for (const [court, geometry] of access.courts ?? [])
+      drawElevatedArrivalCourt(mesh, geometry, (station) => siteWalkHeight(access.nodes, station), plan.position, 'Site_Entrance_Plaza', court);
   }
   const extraAccess = [...plan.lowerRooms.map(({ route }) => route), ...(boatBay?.route ? [boatBay.route] : [])];
   for (const route of extraAccess) {
@@ -1175,9 +1191,11 @@ function siteSectionCuts(plan, dockStructure = 'side-truss') {
       kind: 'approach',
       title: `${lobby} · Ground-level approach`,
       note: route.innerWalk ? 'The graded walk meets the ground-floor lobby via the closed drawbridge.'
+        : route.arrival ? 'The ground-level walk runs from the outer forecourt under the elevated track to the lobby.'
         : 'The graded walk meets the ground-floor lobby with a level landing and a maximum study slope of 1:20.',
       at: route.at, angle: route.angle, from: (route.innerWalk ?? route).threshold - 2.5, to: end + 4,
-      crown: Math.max(plan.floor, ...route.nodes.map(([, y]) => y)) + 2.4
+      crown: Math.max(plan.floor, ...route.nodes.map(([, y]) => y), route.arrival ? plan.runway.head : -Infinity) + 2.4,
+      elevatedArrival: Boolean(route.arrival)
     };
   })];
 }

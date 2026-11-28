@@ -466,7 +466,8 @@ function animateSwingFrame(now) {
         changed = true;
       }
     }
-    if (showingModel && mesh.craneMotion && state.craneStage === 'travel' && now - craneAnimation.last >= (software ? 135 : 36)) {
+    if (showingModel && mesh.craneMotion && craneTravelStage(state.craneStage) && !craneAnimation.paused &&
+        now - craneAnimation.last >= (software ? 135 : 36)) {
       const elapsed = craneAnimation.last ? Math.min(0.25, (now - craneAnimation.last) / 1000) : 0;
       craneAnimation.last = now;
       animateCraneMotion(mesh, elapsed, gl, gpu);
@@ -1470,6 +1471,7 @@ function applySaved(data) {
   if (s.craneStage === 'ride') d.craneStage = 'travel';
   else if (Object.hasOwn(CRANE_STAGES, s.craneStage)) d.craneStage = s.craneStage;
   if (Object.hasOwn(CRANE_RUNWAYS, s.craneRunway)) d.craneRunway = s.craneRunway;
+  if (d.craneRunway !== 'elevated' && d.craneStage === 'caterpillar') d.craneStage = 'travel';
   d.craneFloor = Math.round(d.craneFloor);
   d.craneBearing = Math.round(d.craneBearing);
   d.moduleSpacing = Number(d.moduleSpacing.toFixed(1));
@@ -1569,6 +1571,7 @@ function applySaved(data) {
   for (const k of ['memoryBonus', 'programBonus', 'funBonus', 'speciesBonus'])
     if (Number.isFinite(s[k])) d[k] = clamp(s[k], 1, 3);
   state = d;
+  Object.assign(craneAnimation, { angle: 0, last: 0, paused: false });
   const c = data.camera || {};
   camera = {
     az: Number.isFinite(c.az) ? c.az : -0.84,

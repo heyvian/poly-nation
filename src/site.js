@@ -169,9 +169,9 @@ const siteWorkspace = (() => {
     if (!terrain || !building || mode !== 'terrain' || panel.hidden) return;
     const plan = supportPlan(building);
     if (!assembly || assembly.sitePlan !== plan) {
-      const { assignments, layers } = assemblyOptions;
+      const { assignments, layers, craneSettings } = assemblyOptions;
       assembly = buildAssemblyMesh(sitePlacementModel(building, plan), layers, 0, {
-        assignments, view: { seed: state.seed }, programColors: false, structureView: false, finishJoints: false
+        assignments, view: { seed: state.seed }, craneSettings, programColors: false, structureView: false, finishJoints: false
       });
       assembly.sitePlan = plan;
     }
@@ -210,6 +210,9 @@ const siteWorkspace = (() => {
             supports.crossingSoffit - depth - supports.water.level))) : 0,
           structure = spans ? `The level above spans the canal with ${clearance.toFixed(1)} m minimum study clearance.${landward}`
             : piled ? 'Landward stem walls bear on schematic piles.' : 'Footings follow the local grade.',
+          arrivals = supports.accesses.filter((route) => route.arrival).length,
+          forecourts = building.plaza.arrivals?.length && arrivals < building.plaza.arrivals.length
+            ? ` ${arrivals ? 'One walk reaches' : 'An approach needs dry ground to reach'} beyond the elevated track.` : '',
           access = supports.accesses.length === 2 ? ' Both lobbies have step-free walks from grade.' : supports.accesses.length === 1
             ? ' One lobby has a step-free walk from grade. The other needs a different alignment.'
             : ' The lobby approaches need a different alignment to meet dry grade.',
@@ -222,7 +225,7 @@ const siteWorkspace = (() => {
           moat = supports.moat?.connected ? ' The moat shares the district water level.' : '',
           runway = (supports.runway ?? supports.moat?.runway)?.unresolved ? ' Long runway crossings need a separate span study.' : '';
         supportStatus.textContent = (supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' : structure) +
-          access + clearBays + dry + boat + moat + runway;
+          access + forecourts + clearBays + dry + boat + moat + runway;
       }
     } else {
       delete $('sitePlacementStatus').dataset.elevation;
@@ -522,10 +525,11 @@ const siteWorkspace = (() => {
           ...Object.fromEntries(Object.keys(BUILD_LAYERS).map((layer) => [layer, true])),
           moduleInteriors: false
         },
-        next = JSON.stringify([assignments, layers]);
+        craneSettings = state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : undefined,
+        next = JSON.stringify([assignments, layers, craneSettings]);
       if (modelChanged || signature !== next) {
         signature = next;
-        assemblyOptions = { assignments, layers };
+        assemblyOptions = { assignments, layers, craneSettings };
         assembly = null;
         scene = null;
       }

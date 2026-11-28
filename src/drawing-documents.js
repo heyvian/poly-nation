@@ -67,7 +67,7 @@ function craneStudyGeometry(model, view, detail, assignments = {}) {
   return drawingGeometry(mesh, model, {
     include: ({ layer }) => /^Crane_/.test(layer) || (detail
       ? /^(Assembly_(Floor_|Roof_Deck|Exterior_Walls|Module_(Chassis|Skin|Roof)|Dock_)|Dock_Closure_)/.test(layer)
-      : /^(Core_(Foundation|L\d+_Slab)|Facade_|Modules_L|Roof_(Public_Deck|Lift_|Commercial_Retail)|Atrium_(Glass|Roof_Ridge)|Swing_Tower|Public_Plaza_(Paving|Promenade)|Infinite_Rinse_Water_Slide)/.test(layer)),
+      : /^(Core_(Foundation|L\d+_Slab)|Facade_|Modules_L|Roof_(Public_Deck|Lift_|Commercial_Retail)|Atrium_(Glass|Roof_Ridge)|Swing_Tower|Public_Plaza_(Paving|Promenade)|(?:Entrance|Opposite_Lobby)_Plaza_(?:Elevated_Walk|(?:Inner|Outer)_Court)|Infinite_Rinse_Water_Slide)/.test(layer)),
     component: craneStudyComponent
   });
 }
@@ -75,6 +75,8 @@ function craneStudyGeometry(model, view, detail, assignments = {}) {
 function craneStudyComponent(layer) {
   if (layer === 'Crane_Demonstration_Module') return 'modules';
   if (layer === 'Crane_Moat_Water') return 'circulation';
+  if (/^(?:Site_)?(?:Entrance|Opposite_Lobby)_Plaza_/.test(layer)) return 'circulation';
+  if (layer === 'Crane_Caterpillar_Cars') return 'rides';
   if (layer === 'Crane_Hoist_Lines' || layer === 'Crane_Lifting_Jaws') return 'rides';
   if (/^(Crane_|Assembly_Dock_)/.test(layer)) return 'docks';
   return 'core';
