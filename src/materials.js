@@ -1,6 +1,6 @@
 'use strict';
 
-// Work on a detached massing snapshot. Changing massing never mutates the material study.
+// Keep material assignments independently of the linked design or its standalone snapshot.
 const materialWorkspace = (() => {
   const phase = $('materialsPhase');
   const materialCanvas = $('materialsCanvas');
@@ -14,6 +14,11 @@ const materialWorkspace = (() => {
   let study = null,
     mesh = null,
     frame = 0;
+
+  function displayStudy() {
+    if (!siteWorkspace.linked || !model?.siteGeometry) return study;
+    return { ...study, model, view: { ...study.view, floors: model.layers.length, seed: state.seed } };
+  }
 
   function saveStudy() {
     try {
@@ -86,7 +91,7 @@ const materialWorkspace = (() => {
   function captureMassing() {
     if (pending) update();
     study ??= { assignments: {}, programColors: false, structureView: false, notes: '' };
-    study.model = structuredClone(model);
+    study.model = model.siteGeometry ? derive(state.dockVariant, null) : structuredClone(model);
     study.view = {
       floors: state.floors,
       seed: state.seed,
@@ -102,9 +107,9 @@ const materialWorkspace = (() => {
       ...(state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : {})
     };
     const currentSlots = new Set(
-      study.model.slots
+      [study.model, model].flatMap((layout) => layout.slots
         .filter((slot) => slot.p !== EMPTY)
-        .map((slot) => 'module:' + materialSlotKey(study.model, slot))
+        .map((slot) => 'module:' + materialSlotKey(layout, slot)))
     );
     for (const key of Object.keys(study.assignments)) {
       if (key.startsWith('module:') && !currentSlots.has(key)) delete study.assignments[key];
@@ -164,11 +169,12 @@ const materialWorkspace = (() => {
         materialGL.clearColor(...ground, 1);
       } else materialSoftware = createSoftwareRenderer(materialCanvas);
     }
-    const view = { ...study.view, showRooms: !study.structureView || study.programColors };
+    const display = displayStudy(),
+      view = { ...display.view, showRooms: !study.structureView || study.programColors };
     // Depth testing hides seams behind overlapping walls. Keep simplified colors on Canvas.
-    const preview = { ...study, finishJoints: Boolean(materialRenderer) };
-    const placed = siteWorkspace.designModel(study.model);
-    mesh = siteWorkspace.composeDesign(buildMesh(placed, false, view, preview), study.model);
+    const preview = { ...display, finishJoints: Boolean(materialRenderer) };
+    const placed = siteWorkspace.designModel(display.model);
+    mesh = siteWorkspace.composeDesign(buildMesh(placed, false, view, preview), display.model);
     if (materialRenderer) uploadWebGLMesh(materialGL, materialRenderer, mesh);
     redraw();
   }
@@ -314,8 +320,8 @@ const materialWorkspace = (() => {
   });
   const percent = (ratio) => Math.round(ratio * 100) + '%';
   function updateMaterialAnalysis() {
-    const { model, assignments, rates } = study;
-    const takeoff = estimateMaterialAssemblies(model, assignments, rates, study.view.seed);
+    const { model, assignments, rates, view } = displayStudy();
+    const takeoff = estimateMaterialAssemblies(model, assignments, rates, view.seed);
     $('materialCostTotal').textContent = '≈ ' + currency.format(takeoff.total) + ' CAD';
     $('materialCostRows').replaceChildren(
       ...takeoff.rows.map(({ label, count, cost }) => {
@@ -385,7 +391,7 @@ const materialWorkspace = (() => {
   }
 
   function refreshAssemblies() {
-    const { model: snapshot, assignments } = study;
+    const { model: snapshot, assignments, view } = displayStudy();
     const core = assemblyVariants(
       snapshot.rooms.map((room) => ({
         values: materialValues(assignments, 'core', room.id),
@@ -398,7 +404,7 @@ const materialWorkspace = (() => {
       const modules = snapshot.slots
         .filter((slot) => slot.p === id)
         .map((slot) => ({
-          values: moduleMaterialSelection(snapshot, slot, assignments, study.view.seed).values,
+          values: moduleMaterialSelection(snapshot, slot, assignments, view.seed).values,
           quantity: 1
         }));
       const variants = assemblyVariants(modules, materialValues(assignments, 'module', id));
@@ -612,7 +618,8 @@ const materialWorkspace = (() => {
       hint.textContent = 'Explore different silhouettes, claddings and windows within the same dock.';
       return;
     }
-    const { enclosed, terraces, short } = realizedModuleEnclosure(study.model, study.assignments, study.view.seed);
+    const { model, assignments, view } = displayStudy(),
+      { enclosed, terraces, short } = realizedModuleEnclosure(model, assignments, view.seed);
     hint.textContent = fmt(enclosed) + ' m² enclosed in dock modules · ' + fmt(terraces) +
       ' m² of terraces across ' + short + ' shortened units. Massing still books the full dock allowance.';
   }
@@ -632,14 +639,15 @@ const materialWorkspace = (() => {
   };
 
   function syncStudy() {
+    const { model, view } = displayStudy();
     $('materialSnapshot').textContent =
-      'Massing snapshot · Seed ' +
-      study.view.seed +
+      (model.siteGeometry ? 'West Village design' : 'Massing snapshot') + ' · Seed ' +
+      view.seed +
       ' · ' +
-      study.view.floors +
-      (study.view.floors === 1 ? ' floor' : ' floors') +
+      view.floors +
+      (view.floors === 1 ? ' floor' : ' floors') +
       ' · ' +
-      study.model.count +
+      model.count +
       ' modules';
     $('materialProgramColors').checked = study.programColors;
     $('materialStructureView').checked = study.structureView;
@@ -732,18 +740,18 @@ const materialWorkspace = (() => {
     study.notes = $('materialNotes').value;
     saveStudy();
   });
-  $('updateMaterials').addEventListener('click', () => {
+  $('updateMaterials').addEventListener('click', () => appWork.run('Updating materials…', () => {
     captureMassing();
     syncStudy();
     $('materialStatus').textContent =
       'Updated from massing. Matching material assignments were kept.';
-  });
+  }));
   const snapshotButton = $('saveMaterialSnapshot');
   snapshotButton.addEventListener('click', async () => {
     const date = new Date();
     snapshotButton.disabled = true;
     try {
-      const sheet = drawMaterialSnapshot(study, cards, currentVariants, captureMaterialModel, date);
+      const sheet = drawMaterialSnapshot(displayStudy(), cards, currentVariants, captureMaterialModel, date);
       const png = await new Promise((resolve) => sheet.toBlob(resolve, 'image/png'));
       if (!png) throw Error('The browser could not create a PNG.');
       const filename = 'poly-nation-materials-' + date.toISOString().replace(/[:.]/g, '-') + '.png';
@@ -764,7 +772,7 @@ const materialWorkspace = (() => {
     buttons: { axo: 'materialAxo', plan: 'materialPlan', side: 'materialSide', fit: 'materialFit' }
   });
   document.addEventListener('west-village-change', () => {
-    if (!phase.hidden && study) rebuild();
+    if (!phase.hidden && study) syncStudy();
   });
 
   return {

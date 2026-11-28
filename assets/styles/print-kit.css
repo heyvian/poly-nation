@@ -1,0 +1,68 @@
+body.print-open .header-actions > :not(.workspace-nav) { display: none; }
+
+#printPhase {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px max(20px, calc((100vw - 1280px) / 2)) 38px;
+}
+
+.print-heading, .print-preview-heading, .print-part-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+
+.print-heading { margin-bottom: 18px; }
+.print-heading h2 { margin: 0; font-size: clamp(22px, 2.5vw, 32px); letter-spacing: -0.035em; }
+.print-heading p, .print-preview-heading p { margin: 3px 0 0; color: var(--muted); }
+.print-layout { display: grid; grid-template-columns: minmax(185px, 232px) minmax(0, 1fr); align-items: start; gap: 16px; }
+.print-results { min-width: 0; }
+
+.print-controls, .print-empty, .print-part-card, .print-guide, .print-viewport {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+}
+
+.print-controls, .print-part-card, .print-guide { padding: 14px; }
+.print-controls > label { display: block; margin-bottom: 5px; font-weight: 650; }
+.print-controls select, .print-part-toolbar select {
+  min-height: 34px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink);
+  background: #f7f9f4;
+  font: inherit;
+}
+.print-controls select { width: 100%; margin-bottom: 13px; }
+.print-controls p { margin: 0 0 13px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.print-controls .print-bed-spec { border-top: 1px solid var(--line); padding-top: 12px; }
+.print-controls #printStatus { margin: 9px 0 0; }
+.print-controls #printStatus[data-error] { color: #943f2c; }
+.print-primary { min-height: 36px; background: #315847; border-color: #315847; color: #fffefa; font-weight: 650; }
+.print-primary:hover:not(:disabled) { background: #284a3a; }
+.print-primary:disabled { opacity: 0.5; }
+.print-empty { display: grid; place-items: center; min-height: 290px; padding: 22px; color: var(--muted); text-align: center; }
+.print-empty[hidden] { display: none; }
+.print-preview-heading { margin-bottom: 8px; }
+.print-preview-heading p { font-size: 12px; }
+.print-viewport { position: relative; height: clamp(250px, 54vh, 565px); overflow: hidden; }
+.print-viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.print-part-card, .print-guide { margin-top: 12px; }
+.print-part-toolbar label { display: flex; min-width: 0; flex: 1; align-items: center; gap: 9px; font-weight: 650; }
+.print-part-toolbar select { flex: 1; min-width: 0; }
+.print-part-card p { margin: 10px 0 0; }
+.print-part-card ul, .print-guide li { margin: 6px 0; line-height: 1.4; }
+.print-guide #printWarnings { color: #795243; }
+
+@media (max-width: 680px) {
+  #printPhase { padding: 16px 12px 24px; }
+  .print-layout { grid-template-columns: minmax(0, 1fr); }
+  .print-empty { min-height: 160px; }
+  .print-part-toolbar label { flex-basis: 100%; }
+}

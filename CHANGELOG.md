@@ -1,5 +1,22 @@
 # Changelog
 
+## 3D Print kits
+
+- Generate scaled Massing, Assembly and Structure kits from the current model. Preview the assembled parts and their bed orientations, and download individual STLs or the numbered ZIP with vector assembly and clear-sheet cut guides.
+- Include the core, modules, mast, simplified swings and selected gantry. Split large assemblies for the X1 Carbon build volume and supply rail and clip samples where moving hardware fits.
+
+## Loading feedback
+
+- Show a full-page loading indicator during building recalculations, terrain loads and drawing generation.
+
+## Site-linked programme and envelope studies
+
+- Edit the West Village placement from Massing or Site. Reserve wet ground bays before module allocation, fit ground rooms to dry space, and recalculate circulation and recreation. Use the placed design in area schedules, programme drawings and occupancy trials.
+- Compare recessed or projecting round-core dock frames and a faceted perimeter, with folding bay shutters and separate seasonal deck and module closures.
+- Compare an open canal atrium and sloped glazing with public water access where it fits. Adjust insulated roof coverage and solar fins in the model and the heat and daylight study.
+- Compare Calgary airport extreme days by floor, with an ideal HVAC case, a free-running case and estimated atrium daylight. Export the hourly results as CSV using modeled weather profiles anchored to observed daily temperatures.
+- Fit three or six enclosed fireboat berths, a service quay and a marine workshop alongside the canal. Keep the new site space in a separate area schedule and show both directions of section through the hall.
+
 ## Linked West Village placement
 - Carry the selected terrain and site-adapted building through Massing, Materials, Build, Render and regular Drawings.
 - Route live occupancy along the graded site walks and reserve the nominal schedule and comparison trials for the base design.

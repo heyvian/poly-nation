@@ -269,43 +269,6 @@ function siteLobbyGrade(terrain, routes, [x, z]) {
   };
 }
 
-function siteFirehallBoatBay(model, position, surface, terrain, accessAngle) {
-  if (!surface?.proposed?.length) return null;
-  const rim = model.R + 3.15, back = Math.max(model.r + 1.2, rim - 13.4), halfWidth = 3.7,
-    canals = siteFoundationWater({ proposed: surface.proposed }, position, rim + 24),
-    district = siteFoundationWater(surface, position, rim + 24), options = [];
-  for (let i = 0; i < 144; i++) {
-    const angle = i * TAU / 144;
-    if (Math.sin(angDist(angle, accessAngle)) * rim < 7.5) continue;
-    const at = siteLine(position, angle), probes = [-halfWidth + 0.3, 0, halfWidth - 0.3].map((offset) =>
-      canals.spans(siteLine(position, angle, offset), back, rim + 17));
-    const reach = probes[1].flatMap(([from, to]) => probes[0].flatMap(([a, b]) => probes[2].map(([p, q]) =>
-      [Math.max(from, a, p, rim + 0.45), Math.min(to, b, q)])))
-      .filter(([from, to]) => to - from > 1.5).sort((a, b) => a[0] - b[0])[0];
-    if (!reach || reach[0] > rim + 12) continue;
-    const end = reach[0] + 0.85, cos = Math.cos(angle), sin = Math.sin(angle),
-      point = (station, offset) => [position[0] + station * cos - offset * sin, position[1] + station * sin + offset * cos],
-      crewSide = [-1, 1].sort((a, b) =>
-        Number(district.overlaps(point(rim - 2, a * (halfWidth + 1)), 0.75)) -
-        Number(district.overlaps(point(rim - 2, b * (halfWidth + 1)), 0.75)))[0],
-      [a, b, c, d] = [point(back, -halfWidth), point(end, -halfWidth), point(end, halfWidth), point(back, halfWidth)],
-      dryRear = !district.overlaps(at(back), halfWidth * 0.55),
-      level = surface.level - terrain.datum;
-    options.push({ angle, at, point, back, rim, end, halfWidth, crewSide, level, dryRear,
-      triangles: [[a, b, c], [a, c, d]], area: (rim - back) * 2 * halfWidth,
-      score: end - rim + (dryRear ? 0 : 4) });
-  }
-  options.sort((a, b) => a.score - b.score);
-  const moat = craneMoatBounds(model.crane), reach = rim + 52;
-  return options.find((bay) => {
-    const water = siteFoundationWater({ ...surface, garage: bay.triangles }, position, reach),
-      floor = bay.level + modelFloorPitch(model) + 0.28;
-    water.level = bay.level;
-    water.clearance = modelFloorPitch(model) - 0.8;
-    return siteBoatCrewAccess(bay, terrain, water, position, floor, moat);
-  }) ?? options[0] ?? null;
-}
-
 function siteMoatPlan(bounds, position, surface, terrain, water, foundation) {
   if (!bounds) return null;
   const triangles = siteMoatFootprint(bounds, position),
@@ -338,7 +301,7 @@ function siteRunwaySupports(crane, position, angle, water, pitch) {
   return { radii, poles, spans, unresolved: poles.length < 3 || spans.some(({ length }) => length > 42) };
 }
 
-function siteLowerRooms(model, terrain, position, floor, perimeter, rows, water, accessAngle, moat, boatBay, bearing, innerRing) {
+function siteLowerRooms(model, terrain, position, floor, perimeter, rows, water, accessAngle, moat, bearing, innerRing) {
   const { radius } = perimeter, outer = radius - 0.20, inner = Math.max(innerRing + 0.55, model.r + 1.35, outer - 6.4),
     bayLength = (outer - inner) * 1.42, half = bayLength / (2 * radius),
     ceiling = floor - SITE_PLATFORM_BEAM_TOP - SITE_DRY_BEAM_DEPTH,
@@ -349,7 +312,6 @@ function siteLowerRooms(model, terrain, position, floor, perimeter, rows, water,
     if (Math.sin(angDist(angle, accessAngle)) * radius < bayLength / 2 + 4) continue;
     const station = radius * local, width = 1.9;
     if (!perimeter.runs.some((run) => station - half * radius >= run.from && station + half * radius <= run.to)) continue;
-    if (boatBay && angDist(angle, boatBay.angle) * radius < bayLength / 2 + boatBay.halfWidth + 3) continue;
     const samples = [inner, (inner + outer) / 2, outer].flatMap((r) =>
       Array.from({ length: 7 }, (_, j) => siteLine(position, from + (to - from) * j / 6)(r)));
     if (samples.some((point) => water.overlaps(point, SITE_BANK_FOUNDATION_SETBACK + 1.1))) continue;
@@ -366,7 +328,7 @@ function siteLowerRooms(model, terrain, position, floor, perimeter, rows, water,
     if (!route) continue;
     options.push({ angle, at, inner, outer, from, to, level, ceiling, route, area: (outer ** 2 - inner ** 2) * half,
       door: { from: station - width / 2, to: station + width / 2, sill: level, head: level + 2.24 },
-      score: route.run - Math.min(ceiling - level, 4) + (boatBay ? angDist(angle, boatBay.angle) * 2 : 0) });
+      score: route.run - Math.min(ceiling - level, 4) });
   }
   const rooms = [];
   for (const room of options.sort((a, b) => a.score - b.score)) {
@@ -376,33 +338,10 @@ function siteLowerRooms(model, terrain, position, floor, perimeter, rows, water,
   return rooms;
 }
 
-function siteBoatCrewAccess(bay, terrain, water, position, floor, moat) {
-  const deck = bay.level + 0.48, ceiling = floor - SITE_PLATFORM_BEAM_TOP - SITE_DRY_BEAM_DEPTH;
-  for (const side of [bay.crewSide, -bay.crewSide]) {
-    const offset = side * (bay.halfWidth + 0.85), limit = moat ? moat.inner - bay.rim - 1 : 42,
-      landing = Math.max(deck, ...[-0.95, 0, 0.95].map((shift) =>
-        siteTerrainHeight(terrain, ...bay.point(bay.rim, offset + shift)) + 0.10));
-    if (landing - deck <= 2.1 && landing + 2.4 <= ceiling) {
-      const route = siteApproach(terrain, water, position, bay.angle, bay.rim, offset, landing, 'ramp', limit);
-      if (route) return { side, route, landing };
-    }
-    // When a canal runs alongside the slip, reach its nearest dry bank from the crew apron.
-    const origin = bay.point(bay.rim - 1.1, offset), direction = bay.angle + side * Math.PI / 2,
-      at = siteLine(origin, direction);
-    for (let distance = 1.6; distance <= 7; distance += 0.45) {
-      const point = at(distance), top = Math.max(deck, siteTerrainHeight(terrain, ...point) + 0.18);
-      if (water.overlaps(point, 0.95) || top - deck > Math.min(1.6, distance * 0.38) || top + 2.4 > ceiling) continue;
-      const route = siteApproach(terrain, water, origin, direction, distance, 0, top, 'stair', 20);
-      if (route) return { side, route, landing: top,
-        gangway: { at, angle: direction, width: 1.86, distance, deck, landing: top } };
-    }
-  }
-  return null;
-}
-
 function siteModuleFootprint(model, slot, position, bearing) {
   const angle = slot.angle + bearing, width = MODULE.width / 2 + 0.42,
-    from = model.R - 0.24, to = model.R + BUILD_SECTION.dockGap + MODULE.depth + 2.05,
+    from = coreBoundaryRadius(model, model.R, slot.angle) - 0.24,
+    to = model.R + BUILD_SECTION.dockGap + MODULE.depth + 2.05,
     left = siteLine(position, angle, -width), right = siteLine(position, angle, width);
   return { angle, width, from, to, corners: [left(from), left(to), right(to), right(from)] };
 }
@@ -421,7 +360,7 @@ function siteGroundStorey(model, terrain, position, angle, radius, water) {
     const footprint = siteModuleFootprint(model, slot, position, angle);
     if (water.overlapsFootprint(footprint.corners)) {
       wetBays.add(slot.j);
-      if (!slot.blocked) omitted.add(slot.i);
+      if (!slot.blocked || slot.siteReserved) omitted.add(slot.i);
       continue;
     }
     if (slot.blocked) continue;
@@ -455,14 +394,16 @@ function siteTerraceProfile(ground, [x, z], radius, floor) {
 
 function sitePlacementModel(model, plan) {
   if (!plan) return model;
-  const outdoor = plan.lookouts.find(({ type }) => type === 'dock'),
+  const canalStair = plan.canalAtrium?.upperStair,
+    circulation = canalStair ? { ...model.circulation, stairs: [...(model.circulation.stairs ?? []), canalStair] } : model.circulation,
+    outdoor = plan.lookouts.find(({ type }) => type === 'dock'),
     slots = plan.omitted.size || outdoor ? model.slots.map((slot) => {
       if (plan.omitted.has(slot.i)) return { ...slot, blocked: true, p: EMPTY, use: 'empty' };
       return slot.i === outdoor?.slot ? { ...slot, siteCanalLookout: true } : slot;
     }) : model.slots,
     crane = plan.runway?.lift ? { ...model.crane, groundRail: model.crane.groundRail + plan.runway.lift } : model.crane;
   const cos = Math.cos(plan.angle), sin = Math.sin(plan.angle), [x, z] = plan.position;
-  return { ...model, crane, slots, sitePlan: plan, siteWetBays: plan.wetBays, siteTransferredColumns: plan.transferredColumns,
+  return { ...model, crane, circulation, slots, sitePlan: plan, siteWetBays: plan.wetBays, siteTransferredColumns: plan.transferredColumns,
     siteCanalLookouts: plan.lookouts,
     siteTransferredLifts: new Set(plan.lateralBays.filter(({ wet }) => wet).map(({ key }) => key)),
     siteGroundAt: (px, pz) => siteTerrainHeight(plan.terrain, x + px * cos - pz * sin, z + px * sin + pz * cos) - plan.foundation };
@@ -582,12 +523,15 @@ function siteCoreBearings(model, terrain, position, bearing, water, radius, rows
   return { grid, columns, lateralBays, transferredColumns: new Set(columns.filter(({ wet }) => wet).map(({ key }) => key)) };
 }
 
-function siteFoundationPlan(model, terrain, { position, bearing, grade, water: districtSurface, lookout = 'atrium' }) {
+function siteFoundationPlan(model, terrain, {
+  position, bearing, grade, water: districtSurface, lookout = 'atrium', boatCapacity = 3, canalDepth = 2
+}) {
   const storey = buildStorey(model, 0), base = storey.base, pitch = modelFloorPitch(model), angle = bearing * Math.PI / 180,
     radius = model.R + 3.15, reach = Math.max(110, radius * 2.6),
     envelope = Math.max(radius, Math.hypot(model.R + BUILD_SECTION.dockGap + MODULE.depth + 2.05, MODULE.width / 2 + 0.4)),
     accessAngle = model.lobby.angle + angle,
-    boatBay = siteFirehallBoatBay(model, position, districtSurface, terrain, accessAngle),
+    boatBay = canalDepth >= SITE_MIN_FIREBOAT_DEPTH
+      ? siteFirehallBoatBay(model, position, districtSurface, terrain, accessAngle, boatCapacity) : null,
     surface = boatBay ? { ...districtSurface, garage: boatBay.triangles } : districtSurface,
     water = siteFoundationWater(surface, position, Math.max(270 + radius, reach + radius)),
     district = boatBay ? siteFoundationWater(districtSurface, position, reach + radius) : water,
@@ -672,9 +616,14 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
   }
   const finishedTerrain = accesses.length ? { ...terrace, groundProfile: siteLobbyGrade(terrace, accesses, position) } : terrace,
     gradeReach = Math.max(terrace === terrain ? 0 : envelope + 6, ...accesses.map(({ nodes }) => nodes.at(-1)[0] + 5));
-  const crew = boatBay && siteBoatCrewAccess(boatBay, finishedTerrain, water, position, crossingDeck, moat);
-  if (crew) Object.assign(boatBay, { crewSide: crew.side, route: crew.route, landing: crew.landing, gangway: crew.gangway });
-  const lowerRooms = siteLowerRooms(model, terrain, position, floor, perimeter, rows, water, accessAngle, moat, boatBay, angle, grid.inner),
+  const boatAccess = boatBay && siteBoatCrewAccess(boatBay, finishedTerrain, water, position);
+  if (boatAccess) Object.assign(boatBay, boatAccess, {
+    contextReach: Math.max(boatBay.contextReach, ...boatAccess.route.nodes.map(([station]) => {
+      const [x, z] = boatAccess.route.at(station);
+      return Math.hypot(x - position[0], z - position[1]) + 3;
+    }))
+  });
+  const lowerRooms = siteLowerRooms(model, terrain, position, floor, perimeter, rows, water, accessAngle, moat, angle, grid.inner),
     mastSeats = mastCrossing ? rows.filter((row) => Math.abs(row.offset) <= mastRadius + 0.5 &&
       row.transfers.some(({ from, to }) => from < 0 && to > 0)) : [];
   const dockFloors = new Map();
@@ -684,15 +633,18 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
     floors.push(slot.f);
     dockFloors.set(slot.j, floors);
   }
-  return { position, angle, radius, foundation, floor, pitch, roofLevel: model.roofPlan.y, dockFloors, groundAtPin, water, rows,
+  const plan = { position, angle, radius, foundation, floor, pitch, roofLevel: model.roofPlan.y, dockFloors, groundAtPin, water, rows,
     crossingOffset, anchor, crossingDeck, crossingSoffit, lookouts,
     omitted: ground?.omitted ?? new Set(), wetBays: ground?.wetBays ?? new Set(), mastCrossing, mastRadius, mastSeats,
     grid, columns, lateralBays, transferredColumns, foundationRings, crane,
     terrain: finishedTerrain, gradeReach, surface, accesses, accessAngle, moat, perimeter, runway, boatBay, lowerRooms,
-    contextReach: Math.max(envelope, model.crane?.extent ?? 0, ...(model.plaza.arrivals ?? []).map(({ end }) => end)),
+    contextReach: Math.max(envelope, model.crane?.extent ?? 0, boatBay?.contextReach ?? 0,
+      ...(model.plaza.arrivals ?? []).map(({ end }) => end)),
     unresolved: rows.some((row) => row.unresolved) || [...columns, ...lateralBays.flatMap(({ ends }) => ends)]
       .some(({ wet, transfer }) => wet && !transfer) ||
       mastCrossing && mastSeats.length < 2 };
+  plan.canalAtrium = planCanalAtriumEnclosure(model, plan, districtSurface, rowAngle);
+  return plan;
 }
 
 function sitePileStations({ from, to }) {
@@ -771,7 +723,8 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
   }
   function sector(inner, outer, bottom, depth, colour, from = 0, to = TAU) {
     const first = mesh.solid.length;
-    mesh.sector(inner, outer, from, to, bottom, depth, colour);
+    const outline = inner === model.R || outer === model.R ? coreOutline(model, plan.angle) : null;
+    mesh.sector(inner, outer, from, to, bottom, depth, colour, null, false, null, outline);
     for (let i = first; i < mesh.solid.length; i += 10) {
       mesh.solid[i] += position[0];
       mesh.solid[i + 2] += position[1];
@@ -947,62 +900,7 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
     slab(route, outer, level, route.nodes[0][0], level);
   }
   const { boatBay } = plan;
-  if (boatBay) {
-    const { back, rim, point, halfWidth, angle, crewSide, level, dryRear } = boatBay,
-      deck = level + 0.48, ceiling = plan.crossingSoffit,
-      quayEdge = crewSide * (halfWidth - 1.50), apron = crewSide * (halfWidth + 0.85),
-      box = (along, across, y, width, height, length, color) => {
-        const [x, z] = point(along, across);
-        mesh.box(x, y, z, width, height, length, angle, color, true);
-      };
-    mesh.mark('Site_Firehall_Boat_Garage', 'Water-level firehall bay and crew quay under the core');
-    const portal = model.R - 0.10, jamb = Math.min(0.74, ceiling - level - water.clearance);
-    if (jamb > 0.28) {
-      box(portal, 0, ceiling - 0.28, halfWidth * 2 + 0.28, 0.28, 0.36, steel);
-      for (const side of [-1, 1]) box(portal, side * halfWidth, ceiling - jamb, 0.25, jamb, 0.36, steel);
-    }
-    box((rim + back) / 2, (quayEdge + apron) / 2, deck - 0.24, Math.abs(apron - quayEdge) + 1.25, 0.24, rim - back, paving);
-    for (const side of [-1, 1]) {
-      const edge = side * (halfWidth + (side === crewSide ? 1.44 : 0.13)),
-        face = Math.min(model.R - 0.1, rim - 1);
-      if (!water.overlaps(point((back + face) / 2, edge), 0.18))
-        box((back + face) / 2, edge, deck - 0.24, 0.26, ceiling - deck + 0.24, face - back, concrete);
-    }
-    if (dryRear) box(back - 0.18, 0, deck - 0.24, halfWidth * 2, ceiling - deck + 0.24, 0.36, concrete);
-    for (const along of [back + 0.8, back + (rim - back) / 2, rim - 0.65])
-      box(along, quayEdge + crewSide * 0.16, deck, 0.14, 0.28, 0.2, steel);
-    if (boatBay.gangway) {
-      const gangway = boatBay.gangway, { distance, landing } = gangway,
-        steps = Math.max(1, Math.ceil((landing - deck) / 0.165));
-      for (let i = 0; i < steps; i++) {
-        const a = distance * i / steps, b = distance * (i + 1) / steps,
-          y = deck + (landing - deck) * i / steps, next = deck + (landing - deck) * (i + 1) / steps;
-        slab(gangway, a, y, a, next);
-        slab(gangway, a, next, b, next);
-      }
-    } else if (boatBay.route) {
-      const rise = boatBay.landing - deck, steps = Math.max(1, Math.ceil(rise / 0.165));
-      for (let i = 0; i < steps; i++) {
-        const y = deck + rise * (i + 1) / steps;
-        box(rim - 0.3 * (steps - i - 0.5), apron, deck - 0.12, 1.9, y - deck + 0.12, 0.30, paving);
-      }
-    }
-
-    mesh.mark('Site_Firehall_Rescue_Boat', 'Schematic fire rescue boat at the wet berth');
-    const center = (back + rim) / 2, across = -crewSide * 0.55, length = Math.min(5.6, rim - back - 0.65),
-      hull = [[-0.49, -0.99], [-0.49, 0.99], [0.28, 0.99], [0.5, 0], [0.28, -0.99]],
-      hullPoint = ([u, v], y, scale = 1) => {
-        const [x, z] = point(center + u * length * scale, across + v * scale);
-        return [x, y, z];
-      }, red = rgb('#935b4c'), white = rgb('#d1c7ad');
-    for (let i = 0; i < hull.length; i++) {
-      const a = hull[i], b = hull[(i + 1) % hull.length];
-      mesh.quad(hullPoint(a, level - 0.22, 0.79), hullPoint(b, level - 0.22, 0.79),
-        hullPoint(b, level + 0.31), hullPoint(a, level + 0.31), red);
-      mesh.tri(hullPoint([0, 0], level + 0.31), hullPoint(b, level + 0.31), hullPoint(a, level + 0.31), white);
-    }
-    box(center + length * 0.03, across, level + 0.30, 1.0, 0.79, Math.min(1.25, length / 3), red);
-  }
+  drawSiteFirehallBoatHall(mesh, boatBay, terrain, concrete, steel, paving);
   for (const access of plan.accesses) {
     mesh.mark('Site_Access_Lobby_Walks', 'Graded approaches to the ground-floor lobbies');
     for (const route of access.innerWalk ? [access.innerWalk, access] : [access]) {
@@ -1017,14 +915,15 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
   const extraAccess = [...plan.lowerRooms.map(({ route }) => route), ...(boatBay?.route ? [boatBay.route] : [])];
   for (const route of extraAccess) {
     const [[start, top], ...nodes] = route.nodes, [end] = nodes.at(-1),
-      stairs = route.kind === 'stair';
-    mesh.mark(stairs ? 'Site_Access_Stairs' : 'Site_Access_Ramps',
+      stairs = route.kind === 'stair', marine = route === boatBay?.route;
+    if (marine) mesh.mark('Site_Firehall_Boat_Access', stairs ? 'Marine service stair to grade' : 'Marine service walk to grade');
+    else mesh.mark(stairs ? 'Site_Access_Stairs' : 'Site_Access_Ramps',
       stairs ? 'Lower-level service stair to grade' : 'Lower-level ramp and landings to grade');
     for (const [i, [b, y]] of nodes.entries()) {
       const [a, before] = i ? nodes[i - 1] : [start, top];
       slab(route, a, before, b, y);
     }
-    mesh.mark('Site_Access_Handrails');
+    mesh.mark(marine ? 'Site_Firehall_Boat_Access_Rails' : 'Site_Access_Handrails');
     const sides = [-route.width / 2 + 0.055, route.width / 2 - 0.055];
     for (const side of sides) {
       let previous = null;
@@ -1076,6 +975,7 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
       }
     }
   }
+  drawCanalAtriumEnclosure(mesh, plan);
 }
 
 function siteFoundationAxo(model, plan, surface, canalDepth) {
@@ -1269,16 +1169,30 @@ function siteSectionCuts(plan, dockStructure = 'side-truss') {
       ] });
   }
   if (plan.boatBay) {
-    const bay = plan.boatBay;
-    cuts.push({ kind: 'boat-garage', title: 'Firehall · Canal inlet and boat garage',
-      note: `${Math.round(bay.area)} m² covered wet bay in the additional site programme. The rescue boat enters directly from the canal.`,
-      at: bay.at, angle: bay.angle, from: bay.back - 4, to: bay.end + 9, crown: plan.crossingDeck + 1.2,
+    const bay = plan.boatBay, across = (station) => bay.point((bay.back + bay.rim) / 2, station);
+    cuts.push({ kind: 'boat-garage', title: 'Firehall · Wet berth and marine workshop',
+      note: `${bay.capacity} covered slips for ${bay.boat.length} m response craft, with a continuous transfer quay and ${Math.round(bay.maintenanceArea)} m² for marine gear and servicing. The launch apron connects to the canal.`,
+      at: bay.at, angle: bay.angle, from: bay.serviceBack - 4, to: bay.end + 8, crown: bay.ceiling + 1.65,
+      recede: bay.berthWidth / 2 + 0.9,
       labels: [
-        [bay.rim - 3.5, plan.crossingSoffit, 'First elevated deck above the slip'],
-        [(bay.back + bay.rim) / 2, bay.level + 0.88, 'Rescue boat and crew quay'],
-        [bay.end + 0.6, bay.level - 0.3, 'Canal water entering the bay']
+        [bay.serviceBack + 3.2, bay.serviceFloor + 1.12, 'Marine workshop and gear storage', -8],
+        [bay.back - 1.35, bay.deck + 0.02, 'Continuous crew transfer quay', 26],
+        [(bay.back + bay.rim) / 2, bay.level + 0.9, `${bay.boat.length} m response craft`],
+        [bay.rim, bay.ceiling - 0.77, 'Overhead door, open for launch', -7],
+        [bay.end + 0.6, bay.level - 0.3, 'Canal water entering the launch apron', 42]
+      ] });
+    cuts.push({ kind: 'boat-hall-cross', title: 'Firehall · Across the wet berths',
+      note: `Each ${bay.berthWidth} m clear slip has a pedestrian quay at its side. The hulls, door openings and pile locations follow the marine-only layout.`,
+      at: across, angle: bay.angle + Math.PI / 2, from: -bay.halfWidth - 3, to: bay.halfWidth + 3,
+      crown: bay.ceiling + 1.65, recede: 3.4,
+      labels: [
+        [0, bay.ceiling + 1.16, 'Ridge rooflight and steel framing'],
+        [bay.slipCenters[0], bay.level + 1.32, 'Covered 5.25 m clear slip'],
+        [-bay.halfWidth + 0.82, bay.level - 1.25, 'Pile line under crew quay']
       ] });
   }
+  const envelopeCut = canalAtriumSectionCut(plan);
+  if (envelopeCut) cuts.push(envelopeCut);
   if (plan.lowerRooms.length) {
     const [room] = plan.lowerRooms, area = plan.lowerRooms.reduce((sum, bay) => sum + bay.area, 0);
     cuts.push({ kind: 'lower-programme', title: 'Landward core · Additional lower-level programme',

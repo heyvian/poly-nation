@@ -98,6 +98,7 @@ const openDrawingWorkspace = (() => {
     renderedGeometryMode = null,
     rendered = null,
     timer = 0,
+    finishDrawing,
     printingFloorSet = false,
     placing = false,
     drag = null;
@@ -959,7 +960,7 @@ const openDrawingWorkspace = (() => {
         ...(plan.mastRadius && !plan.mastCrossing ? [['#7f9185', 'Independent mast cap and piles']] : []),
         ...(plan.accesses.length ? [['#c7c0aa', 'Step-free lobby walks']] : []),
         ...(plan.lowerRooms.length ? [['#ac8d6f', 'Dry lower-level programme']] : []),
-        ...(plan.boatBay ? [['#935b4c', 'Firehall boat garage']] : []),
+        ...(plan.boatBay?.contextReach <= reach ? [['#935b4c', 'Fireboat hall']] : []),
         ...(mesh.groups.some(({ layer }) => layer === 'Site Bow River water') ? [['#4a939e', 'Modeled water']] : [])
       ];
     for (const [i, [fill, label]] of legend.entries()) {
@@ -978,6 +979,9 @@ const openDrawingWorkspace = (() => {
     if (!study) return [];
     const { plan, mesh, structure, context, district, canalDepth, dockStructure } = study, paper = SITE_SECTION_PAPER,
       geometry = drawingGeometry(mesh, sourceModel),
+      marineGeometry = plan.boatBay && drawingGeometry(mesh, sourceModel, {
+        include: ({ layer }) => layer.startsWith('Site_Firehall_')
+      }),
       structureGeometry = drawingGeometry(structure, sourceModel, {
         include: ({ layer }) => !/^(?:Crane_Traveling_|Swing_Crown|Site terrain|Site (?:Bow|canal|moat|water))/.test(layer)
       }),
@@ -996,7 +1000,8 @@ const openDrawingWorkspace = (() => {
     const sections = cuts.map((cut, index) => {
       const { title, note, at, angle, from, to, kind } = cut, [cx, cz] = plan.position,
         loadPath = kind === 'structural-axis', mast = kind === 'mast-foundation',
-        detail = ['canal-detail', 'canal-lookout', 'canal-lookout-open-air', 'piled-detail', 'approach', 'boat-garage', 'lower-programme'].includes(kind) || mast,
+        marine = kind === 'boat-garage' || kind === 'boat-hall-cross',
+        detail = ['canal-detail', 'canal-lookout', 'canal-lookout-open-air', 'canal-envelope', 'piled-detail', 'approach', 'boat-garage', 'boat-hall-cross', 'lower-programme'].includes(kind) || mast,
         district = kind === 'district',
         point = (station, height) => { const [x, z] = at(station); return [x - cx, height - plan.foundation, z - cz]; },
         along = [Math.cos(angle), 0, Math.sin(angle)], normal = [-along[2], 0, along[0]],
@@ -1010,8 +1015,8 @@ const openDrawingWorkspace = (() => {
         focus = [from, to].flatMap((station) => [bottom, detail || loadPath ? upper : Math.max(upper, contextTop + 3)].map((y) => point(station, y))),
         drawingY = detail ? 414 : 142,
         region = { width: w - 2 * margin - (cut.notes ? 315 : cut.labels ? 280 : 0), height: h - drawingY - 65 },
-        frame = renderDrawing(loadPath || mast || cut.elevatedArrival ? structureGeometry : geometry, camera, [
-          plane, { normal, offset: offset - (kind === 'boat-garage' ? 1.55 : mast ? 2.5 : loadPath ? 3.8 : 5), flip: true },
+        frame = renderDrawing(marine ? marineGeometry : loadPath || mast || cut.elevatedArrival ? structureGeometry : geometry, camera, [
+          plane, { normal, offset: offset - (cut.recede ?? (mast ? 2.5 : loadPath ? 3.8 : 5)), flip: true },
           { normal: along, offset: longitudinalOffset + to }, { normal: along, offset: longitudinalOffset + from, flip: true },
           { normal: [0, 1, 0], offset: upper - plan.foundation }
         ], paper, 'auto', false, centeredPlacement(), false, pens, { region, focus, cutFill: true, scales }),
@@ -1046,7 +1051,7 @@ const openDrawingWorkspace = (() => {
       if (detail) {
         const overviewY = 134, overviewRegion = { width: w - 2 * margin, height: drawingY - overviewY - 6 },
           overview = renderDrawing(contextGeometry, camera, [], paper, 'auto', false, centeredPlacement(), false, pale,
-            { region: overviewRegion, scales }),
+            { region: overviewRegion, scales, ...(marine ? { focus: [...contextGeometry.points, ...focus] } : {}) }),
           view = floorView(overview, '', margin, overviewY), contextArea = view.children[0];
         view.replaceChildren(contextArea);
         view.dataset.siteContext = 'inset';
@@ -1120,7 +1125,8 @@ const openDrawingWorkspace = (() => {
       text(margin, 106, note, 15);
       text(w - margin, 40, sheetNumber, 16, { 'text-anchor': 'end' });
       for (const y of [125, h - 65]) studyMark(svg, 'line', { x1: margin, y1: y, x2: w - margin, y2: y, stroke: rule });
-      const elevations = `Ground floor ${(plan.floor + plan.terrain.datum).toFixed(2)} m` +
+      const elevations = (marine ? `Crew quay ${(plan.boatBay.deck + plan.terrain.datum).toFixed(2)} m` :
+        `Ground floor ${(plan.floor + plan.terrain.datum).toFixed(2)} m`) +
         (surfaces.length ? `  ·  District study water level ${(plan.water.level + plan.terrain.datum).toFixed(2)} m` : '');
       text(margin, h - 38, `${elevations}  ·  Schematic site grades`, 14);
       const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 13 });
@@ -1344,9 +1350,8 @@ const openDrawingWorkspace = (() => {
     if (!sourceModel || panel.hidden) return;
     const revision = ++craneRender;
     if (settings.document === 'cranes') {
-      renderCraneDocument(revision);
       $('drawingDocumentStage').scrollTop = 0;
-      return;
+      return renderCraneDocument(revision);
     }
     cranePages = [];
     const paper = paperDimensions();
@@ -1357,7 +1362,7 @@ const openDrawingWorkspace = (() => {
         const pages = settings.document === 'lobbies'
           ? lobbyPages.map(({ preview }) => preview)
           : settings.document === 'site-sections' ? sitePages.map(({ preview }) => preview)
-            : drawingSetPages(settings.document, sourceModel, sourceAssignments);
+            : drawingSetPages(settings.document, siteWorkspace.designModel(sourceModel), sourceAssignments);
         $('printDocument').disabled = !pages.length;
         if (!pages.length) {
           const message = document.createElement('p');
@@ -1516,7 +1521,17 @@ const openDrawingWorkspace = (() => {
     $('printDocument').disabled = true;
     $('printFloorSet').disabled = true;
     clearTimeout(timer);
-    timer = setTimeout(render, 45);
+    finishDrawing ??= appWork.begin('Preparing drawings…');
+    timer = setTimeout(renderPending, 45);
+  }
+  async function renderPending() {
+    const finish = finishDrawing;
+    finishDrawing = null;
+    try {
+      await render();
+    } finally {
+      finish?.();
+    }
   }
   new ResizeObserver(() => {
     if (!panel.hidden) resizePaperPreview();
@@ -1805,8 +1820,12 @@ const openDrawingWorkspace = (() => {
     syncSettings();
     queueDrawing();
   };
-  document.addEventListener('west-village-change', () => {
+  document.addEventListener('west-village-change', (event) => {
     if (panel.hidden) return;
+    if (event.detail?.model && event.detail.model !== sourceModel) {
+      openDrawingWorkspace(event.detail.model, sourceAssignments);
+      return;
+    }
     syncSettings();
     queueDrawing();
   });
@@ -2404,7 +2423,7 @@ const openDrawingWorkspace = (() => {
       return;
     if (timer) {
       clearTimeout(timer);
-      render();
+      renderPending();
     }
     if (settings.document === 'cranes') {
       if (cranePages.length && !$('printDocument').disabled)
@@ -2429,7 +2448,7 @@ const openDrawingWorkspace = (() => {
     $('documentPrintPages').replaceChildren();
   });
   return (model, assignments) => {
-    const signature = JSON.stringify([assignments, buildViewLayers()]);
+    const signature = JSON.stringify([assignments, buildViewLayers(), climateFinStamp(model)]);
     if (sourceModel !== model || materialSignature !== signature) {
       sourceModel = model;
       sourceAssignments = assignments;

@@ -41,9 +41,11 @@ requestAnimationFrame(animateSwingFrame);
       build: { panel: $('buildPhase'), button: $('openBuild'), title: $('buildTitle') },
       render: { panel: $('renderPhase'), button: $('openRender'), title: $('renderTitle') },
       site: { panel: $('sitePhase'), button: $('openSite'), title: $('siteTitle') },
+      climate: { panel: $('climatePhase'), button: $('openClimate'), title: $('climateTitle') },
+      print: { panel: $('printPhase'), button: $('openPrint'), title: $('printTitle') },
       rationale: { panel: rationale, button: $('openRationale') }
     },
-    pageScroll = { massing: 0, materials: 0, drawings: 0, build: 0, render: 0, site: 0, rationale: 0 };
+    pageScroll = { massing: 0, materials: 0, drawings: 0, build: 0, render: 0, site: 0, climate: 0, print: 0, rationale: 0 };
   let activeWorkspace = 'massing',
     lastStudyWorkspace = 'massing';
 
@@ -62,6 +64,8 @@ requestAnimationFrame(animateSwingFrame);
     document.body.classList.toggle('build-open', workspace === 'build');
     document.body.classList.toggle('render-open', workspace === 'render');
     document.body.classList.toggle('site-open', workspace === 'site');
+    document.body.classList.toggle('climate-open', workspace === 'climate');
+    document.body.classList.toggle('print-open', workspace === 'print');
     activeWorkspace = workspace;
     if (workspace === 'materials') materialWorkspace.open();
     if (workspace === 'drawings') {
@@ -80,6 +84,14 @@ requestAnimationFrame(animateSwingFrame);
       if (pending) update();
       siteWorkspace.open(model, materialWorkspace.assignments());
     }
+    if (workspace === 'climate') {
+      if (pending) update();
+      climateWorkspace.open(model);
+    }
+    if (workspace === 'print') {
+      if (pending) update();
+      printWorkspace.open(model);
+    }
     if (workspace === 'massing') {
       if (massingSiteRevision !== siteWorkspace.revision) upload(model);
       else requestAnimationFrame(draw);
@@ -97,7 +109,7 @@ requestAnimationFrame(animateSwingFrame);
   for (const [name, { button }] of Object.entries(workspaces))
     button.addEventListener('click', () => showWorkspace(name));
   document.addEventListener('west-village-change', () => {
-    if (activeWorkspace === 'massing') upload(model);
+    if (activeWorkspace === 'massing' && massingSiteRevision !== siteWorkspace.revision) upload(model);
   });
   for (const id of ['drBack', 'drBottomBack'])
     $(id).addEventListener('click', () => showWorkspace(lastStudyWorkspace));

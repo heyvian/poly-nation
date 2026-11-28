@@ -506,7 +506,7 @@ function estimateMaterialAssemblies(model, assignments, rates, seed = state.seed
     for (const wall of coreFacadeSpans(model, floor))
       for (const span of coreFacadeSegments(model, floor, wall.span)) {
         const { facade } = materialValues(assignments, 'core', span.program);
-        measure(core, 'facade', facade, (span.end - span.start) * model.R * wall.height);
+        measure(core, 'facade', facade, coreFacadeLength(model, span.start, span.end) * wall.height);
       }
 
   let unenclosedArea = 0;

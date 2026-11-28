@@ -147,37 +147,37 @@ function meshBuilder() {
   function ringPoint(r, a, y) {
     return [r * Math.cos(a), y, r * Math.sin(a)];
   }
-  function sector(r, R, a, b, y, h, col, portal = null, hideTop = false, bands = null) {
-    const steps = Math.max(1, Math.ceil((b - a) / 0.055));
-    const cuts = Array.from({ length: steps + 1 }, (_, i) => a + ((b - a) * i) / steps);
+  function sector(r, R, a, b, y, h, col, portal = null, hideTop = false, bands = null, outline = null) {
+    const point = outline?.point ?? ringPoint;
+    const cuts = coreBoundaryAngles(outline, a, b);
     if (portal) for (const v of [portal.a, portal.b]) if (v > a && v < b) cuts.push(v);
-    cuts.sort((x, z) => x - z);
+    if (portal) cuts.sort((x, z) => x - z);
     for (let i = 0; i < cuts.length - 1; i++) {
       const u = cuts[i],
         v = cuts[i + 1];
       if (v - u < 1e-9) continue;
-      let A = ringPoint(r, u, y),
-        B = ringPoint(R, u, y),
-        C = ringPoint(R, v, y),
-        D = ringPoint(r, v, y),
-        At = ringPoint(r, u, y + h),
-        Bt = ringPoint(R, u, y + h),
-        Ct = ringPoint(R, v, y + h),
-        Dt = ringPoint(r, v, y + h);
+      const A = point(r, u, y),
+        B = point(R, u, y),
+        C = point(R, v, y),
+        D = point(r, v, y),
+        At = point(r, u, y + h),
+        Bt = point(R, u, y + h),
+        Ct = point(R, v, y + h),
+        Dt = point(r, v, y + h);
       if (!hideTop) quad(At, Dt, Ct, Bt, col);
       quad(A, B, C, D, col);
       if (portal && u >= portal.a - 1e-8 && v <= portal.b + 1e-8) {
         const lo = clamp(portal.lo, y, y + h),
           hi = clamp(portal.hi, y, y + h);
-        if (lo > y + 1e-7) quad(B, ringPoint(R, u, lo), ringPoint(R, v, lo), C, col);
-        if (hi < y + h - 1e-7) quad(ringPoint(R, u, hi), Bt, Ct, ringPoint(R, v, hi), col);
+        if (lo > y + 1e-7) quad(B, point(R, u, lo), point(R, v, lo), C, col);
+        if (hi < y + h - 1e-7) quad(point(R, u, hi), Bt, Ct, point(R, v, hi), col);
       } else if (bands) {
         for (const band of bands)
           quad(
-            ringPoint(R, u, band.low),
-            ringPoint(R, u, band.high),
-            ringPoint(R, v, band.high),
-            ringPoint(R, v, band.low),
+            point(R, u, band.low),
+            point(R, u, band.high),
+            point(R, v, band.high),
+            point(R, v, band.low),
             band.color
           );
       } else quad(B, Bt, Ct, C, col);
@@ -1185,7 +1185,7 @@ function drawStructureBays(system, length, height, point, line) {
   line(point(length, 0), point(length, height), color);
 }
 
-function drawMaterialModule(b, slot, x, y, z, preview, values) {
+function drawMaterialModule(b, slot, x, y, z, preview, values, entryClosed) {
   const { line } = b;
   const { width, height, depth } = MODULE;
   const angle = slot.angle;
@@ -1214,7 +1214,7 @@ function drawMaterialModule(b, slot, x, y, z, preview, values) {
       ? rgb(paint.colors[mod(slot.j + 2 * slot.f + preview.view.seed, paint.colors.length)])
       : finishColor(finish, slot.p, preview, variation);
   const [footX, , footZ] = point(0, -depth / 2, 0);
-  drawNominalDockModule(b, slot, footX, y, footZ, color, paint?.colors ? paint.gloss : 0, !framing);
+  drawNominalDockModule(b, slot, footX, y, footZ, color, paint?.colors ? paint.gloss : 0, !framing, entryClosed);
   if (preview.structureView ? !framing : !preview.finishJoints) return;
   const elevation = framing
     ? (length, locate) => drawStructureBays(system, length, height, locate, line)
@@ -1465,12 +1465,12 @@ function coreFacadeSpans(
   storey = buildStorey(model, floor),
   slidePortals = null
 ) {
-  const { base: y, soffit } = storey, head = dockOpeningHead(storey),
-    half = dockOpeningHalf(model), fullHeightHoles = lobbyHoles(model.lobby, floor),
+  const { base: y, soffit } = storey, head = dockBayHead(storey),
+    fullHeightHoles = lobbyHoles(model.lobby, floor),
     doorHoles = [];
   for (const slot of model.slots)
     if (slot.f === floor && !slot.blocked)
-      doorHoles.push([slot.angle, half]);
+      doorHoles.push([slot.angle, dockBayOpening(model, slot).half]);
   for (const connection of model.feature.slide?.connections || []) {
     if (connection.floor !== floor) continue;
     const portal = slidePortals?.find((entry) => entry.floor === floor);
@@ -1496,11 +1496,13 @@ function coreFacadeSpans(
 
 function coreFacadeSegments(model, floor, [start, end]) {
   const rooms = model.layers[floor][model.bandN - 1];
+  const outline = coreOutline(model);
   const cuts = [
     start,
     ...rooms
       .flatMap((room) => [room.start, room.end])
       .filter((angle) => angle > start && angle < end),
+    ...coreFaceDividers(outline, start, end),
     end
   ].sort((a, b) => a - b);
   const spans = [];
@@ -1513,12 +1515,18 @@ function coreFacadeSegments(model, floor, [start, end]) {
 }
 
 function drawMaterialFacade(b, model, floor, span, y, height, preview) {
+  const outline = coreOutline(model);
   for (const { start: a, end: z, program } of coreFacadeSegments(model, floor, span)) {
     const { structure, facade } = materialValues(preview.assignments, 'core', program);
     const system = STRUCTURAL_SYSTEMS[structure],
       finish = EXTERIOR_FINISHES[facade];
-    const point = (distance, up) => b.ringPoint(model.R + 0.028, a + distance / model.R, y + up);
-    const length = (z - a) * model.R;
+    const length = coreFacadeLength(model, a, z, outline);
+    const point = (distance, up) => {
+      if (!outline) return b.ringPoint(model.R + 0.028, a + distance / model.R, y + up);
+      const A = outline.point(model.R + 0.028, a, y + up),
+        B = outline.point(model.R + 0.028, z, y + up);
+      return A.map((p, i) => p + (B[i] - p) * distance / length);
+    };
     if (preview.structureView && system.frame !== 'solid') {
       drawStructureBays(system, length, height, point, b.line);
     } else {
@@ -1537,7 +1545,8 @@ function drawMaterialFacade(b, model, floor, span, y, height, preview) {
         color,
         null,
         false,
-        bands
+        bands,
+        outline
       );
       if (!bands && !preview.structureView && preview.finishJoints)
         drawFinishJoints(finish, length, height, point, b.textureLine, color);
@@ -1689,12 +1698,11 @@ function glassGuards({ quad, glass, line, ringPoint }) {
     quad(a, b, topB, topA, guardGlass, glass, 0.38);
     line(topA, topB, guardFrame);
   }
-  function curvedGlassGuard(radius, y, start, end) {
-    const panels = Math.ceil((end - start) / 0.07);
-    for (let i = 0; i < panels; i++) {
-      const a = start + ((end - start) * i) / panels,
-        z = start + ((end - start) * (i + 1)) / panels;
-      glassGuard(ringPoint(radius, a, y), ringPoint(radius, z, y));
+  function curvedGlassGuard(radius, y, start, end, outline = null) {
+    const cuts = coreBoundaryAngles(outline, start, end), point = outline?.point ?? ringPoint;
+    for (let i = 1; i < cuts.length; i++) {
+      if (cuts[i] - cuts[i - 1] > 1e-9)
+        glassGuard(point(radius, cuts[i - 1], y), point(radius, cuts[i], y));
     }
   }
   return { glassGuard, curvedGlassGuard };
@@ -2500,9 +2508,9 @@ const ROOM_FLOOR_FINISH = rgb('#c9bdb0');
 const CIRCULATION_FLOOR_FINISH = rgb('#f0eadc');
 
 // Brush the circulation finish along the route. Scatter aggregate in the poured room floors.
-function drawInteriorFloorPattern(mesh, patch, y, color, circulation, region = patch) {
+function drawInteriorFloorPattern(mesh, patch, y, color, circulation, region = patch, outline = null) {
   const { r, R, start, end } = patch;
-  const top = y + 0.003;
+  const top = y + 0.003, point = outline?.point ?? mesh.ringPoint;
   if (circulation) {
     // The returns cross the ring, so their bands run radially into the next corridor.
     const radial =
@@ -2524,10 +2532,10 @@ function drawInteriorFloorPattern(mesh, patch, y, color, circulation, region = p
         const left = a + ((b - a) * j) / steps,
           right = a + ((b - a) * (j + 1)) / steps;
         mesh.quad(
-          mesh.ringPoint(low, left, top),
-          mesh.ringPoint(low, right, top),
-          mesh.ringPoint(high, right, top),
-          mesh.ringPoint(high, left, top),
+          point(low, left, top),
+          point(low, right, top),
+          point(high, right, top),
+          point(high, left, top),
           ink
         );
       }
@@ -2550,7 +2558,7 @@ function drawInteriorFloorPattern(mesh, patch, y, color, circulation, region = p
       width = size / radius;
     if (radius - size < r || radius + size > R || angle - width < start || angle + width > end)
       continue;
-    const at = (dr, da) => mesh.ringPoint(radius + size * dr, angle + width * da, top);
+    const at = (dr, da) => point(radius + size * dr, angle + width * da, top);
     mesh.quad(
       at(-0.58, -0.4),
       at(-0.22, 0.8),
@@ -3431,6 +3439,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     edge = rgb('#a3aea3'),
     ground = rgb('#e4e8df');
   const { glassGuard, curvedGlassGuard } = glassGuards(b);
+  const outline = coreOutline(m);
   const floorH = modelFloorPitch(m),
     slabThickness = m.slabThickness ?? BUILD_SECTION.slabThickness,
     H = view.floors * floorH;
@@ -3455,7 +3464,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     }
   }
   mark('Core_Foundation');
-  sector(0, m.R + 0.25, 0, TAU, 0, Math.min(0.18, buildStorey(m, 0).underside), slab);
+  sector(0, m.R + 0.25, 0, TAU, 0, Math.min(0.18, buildStorey(m, 0).underside), slab, null, false, null, outline);
   mark('Infinite_Rinse_Greenhouse');
   const greenhouseLevel = m.greenhouse ? 0.46 : 0.3;
   sector(0, m.r, 0, TAU, 0.19, greenhouseLevel - 0.19, rgb('#c8d7c2'));
@@ -3500,7 +3509,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const l = m.lobby;
     const { underside } = buildStorey(m, f);
     for (const [a, z] of openArcs(f ? lobbyHoles(l, f) : []))
-      sector(m.r - 0.08, m.R + 0.12, a, z, underside, slabThickness, slab);
+      sector(m.r - 0.08, m.R + 0.12, a, z, underside, slabThickness, slab, null, false, null, outline);
     for (const room of m.rooms) {
       if (room.f !== f || (!exporting && !view.showRooms)) continue;
       mark(
@@ -3541,7 +3550,9 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         h,
         surface,
         portal,
-        !exporting && !view.inspect && view.showRoofDeck && !view.xray && f === view.floors - 1
+        !exporting && !view.inspect && view.showRoofDeck && !view.xray && f === view.floors - 1,
+        null,
+        outline
       );
       if (flat)
         drawInteriorFloorPattern(
@@ -3555,7 +3566,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           y + 0.25 + h,
           surface,
           false,
-          room
+          room,
+          outline
         );
       if (portal) {
         const frame = rgb('#287fa7'),
@@ -3593,8 +3605,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       `${kind}_${q.f + 1}_${q.start.toFixed(3)}`
     );
     if (isHub && q.layout) drawSharedLobbyFloor(b, q, y + 0.075);
-    else sector(q.r, q.R, q.start, q.end, y, isLift ? floorH - 0.18 : 0.075, color);
-    if (!isHub && !isLift) drawInteriorFloorPattern(b, q, y + 0.075, color, true);
+    else sector(q.r, q.R, q.start, q.end, y, isLift ? floorH - 0.18 : 0.075, color, null, false, null, outline);
+    if (!isHub && !isLift) drawInteriorFloorPattern(b, q, y + 0.075, color, true, q, outline);
     if (isLift) {
       const a = q.end,
         rad = (q.r + q.R) / 2,
@@ -3637,7 +3649,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
   }
   for (const stair of circulation.stairs ?? []) {
     if (!visible(stair.f) || !visible(stair.f - 1)) continue;
-    mark(`Atrium_Stair_L${stair.f + 1}`, `Bridge stair to level ${stair.f}`);
+    mark(stair.canal ? 'Atrium_Canal_Stair_L2' : `Atrium_Stair_L${stair.f + 1}`,
+      stair.canal ? 'Dry canal-side stair between the atrium and Level 2' : `Bridge stair to level ${stair.f}`);
     drawAtriumStair(b, rr, stair, dockWalkLevel(buildStorey(m, stair.f)),
       dockWalkLevel(buildStorey(m, stair.f - 1)), rgb('#d9bb87'));
   }
@@ -3676,10 +3689,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       frame = rgb('#ac9271'),
       glaze = rgb('#c7dbd9');
     mark(i ? 'Opposite_Lobby_Atrium' : 'Entrance_Lobby');
-    sector(m.r, m.R, a, z, base, dockWalkLevel(buildStorey(m, 0)) - base, rgb('#e5d3ae'));
+    sector(m.r, m.R, a, z, base, dockWalkLevel(buildStorey(m, 0)) - base, rgb('#e5d3ae'), null, false, null, outline);
     if (l.gallery && visible(1)) {
       mark('Lobby_Atrium_Upper_Gallery', 'Level 2 corridor bridge');
-      sector(l.gallery, m.R + 0.12, a, z, buildStorey(m, 1).underside, slabThickness, slab);
+      sector(l.gallery, m.R + 0.12, a, z, buildStorey(m, 1).underside, slabThickness, slab, null, false, null, outline);
       for (const radius of [l.gallery, m.R]) {
         const n = Math.max(1, Math.ceil((z - a) / 0.055));
         for (let j = 0; j < n; j++) {
@@ -3701,7 +3714,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       }
       mark(i ? 'Opposite_Lobby_Atrium' : 'Entrance_Lobby');
     }
-    if (!cut || view.inspect > l.levels) sector(m.r, m.R, a, z, top - 0.2, 0.2, rgb('#e5d3ae'));
+    if (!cut || view.inspect > l.levels)
+      sector(m.r, m.R, a, z, top - 0.2, 0.2, rgb('#e5d3ae'), null, false, null, outline);
     for (const k of [a, z]) {
       quad(
         ringPoint(m.r, k, sideBase),
@@ -3945,6 +3959,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
 
   // Primary modules and adaptive uses share the same docking geometry.
   const exterior = exporting || view.showModules ? moduleExteriorDetails(m, view.seed) : null;
+  const entryClosed = dockSealMode(m) !== 'summer';
   if (exterior) {
     for (const s of m.slots) {
       if (!visible(s.f) || s.blocked) continue;
@@ -3986,12 +4001,14 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         const detailed = values && (EXTERIOR_FINISHES[values.facade].detailed || STRUCTURAL_SYSTEMS[values.structure].logs);
         if (varied || detailed) {
           const plan = furnishedModulePlan(m, s, preview.assignments, view.seed, exterior.balconies.has(s.i));
-          drawFittedModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), preview, plan, { craneLifting: Boolean(m.crane) });
+          drawFittedModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), preview, plan, {
+            craneLifting: Boolean(m.crane), entryClosed
+          });
           if (plan.balcony) drawModuleBalcony(b, m, s, y, null, false, plan);
           continue;
         }
-        if (values) drawMaterialModule(b, s, x, y, z, preview, values);
-        else drawNominalDockModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), c);
+        if (values) drawMaterialModule(b, s, x, y, z, preview, values, entryClosed);
+        else drawNominalDockModule(b, s, foot * Math.cos(a), y, foot * Math.sin(a), c, 0, true, entryClosed);
         if (exterior.balconies.has(s.i))
           drawModuleBalcony(
             b,
@@ -4034,19 +4051,20 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       green = rgb('#a3b79a'),
       rail = rgb('#75897b');
     mark('Roof_Public_Deck');
-    sector(m.r, m.R, 0, TAU, y - slabThickness, slabThickness, green);
+    sector(m.r, m.R, 0, TAU, y - slabThickness, slabThickness, green, null, false, null, outline);
     mark('Roof_Public_Walking_Loop');
-    sector(m.R - p.walk, m.R, 0, TAU, y + 0.01, 0.065, walk);
+    sector(m.R - p.walk, m.R, 0, TAU, y + 0.01, 0.065, walk, null, false, null, outline);
     for (const a of [m.circulation.bridgeAngle, m.circulation.bridgeAngle + Math.PI]) {
       const half = Math.min(0.2, 1.15 / Math.max(1, m.r));
       mark('Roof_Pedestrian_Links');
       sector(m.r, m.R - p.walk, a - half, a + half, y + 0.01, 0.066, walk);
     }
     mark('Roof_Railings');
-    for (const radius of [m.r, m.R])
-      for (let i = 0; i < 100; i++) {
-        const a = (i * TAU) / 100,
-          d = ((i + 1) * TAU) / 100,
+    for (const radius of [m.r, m.R]) {
+      const bounds = coreBoundaryAngles(radius === m.R ? outline : null, 0, TAU);
+      const point = radius === m.R && outline ? outline.point : ringPoint;
+      for (let i = 1; i < bounds.length; i++) {
+        const a = bounds[i - 1], d = bounds[i],
           stairOpening = m.feature.ride.roofPitch?.stairHalfAngle ?? 0;
         if (
           radius === m.r &&
@@ -4054,9 +4072,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
             Math.max(stairOpening, 1.65 / Math.max(1, radius)) + TAU / 100
         )
           continue;
-        line(ringPoint(radius, a, y + 1.12), ringPoint(radius, d, y + 1.12), rail);
-        if (i % 2 === 0) line(ringPoint(radius, a, y + 0.03), ringPoint(radius, a, y + 1.12), rail);
+        line(point(radius, a, y + 1.12), point(radius, d, y + 1.12), rail);
+        if (i % 2 === 1) line(point(radius, a, y + 0.03), point(radius, a, y + 1.12), rail);
       }
+    }
     for (const q of p.lifts) {
       mark('Roof_Lift_Access_' + (q.block + 1));
       sector(q.r, q.R, q.start, q.end, y, q.accessHeight, rgb('#777a91'));
@@ -4129,7 +4148,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       }
     }
   }
-  // Opaque exterior envelope. Keep full-height entrance/slide portals and door-sized docking openings.
+  // Keep full-height entrance and slide portals and a full-width shutter opening at each dock.
   // The wall is inside the gross footprint; X-ray and the facade toggle affect the view only.
   if (exporting || (view.showFacade && !view.xray))
     for (let f = 0; f < view.floors; f++) {
@@ -4140,11 +4159,15 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       const storey = buildStorey(m, f);
       for (const { span, y, height } of coreFacadeSpans(m, f, storey)) {
         if (preview) drawMaterialFacade(b, m, f, span, y, height, preview);
-        else sector(inner, m.R, ...span, y, height, wall);
+        else sector(inner, m.R, ...span, y, height, wall, null, false, null, outline);
       }
-      for (const slot of m.slots)
-        if (slot.f === f && !slot.blocked)
-          drawDockClosure(b, m, slot, storey, dockInUse(slot) && cranePose?.slot?.i !== slot.i);
+      for (const slot of m.slots) {
+        if (slot.f !== f || slot.blocked) continue;
+        const installed = dockInUse(slot) && cranePose?.slot?.i !== slot.i;
+        drawDockClosure(b, m, slot, storey, installed);
+        if (installed && !exterior && !preview?.structureView)
+          drawDockWeatherScreen(b, m, slot, storey, slot.p !== EMPTY || slot.use === 'retail');
+      }
     }
 
   // Full-height outdoor climbing wall. The reserved dock strip stays unoccupied.
@@ -4220,7 +4243,6 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const pitch = ride.roofPitch,
       aBridge = m.circulation.bridgeAngle;
     if (exporting || (view.roof && !view.xray)) {
-      mark('Atrium_Glass_Roof');
       const raisedCanopy = pitch?.canopyRidgeY != null,
         roofc = rgb('#c4dfde'),
         frame = rgb(raisedCanopy ? '#728a81' : '#9aada8'),
@@ -4232,18 +4254,12 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
         roofPoint = (radius, angle, frameOffset = 0) =>
           ringPoint(radius, angle, roofY(radius) + frameOffset);
       const n = 96;
+      drawAtriumRoofPanels(b, m, { inner, outer, point: roofPoint, glazeLayer: 'Atrium_Glass_Roof',
+        alpha: raisedCanopy ? 0.38 : 0.28 });
+      mark('Atrium_Roof_Glazing_Frame');
       for (let i = 0; i < n; i++) {
         const a = (i * TAU) / n,
           d = ((i + 1) * TAU) / n;
-        quad(
-          roofPoint(inner, d),
-          roofPoint(outer, d),
-          roofPoint(outer, a),
-          roofPoint(inner, a),
-          roofc,
-          glass,
-          raisedCanopy ? 0.38 : 0.28
-        );
         line(roofPoint(outer, a, 0.01), roofPoint(outer, d, 0.01), frame);
         line(roofPoint(inner, a, 0.01), roofPoint(inner, d, 0.01), frame);
       }
@@ -4254,8 +4270,8 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
       for (const scale of [0.33, 0.66])
         for (let i = 0; i < n; i++)
           line(
-            roofPoint(inner + (rr - inner) * scale, (i * TAU) / n, 0.02),
-            roofPoint(inner + (rr - inner) * scale, ((i + 1) * TAU) / n, 0.02),
+            roofPoint(inner + (outer - inner) * scale, (i * TAU) / n, 0.02),
+            roofPoint(inner + (outer - inner) * scale, ((i + 1) * TAU) / n, 0.02),
             frame
           );
       if (raisedCanopy) {

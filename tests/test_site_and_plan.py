@@ -170,8 +170,12 @@ with serve_lab(root) as url, sync_playwright() as p:
     assert not tile_requests, 'Terrain was requested before the placement step'
 
     # No vector map service is required to show the river and excavations in the supplied plans.
-    page.locator('#loadSite').click()
+    assert page.locator('#loadSite').evaluate('''button => {
+      button.click();
+      return !document.getElementById('appWorking').hidden;
+    }''')
     expect(page.locator('#siteStatus')).to_contain_text('Mapzen Terrain Tiles', timeout=20000)
+    expect(page.locator('#appWorking')).to_be_hidden()
     expect(page.locator('#sitePlacementStatus')).to_contain_text('Ground at pin 1040.0 m')
     expect(page.locator('#siteWaterStatus')).to_contain_text('Bow River study level 1040.0 m')
     expect(page.locator('#siteWaterStatus')).to_contain_text('Approximate plan registration')
@@ -366,6 +370,8 @@ with serve_lab(root) as url, sync_playwright() as p:
         dry = siteFoundationPlan(building, terrain, { position, bearing, grade: 5.5, water: null }),
         elevated = siteFoundationPlan({ ...model, crane: planModuleCrane(model, 'elevated') }, terrain,
           { position, bearing, grade: 0, water }),
+        six = siteFoundationPlan(building, terrain, { position, bearing, grade: 0, water, boatCapacity: 6 }),
+        shallow = siteFoundationPlan(building, terrain, { position, bearing, grade: 0, water, canalDepth: 1.5 }),
         mesh = meshBuilder();
       drawCraneInfrastructure(mesh, building, crane, rgb('#5d7971'), true);
       const scene = siteAssemblyMesh({ ...mesh, H: 60, extent: 120, craneMoat: craneMoatBounds(crane) }, terrain,
@@ -379,10 +385,14 @@ with serve_lab(root) as url, sync_playwright() as p:
         bay = plan.boatBay, cuts = siteSectionCuts(plan).map(({ kind }) => kind);
       return plan.moat.connected && !dry.moat.connected && moatHeights.length && canalHeights.length &&
         [...moatHeights, ...canalHeights].every((y) => Math.abs(y - (water.level - terrain.datum)) < 1e-5) &&
-        bay?.area > 45 && plan.water.overlaps(bay.at(bay.back + 0.2)) && elevated.runway.spans.length > 0 &&
+        bay?.capacity === 3 && bay.boat.length >= 11 && bay.boat.beam < bay.berthWidth && bay.maintenanceArea >= 120 &&
+        !shallow.boatBay && !shallow.surface.garage && six.boatBay?.capacity === 6 &&
+        six.boatBay.slipCenters.length === 6 && six.boatBay.area > bay.area &&
+        plan.water.overlaps(bay.at(bay.back + 0.2)) && elevated.runway.spans.length > 0 &&
         elevated.runway.poles.every((azimuth) => elevated.runway.radii.every((radius) =>
           !elevated.water.overlaps(siteLine(position, azimuth)(radius), 1.1))) &&
-        scene.groups.some(({ layer }) => layer === 'Site_Firehall_Rescue_Boat') && cuts.includes('boat-garage') &&
+        scene.groups.some(({ layer }) => layer === 'Site_Firehall_Rescue_Boat') &&
+        cuts.includes('boat-garage') && cuts.includes('boat-hall-cross') &&
         dry.lowerRooms.length && dry.lowerRooms.every(({ ceiling, level }) => ceiling - level >= 2.7) &&
         JSON.stringify(model.layers) === layers;
     }''')
@@ -464,9 +474,31 @@ with serve_lab(root) as url, sync_playwright() as p:
     page.route(fallback, lambda route: route.abort())
     page.locator('#loadSite').click()
     expect(page.locator('#siteStatus')).to_contain_text('previous elevation surface is still shown')
+    expect(page.locator('#appWorking')).to_be_hidden()
     expect(page.locator('#siteCanvas')).to_be_visible()
     page.locator('#sitePlaceMode').click()
     expect(footprint).to_have_attribute('transform', pin)
+    svg.scroll_into_view_if_needed()
+    pick(660, 387)
+    page.wait_for_function('''() => model.siteGeometry.canalArea > 0 && model.siteGeometry.wetBays.size > 0 &&
+      model.slots.filter(({ siteReserved }) => siteReserved).every(({ f, blocked, p, use }) =>
+        f === 0 && blocked && p === EMPTY && use === 'blocked') &&
+      model.total <= state.areaCap + 0.001''')
+    page.locator('#openMassing').click()
+    page.locator('summary').filter(has_text='West Village site').click()
+    before_site_change = page.evaluate('model.siteGeometry.position')
+    page.locator('#designSiteMoveEast').click()
+    page.wait_for_function('before => model.siteGeometry.position.some((value, i) => value !== before[i])', arg=before_site_change)
+    page.locator('#openDrawings').click()
+    page.locator('#drawingDocument').select_option('programme')
+    expect(page.locator('#documentPages')).to_contain_text('of ground plate open at the water')
+    expect(page.locator('#documentPages [data-site-water]').first).to_be_attached()
+    expect(page.locator('#documentPages [data-site-footprint]').first).to_be_attached()
+    page.evaluate('window.print = () => {}')
+    page.locator('#printDocument').click()
+    pdf = page.pdf(prefer_css_page_size=True, print_background=True)
+    assert b'/MediaBox [0 0 1224 792]' in pdf and b'/Subtype /Image' not in pdf
+    page.evaluate('window.dispatchEvent(new Event("afterprint"))')
     mobile = browser.new_page(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
     mobile.goto(url + '/')
     mobile.locator('#openSite').click()

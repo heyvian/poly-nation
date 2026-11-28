@@ -304,7 +304,7 @@ function createWebGLRenderer(gl) {
         float rim = clamp((r - uLightGeometry.x + 1.) / 9., 0., 1.);
         bool outside = r > uLightGeometry.y + .06;
         float sky = (y < base - .12 || y > top - .03 || outside)
-          ? 1. : (.44 + .49 * depth) * (1. - .86 * rim);
+          ? 1. : (.44 + .49 * depth) * (1. - .86 * rim) * uLightControls.w;
         float level = floor((y - base + .045) / uLightData.y);
         vec2 uv = .5 + vWorld.xz / (2. * uLightData.x);
         float pool = 0.;
@@ -780,10 +780,7 @@ function initProgrammingEditor() {
     )
       return;
     // Pick against the latest layout if a field edit queued a rebuild.
-    if (pending) {
-      cancelAnimationFrame(pending);
-      update();
-    }
+    if (pending) update();
     const selected = pickMassingLocation(event.clientX, event.clientY);
     if (selected) openEditor(selected.pick);
   });
@@ -796,6 +793,7 @@ function initProgrammingEditor() {
 let massingSiteRevision;
 function upload(m) {
   const placed = siteWorkspace.designModel(m);
+  $('canalAtriumInfo').textContent = canalAtriumDescription(placed.sitePlan?.canalAtrium);
   massingSiteRevision = siteWorkspace.revision;
   if (
     !occupancy ||
@@ -809,10 +807,13 @@ function upload(m) {
   const siteStatus = $('designSiteStatus');
   siteStatus.hidden = placed === m;
   if (placed !== m) {
-    const omitted = m.slots.filter((slot) => placed.sitePlan.omitted.has(slot.i) &&
-      (slot.p !== EMPTY || slot.use === 'retail')).length;
-    siteStatus.textContent = `West Village placement linked. ${omitted ? `${omitted} enclosed bays (${fmt(omitted * MODULE.area)} m²) omitted at the water. ` : ''}` +
-      'The area schedule and comparison trials use the base design.';
+    const { wetBays, canalArea } = m.siteGeometry,
+      { terrain, floor, boatBay, lowerRooms } = placed.sitePlan,
+      extra = lowerRooms.reduce((area, room) => area + room.area, boatBay?.area ?? 0);
+    siteStatus.textContent = `West Village placement linked. Ground floor at ${(terrain.datum + floor).toFixed(1)} m.` +
+      (wetBays.size ? ` ${wetBays.size} ground-floor docks reserved over water.` : '') +
+      (canalArea > 0.5 ? ` ${fmt(canalArea)} m² of ground floor opens to water.` : '') +
+      (extra > 0.5 ? ` ${fmt(extra)} m² of additional site programme outside the area budget.` : '');
   }
   const mesh = siteWorkspace.composeDesign(buildMesh(placed, false, massingView()), m);
   if (programEditing) prepareProgramTargets(mesh);
@@ -866,7 +867,7 @@ function paintWebGL(
     { back, right, up, target, half } = modelProjection(gpu.mesh, camera, aspect);
   const u = gpu.u;
   if (light) {
-    gl.uniform4f(u.uLightControls, 1, light.daylight, light.interior, 0);
+    gl.uniform4f(u.uLightControls, 1, light.daylight, light.interior, light.roofTransmission ?? 1);
     gl.uniform4f(u.uLightGeometry, light.radius, light.outer, light.base, light.top);
     gl.uniform4f(u.uLightData, light.extent, light.pitch, light.levels, light.size);
     gl.activeTexture(gl.TEXTURE0);
@@ -1043,9 +1044,21 @@ for (const [id, key] of Object.entries(viewKeys))
     refreshView();
     renderCrossScore();
   };
-// Recalculate the model, synchronize the controls and readouts, and schedule an autosave.
-function update() {
+let finishScheduledUpdate;
+function update(options) {
+  if (pending) cancelAnimationFrame(pending);
   pending = 0;
+  const finish = finishScheduledUpdate;
+  finishScheduledUpdate = null;
+  try {
+    rebuildDesign(options);
+  } finally {
+    finish?.();
+  }
+}
+
+// Recalculate the model, synchronize the controls and readouts, and schedule an autosave.
+function rebuildDesign({ preserveAllocation = false } = {}) {
   const R = Math.sqrt(state.footprint / Math.PI);
   $('ringWidth').max = state.autoCore
     ? 35
@@ -1056,7 +1069,7 @@ function update() {
   for (const [id, key] of Object.entries(viewKeys))
     $(id).setAttribute('aria-pressed', String(state[key]));
   model = derive();
-  if (state.allocationMoves.length && !model.allocationApplied) {
+  if (!preserveAllocation && state.allocationMoves.length && !model.allocationApplied) {
     state.allocationMoves = [];
     setOptimizationStatus('The updated design cleared the saved allocation exchanges.');
   }
@@ -1068,7 +1081,7 @@ function update() {
     s = m.feature.slide;
   $('climbSize').textContent = c
     ? c.width.toFixed(1) + ' m × ' + c.height.toFixed(1) + ' m'
-    : 'Off';
+    : m.siteGeometry && state.climbWidth ? 'No dry landing' : 'Off';
   $('climbBlocked').textContent = c ? c.blocked.size + ' slots' : '0 slots';
   $('climbClearance').textContent = s?.climbCrossing
     ? s.climbClearance.toFixed(1) + ' m (conceptual)'
@@ -1155,7 +1168,8 @@ function update() {
   $('diameter').textContent = (m.R * 2).toFixed(1) + ' m';
   $('ringArea').textContent = fmt(m.ringPer) + ' m²';
   $('courtArea').textContent = fmt(m.court) + ' m²';
-  $('lobbyArea').textContent = fmt(m.lobby.area) + ' m²';
+  const lobbyArea = m.lobby.siteArea ?? m.lobby.area;
+  $('lobbyArea').textContent = fmt(lobbyArea) + ' m²';
   $('lobbyVoid').textContent = fmt(m.lobby.voidArea) + ' m²';
   $('lobbyVolume').textContent = fmt(m.lobby.volume) + ' m³';
   $('lobbyBlocked').textContent = m.lobby.blocked.size + ' slots';
@@ -1173,7 +1187,9 @@ function update() {
   warning(
     'slideWarning',
     state.slideLength && !m.feature.slide
-      ? 'No suitable vertically separated Infinite Rinse facade rooms. Try another variation or more core Rinse area / floors.'
+      ? m.siteGeometry
+        ? 'No Infinite Rinse room pair fits the slide and clears the current terrain and canal.'
+        : 'No suitable vertically separated Infinite Rinse facade rooms. Try another variation or more core Rinse area / floors.'
       : ''
   );
   warning(
@@ -1226,9 +1242,9 @@ function update() {
     rows += `<tr><td><i class="dot" style="background:${p.color}"></i>${p.name}</td><td>${fmt(p.goal)}</td><td>${fmt(m.core[i])}</td><td>${m.counts[i]}</td><td><b>${fmt(total)}</b></td><td class="${d < -0.5 ? 'negative' : d > 0.5 ? 'positive' : ''}">${signed(d)}</td></tr>`;
     bar += `<div title="${p.name}: ${fmt(total)} m²" style="background:${p.color};width:${(total / m.total) * 100}%"></div>`;
   });
-  if (m.lobby.area) {
-    rows += `<tr><td><i class="dot" style="background:#e5d3ae"></i>Lobby atriums</td><td>—</td><td>${fmt(m.lobby.area)}</td><td>—</td><td><b>${fmt(m.lobby.area)}</b></td><td>—</td></tr>`;
-    bar += `<div style="background:#e5d3ae;width:${(m.lobby.area / m.total) * 100}%"></div>`;
+  if (lobbyArea) {
+    rows += `<tr><td><i class="dot" style="background:#e5d3ae"></i>Lobby atriums</td><td>—</td><td>${fmt(lobbyArea)}</td><td>—</td><td><b>${fmt(lobbyArea)}</b></td><td>—</td></tr>`;
+    bar += `<div style="background:#e5d3ae;width:${(lobbyArea / m.total) * 100}%"></div>`;
   }
   if (m.circulation.total) {
     for (const [name, value, color] of [
@@ -1284,9 +1300,13 @@ function update() {
   upload(m);
   queueSave();
 }
-// Combine bursts of form and pointer changes into one recalculation per frame.
+// Combine bursts of form and pointer changes and paint the status before deriving.
 function scheduleUpdate() {
-  if (!pending) pending = requestAnimationFrame(update);
+  if (pending) return;
+  finishScheduledUpdate = appWork.begin('Updating the building…');
+  pending = requestAnimationFrame(() => {
+    pending = requestAnimationFrame(() => update());
+  });
 }
 $('shuffle').onclick = () => {
   state.seed = (state.seed + 1) >>> 0;
@@ -1316,7 +1336,7 @@ for (const k of ['roof', 'grid', 'supports', 'showModules', 'showPeople', 'showA
 $('export').onclick = () => {
   if (pending) update();
   if (!model) return;
-  const m = model,
+  const m = model, site = siteWorkspace.designModel(m).sitePlan,
     data = {
       schemaVersion: 17,
       crossPollination: {
@@ -1332,6 +1352,13 @@ $('export').onclick = () => {
       units: 'meters, square meters',
       crane: m.crane,
       state,
+      ...(m.siteGeometry && { siteGeometry: {
+        ...m.siteGeometry,
+        wetBays: [...m.siteGeometry.wetBays],
+        groundFloorElevation: site ? site.terrain.datum + site.floor : null,
+        additionalDryArea: site?.lowerRooms.reduce((sum, room) => sum + room.area, 0) ?? 0,
+        additionalMarineArea: site?.boatBay?.area ?? 0
+      } }),
       geometry: {
         outerFootprint: Math.PI * m.R * m.R,
         outerWallThickness: facadeThickness(m),
@@ -1399,7 +1426,7 @@ $('export').onclick = () => {
       remainingArea: Math.max(0, state.areaCap - m.total),
       primaryTarget: state.areaCap - m.retail - m.roofPlan.retailArea,
       programTarget:
-        state.areaCap - m.retail - m.roofPlan.area - m.lobby.area - m.circulation.total,
+        state.areaCap - m.retail - m.roofPlan.area - (m.lobby.siteArea ?? m.lobby.area) - m.circulation.total,
       camera,
       lobby: { ...m.lobby, blocked: [...m.lobby.blocked] },
       greenhouse: m.greenhouse,
@@ -1467,6 +1494,7 @@ function applySaved(data) {
     mix: [0, 100],
     slideLength: [0, 100],
     climbWidth: [0, 24],
+    atriumOpaquePct: [0, 80],
     lobby: [0, 1000],
     corridorWidth: [1.5, 5],
     areaCap: [5000, 50000],
@@ -1479,6 +1507,11 @@ function applySaved(data) {
   for (const [k, [a, b]] of Object.entries(ranges))
     if (typeof s[k] === 'number' && Number.isFinite(s[k])) d[k] = clamp(s[k], a, b);
   if (Object.hasOwn(BRIDGE_MODES, s.atriumBridges)) d.atriumBridges = s.atriumBridges;
+  if (CORE_ENVELOPES.includes(s.coreEnvelope)) d.coreEnvelope = s.coreEnvelope;
+  if (DOCK_SEASONS.includes(s.dockSeal)) d.dockSeal = s.dockSeal;
+  if (ATRIUM_FIN_MODES.includes(s.atriumFinMode)) d.atriumFinMode = s.atriumFinMode;
+  if (CANAL_ATRIUM_MODES.includes(s.canalAtriumSeal)) d.canalAtriumSeal = s.canalAtriumSeal;
+  d.atriumOpaquePct = Math.round(d.atriumOpaquePct);
   if (s.craneStage === 'ride') d.craneStage = 'travel';
   else if (Object.hasOwn(CRANE_STAGES, s.craneStage)) d.craneStage = s.craneStage;
   if (Object.hasOwn(CRANE_RUNWAYS, s.craneRunway)) d.craneRunway = s.craneRunway;
@@ -1627,11 +1660,13 @@ $('importFile').onchange = async () => {
   if (!f) return;
   try {
     const data = JSON.parse(await f.text());
-    applySaved(data);
-    initCrossUI();
-    wheelRender();
-    update();
-    saveNow();
+    await appWork.run('Restoring the design…', () => {
+      applySaved(data);
+      initCrossUI();
+      wheelRender();
+      update();
+      saveNow();
+    });
   } catch (e) {
     alert('Could not restore configuration: ' + e.message);
   } finally {

@@ -347,7 +347,7 @@ function buildNavigation(m, includeBridgeSeats = true) {
     for (let i = 1; i < list.length; i++) connect(list[i - 1].id, list[i].id, null, 'lift');
   }
   // Occupied modules and adaptive public decks are accessible destinations through their dock doors.
-  for (const slot of m.slots) {
+  for (const slot of dockSealMode(m) === 'secured' ? [] : m.slots) {
     if (slot.blocked || !dockInUse(slot)) continue;
     const a = slot.angle,
       f = slot.f,
@@ -1395,7 +1395,13 @@ function cpSignature() {
     memory: state.memoryBonus,
     program: state.programBonus,
     fun: state.funBonus,
-    species: state.speciesBonus
+    species: state.speciesBonus,
+    site: model?.siteGeometry && [
+      ...model.siteGeometry.position,
+      model.siteGeometry.angle,
+      model.siteGeometry.floor,
+      siteWorkspace.designStudyKey()
+    ]
   });
 }
 function refreshTrialDashboard() {
@@ -1841,14 +1847,11 @@ async function toggleTrial() {
   }
   try {
     // Clicking a trial button can commit a number field and queue a layout on the same click.
-    if (pending) {
-      cancelAnimationFrame(pending);
-      update();
-    }
+    if (pending) update();
     if (!model) return;
     const trialModel = model,
       signature = cpSignature(),
-      trial = makeOccupancy(trialModel);
+      trial = makeOccupancy(siteWorkspace.designModel(trialModel));
     cpTrialActive = trial;
     refreshTrialDashboard();
     const completed = await advanceTrialBatches(
@@ -1993,9 +1996,10 @@ function finishLayoutSearch(message) {
 
 async function meanLayoutRate(layout, seeds, isCurrent) {
   let sum = 0;
+  const placed = siteWorkspace.designModel(layout);
   for (const seed of seeds) {
     if (!isCurrent()) return null;
-    const trial = makeOccupancy(layout, seed);
+    const trial = makeOccupancy(placed, seed);
     if (trial.graph.entry == null || !(await advanceTrialBatches(trial, isCurrent))) return null;
     sum += crossRate(trial);
   }
@@ -2048,10 +2052,7 @@ async function optimizeDesign(mode) {
   let search = null;
   let message = 'Layout search stopped because the settings changed.';
   try {
-    if (pending) {
-      cancelAnimationFrame(pending);
-      update();
-    }
+    if (pending) update();
     if (!model?.count) {
       message = 'The model needs modules to search for alternate placements.';
       return;

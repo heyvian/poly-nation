@@ -15,12 +15,22 @@ const siteWorkspace = (() => {
     bearing = $('siteBearing'),
     grade = $('siteGrade'),
     lookout = $('siteCanalLookout'),
+    boatCapacity = $('siteBoatCapacity'),
     linkDesign = $('siteLinkDesign'),
     load = $('loadSite'),
     sourcePicker = $('sitePlanSource'),
     status = $('siteStatus'),
     dataStatus = $('siteWaterStatus'),
     registrationStatus = $('siteRegistration'),
+    massingControls = [
+      [linkDesign, $('designSiteLink')],
+      [bearing, $('designSiteBearing')],
+      [grade, $('designSiteGrade')],
+      [condition, $('designSiteCondition')],
+      [depth, $('designSiteDepth')],
+      [lookout, $('designSiteLookout')],
+      [boatCapacity, $('designSiteBoatCapacity')]
+    ],
     key = 'poly-nation-west-village-v1',
     terrainKey = 'poly-nation-west-village-terrain-v1',
     supportCache = new WeakMap(),
@@ -44,7 +54,9 @@ const siteWorkspace = (() => {
     signature = '',
     context = null,
     renderer = null,
-    fallback = null;
+    fallback = null,
+    design = null,
+    lastDesign = null;
   let focusBuilding = false;
 
   try {
@@ -57,6 +69,7 @@ const siteWorkspace = (() => {
       bearing.value = mod(Number(saved.bearing) || 0, 360);
       grade.value = clamp(Number(saved.grade) || 0, -20, 20);
       lookout.value = ['outdoor', 'both'].includes(saved.lookout) ? saved.lookout : 'atrium';
+      boatCapacity.value = Number(saved.boatCapacity) === 6 ? '6' : '3';
       linkDesign.checked = saved.linkDesign !== false;
       contours.checked = saved.contours !== false;
       waterToggle.checked = saved.water !== false;
@@ -114,6 +127,7 @@ const siteWorkspace = (() => {
           depth: depth.value,
           grade: grade.value,
           lookout: lookout.value,
+          boatCapacity: Number(boatCapacity.value),
           linkDesign: linkDesign.checked,
           bearing: bearing.value,
           contours: contours.checked,
@@ -147,6 +161,7 @@ const siteWorkspace = (() => {
       grade: clamp(Number(grade.value) || 0, -20, 20),
       bearing: mod(Number(bearing.value) || 0, 360),
       lookout: lookout.value,
+      boatCapacity: Number(boatCapacity.value),
       showContours: contours.checked,
       showWater: waterToggle.checked,
       canalDepth: clamp(Number(depth.value) || 2, 0.5, 8),
@@ -157,7 +172,8 @@ const siteWorkspace = (() => {
 
   function supportPlan(model) {
     if (!terrain || !model) return null;
-    const options = sceneOptions(), placement = [...options.position, options.grade, options.bearing, options.lookout].join('/');
+    const options = sceneOptions(), placement = [...options.position, options.grade, options.bearing, options.lookout,
+      options.boatCapacity, options.canalDepth].join('/');
     let cached = supportCache.get(model);
     if (cached?.terrain !== terrain || cached.surface !== surface || cached.placement !== placement) {
       const plan = siteFoundationPlan(model, terrain, options);
@@ -172,6 +188,104 @@ const siteWorkspace = (() => {
   }
 
   const linked = () => Boolean(terrain && linkDesign.checked);
+
+  // Share the same water extents and module footprint with the foundation study.
+  // The fit only needs local measurements. The full site mesh is assembled after allocation.
+  function designConstraints() {
+    if (!linked()) return null;
+    const { position, bearing, grade, canalDepth, water: districtWater } = sceneOptions(),
+      key = [...position, bearing, grade, canalDepth].join('/');
+    if (design?.terrain === terrain && design?.surface === districtWater && design.key === key)
+      return design.constraints;
+    const angle = bearing * Math.PI / 180,
+      cos = Math.cos(angle), sin = Math.sin(angle),
+      ground = siteTerrainHeight(terrain, ...position),
+      water = siteFoundationWater(districtWater, position, 340),
+      level = (districtWater?.level ?? terrain.datum) - terrain.datum,
+      point = (x, z) => [position[0] + x * cos - z * sin, position[1] + x * sin + z * cos],
+      fits = new Map();
+    const constraints = {
+      position, angle, ground,
+      resolve(R, r, slotN, coreEnvelope) {
+        const fitKey = [R, r, slotN, coreEnvelope].join('/');
+        if (fits.has(fitKey)) return fits.get(fitKey);
+        const core = { R, r, slotN, coreEnvelope },
+          cutRadius = (radius, azimuth) => coreBoundaryRadius(core, radius, azimuth),
+          local = (radius, azimuth) => {
+            const station = cutRadius(radius, azimuth);
+            return point(station * Math.cos(azimuth), station * Math.sin(azimuth));
+          },
+          wetBays = new Set(), coreReach = cutRadius(R, Math.PI / slotN),
+          reachesWater = water.overlaps(position, R + MODULE.depth + BUILD_SECTION.dockGap + 3),
+          cutsCore = reachesWater && water.overlaps(position, coreReach),
+          arcCache = new Map(),
+          areaCache = new Map();
+        if (reachesWater) for (let j = 0; j < slotN; j++) {
+          const footprint = siteModuleFootprint(core, { angle: TAU * j / slotN }, position, angle);
+          if (water.overlapsFootprint(footprint.corners)) wetBays.add(j);
+        }
+        function dryArcs(lo, hi, start, end) {
+          if (!cutsCore) return [[start, end]];
+          const key = [lo, hi, start, end].join('/');
+          if (arcCache.has(key)) return arcCache.get(key);
+          const steps = Math.max(1, Math.ceil((end - start) * hi / 1.25)), dry = [];
+          for (let i = 0; i < steps; i++) {
+            const a = start + (end - start) * i / steps, b = start + (end - start) * (i + 1) / steps,
+              corners = [local(lo, a), local(hi, a), local(hi, b), local(lo, b)];
+            if (water.overlapsFootprint(corners)) continue;
+            if (dry.at(-1)?.[1] === a) dry.at(-1)[1] = b;
+            else dry.push([a, b]);
+          }
+          arcCache.set(key, dry);
+          return dry;
+        }
+        function wetArea(lo, hi, start = 0, end = TAU) {
+          if (!cutsCore) return 0;
+          const key = [lo, hi, start, end].join('/');
+          if (areaCache.has(key)) return areaCache.get(key);
+          const strips = Math.max(1, Math.ceil((end - start) * hi / 0.75)), step = (end - start) / strips;
+          let area = 0;
+          for (let i = 0; i < strips; i++) {
+            const azimuth = start + (i + 0.5) * step,
+              at = siteLine(position, angle + azimuth);
+            for (const [a, b] of water.spans(at, cutRadius(lo, azimuth), cutRadius(hi, azimuth)))
+              area += (b ** 2 - a ** 2) * step / 2;
+          }
+          areaCache.set(key, area);
+          return area;
+        }
+        const crosses = reachesWater && Boolean(water.anchor(R + 3.15)),
+          base = BUILD_SECTION.slabBase + BUILD_SECTION.slabThickness,
+          bankElevations = crosses ? Array.from({ length: 72 }, (_, i) =>
+            siteLine(position, i * TAU / 72)(R + 3.15))
+            .filter((at) => !water.overlaps(at, 0.5))
+            .map((at) => siteTerrainHeight(terrain, ...at)).sort((a, b) => a - b) : [],
+          near = bankElevations[Math.floor(bankElevations.length * 0.20)] ?? ground,
+          floor = Math.max((crosses ? near + 0.22 : ground + base) + grade,
+            crosses ? level + 0.25 : -Infinity);
+        const fit = {
+          wetBays, cutRing: wetArea(r, R), cutCourt: wetArea(0, r), dryArcs, wetArea,
+          dryWalk(azimuth, from, to, width) {
+            return !reachesWater || siteDryWalk(water, position, angle + azimuth, from, to, width);
+          },
+          surfaceBelow(x, z, radius) {
+            return Math.max(...[[x, z], [x + radius, z], [x - radius, z], [x, z + radius], [x, z - radius]]
+              .map(([dx, dz]) => {
+                const at = point(dx, dz);
+                return reachesWater && water.overlaps(at) ? level : siteTerrainHeight(terrain, ...at);
+              }));
+          },
+          // The detailed foundation may raise this datum to clear the highest bank.
+          floor, foundation: floor - base
+        };
+        if (fits.size >= 80) fits.clear();
+        fits.set(fitKey, fit);
+        return fit;
+      }
+    };
+    design = { terrain, surface: districtWater, key, constraints };
+    return constraints;
+  }
 
   function present() {
     if (panel.hidden || mode !== 'terrain' || !scene) return;
@@ -242,10 +356,12 @@ const siteWorkspace = (() => {
             : ' The lobby approaches need a different alignment to meet dry grade.',
           dryArea = supports.lowerRooms.reduce((total, room) => total + room.area, 0),
           dry = dryArea > 0 ? ` ${Math.round(dryArea)} m² of additional lower-level programme.` : '',
-          boat = supports.boatBay ? ` ${Math.round(supports.boatBay.area)} m² covered firehall boat bay.` +
-            (supports.boatBay.route ? '' : ' The crew approach still needs an alignment.') : '',
-          modules = building.slots.filter((slot) => supports.omitted.has(slot.i) && (slot.p !== EMPTY || slot.use === 'retail')).length,
-          clearBays = supports.omitted.size ? ` ${supports.omitted.size} ground-level dock bays cleared at the water (${modules} enclosed modules).` : '',
+          boat = supports.boatBay ? ` The marine hall houses ${supports.boatBay.capacity} boats and ${Math.round(supports.boatBay.maintenanceArea)} m² of landward servicing space.` +
+            (supports.boatBay.route ? '' : ' The service entrance needs a dry approach.')
+            : condition.value !== 'proposed' ? '' : sceneOptions().canalDepth < SITE_MIN_FIREBOAT_DEPTH
+              ? ` The fireboat hall needs at least ${SITE_MIN_FIREBOAT_DEPTH.toFixed(2)} m of modeled water for draft and under-keel clearance.`
+              : ` No dry bank fits the selected ${boatCapacity.value}-boat hall and its launch apron at this placement.`,
+          clearBays = supports.omitted.size ? ` ${supports.omitted.size} ground-level dock bays reserved over water.` : '',
           moat = supports.moat?.connected ? ' The moat shares the district water level.' : '',
           runway = (supports.runway ?? supports.moat?.runway)?.unresolved ? ' Long runway crossings need a separate span study.' : '';
         supportStatus.textContent = (supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' : structure) +
@@ -276,6 +392,15 @@ const siteWorkspace = (() => {
         : '';
       dataStatus.textContent = `Bow River study level ${surface.level.toFixed(1)} m. ${method}${trees}`;
     }
+    for (const [source, mirror] of massingControls) {
+      if (!source || !mirror) continue;
+      if (source.type === 'checkbox') mirror.checked = source.checked;
+      else mirror.value = source.value;
+    }
+    $('designSiteDepthField').hidden = condition.value !== 'proposed';
+    $('designSitePlacement').textContent = terrainError || $('sitePlacementStatus').textContent;
+    $('designSiteLoad').disabled = load.disabled;
+    $('designSiteLoad').textContent = load.disabled ? 'Loading terrain…' : terrain ? 'Reload terrain' : 'Load terrain';
   }
 
   function updatePlan() {
@@ -320,11 +445,30 @@ const siteWorkspace = (() => {
   function changed({ refreshWater = false, fit = false } = {}) {
     if (refreshWater) refreshSurface();
     revision++;
+    const activeDesign = designConstraints();
+    if (lastDesign !== activeDesign && model) update({ preserveAllocation: true });
+    building = model ?? building;
+    lastDesign = activeDesign;
     updatePlan();
     syncStatus();
     rebuild(fit);
     save();
-    document.dispatchEvent(new Event('west-village-change'));
+    document.dispatchEvent(new CustomEvent('west-village-change', { detail: { model } }));
+  }
+
+  let queuedChange;
+  function queueChange({ refreshWater = false } = {}) {
+    if (!terrain) return changed({ refreshWater });
+    if (queuedChange) {
+      queuedChange.refreshWater ||= refreshWater;
+      return;
+    }
+    queuedChange = { refreshWater };
+    return appWork.run('Updating the site and building…', () => {
+      const options = queuedChange;
+      queuedChange = null;
+      changed(options);
+    });
   }
 
   function setMode(value, draw = true) {
@@ -336,7 +480,9 @@ const siteWorkspace = (() => {
     $('siteTerrainPanel').hidden = showPlan;
     $('siteTerrainEmpty').hidden = Boolean(terrain);
     $('siteViewport').hidden = !terrain;
-    if (draw && !showPlan && terrain) rebuild(!scene);
+    if (draw && !showPlan && terrain) appWork.run('Preparing the site view…', () => {
+      if (mode === value) rebuild(!scene);
+    });
     save();
   }
 
@@ -356,12 +502,16 @@ const siteWorkspace = (() => {
         );
         const match = matchWestVillagePlan(elements),
           relocated = match && JSON.stringify(match) !== JSON.stringify(registration);
-        if (relocated) registration = match;
-        if (includeVegetation) {
-          mapped = elements;
-          if (terrain) natural = siteNaturalOverlay(mapped, terrain);
+        function applyMap() {
+          if (relocated) registration = match;
+          if (includeVegetation) {
+            mapped = elements;
+            if (terrain) natural = siteNaturalOverlay(mapped, terrain);
+          }
+          changed({ refreshWater: relocated });
         }
-        changed({ refreshWater: relocated });
+        if (terrain && (relocated || includeVegetation)) await appWork.run('Updating the site map…', applyMap);
+        else if (relocated || includeVegetation) applyMap();
       } catch {
         // The material supplied for the studio already contains the river and canal outlines.
       } finally {
@@ -377,6 +527,8 @@ const siteWorkspace = (() => {
   load.onclick = async () => {
     if (load.disabled) return;
     load.disabled = true;
+    $('designSiteLoad').disabled = true;
+    $('designSiteLoad').textContent = 'Loading terrain…';
     status.textContent = 'Loading live terrain…';
     const controller = new AbortController(),
       timeout = setTimeout(() => controller.abort(), 26000);
@@ -384,16 +536,17 @@ const siteWorkspace = (() => {
     // the elevation surface or delete the river that is already on the studio plan.
     lookupMap();
     try {
-      const sampled = await loadWestVillageTerrain(controller.signal);
-      terrain = sampled;
-      natural = mapped && vegetation.checked ? siteNaturalOverlay(mapped, terrain) : null;
-      saveTerrain();
-      directions = null;
-      refreshSurface();
-      terrainError = '';
-      setMode('terrain', false);
-      changed({ fit: true });
-      load.textContent = 'Reload live terrain';
+      await appWork.run('Loading terrain and updating the building…', async () => {
+        terrain = await loadWestVillageTerrain(controller.signal);
+        natural = mapped && vegetation.checked ? siteNaturalOverlay(mapped, terrain) : null;
+        saveTerrain();
+        directions = null;
+        refreshSurface();
+        terrainError = '';
+        setMode('terrain', false);
+        changed({ fit: true });
+        load.textContent = 'Reload live terrain';
+      });
     } catch {
       terrainError = terrain
         ? 'Live refresh was unavailable. The previous elevation surface is still shown.'
@@ -402,7 +555,7 @@ const siteWorkspace = (() => {
     } finally {
       clearTimeout(timeout);
       load.disabled = false;
-      if (!terrainError) syncStatus();
+      syncStatus();
     }
   };
 
@@ -416,7 +569,7 @@ const siteWorkspace = (() => {
     pin = point;
     // Returning from the plan should follow the moved building when its close-up is active.
     if (focusBuilding) scene = null;
-    changed();
+    return queueChange();
   }
 
   const [left, top, width, height] = frame,
@@ -460,9 +613,8 @@ const siteWorkspace = (() => {
     updatePlan();
     save();
   };
-  condition.onchange = () => changed({ refreshWater: true });
-  lookout.onchange = () => changed();
-  linkDesign.onchange = () => changed();
+  condition.onchange = () => queueChange({ refreshWater: true });
+  lookout.onchange = boatCapacity.onchange = linkDesign.onchange = () => queueChange();
   depth.onchange =
     bearing.onchange =
     grade.onchange =
@@ -470,16 +622,32 @@ const siteWorkspace = (() => {
         depth.value = sceneOptions().canalDepth;
         bearing.value = sceneOptions().bearing;
         grade.value = sceneOptions().grade;
-        changed();
+        queueChange();
       };
-  contours.onchange = waterToggle.onchange = () => changed();
+  contours.onchange = waterToggle.onchange = () => queueChange();
   vegetation.onchange = () => {
     if (vegetation.checked && terrain) {
       if (mapped) natural = siteNaturalOverlay(mapped, terrain);
       else lookupMap();
     }
-    changed();
+    queueChange();
   };
+  for (const [source, mirror] of massingControls) {
+    if (!source || !mirror) continue;
+    mirror.onchange = () => {
+      if (source.type === 'checkbox') source.checked = mirror.checked;
+      else source.value = mirror.value;
+      source.dispatchEvent(new Event('change'));
+    };
+  }
+  for (const [direction, dx, dz] of [['North', 0, 5], ['West', 5, 0], ['South', 0, -5], ['East', -5, 0]]) {
+    $('designSiteMove' + direction).onclick = () => {
+      const [x, z] = westVillageToGround(pin, registration);
+      place(westVillageToPage([x + dx, z + dz], registration));
+    };
+  }
+  $('designSiteOpen').onclick = () => $('openSite').click();
+  $('designSiteLoad').onclick = () => load.click();
 
   bindModelCamera({
     canvas,
@@ -497,11 +665,18 @@ const siteWorkspace = (() => {
   };
   new ResizeObserver(present).observe(canvas);
   refreshSurface();
+  lastDesign = designConstraints();
   updatePlan();
   syncStatus();
   if (terrain) load.textContent = 'Reload live terrain';
 
   return {
+    designConstraints,
+    designStudyKey() {
+      if (!linked()) return null;
+      return [condition.value, lookout.value, grade.value, depth.value, boatCapacity.value,
+        terrain.provider, surface?.level].join('/');
+    },
     get hasTerrain() {
       return Boolean(terrain);
     },
@@ -565,7 +740,7 @@ const siteWorkspace = (() => {
           moduleInteriors: false
         },
         craneSettings = state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : undefined,
-        next = JSON.stringify([assignments, layers, craneSettings]);
+        next = JSON.stringify([assignments, layers, craneSettings, climateFinStamp(model)]);
       if (modelChanged || signature !== next) {
         signature = next;
         assemblyOptions = { assignments, layers, craneSettings };

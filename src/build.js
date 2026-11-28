@@ -585,79 +585,125 @@ function drawSharedDockSupports(mesh, model, slots, structure, slabThickness, gr
   }
 }
 
-// Angular cuts suit the ring wall. Fill their reveals back to straight,
-// parallel jambs so the shutter, collar and module all use one radial axis.
-function drawDockClosure(mesh, model, slot, storey, use = dockInUse(slot)) {
-  const { coreWidth, coreHeight } = DOCK_ENTRY,
-    floor = dockWalkLevel(storey), thresholdHead = floor + coreHeight,
-    openingHead = dockOpeningHead(storey), half = dockOpeningHalf(model),
-    inside = model.R - facadeThickness(model), outside = model.R,
-    hinge = Math.sqrt(inside ** 2 - (coreWidth / 2) ** 2),
+// The fixed receiver squares off the jambs and carries an inward-folding bay door.
+function drawDockClosure(mesh, model, slot, storey, installed = dockInUse(slot)) {
+  const { width, half, plane, inner: innerFace, jamb } = dockBayOpening(model, slot),
+    floor = dockWalkLevel(storey), openingHead = dockBayHead(storey),
+    panelHead = openingHead - DOCK_ENTRY.shutterPocket,
     { point, block } = craneFrame(mesh, slot.angle),
-    door = rgb('#84998d'), frame = rgb('#627973'), seam = rgb('#556d61');
-  mesh.mark(`Dock_Closure_${use ? 'Folded' : 'Sealed'}_L${slot.f + 1}`, `Slot_${slot.j}`);
+    door = rgb('#84998d'), frame = rgb('#627973'), seam = rgb('#556d61'),
+    folded = installed && dockSealMode(model) !== 'secured',
+    hinge = plane - 0.05;
+  mesh.mark(`Dock_Closure_${folded ? 'Folded' : 'Sealed'}_L${slot.f + 1}`, `Slot_${slot.j}`);
   for (const side of [-1, 1]) {
-    const profile = [[hinge, side * coreWidth / 2],
-      [inside * Math.cos(half), side * inside * Math.sin(half)],
-      [outside * Math.cos(half), side * outside * Math.sin(half)],
-      [Math.sqrt(outside ** 2 - (coreWidth / 2) ** 2), side * coreWidth / 2]];
-    const at = (pointOnPlan, y) => point(...pointOnPlan, y);
-    for (const y of [storey.base, openingHead]) mesh.quad(...profile.map((p) => at(p, y)), frame);
+    const angle = slot.angle + side * half,
+      inner = coreBoundaryRadius(model, model.R - facadeThickness(model), angle),
+      outer = coreBoundaryRadius(model, model.R, angle),
+      profile = [
+        [inner * Math.cos(half), side * width / 2],
+        [inner * Math.cos(half), side * inner * Math.sin(half)],
+        [outer * Math.cos(half), side * outer * Math.sin(half)],
+        [plane + 0.035, side * (width / 2 + jamb)],
+        [plane + 0.035, side * width / 2]
+      ],
+      at = (p, y) => point(...p, y);
+    for (const y of [storey.base, openingHead])
+      for (let i = 1; i < profile.length - 1; i++)
+        mesh.tri(at(profile[0], y), at(profile[i], y), at(profile[i + 1], y), frame);
     for (const [i, a] of profile.entries()) {
       const b = profile[(i + 1) % profile.length];
       mesh.quad(at(a, storey.base), at(b, storey.base), at(b, openingHead), at(a, openingHead), frame);
     }
+    block(hinge, side * (width / 2 + 0.012), floor, 0.045, panelHead - floor, 0.115, seam);
   }
-  const headFrom = inside * Math.cos(half), headTo = outside;
-  block((headFrom + headTo) / 2, 0, thresholdHead, 2 * outside * Math.sin(half),
-    openingHead - thresholdHead, headTo - headFrom, frame);
-  const leaf = coreHeight / 2;
-  if (use) {
+  const sillFrom = innerFace - 0.12, sillTo = plane + 0.17;
+  block((sillFrom + sillTo) / 2, 0, floor - 0.18, width + 2 * jamb, 0.176,
+    sillTo - sillFrom, frame);
+  block(plane, 0, openingHead - 0.055, width + 2 * jamb, 0.055, 0.14, frame, true);
+  const leaf = (panelHead - floor) / 2;
+  if (folded) {
+    // Park the two mirrored leaves under the perimeter beam, inside the weather line.
     for (const [i, color] of [door, seam].entries())
-      block(hinge - leaf / 2 + 0.034, 0, thresholdHead + 0.018 + i * 0.064,
-        coreWidth - 0.02, 0.057, leaf, color);
-  } else {
-    const center = inside + (outside - inside) * 0.6;
-    for (const bottom of [floor, floor + leaf])
-      block(center, 0, bottom + 0.002, coreWidth + 0.02, leaf - 0.004, 0.075, door, true);
-    const at = (across) => point(center + 0.039, across, floor + leaf);
-    mesh.line(at(-coreWidth / 2), at(coreWidth / 2), seam);
+      block(hinge - leaf / 2, 0, panelHead + 0.018 + i * 0.064,
+        width - 0.024, 0.057, leaf, color, true);
+    return;
   }
+  for (const bottom of [floor, floor + leaf])
+    block(hinge, 0, bottom + 0.002, width, leaf - 0.004, 0.075, door, true);
+  block(hinge, 0, panelHead, width + 0.02, DOCK_ENTRY.shutterPocket - 0.045, 0.075, frame);
+  mesh.line(point(hinge + 0.039, -width / 2, floor + leaf),
+    point(hinge + 0.039, width / 2, floor + leaf), seam);
 }
 
 function drawDockPassage(mesh, model, slot, storey, enclosed, enclosure) {
   const { coreWidth, coreHeight } = DOCK_ENTRY, clear = coreWidth / 2,
-    floor = dockWalkLevel(storey), foot = dockFootRadius(model),
-    from = model.R - facadeThickness(model) - 0.018, rim = model.R,
+    floor = dockWalkLevel(storey), foot = dockFootRadius(model), bay = dockBayOpening(model, slot),
+    from = bay.inner - 0.20, rim = model.R,
     { block, point } = craneFrame(mesh, slot.angle), frame = rgb('#6d837a'), sill = rgb('#c0b5a0');
   mesh.mark(enclosed ? 'Assembly_Module_Dock_Collar' : `Circulation_L${slot.f + 1}_Dock_Thresholds`,
     enclosed ? `${slot.f + 1}/Slot_${slot.j}` : `Dock_${slot.j}`);
   block((from + foot) / 2, 0, storey.base - 0.09, coreWidth + 0.12, 0.09, foot - from, sill);
-  // The cover starts at the curved floor edge. Its buried plate can run back
-  // into the slab without two visible surfaces fighting for the same pixels.
+  // The buried plate bears into the slab. Its visible cover starts at the outer edge.
   const half = clear + 0.06, segments = 8,
-    rear = (u) => Math.sqrt(rim ** 2 - u ** 2) - rim * (1 - Math.cos(0.055 / 2));
+    rear = (u) => {
+      const offset = Math.asin(u / rim);
+      return (coreBoundaryRadius(model, rim, slot.angle + offset) - 0.015) * Math.cos(offset);
+    };
   for (let i = 0; i < segments; i++) {
     const a = -half + 2 * half * i / segments, b = -half + 2 * half * (i + 1) / segments;
     mesh.quad(point(rear(a), a, floor), point(rear(b), b, floor), point(foot, b, floor), point(foot, a, floor), sill);
   }
+  const collar = bay.plane - 0.046, length = foot - collar, center = (foot + collar) / 2;
   if (enclosed) {
-    const collar = model.R - 0.046, length = foot - collar, center = (foot + collar) / 2;
     if (enclosure) {
       for (const side of [-1, 1]) {
         block(center, side * (clear + 0.056), floor, 0.112, coreHeight, length, frame);
         block(foot - 0.027, side * (clear + 0.043), floor, 0.086, coreHeight, 0.052, rgb('#526864'));
       }
       block(center, 0, floor + coreHeight, coreWidth + 0.224, 0.10, length, frame);
+      block(foot - 0.027, 0, floor + coreHeight, coreWidth + 0.16, 0.058, 0.052, rgb('#526864'));
+      drawDockWeatherScreen(mesh, model, slot, storey, true);
     }
     block(center, 0.56, floor - 0.214, 0.32, 0.14, length, rgb('#526864'));
     return;
   }
+  if (enclosure) drawDockWeatherScreen(mesh, model, slot, storey, false);
   const { glassGuard } = glassGuards(mesh);
   for (const side of [-1, 1]) {
-    glassGuard(point(model.R - 0.02, side * clear, floor), point(foot, side * clear, floor));
+    glassGuard(point(bay.plane + 0.06, side * clear, floor), point(foot, side * clear, floor));
     if (!slot.siteCanalLookout)
       glassGuard(point(foot, side * clear, floor), point(foot, side * (MODULE.width / 2 - 0.10), floor));
+  }
+}
+
+// An independent weather line remains in service with the dock shutter raised.
+function drawDockWeatherScreen(mesh, model, slot, storey, enclosed) {
+  const { width, plane } = dockBayOpening(model, slot), { coreWidth, coreHeight } = DOCK_ENTRY,
+    floor = dockWalkLevel(storey), height = dockBayHead(storey) - floor,
+    at = plane + 0.066, clear = coreWidth / 2, cheek = (width - coreWidth) / 2,
+    { block, point } = craneFrame(mesh, slot.angle), frame = rgb('#657c75'),
+    closed = dockSealMode(model) !== 'summer';
+  mesh.mark(enclosed ? 'Assembly_Dock_Compression_Seal' : `Assembly_Dock_Deck_Glazing_${closed ? 'Closed' : 'Open'}`,
+    `${slot.f + 1}/Slot_${slot.j}`);
+  block(at, 0, floor + coreHeight, width + 0.026, height - coreHeight, 0.096, frame);
+  for (const side of [-1, 1]) {
+    const across = side * (clear + cheek / 2);
+    if (enclosed) block(at, across, floor, cheek + 0.026, coreHeight + 0.02, 0.096, frame);
+    else {
+      const panel = (r, center, span) => {
+        const a = center - span / 2, b = center + span / 2, bottom = floor + 0.004,
+          top = floor + coreHeight;
+        for (const height of [bottom, top - 0.036])
+          block(r, center, height, span, 0.036, 0.055, frame);
+        for (const edge of [a + 0.018, b - 0.018])
+          block(r, edge, bottom, 0.036, top - bottom, 0.055, frame);
+        mesh.quad(point(r, a + 0.018, bottom), point(r, b - 0.018, bottom),
+          point(r, b - 0.018, top), point(r, a + 0.018, top), rgb('#c2d9d7'), mesh.glass, 0.40);
+      };
+      panel(at, across, cheek + 0.028);
+      const slideWidth = Math.min(clear, cheek - 0.02);
+      panel(at + 0.06, side * (closed ? clear / 2 : clear + slideWidth / 2), closed ? clear : slideWidth);
+    }
   }
 }
 
@@ -670,6 +716,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     slabThickness = layers.slabThickness ?? model.slabThickness ?? BUILD_SECTION.slabThickness,
     grid = buildSupportGrid(model), { inside, inner, outer: outside, width: column } = grid,
     { ringWidth } = buildRingFrame(model),
+    outline = coreOutline(model),
     concrete = rgb('#c7c8bd'),
     partition = rgb('#e1dacc');
   const coreValues = materialValues(preview.assignments, 'core'),
@@ -707,7 +754,11 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       TAU,
       0,
       buildStorey(model, 0, slabThickness).underside,
-      concrete
+      concrete,
+      null,
+      false,
+      null,
+      outline
     );
   }
   if (layers.slabs && model.greenhouse) {
@@ -783,7 +834,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       arcs = openArcs(openings);
     if (layers.slabs) {
       mark('Assembly_Floor_' + (f + 1));
-      for (const arc of arcs) sector(model.r, model.R, ...arc, y, slabThickness, concrete);
+      for (const arc of arcs)
+        sector(model.r, model.R, ...arc, y, slabThickness, concrete, null, false, null, outline);
       if (f === 1 && model.lobby.gallery) {
         mark('Assembly_Lobby_Galleries');
         for (const [angle, half] of openings) {
@@ -794,10 +846,14 @@ function buildAssemblyMesh(model, layers, levels, preview) {
             angle + half,
             y,
             slabThickness,
-            concrete
+            concrete,
+            null,
+            false,
+            null,
+            outline
           );
           for (const radius of [model.lobby.gallery, model.R])
-            curvedGlassGuard(radius, base, angle - half, angle + half);
+            curvedGlassGuard(radius, base, angle - half, angle + half, radius === model.R ? outline : null);
         }
       }
       if (f > 0) {
@@ -887,8 +943,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       mark(`Core_L${f + 1}_Room_Floor_Pattern`);
       for (const room of model.rooms) {
         if (room.f !== f) continue;
-        sector(room.r, room.R, room.start, room.end, base, 0.006, ROOM_FLOOR_FINISH);
-        drawInteriorFloorPattern(mesh, room, base + 0.006, ROOM_FLOOR_FINISH, false);
+        sector(room.r, room.R, room.start, room.end, base, 0.006, ROOM_FLOOR_FINISH, null, false, null, outline);
+        drawInteriorFloorPattern(mesh, room, base + 0.006, ROOM_FLOOR_FINISH, false, room, outline);
       }
       for (const q of model.circulation.regions) {
         if (q.f !== f || q.kind === 'elevator' || q.kind === 'lobbyDivider') continue;
@@ -899,8 +955,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
             : `Circulation_L${f + 1}_Floor_Pattern`
         );
         const finish = 0.006;
-        sector(q.r, q.R, q.start, q.end, base, finish, CIRCULATION_FLOOR_FINISH);
-        drawInteriorFloorPattern(mesh, q, base + finish, CIRCULATION_FLOOR_FINISH, true);
+        sector(q.r, q.R, q.start, q.end, base, finish, CIRCULATION_FLOOR_FINISH, null, false, null, outline);
+        drawInteriorFloorPattern(mesh, q, base + finish, CIRCULATION_FLOOR_FINISH, true, q, outline);
       }
     }
   }
@@ -910,7 +966,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   }
   if (full && layers.slabs) {
     mark('Assembly_Roof_Deck');
-    sector(model.r, model.R, 0, TAU, model.roofPlan.y - slabThickness, slabThickness, concrete);
+    sector(model.r, model.R, 0, TAU, model.roofPlan.y - slabThickness, slabThickness, concrete, null, false, null, outline);
   }
   if (full && layers.frame) {
     mark('Assembly_Roof_Framing');
@@ -945,25 +1001,9 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       }
     }
     if (layers.facade) {
-      mark('Assembly_Greenhouse_Glazing');
-      const tint = rgb('#c4dfde'),
-        cap = [0, high, 0];
-      for (let i = 0; i < 96; i++) {
-        const a = (i * TAU) / 96,
-          d = ((i + 1) * TAU) / 96,
-          innerA = ringPoint(inner, a, high),
-          innerD = ringPoint(inner, d, high);
-        quad(
-          innerD,
-          ringPoint(outer, d, low),
-          ringPoint(outer, a, low),
-          innerA,
-          tint,
-          mesh.glass,
-          0.38
-        );
-        if (!layers.swings) mesh.tri(cap, innerD, innerA, tint, mesh.glass, 0.38);
-      }
+      const point = (radius, angle) => ringPoint(radius, angle, low + (high - low) * (outer - radius) / (outer - inner));
+      drawAtriumRoofPanels(mesh, model, { inner, outer, point, glazeLayer: 'Assembly_Greenhouse_Glazing',
+        alpha: 0.38, cap: layers.swings ? null : [0, high, 0] });
     }
     if (layers.swings && pitch.ridgeGlazingY != null) {
       mark('Assembly_Greenhouse_Ridge_Curb', 'Sealed upstand below the boarding deck');
@@ -1006,7 +1046,11 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     }
     const installed = dockInUse(slot) && cranePose?.slot?.i !== slot.i;
     if (layers.facade || layers.docks) drawDockClosure(mesh, model, slot, storey, installed);
-    if (!layers.modules || !installed) continue;
+    if (!installed) continue;
+    if (!layers.modules) {
+      if (layers.facade) drawDockWeatherScreen(mesh, model, slot, storey, occupied);
+      continue;
+    }
     drawDockPassage(mesh, model, slot, storey, occupied, layers.facade);
     if (slot.siteCanalLookout) continue;
     if (!occupied) {
@@ -1025,6 +1069,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     drawFittedModule(mesh, slot, x, base, z, preview, plan, {
       assembly: true,
       enclosure: layers.facade,
+      entryClosed: dockSealMode(model) !== 'summer',
       craneLifting: Boolean(model.crane),
       interiors: layers.moduleInteriors ?? layers.walls,
       cover: layers.moduleRoofs ?? true
@@ -1056,7 +1101,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     }
     for (const stair of model.circulation.stairs ?? []) {
       if (stair.f >= floors) continue;
-      mark(`Assembly_Atrium_Stair_L${stair.f + 1}`, `Bridge stair to level ${stair.f}`);
+      mark(stair.canal ? 'Assembly_Atrium_Canal_Stair_L2' : `Assembly_Atrium_Stair_L${stair.f + 1}`,
+        stair.canal ? 'Dry canal-side stair between the atrium and Level 2' : `Bridge stair to level ${stair.f}`);
       drawAtriumStair(mesh, model.r, stair, buildStorey(model, stair.f, slabThickness).base,
         buildStorey(model, stair.f - 1, slabThickness).base, rgb('#c4ae87'));
     }
@@ -1219,11 +1265,11 @@ const openBuildWorkspace = (() => {
     updateEstimate();
     rebuild(true);
   };
-  slabThickness.onchange = () => {
+  slabThickness.onchange = () => appWork.run('Updating the structure…', () => {
     state.slabThickness = Number(slabThickness.value);
     update();
     openBuildWorkspace(model, assignments, false);
-  };
+  });
   waterDepth.oninput = () => {
     if (copy) updateEstimate();
   };
@@ -1247,8 +1293,9 @@ const openBuildWorkspace = (() => {
     buttons: { axo: 'buildAxo', plan: 'buildPlan', side: 'buildSide', fit: 'buildFit' }
   });
   new ResizeObserver(present).observe(canvas);
-  document.addEventListener('west-village-change', () => {
-    if (!panel.hidden && copy) rebuild();
+  document.addEventListener('west-village-change', (event) => {
+    if (panel.hidden || !copy) return;
+    openBuildWorkspace(event.detail?.model ?? source, assignments, false);
   });
 
   return (model, materialAssignments, fit = true) => {
@@ -1258,7 +1305,8 @@ const openBuildWorkspace = (() => {
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
     const next = JSON.stringify([materialAssignments, siteWorkspace.revision, state.craneStage,
-      state.craneStage === 'caterpillar' ? craneCaterpillarPreview().craneBearing : state.craneBearing, state.craneFloor]);
+      state.craneStage === 'caterpillar' ? craneCaterpillarPreview().craneBearing : state.craneBearing, state.craneFloor,
+      climateFinStamp(model)]);
     if (source === model) {
       if (signature === next) present();
       else {

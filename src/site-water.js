@@ -36,12 +36,15 @@ function siteWaterStudy(terrain, aligned, cells) {
         return { x, y: 0, z, level: x * p[0] + z * p[2] };
       });
       if (winding > 0) polygon.reverse();
-      faces.push({ kind, polygon });
       const xs = polygon.map((p) => p[0]),
-        zs = polygon.map((p) => p[2]);
+        zs = polygon.map((p) => p[2]), coveredCells = [];
       for (let i = cell(Math.max(...zs)); i <= cell(Math.min(...zs)); i++)
-        for (let j = cell(Math.max(...xs)); j <= cell(Math.min(...xs)); j++)
-          index[i * cells + j].push(planes);
+        for (let j = cell(Math.max(...xs)); j <= cell(Math.min(...xs)); j++) coveredCells.push(i * cells + j);
+      const visible = source === 'garage'
+        ? terrainOutsideSiteWater(polygon, [...new Set(coveredCells.flatMap((id) => index[id]))])
+        : [polygon];
+      faces.push(...visible.map((polygon) => ({ kind, polygon })));
+      for (const id of coveredCells) index[id].push(planes);
       for (let i = 0; i < 3; i++) {
         const p = original[i],
           q = original[(i + 1) % 3],
@@ -67,6 +70,7 @@ function terrainOutsideSiteWater(triangle, waterPlanes) {
   let land = [triangle];
   for (const boundary of waterPlanes) {
     land = land.flatMap((polygon) => {
+      if (trimDrawingFace(polygon, boundary).length < 3) return [polygon];
       let inside = polygon;
       const outside = [];
       // A convex triangle's outside is the union of its side half-planes. Retain each

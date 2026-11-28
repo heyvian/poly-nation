@@ -266,10 +266,13 @@ function studyMark(svg, type, attributes, text) {
   return element;
 }
 
-function studyArc(r, R, start = 0, end = TAU) {
-  const steps = Math.max(2, Math.ceil((end - start) * 16)),
-    angles = Array.from({ length: steps + 1 }, (_, i) => start + ((end - start) * i) / steps),
-    at = (radius, angle) => [radius * Math.cos(angle), radius * Math.sin(angle)];
+function studyArc(r, R, start = 0, end = TAU, outline = null) {
+  const angles = coreBoundaryAngles(outline, start, end);
+  const at = (radius, angle) => {
+    if (!outline) return [radius * Math.cos(angle), radius * Math.sin(angle)];
+    const [x, , z] = outline.point(radius, angle, 0);
+    return [x, z];
+  };
   const outer = angles.map((angle) => at(R, angle));
   if (r === 0 && end - start >= TAU - 1e-7) return outer;
   return [...outer, ...angles.reverse().map((angle) => at(r, angle))];
@@ -300,19 +303,21 @@ function studyFloorName(floor, model) {
 function studyFloor(model, floor, kind) {
   const shapes = [],
     rooms = model.rooms.filter((room) => room.f === floor),
+    outline = coreOutline(model),
+    coreArc = (r, R, start, end) => studyArc(r, R, start, end, outline),
     roof = floor === model.layers.length,
     programme = kind === 'program';
   function put(points, color, height = 0, code = '', base = false) {
     shapes.push({ points, color, height, code, base });
   }
   for (const [start, end] of openArcs(roof || floor === 0 ? [] : lobbyHoles(model.lobby, floor)))
-    put(studyArc(model.r, model.R, start, end), '#e7ede5', 0, '', true);
+    put(coreArc(model.r, model.R, start, end), '#e7ede5', 0, '', true);
 
   if (roof) {
-    if (!programme) put(studyArc(model.r + 0.25, model.r + 1.9), CIRCULATION_COLOURS.corridor);
+    if (!programme) put(coreArc(model.r + 0.25, model.r + 1.9), CIRCULATION_COLOURS.corridor);
     for (const q of model.roofPlan.pavilions ?? [])
       put(
-        studyArc(q.r, q.R, q.start, q.end),
+        coreArc(q.r, q.R, q.start, q.end),
         programme ? '#ad91c7' : '#d7ddd4',
         q.upper ? 3.2 : 1.55,
         programme ? 'RT' : ''
@@ -354,7 +359,7 @@ function studyFloor(model, floor, kind) {
   for (const [start, half] of lobbyHoles(model.lobby, 0)) {
     if (floor !== 0 && !(floor === 1 && model.lobby.gallery)) continue;
     put(
-      studyArc(floor === 0 ? model.r : model.lobby.gallery, model.R, start - half, start + half),
+      coreArc(floor === 0 ? model.r : model.lobby.gallery, model.R, start - half, start + half),
       CIRCULATION_COLOURS.lobby,
       0,
       floor === 0 ? 'LOBBY' : ''
@@ -363,7 +368,7 @@ function studyFloor(model, floor, kind) {
   for (const room of rooms) {
     const program = P[room.id] ?? P[UNUSED];
     put(
-      studyArc(room.r, room.R, room.start, room.end),
+      coreArc(room.r, room.R, room.start, room.end),
       programme ? program.color : '#e1e5dc',
       programme ? 0.85 : 0,
       programme ? program.short : ''
@@ -373,12 +378,12 @@ function studyFloor(model, floor, kind) {
     for (const q of [...model.circulation.regions, ...model.circulation.hubs]) {
       if (q.f !== floor) continue;
       if (q.kind === 'lobbyDivider') {
-        put(studyArc(q.r, q.R, q.start, q.end), '#536157');
+        put(coreArc(q.r, q.R, q.start, q.end), '#536157');
         continue;
       }
       const key = q.kind === 'elevator' ? 'lift' : q.kind === 'hub' ? 'lobby' : 'corridor';
       put(
-        studyArc(q.r, q.R, q.start, q.end),
+        coreArc(q.r, q.R, q.start, q.end),
         CIRCULATION_COLOURS[key],
         key === 'lift' ? 1.4 : 0.04
       );
@@ -423,6 +428,39 @@ function studyFloor(model, floor, kind) {
   return shapes;
 }
 
+let studyCanalClipID = 0;
+
+function studyCanalPlan(svg, model, project, radius) {
+  const site = model.sitePlan;
+  if (!site?.surface) return svg;
+  const { angle, position: [px, pz], surface } = site, c = Math.cos(angle), s = Math.sin(angle),
+    edge = radius + 2, square = [
+      { x: 1, y: 0, z: 0, level: edge }, { x: -1, y: 0, z: 0, level: edge },
+      { x: 0, y: 0, z: 1, level: edge }, { x: 0, y: 0, z: -1, level: edge }
+    ], wet = [...(surface.existing ?? []), ...(surface.proposed ?? []), ...(surface.garage ?? [])]
+      .map((source) => source.map(([x, z]) => [(x - px) * c + (z - pz) * s, 0, (z - pz) * c - (x - px) * s]))
+      .map((polygon) => trimDrawingFace(polygon, square)).filter((polygon) => polygon.length >= 3);
+  if (!wet.length) return svg;
+  const points = (polygon) => polygon.map(([x, , z]) => project([x, z], 0)
+    .map((value) => value.toFixed(2)).join(',')).join(' ');
+  for (const polygon of wet) studyMark(svg, 'polygon', { points: points(polygon), fill: '#c0dce2', 'data-site-water': '' });
+  const limits = wet.flatMap((polygon) => {
+    const winding = Math.sign(polygon.reduce((sum, [x, , z], i) => {
+      const [u, , v] = polygon[(i + 1) % polygon.length];
+      return sum + x * v - z * u;
+    }, 0));
+    if (!winding) return [];
+    return [polygon.map(([x, , z], i) => {
+      const [u, , v] = polygon[(i + 1) % polygon.length], nx = (v - z) * winding, nz = (x - u) * winding;
+      return { x: nx, y: 0, z: nz, level: x * nx + z * nz };
+    }).filter(({ x, z }) => Math.abs(x) + Math.abs(z) > 1e-7)];
+  });
+  const land = terrainOutsideSiteWater([[-edge, 0, -edge], [-edge, 0, edge], [edge, 0, edge], [edge, 0, -edge]], limits),
+    id = `study-dry-ground-${++studyCanalClipID}`, defs = studyMark(svg, 'defs', {}), clip = studyMark(defs, 'clipPath', { id });
+  for (const polygon of land) studyMark(clip, 'polygon', { points: points(polygon) });
+  return studyMark(svg, 'g', { 'clip-path': `url(#${id})`, 'data-site-footprint': '' });
+}
+
 // The document figures use analytical volumes. All footprints and floor assignments come from the plan.
 function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded = false, planRadius } = {}) {
   const plan = floor !== undefined,
@@ -435,12 +473,13 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
         ? studyFloorName(floor, model) + ' ' + kind + ' plan'
         : (exploded ? 'Exploded ' : '') + kind + ' axonometric'
     ),
-    basis = orbitBasis({ az: azimuth, el: 0.59 }),
+    angle = model.sitePlan?.angle ?? 0, cos = Math.cos(angle), sin = Math.sin(angle),
+    basis = orbitBasis({ az: azimuth - angle, el: 0.59 }),
     stack = exploded ? Math.max(15, model.R * 0.9) : modelFloorPitch(model),
     floors = plan ? [floor] : Array.from({ length: model.layers.length + 1 }, (_, i) => i),
     plates = floors.map((level) => ({ level, shapes: studyFloor(model, level, kind) }));
   const raw = ([x, z], y) =>
-    plan ? [-x, -z] : [dot([x, y, z], basis.right), -dot([x, y, z], basis.up)];
+    plan ? [-x * cos + z * sin, -x * sin - z * cos] : [dot([x, y, z], basis.right), -dot([x, y, z], basis.up)];
   let minX = planRadius ? -planRadius : Infinity,
     maxX = planRadius ?? -Infinity,
     minY = minX,
@@ -464,8 +503,10 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
       const [x, z] = raw(vertex, y);
       return [width / 2 + (x - (minX + maxX) / 2) * scale, height / 2 + (z - (minY + maxY) / 2) * scale];
     };
+  const building = floor === 0 ? studyCanalPlan(svg, model, project, planRadius ?? Math.max(Math.abs(minX), Math.abs(maxX),
+    Math.abs(minY), Math.abs(maxY))) : svg;
   function polygon(points, fill, opacity = 1) {
-    studyMark(svg, 'polygon', {
+    studyMark(building, 'polygon', {
       points: points.map(([x, y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' '),
       fill,
       'fill-opacity': opacity,
@@ -516,7 +557,7 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
           .map((sum) => sum / points.length);
         if (shape.points.length === 4 || points.some(([px]) => Math.abs(px - x) > 12))
           studyMark(
-            svg,
+            building,
             'text',
             {
               x,
@@ -684,15 +725,12 @@ function structuralStudyFigure(model, layers, section) {
     const scale = Math.min(152 / model.R, 242 / (model.R + dockLength)),
       centre = [224, 208],
       at = (r, a) => [centre[0] - r * scale * Math.cos(a), centre[1] - r * scale * Math.sin(a)];
-    for (const radius of [model.r, model.R])
-      studyMark(svg, 'circle', {
-        cx: centre[0],
-        cy: centre[1],
-        r: radius * scale,
-        fill: 'none',
-        stroke: STUDY_INK,
-        'stroke-width': radius === model.R ? 1.8 : 1
-      });
+    const outline = coreOutline(model);
+    studyMark(svg, 'circle', { cx: centre[0], cy: centre[1], r: model.r * scale,
+      fill: 'none', stroke: STUDY_INK });
+    studyMark(svg, 'polygon', { points: coreBoundaryAngles(outline, 0, TAU)
+      .map((angle) => at(coreBoundaryRadius(model, model.R, angle), angle).join(',')).join(' '),
+      fill: 'none', stroke: STUDY_INK, 'stroke-width': 1.8 });
     for (const axis of grid.axes) {
       const [x1, y1] = at(inner, axis.angle), [x2, y2] = at(outer, axis.angle),
         [sx, sy] = at(grid.inside, axis.angle + grid.pitch / 2), [ex, ey] = at(outer, axis.angle + grid.pitch / 2),
@@ -705,7 +743,7 @@ function structuralStudyFigure(model, layers, section) {
     const a = grid.axes.find((axis) => axis.active.inner && axis.active.outer)?.angle ?? Math.PI,
       [aX, aY] = at(inner, a),
       [bX, bY] = at(outer, a),
-      [cX, cY] = at(model.R, a),
+      [cX, cY] = at(coreBoundaryRadius(model, model.R, a), a),
       [dX, dY] = at(model.R + dockLength, a);
     line(aX, aY, bX, bY, green, 3);
     line(cX, cY, dX, dY, red, 3, '5 3');
@@ -780,6 +818,15 @@ function drawingSetPages(name, model, assignments) {
     for (const node of table.querySelectorAll('[id]')) node.removeAttribute('id');
     wrapper.append(table);
     page.append(wrapper, units, legend(programmes));
+    if (model.sitePlan) {
+      const note = document.createElement('p'), site = model.sitePlan,
+        dry = (site.lowerRooms ?? []).reduce((sum, room) => sum + room.area, 0),
+        marine = site.boatBay?.area ?? 0;
+      note.textContent = `West Village · ${(site.terrain.datum + site.floor).toFixed(2)} m ground floor elevation` +
+        `${model.siteGeometry?.canalArea ? ` · ${fmt(model.siteGeometry.canalArea)} m² of ground plate open at the water` : ''}` +
+        (dry + marine ? `. The separate site area schedule includes ${fmt(dry)} m² of dry space and ${fmt(marine)} m² of marine space.` : '.');
+      page.append(note);
+    }
     const exploded = add(
       'Programme · Exploded axonometric',
       'The separated floor plates show the internal room layouts and external programme modules.'
@@ -821,7 +868,7 @@ function drawingSetPages(name, model, assignments) {
     ).append(studyModelFigure(model, 'circulation', { exploded: true }), legend(routes));
     for (let floor = 0; floor <= model.layers.length; floor++) {
       add(`${studyFloorName(floor, model)} · Circulation plan`, floor === 0
-        ? 'Opposing lobbies lead through the biofiltration atrium.'
+        ? model.sitePlan?.anchor ? 'Ground routes follow the dry sides of the canal opening.' : 'Opposing lobbies lead through the biofiltration atrium.'
         : 'Corridors, lifts and any bridges at this level.').append(
         studyModelFigure(model, 'circulation', { floor }), legend(routes));
     }

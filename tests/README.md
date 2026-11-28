@@ -11,6 +11,8 @@ python tests/test_site_and_plan.py
 python tests/test_connections.py
 python tests/test_shared_lobbies.py
 python tests/test_atrium_render.py
+python tests/test_climate.py
+python tests/test_print_kit.py
 ```
 
 Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve the real static app over localhost. Most use software rendering, and the module suite also exercises WebGL. Screenshots go to `tests/output/`. The suites cover workspace and drawing exports, storage, responsive layouts, ride boarding and unloading, outdoor encounters, area caps, topology rules, clustering, Materials and direct programming edits. `test_site_and_plan.py` checks overhead projection, PDF placement, canal excavation, raised foundations and dry-bank supports, approach slopes and vector sections using controlled elevations, map fallback and service failure responses. `test_connections.py` checks all six dock support systems, exterior fitting layers, and visibility behind a thin façade at 1:2000.
@@ -22,3 +24,7 @@ Set `CHROMIUM_PATH` to use a particular Chromium executable. The suites serve th
 `test_module_design.py` checks entrance spacing and perimeter bay counts, all three enclosure lengths, sixteen roof families, mirrored slopes, structure and cladding variety, skylights, window shades, patio door types, the fixed dock interface, window and roof bounds, area takeoff and Materials and Build restoration.
 
 `test_module_crane.py` checks chassis pin fit, the lift and insertion stages, all three support systems, roof and swing clearances, roof-only reaction equilibrium, live positioning, 10 m bascule geometry and interlock, park-in-place, Drawings support and bearing overrides and the vector crane document set.
+
+`test_climate.py` exercises the shared envelope settings, both Calgary stress days, the hourly heat and daylight model, the CSV and mobile layout.
+
+`test_print_kit.py` opens the print workspace, downloads two kits and validates their STL shells, dimensions, print-bed contact, packed plate separation, assembly transforms, canal clearance and vector acrylic templates.

@@ -12,25 +12,26 @@ function moduleParts(mesh, slot, x, base, z) {
   return { point, box };
 }
 
-// The paired leaves are shown slid clear of the opening on the room side.
-function drawModuleEntryDoor({ box }, wall) {
+// This pair belongs to the module and travels with it when the bay is released.
+function drawModuleEntryDoor({ box }, wall, closed = false) {
   const { width, height, jamb, header, finish } = DOCK_ENTRY,
     trim = rgb('#586962'), leaf = rgb('#899a8d'), handle = rgb('#c1b59a'), half = width / 2;
   for (const side of [-1, 1]) {
     box(side * (half + jamb / 2), wall / 2, finish, jamb, wall, height, trim);
-    const panel = half - 0.018, center = side * (half + jamb + panel / 2), hinge = wall + 0.026;
+    const panel = half - (closed ? 0.005 : 0.018),
+      center = side * (closed ? half / 2 : half + jamb + panel / 2), track = wall + 0.026;
     for (const y of [finish + 0.018, finish + height - 0.075])
-      box(center, hinge, y, panel, 0.052, 0.055, trim);
-    for (const edge of [-1, 1]) box(center + edge * (panel - 0.042) / 2, hinge, finish + 0.072,
+      box(center, track, y, panel, 0.052, 0.055, trim);
+    for (const edge of [-1, 1]) box(center + edge * (panel - 0.042) / 2, track, finish + 0.072,
       0.042, 0.052, height - 0.146, trim);
-    box(center, hinge, finish + 0.072, panel - 0.084, 0.036, 0.89, leaf);
-    box(center, hinge, finish + 0.96, panel - 0.080, 0.022, height - 1.035, rgb('#a7bcb5'));
-    box(side * (half + jamb + 0.10), hinge + 0.032, finish + 0.97, 0.026, 0.036, 0.13, handle);
+    box(center, track, finish + 0.072, panel - 0.084, 0.036, 0.89, leaf);
+    box(center, track, finish + 0.96, panel - 0.080, 0.022, height - 1.035, rgb('#a7bcb5'));
+    box(side * (closed ? 0.07 : half + jamb + 0.10), track + 0.032, finish + 0.97, 0.026, 0.036, 0.13, handle);
   }
   box(0, wall / 2, finish + height, width + 2 * jamb, wall, header, trim);
 }
 
-function drawNominalDockModule(mesh, slot, x, base, z, color, gloss = 0, enclosure = true) {
+function drawNominalDockModule(mesh, slot, x, base, z, color, gloss = 0, enclosure = true, entryClosed = false) {
   const local = moduleParts(mesh, slot, x, base, z), { box } = local,
     { width, height, depth } = MODULE,
     { width: opening, height: clearHeight, jamb, header, finish, landing } = DOCK_ENTRY,
@@ -41,7 +42,7 @@ function drawNominalDockModule(mesh, slot, x, base, z, color, gloss = 0, enclosu
   for (const side of [-1, 1])
     box(side * (width + rough) / 4, landing / 2, finish, (width - rough) / 2, landing, height - finish, color, false, gloss);
   box(0, landing / 2, top, rough, landing, height - top, color, false, gloss);
-  drawModuleEntryDoor(local, 0.18);
+  drawModuleEntryDoor(local, 0.18, entryClosed);
 }
 
 function drawFittedModule(mesh, slot, x, y, z, preview, plan, options = {}) {
@@ -79,7 +80,7 @@ function drawFittedModule(mesh, slot, x, y, z, preview, plan, options = {}) {
   elevation(false, 1, [plan.endOpening]);
   if (enclosure) {
     if (assembly) mesh.mark('Assembly_Module_Entry', reference);
-    drawModuleEntryDoor(local, wall);
+    drawModuleEntryDoor(local, wall, options.entryClosed);
   }
   if (cover) {
     if (assembly) mesh.mark('Assembly_Module_Roof', reference);

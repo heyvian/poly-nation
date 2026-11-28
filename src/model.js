@@ -81,6 +81,11 @@ const UNASSIGNED = { id: 'unused', name: 'Unassigned', short: '—', goal: 0, co
     slideLength: 40,
     climbWidth: 10,
     atriumBridges: 'off',
+    coreEnvelope: 'curved',
+    dockSeal: 'summer',
+    atriumOpaquePct: 0,
+    atriumFinMode: 'none',
+    canalAtriumSeal: 'open',
     craneStage: 'parked',
     craneRunway: 'elevated',
     craneBearing: 316,
@@ -158,6 +163,83 @@ const DOCK_ENTRY = {
   coreWidth: 1.80, coreHeight: 2.30, coreJamb: 0.10, shutterPocket: 0.19,
   landing: 1.60, finish: 0.006
 };
+const CORE_ENVELOPES = ['curved', 'planar', 'faceted'];
+const DOCK_SEASONS = ['summer', 'winter', 'secured'];
+
+function dockSealMode(model) {
+  return model.dockSeal ?? 'summer';
+}
+
+function coreBoundaryRadius(model, radius, angle) {
+  if (model.coreEnvelope !== 'faceted' || !(model.slotN >= 3)) return radius;
+  const halfFace = Math.PI / model.slotN;
+  const pitch = 2 * halfFace;
+  const offset = ((angle + halfFace) % pitch + pitch) % pitch - halfFace;
+  // Preserve the circular scheme's gross footprint with an equal-area polygon.
+  const apothem = model.R * Math.sqrt(halfFace / Math.tan(halfFace));
+  const transition = clamp((radius - model.r) / (model.R - model.r), 0, 1);
+  return radius + transition * (apothem / Math.cos(offset) - model.R);
+}
+
+function coreOutline(model, bearing = 0) {
+  if (model.coreEnvelope !== 'faceted' || !(model.slotN >= 3)) return null;
+  return {
+    pitch: TAU / model.slotN,
+    bearing,
+    point(radius, angle, y) {
+      const r = coreBoundaryRadius(model, radius, angle - bearing);
+      return [r * Math.cos(angle), y, r * Math.sin(angle)];
+    }
+  };
+}
+
+function coreFaceDividers(outline, start, end) {
+  if (!outline) return [];
+  const { pitch, bearing } = outline, offset = pitch / 2 + bearing, cuts = [];
+  for (let j = Math.floor((start - offset) / pitch) + 1; j * pitch + offset < end; j++)
+    cuts.push(j * pitch + offset);
+  return cuts;
+}
+
+function coreBoundaryAngles(outline, start, end) {
+  if (end <= start) return [start];
+  const steps = Math.ceil((end - start) / 0.055);
+  const cuts = Array.from({ length: steps + 1 }, (_, i) => start + (end - start) * i / steps);
+  if (outline) {
+    cuts.push(...coreFaceDividers(outline, start, end));
+    cuts.sort((a, b) => a - b);
+  }
+  return cuts;
+}
+
+function coreFacadeLength(model, start, end, outline = coreOutline(model)) {
+  if (!outline) return (end - start) * model.R;
+  const points = coreBoundaryAngles(outline, start, end).map((a) => outline.point(model.R, a, 0));
+  return points.slice(1).reduce((length, p, i) =>
+    length + Math.hypot(p[0] - points[i][0], p[2] - points[i][2]), 0);
+}
+
+function dockBayOpening(model, slot) {
+  const inside = model.R - facadeThickness(model), angle = slot.angle;
+  const faceted = model.coreEnvelope === 'faceted' && model.slotN >= 3;
+  const inner = coreBoundaryRadius(model, inside, angle);
+  const outer = coreBoundaryRadius(model, model.R, angle);
+  const capacity = slotCapacity(model.R, MODULE_SPACING.min),
+    count = Math.min(model.slotN || capacity, capacity),
+    maxHalf = Math.min(Math.PI / 2, Math.PI / count - 0.12 / inner);
+  const across = faceted ? (a) => inner * Math.tan(a) : (a) => inner * Math.sin(a);
+  const jamb = 0.06;
+  const width = Math.min(MODULE.width, 2 * (across(maxHalf) - jamb));
+  const rough = width / 2 + jamb;
+  const half = faceted ? Math.atan(rough / inner) : Math.asin(rough / inner);
+  const plane = model.coreEnvelope === 'planar' ? outer + 0.14 :
+    faceted ? outer : outer * Math.cos(half) - 0.032;
+  return { width, half, plane, inner, outer, jamb };
+}
+
+function dockBayHead(storey) {
+  return storey.head;
+}
 
 function dockFootRadius(model) {
   return model.R + BUILD_SECTION.dockGap;
@@ -170,10 +252,6 @@ function dockOpeningHalf(model) {
 
 function dockWalkLevel(storey) {
   return storey.base + DOCK_ENTRY.finish;
-}
-
-function dockOpeningHead(storey) {
-  return Math.min(storey.head, dockWalkLevel(storey) + DOCK_ENTRY.coreHeight + DOCK_ENTRY.shutterPocket);
 }
 
 function dockInUse(slot) {
@@ -345,6 +423,17 @@ $('atriumBridges').onchange = () => {
   state.atriumBridges = $('atriumBridges').value;
   scheduleUpdate();
 };
+for (const key of ['coreEnvelope', 'dockSeal', 'atriumFinMode', 'canalAtriumSeal']) {
+  $(key).onchange = () => {
+    state[key] = $(key).value;
+    scheduleUpdate();
+  };
+}
+$('atriumOpaquePct').oninput = () => {
+  state.atriumOpaquePct = Number($('atriumOpaquePct').value);
+  $('atriumOpaqueOut').value = `${state.atriumOpaquePct}%`;
+  scheduleUpdate();
+};
 $('bridgeSeating').onchange = () => {
   state.bridgeSeating = $('bridgeSeating').checked;
   scheduleUpdate();
@@ -369,6 +458,12 @@ function syncControls() {
   refreshInputs.forEach((f) => f());
   $('autoCore').checked = state.autoCore;
   $('atriumBridges').value = state.atriumBridges;
+  $('coreEnvelope').value = state.coreEnvelope;
+  $('dockSeal').value = state.dockSeal;
+  $('atriumOpaquePct').value = state.atriumOpaquePct;
+  $('atriumOpaqueOut').value = `${state.atriumOpaquePct}%`;
+  $('atriumFinMode').value = state.atriumFinMode;
+  $('canalAtriumSeal').value = state.canalAtriumSeal;
   $('bridgeSeatSetting').hidden = state.atriumBridges === 'off';
   $('bridgeSeating').checked = state.bridgeSeating;
   $('buildSlabThickness').value = String(state.slabThickness);
@@ -472,6 +567,24 @@ function lobbyHoles(lobby, floor) {
   return floor < lobby.levels ? lobbyBays(lobby).map(({ angle, span }) => [angle, span / 2]) : [];
 }
 
+function siteLobbyHeading(site, preferred, radius, span) {
+  if (!site || span <= 0) return preferred;
+  const width = Math.max(4.4, Math.min(10, radius * span * 0.35)),
+    access = (heading) => [heading, heading + Math.PI].filter((bay) =>
+      site.dryWalk(bay, radius - 1.1, radius + 9, width)
+    ).length;
+  let angle = preferred, dryEntrances = access(angle);
+  for (let step = 1; step <= 18 && dryEntrances < 2; step++) {
+    for (const sign of [-1, 1]) {
+      const heading = preferred + sign * step * Math.PI / 36, dry = access(heading);
+      if (dry <= dryEntrances) continue;
+      dryEntrances = dry;
+      angle = heading;
+    }
+  }
+  return angle;
+}
+
 // A bridge spans one upper level on a chord beside the mast, with a passage to the outer corridor
 // at either end. Rotating the same chord makes the radial and aligned spans comparable.
 function designAtriumBridges(r, lobby, liftHalf) {
@@ -543,7 +656,7 @@ function designAtriumBridges(r, lobby, liftHalf) {
 
 // Test each curved flight against the walking surfaces at both ends. Stairs inside
 // the atrium prefer existing public passages. A new lower passage is reserved only when needed.
-function designAtriumStairs(r, slotN, bridges, regions, lobby, pitch) {
+function designAtriumStairs(r, slotN, bridges, regions, lobby, pitch, site) {
   if (!bridges.length) return [];
   const width = 1.2,
     radius = r - width / 2,
@@ -592,6 +705,8 @@ function designAtriumStairs(r, slotN, bridges, regions, lobby, pitch) {
           if (columnClearance(top) < 0.79) continue;
           for (const going of treadDepths) {
             const bottom = top + sign * (landing + (risers - 1) * going) / radius;
+            if (f === 1 && site && !site.dryWalk(bottom, r - width - landing, r + 0.15, landing + 0.5))
+              continue;
             if (f > 1 && columnClearance(bottom) < 0.79) continue;
             if (previous && angDist(bottom, previous.top) < 2.2 * half) continue;
             const newPassage = f > 1 && !lower.some((passage) => contains(passage, bottom));
@@ -603,7 +718,8 @@ function designAtriumStairs(r, slotN, bridges, regions, lobby, pitch) {
             let blocked = false;
             for (let i = -1; i <= 17; i++) {
               const t = i / 16, angle = top + t * (bottom - top);
-              if ((t < 0.64 && overlapsDeck(bridge, angle)) ||
+              if ((f === 1 && site && state.canalAtriumSeal === 'glazed' && !site.dryWalk(angle, r - width - 0.08, r + 0.04, 0.50)) ||
+                  (t < 0.64 && overlapsDeck(bridge, angle)) ||
                   (t > 0.24 && overlapsDeck(lowerBridge, angle))) {
                 blocked = true;
                 break;
@@ -644,7 +760,7 @@ function designAtriumStairs(r, slotN, bridges, regions, lobby, pitch) {
 }
 
 // Reserve the corridors, opposed lifts, and lobby voids before assigning room area.
-function circulationPlan(r, R, lobby, floorHeight, slotN) {
+function circulationPlan(r, R, lobby, floorHeight, slotN, site) {
   const width = R - r,
     cw = Math.min(state.corridorWidth, width * 0.38),
     dual = width >= 2 * cw + 8,
@@ -701,7 +817,7 @@ function circulationPlan(r, R, lobby, floorHeight, slotN) {
     );
     floorPlans.push({ arcs, bands, area });
   }
-  const stairs = designAtriumStairs(r, slotN, bridges, regions, lobby, floorHeight);
+  const stairs = designAtriumStairs(r, slotN, bridges, regions, lobby, floorHeight, site);
   for (const { f, bottom, passageHalf } of stairs) {
     if (!passageHalf) continue;
     const floor = f - 1;
@@ -720,6 +836,15 @@ function circulationPlan(r, R, lobby, floorHeight, slotN) {
         if (regions[i].f === floor && regions[i].kind === 'inner') regions.splice(i, 1);
       for (const [a, b] of plan.arcs) add(floor, 'inner', mid - cw / 2, mid + cw / 2, a, b);
     }
+  }
+  if (site?.cutRing) {
+    const ground = floorPlans[0];
+    ground.dryBands = ground.bands.map(({ r, R }) =>
+      ground.arcs.flatMap(([start, end]) => site.dryArcs(r, R + Math.min(cw / 2, 1.2), start, end))
+    );
+    ground.area = ground.bands.reduce((area, band, index) =>
+      area + ground.dryBands[index].reduce((sum, [start, end]) =>
+        sum + (band.R ** 2 - band.r ** 2) * (end - start) / 2, 0), 0);
   }
   const stairArea = stairs.reduce((total, stair) =>
       total + stair.width * stair.radius * (Math.abs(stair.bottom - stair.top) + 2 * stair.half), 0),
@@ -944,7 +1069,7 @@ function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0) {
       const { r: a, R: b } = plan.bands[band],
         scale = (b * b - a * a) / 2,
         list = [];
-      for (const [start, end] of plan.arcs) {
+      for (const [start, end] of plan.dryBands?.[band] ?? plan.arcs) {
         const cap = (end - start) * scale;
         let used = 0,
           prev = -1;
@@ -1424,7 +1549,7 @@ function placeLobbyApproaches(layout, a, b, fit, lobbyId, context, mode) {
 }
 
 // Carve lobbies after the slide has reserved its landing rooms and façade bypasses.
-function formSharedLobbies(layout, slotN, blocked, blockedLimit, prioritize = false) {
+function formSharedLobbies(layout, slotN, blocked, blockedLimit, prioritize = false, site) {
   const { circulation, rooms } = layout,
     hubs = [],
     pinned = new Set(pinnedDocks(slotN).values()),
@@ -1464,6 +1589,9 @@ function formSharedLobbies(layout, slotN, blocked, blockedLimit, prioritize = fa
     for (const fit of [initialFit, sharedLobbyFit(a, b, circulation.width, 0.9)]) {
       if (!fit) continue;
       const plan = placeLobbyApproaches(layout, a, b, fit, hubs.length, context, mode);
+      if (plan && a.f === 0 && site?.cutRing &&
+          plan.approaches.some(({ moved, sections }) => [moved, ...sections.filter(({ kind }) => kind.startsWith('lobby'))]
+            .some((q) => site.wetArea(q.r, q.R, q.start, q.end) > 0.1))) continue;
       if (plan) return plan;
     }
     return null;
@@ -1619,16 +1747,25 @@ function angDist(a, b) {
   return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 }
 // Size the exterior climb and reserve any dock that would intersect the wall.
-function designClimbing(R, slotN, lobby, floorH) {
+function designClimbing(R, slotN, lobby, floorH, site) {
   if (!state.climbWidth) return null;
   const face = R + 0.3,
     width = Math.min(state.climbWidth, face * Math.PI * 0.6),
     half = width / (2 * face),
     rear = lobbyBays(lobby)[1],
     // Keep the climbing face beside the rear lobby instead of across its opening.
-    angle = mod(lobby.angle + Math.PI + (rear ? rear.span / 2 + half + 1.6 / face : 0), TAU),
+    preferred = mod(lobby.angle + Math.PI + (rear ? rear.span / 2 + half + 1.6 / face : 0), TAU),
     blocked = new Set(),
     pad = Math.atan((MODULE.width / 2 + 1) / (R + 0.65));
+  const angle = site
+    ? Array.from({ length: slotN * 2 }, (_, i) =>
+        mod(preferred + Math.ceil(i / 2) * (i % 2 ? 1 : -1) * Math.PI / slotN, TAU)
+      ).find((heading) =>
+        lobbyBays(lobby).every((bay) => angDist(heading, bay.angle) >= bay.span / 2 + half + 1.4 / face) &&
+        [-1, -0.5, 0, 0.5, 1].every((edge) => site.dryWalk(heading + edge * half, face - 0.1, face + 5, width / 4))
+      )
+    : preferred;
+  if (angle == null) return null;
   const height = Math.min(19.8, state.floors * floorH);
   for (let f = 0; f < state.floors && f * floorH < height; f++)
     for (let j = 0; j < slotN; j++)
@@ -1643,7 +1780,7 @@ function swingMastRadius(radius) {
 const SWING_SEAT_WIDTH = 0.85;
 const SWING_SEAT_DEPTH = 0.52;
 
-function designRideAndSlide(layout, R, r, slotN, lobby, floorH) {
+function designRideAndSlide(layout, R, r, slotN, lobby, floorH, site) {
   const towerRadius = swingMastRadius(r),
     originalPlatform = Math.min(8.2, r * 0.64),
     boardingRadius = Math.max(towerRadius + 0.18, originalPlatform - 0.55),
@@ -1663,7 +1800,7 @@ function designRideAndSlide(layout, R, r, slotN, lobby, floorH) {
     speedKmh,
     rpm: (speedKmh / 3.6 / (TAU * flightRadius)) * 60
   };
-  const climbing = designClimbing(R, slotN, lobby, floorH),
+  const climbing = designClimbing(R, slotN, lobby, floorH, site),
     none = () => ({ ride, slide: null, climbing, blocked: new Set() });
   if (!state.slideLength || state.floors < 2) return none();
   const outer = layout.rooms.filter(
@@ -1688,6 +1825,13 @@ function designRideAndSlide(layout, R, r, slotN, lobby, floorH) {
       target = climbing.face + climbing.clearance + tubeRadius + 0.18;
     return Math.max(base, base + w * Math.max(0, target - base));
   };
+  const inside = R - Math.min(OUTER_WALL_THICKNESS, (R - r) * 0.45) - 0.3;
+  function slidePoint(start, arc, t) {
+    const angle = start + arc * t,
+      base = inside + (radius - inside) * Math.min(1, Math.sin(Math.PI * t) * 4),
+      rad = bulge(angle, base);
+    return [rad * Math.cos(angle), 0, rad * Math.sin(angle)];
+  }
   let best = null;
   // Prefer a launch in a large upper Rinse cluster, then match a lower Rinse facade room and desired travel length.
   const rooms = outer.map((room) => ({
@@ -1706,6 +1850,7 @@ function designRideAndSlide(layout, R, r, slotN, lobby, floorH) {
   for (const a of rooms)
     for (const b of rooms) {
       if (a.f <= b.f) continue;
+      if (b.f === 0 && site && !site.dryWalk(b.angle, b.r, R + 0.3, 3)) continue;
       if (climbing && [a, b].some((q) => angDist(q.angle, climbing.angle) < expanded + shoulder))
         continue;
       const topY = a.f * floorH + 2.85,
@@ -1734,7 +1879,15 @@ function designRideAndSlide(layout, R, r, slotN, lobby, floorH) {
           Math.abs(grade - 0.15) * 3 -
           0.45 * Math.min(1, a.cluster / 850) -
           (0.18 * a.f) / Math.max(1, state.floors - 1);
-        if (!best || score < best.score) best = { a, b, arc, topY, bottomY, drop, score };
+        if (best && score >= best.score) continue;
+        if (site) {
+          const steps = Math.max(24, Math.ceil(approx)),
+            route = Array.from({ length: steps + 1 }, (_, i) => slidePoint(a.angle, arc, i / steps)),
+            stations = slideStations(route), end = stations.at(-1);
+          if (route.some(([x, , z], i) => site.foundation + topY - drop * stations[i] / end - tubeRadius
+            < site.surfaceBelow(x, z, tubeRadius) + 0.2)) continue;
+        }
+        best = { a, b, arc, topY, bottomY, drop, score };
       }
     }
   if (!best) return none();
@@ -1742,20 +1895,8 @@ function designRideAndSlide(layout, R, r, slotN, lobby, floorH) {
   // Continuous sloped centreline: exit and entry at the facade, curving out over the dock band.
   const n = Math.max(40, Math.ceil((Math.abs(arc) * (radius + 3) + 12) / 0.35)),
     points = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n,
-      angle = a.angle + arc * t,
-      inside = R - Math.min(OUTER_WALL_THICKNESS, (R - r) * 0.45) - 0.3,
-      base = inside + (radius - inside) * Math.min(1, Math.sin(Math.PI * t) * 4),
-      rad = bulge(angle, base);
-    points.push([rad * Math.cos(angle), 0, rad * Math.sin(angle)]);
-  }
-  let run = 0;
-  const distances = [0];
-  for (let i = 1; i < points.length; i++) {
-    run += Math.hypot(points[i][0] - points[i - 1][0], points[i][2] - points[i - 1][2]);
-    distances.push(run);
-  }
+  for (let i = 0; i <= n; i++) points.push(slidePoint(a.angle, arc, i / n));
+  const distances = slideStations(points), run = distances.at(-1);
   points.forEach((p, i) => (p[1] = topY - (drop * distances[i]) / run));
   const blocked = new Set();
   for (let f = 0; f < state.floors; f++)
@@ -1807,6 +1948,13 @@ function designRideAndSlide(layout, R, r, slotN, lobby, floorH) {
       : null;
   }
   return { ride, slide, climbing, blocked };
+}
+
+function slideStations(points) {
+  const distances = [0];
+  for (let i = 1; i < points.length; i++)
+    distances.push(distances[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][2] - points[i - 1][2]));
+  return distances;
 }
 
 // Lay out the public roof, keeping enclosed service and retail area separate from open paths and gardens.
@@ -2132,7 +2280,8 @@ function autoGeometry(coreTotal, rinseCore) {
   return { R, r, width };
 }
 // Regenerate the architectural model from state. Fit floor area, reserve features, and then place the inventory.
-function derive(dockVariant = state.dockVariant) {
+function derive(dockVariant = state.dockVariant, siteContext =
+  typeof siteWorkspace === 'undefined' ? null : siteWorkspace.designConstraints?.()) {
   const floorHeight = floorPitch(state.slabThickness),
     sum = (a) => a.reduce((x, y) => x + y, 0),
     retailWant = (n) => apportion(state.vacancy, Math.max(0, n))[3],
@@ -2166,7 +2315,7 @@ function derive(dockVariant = state.dockVariant) {
   }
   function candidate(n, k, searchLobbies = false) {
     const levels = Math.min(2, state.floors),
-      angle = -0.84;
+      preferredLobbyAngle = -0.84;
     let l = state.lobby,
       geom,
       goals,
@@ -2207,18 +2356,18 @@ function derive(dockVariant = state.dockVariant) {
       const span = ringPer ? (TAU * l) / ringPer : 0;
       const gallery =
         levels > 1 && l > 0 ? geom.R - Math.min(state.corridorWidth, geom.width * 0.38) : null;
+      slotN = slotCapacity(geom.R, state.moduleSpacing);
       lobby = {
         area: l,
         voidArea: gallery == null ? 0 : 0.5 * (gallery ** 2 - geom.r ** 2) * span,
         levels,
         gallery,
-        angle,
+        angle: preferredLobbyAngle,
         span,
-        bays: [angle, angle + Math.PI].map((heading) => ({ angle: heading, span: span / 2 })),
+        bays: [preferredLobbyAngle, preferredLobbyAngle + Math.PI].map((angle) => ({ angle, span: span / 2 })),
         blocked: new Set()
       };
       lobby.volume = (l + lobby.voidArea) * floorHeight;
-      slotN = slotCapacity(geom.R, state.moduleSpacing);
       circulation = circulationPlan(geom.r, geom.R, lobby, floorHeight, slotN);
       roofPlan = designRoof(geom.R, geom.r, circulation, floorHeight);
       const need = roofPlan.area + 0.00002;
@@ -2229,10 +2378,18 @@ function derive(dockVariant = state.dockVariant) {
       if (pass === 39) return null;
     }
     const { R, r, width } = geom,
-      court = Math.PI * r * r,
-      ringArea = ringPer * state.floors - lobby.voidArea,
+      site = siteContext?.resolve(R, r, slotN, state.coreEnvelope),
+      court = Math.PI * r * r - (site?.cutCourt ?? 0),
+      ringArea = ringPer * state.floors - lobby.voidArea - (site?.cutRing ?? 0),
       programRing = ringArea - l,
       rawMax = slotN * state.floors;
+    if (count + k > rawMax - (site?.wetBays.size ?? 0)) return null;
+    if (site && (site.cutRing || site.wetBays.size)) {
+      lobby.angle = siteLobbyHeading(site, preferredLobbyAngle, R, lobby.span);
+      lobby.bays = [lobby.angle, lobby.angle + Math.PI].map((angle) => ({ angle, span: lobby.span / 2 }));
+      circulation = circulationPlan(r, R, lobby, floorHeight, slotN, site);
+      roofPlan = designRoof(R, r, circulation, floorHeight);
+    }
     if (
       !roofPlan ||
       count + k > rawMax ||
@@ -2314,13 +2471,14 @@ function derive(dockVariant = state.dockVariant) {
       }
     }
     function fitRoutes(roomPlan) {
-      const feature = designRideAndSlide(roomPlan, R, r, slotN, lobby, floorHeight);
+      const feature = designRideAndSlide(roomPlan, R, r, slotN, lobby, floorHeight, site);
       // The boarding platform completes the cone's inner edge all the way to the mast.
       const ride = feature.ride;
       ride.roofPitch = designSwingRoof(ride, r, roofPlan.y);
       ride.roofLevel = ride.roofPitch.canopyRidgeY - 0.16;
       connectSlide(roomPlan, feature, R, slotN);
       const blocked = new Set([
+        ...(site?.wetBays ?? []),
         ...feature.blocked,
         ...lobby.blocked,
         ...(feature.climbing?.blocked || [])
@@ -2329,16 +2487,17 @@ function derive(dockVariant = state.dockVariant) {
       // inventory or replace two workable lobbies with a single preferred one.
       const budget = rawMax - count - k,
         junctionPlan = Object.values(state.relations).includes('attract') ? structuredClone(roomPlan) : null;
-      formSharedLobbies(roomPlan, slotN, blocked, budget);
+      formSharedLobbies(roomPlan, slotN, blocked, budget, false, site);
       reserveDocksWithoutClearApproach(roomPlan.circulation, R, width, slotN, blocked);
       const hubs = roomPlan.circulation.hubs;
       if (junctionPlan && hubs.length >= 2) {
         const junctionBlocks = new Set([
+          ...(site?.wetBays ?? []),
           ...feature.blocked,
           ...lobby.blocked,
           ...(feature.climbing?.blocked || [])
         ]);
-        formSharedLobbies(junctionPlan, slotN, junctionBlocks, budget, true);
+        formSharedLobbies(junctionPlan, slotN, junctionBlocks, budget, true, site);
         reserveDocksWithoutClearApproach(junctionPlan.circulation, R, width, slotN, junctionBlocks);
         if (k <= retailWant(rawMax - junctionBlocks.size - count) &&
             preferredLobbyLayout(junctionPlan.circulation.hubs, hubs))
@@ -2387,6 +2546,21 @@ function derive(dockVariant = state.dockVariant) {
         sum(layout.rooms.filter((q) => q.id === i).map((q) => q.area))
       ),
       core = actualRing.slice();
+    if (site?.cutRing) {
+      lobby.siteArea = Math.max(0, l - lobbyBays(lobby).reduce((area, bay) =>
+        area + site.wetArea(r, R, bay.angle - bay.span / 2, bay.angle + bay.span / 2), 0));
+      const wetElevatorArea = circulation.regions.filter((q) => q.f === 0 && q.kind === 'elevator')
+        .reduce((area, q) => area + site.wetArea(q.r, q.R, q.start, q.end), 0),
+        wetHubArea = circulation.hubs.filter((q) => q.f === 0)
+          .reduce((area, q) => area + site.wetArea(q.r, q.R, q.start, q.end), 0);
+      circulation.elevatorArea = Math.max(0, circulation.elevatorArea - wetElevatorArea);
+      circulation.hubArea = Math.max(0, circulation.hubArea - wetHubArea);
+      // Narrow dry strips around the canal remain open where they cannot fit a complete room.
+      circulation.area = Math.max(0, ringArea - lobby.siteArea - sum(actualRing) - circulation.hubArea)
+        + circulation.bridgeArea;
+      circulation.corridorArea = circulation.area - circulation.elevatorArea;
+      circulation.total = circulation.area + circulation.hubArea;
+    }
     core[0] += court;
     const adjusted = goals.map(
       (g, i) => g - (ring[i] - actualRing[i]) - (ringDesired[i] - ring[i])
@@ -2413,6 +2587,11 @@ function derive(dockVariant = state.dockVariant) {
       lobby,
       circulation,
       roofPlan
+    };
+    if (site) result.siteGeometry = {
+      wetBays: site.wetBays, canalArea: site.cutRing + site.cutCourt,
+      ringCutArea: site.cutRing, atriumCutArea: site.cutCourt,
+      ground: siteContext.ground, floor: site.floor, position: siteContext.position, angle: siteContext.angle
     };
     const max = rawMax - blocked.size;
     if (count + k > max) return null;
@@ -2505,7 +2684,8 @@ function derive(dockVariant = state.dockVariant) {
     lobby,
     blocked,
     circulation,
-    roofPlan
+    roofPlan,
+    siteGeometry
   } = best;
   const slots = [];
   for (let f = 0; f < state.floors; f++)
@@ -2520,7 +2700,8 @@ function derive(dockVariant = state.dockVariant) {
         anchor: roomAt(layers[f][bandN - 1], angle),
         p: EMPTY,
         blocked: blocked.has(i),
-        use: blocked.has(i) ? 'blocked' : null
+        use: blocked.has(i) ? 'blocked' : null,
+        ...(f === 0 && siteGeometry?.wetBays.has(j) ? { siteReserved: true } : {})
       });
     }
   const activeSlots = slots.filter((s) => !s.blocked);
@@ -2589,6 +2770,8 @@ function derive(dockVariant = state.dockVariant) {
     bandN,
     slots,
     slotN,
+    coreEnvelope: state.coreEnvelope,
+    dockSeal: state.dockSeal,
     moduleEntranceGap: moduleEntranceGap(R, slotN),
     max,
     count,
@@ -2612,7 +2795,9 @@ function derive(dockVariant = state.dockVariant) {
     lobby,
     blocked,
     circulation,
+    ...(siteGeometry ? { siteGeometry } : {}),
     greenhouse: designGreenhouse(r, lobby, feature.ride),
+    atriumEnvelope: atriumEnvelopeOptions(),
     roofPlan
   };
   layout.crane = planModuleCrane(layout, state.craneRunway);

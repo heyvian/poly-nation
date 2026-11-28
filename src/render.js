@@ -53,13 +53,14 @@ function makeRenderLighting(model, seed = 0) {
 
 // Match the GPU's roof-exposure and lamp falloff in browsers using the canvas fallback.
 function renderSurfaceLight(study, x, y, z) {
-  const { size, levels, pitch, extent, base, top, field, radius, outer, daylight, interior } = study,
+  const { size, levels, pitch, extent, base, top, field, radius, outer, daylight, interior,
+      roofTransmission = 1 } = study,
     r = Math.hypot(x, z),
     floor = Math.floor((y - base + 0.045) / pitch),
     depth = clamp((y - base) / (top - base), 0, 1),
     rim = clamp((r - radius + 1) / 9, 0, 1),
     sky = y < base - 0.12 || y > top - 0.03 || r > outer + 0.06 ? 1 :
-      (0.44 + 0.49 * depth) * (1 - 0.86 * rim),
+      (0.44 + 0.49 * depth) * (1 - 0.86 * rim) * roofTransmission,
     row = Math.floor((z / extent + 1) * size / 2),
     col = Math.floor((x / extent + 1) * size / 2),
     pool = floor >= 0 && floor < levels && row >= 0 && row < size && col >= 0 && col < size
@@ -115,6 +116,11 @@ const openRenderWorkspace = (() => {
         slide: true, swings: true, crane: true, roofRetail: true
       };
     const placed = siteWorkspace.designModel(source);
+    const envelope = climateEnvelope(placed), sun = climateStudySun(),
+      reference = climateRoofSun({ ...envelope, opaqueFraction: 0, finMode: 'none' }, sun, CLIMATE_GLAZING.triple).daylight;
+    lighting.roofTransmission = reference > 0
+      ? climateRoofSun(envelope, sun, CLIMATE_GLAZING.triple).daylight / reference
+      : 1 - envelope.opaqueFraction;
     const mesh = buildAssemblyMesh(placed, layers, visible, {
       assignments,
       view: { seed: state.seed },
@@ -133,20 +139,21 @@ const openRenderWorkspace = (() => {
     buttons: { axo: 'renderAxo', plan: 'renderPlan', side: 'renderSide', fit: 'renderFit' }
   });
   new ResizeObserver(present).observe(canvas);
-  document.addEventListener('west-village-change', () => {
-    if (!panel.hidden && source) rebuild();
+  document.addEventListener('west-village-change', (event) => {
+    if (panel.hidden || !source) return;
+    openRenderWorkspace(event.detail?.model ?? source, assignments, false);
   });
   for (const control of [daylight, interior]) control.oninput = present;
   level.onchange = () => rebuild(true);
   modules.onchange = () => rebuild();
-  return (model, materials) => {
+  return (model, materials, fit = true) => {
     if (!renderer && !fallback) {
       context = canvas.getContext('webgl', { antialias: true, alpha: false });
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
     const next = JSON.stringify([materials, siteWorkspace.revision, buildViewLayers().dockStructure,
-      state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : null]);
+      state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : null, climateFinStamp(model)]);
     if (model === source && next === signature) return present();
     const changed = source !== model, previous = level.value;
     source = model;
@@ -162,6 +169,6 @@ const openRenderWorkspace = (() => {
       level.value = previous === '' ? String(model.layers.length) :
         String(Math.min(Number(previous), model.layers.length));
     }
-    rebuild(changed);
+    rebuild(changed && fit);
   };
 })();

@@ -14,7 +14,7 @@ The crane installation stages, unloaded travel and Caterpillar motion preview us
 
 At occupied docks the route follows the center of the rendered sill from the outer corridor to the module or public deck. The route uses the same finished floor level as the threshold.
 
-When West Village is linked, live visitors enter along the modeled grade walks and use the available docks. Ground-level links over the canal opening are removed. Comparison trials and optimization use the base design so their results can be compared across placement studies.
+When West Village is linked, live visitors enter along the modeled grade walks and use the available docks. Ground-level links over the canal opening are removed. Comparison trials and optimization use the same site-adapted layout and routes. The trial signature includes the placement and site study inputs so comparisons retain their site context.
 
 Human and dog routes can enter either ground-floor lobby from the public promenade and cross the biofiltration greenhouse on straight approaches joined by a circular walk. Agents can take either side of the swing mast. The crossing uses the same geometry as the modeled paving. Encounters there use the existing greenhouse scoring weights.
 
