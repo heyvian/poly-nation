@@ -7,6 +7,91 @@ const SITE_MIN_FIREBOAT_DEPTH = Number((SITE_FIREBOAT.draft + 0.55).toFixed(2));
 const SITE_BOAT_SLIP = 5.25;
 const SITE_BOAT_QUAY = 1.65;
 const SITE_BOAT_FLOOR = 0.68;
+const SITE_FIREHALL_LINK_WIDTH = 2.45;
+const SITE_FIREHALL_LINK_LIMIT = 95;
+
+function siteFirehallReserve(capacity) {
+  return (capacity * (SITE_BOAT_SLIP + SITE_BOAT_QUAY) + SITE_BOAT_QUAY) * 26 +
+    SITE_FIREHALL_LINK_LIMIT * SITE_FIREHALL_LINK_WIDTH;
+}
+
+function siteFirehallLinkLevels(bay, floor) {
+  let station = 0;
+  const { path, length } = bay.connection;
+  const points = [[path[0][0], floor, path[0][1]]];
+  const height = (at) => floor + (bay.serviceFloor - floor) * clamp((at - 1.5) / (length - 3), 0, 1);
+  for (let i = 1; i < path.length; i++) {
+    const [x, z] = path[i], [fromX, fromZ] = path[i - 1], span = Math.hypot(x - fromX, z - fromZ);
+    for (const levelAt of [1.5, length - 1.5]) if (levelAt > station && levelAt < station + span) {
+      const t = (levelAt - station) / span;
+      points.push([fromX + t * (x - fromX), height(levelAt), fromZ + t * (z - fromZ)]);
+    }
+    station += span;
+    points.push([x, height(station), z]);
+  }
+  return points;
+}
+
+function siteFirehallPortals(model, position, bearing, water) {
+  const pitch = TAU / model.slotN, reach = model.R + BUILD_SECTION.dockGap + MODULE.depth + 3,
+    width = SITE_FIREHALL_LINK_WIDTH, portals = [],
+    dryDocks = model.slots.filter(slot => slot.f === 0 && !slot.blocked).map(slot => slot.angle);
+  for (let slot = 0; slot < model.slotN; slot++) {
+    if (model.blocked.has(slot)) continue;
+    const angle = slot * pitch, radius = coreBoundaryRadius(model, model.R, angle),
+      at = siteLine(position, angle + bearing);
+    if (siteDryWalk(water, position, angle + bearing, radius - 1.15, reach, width + 0.25)) {
+      const crewDistance = dryDocks.map(heading => angDist(heading, angle) * radius).sort((a, b) => a - b).slice(1, 5);
+      portals.push({ slot, angle, start: at(radius - 0.27), outer: at(reach),
+        accessScore: (crewDistance.reduce((sum, span) => sum + span, 0) + (4 - crewDistance.length) * radius * Math.PI) / 4 });
+    }
+  }
+  return portals;
+}
+
+// A service spoke uses a reserved bay, then turns toward a door in the workshop.
+// The turn stays beyond the modules and both ends of the route stay on the dry bank.
+function siteFirehallConnection(bay, portals, position, terrain, water, floor, radius, crane, bearing, context) {
+  const width = SITE_FIREHALL_LINK_WIDTH, hallStation = (bay.serviceBack + bay.quayBack) / 2,
+    distance = (a, b) => Math.hypot(...sub(a, b)), reach = (p) => distance(position, p),
+    poles = crane?.runway === 'elevated' ? elevatedRunwaySupports(crane).flatMap(angle =>
+      [-1, 1].map(side => siteLine(position, angle + bearing)(crane.tower + side * crane.groundGauge / 2))) : [],
+    moat = craneMoatBounds(crane),
+    linkSegments = (path) => path.slice(1).map((point, i) => [path[i], point]);
+  function sample(a, b, predicate) {
+    const span = distance(a, b), steps = Math.max(1, Math.ceil(span / 0.7));
+    return Array.from({ length: steps + 1 }, (_, i) => i / steps).every(t =>
+      predicate(a.map((value, i) => value + (b[i] - value) * t)));
+  }
+  let best = null;
+  for (const side of [-1, 1]) {
+    const door = bay.point(hallStation, side * (bay.halfWidth - 0.19)),
+      landing = bay.point(hallStation, side * (bay.halfWidth + 2.3));
+    for (const { slot, angle, start, outer, accessScore } of portals) {
+      const off = sub(outer, landing), normal = sub(landing, door);
+      if (off[0] * normal[0] + off[1] * normal[1] < -0.5 * Math.hypot(...off) * Math.hypot(...normal)) continue;
+      const path = [start, outer, landing, door], segments = linkSegments(path),
+        length = segments.reduce((sum, [a, b]) => sum + distance(a, b), 0);
+      const cost = length + 0.45 * accessScore;
+      if (length > SITE_FIREHALL_LINK_LIMIT || cost >= (best?.cost ?? Infinity) || Math.abs(floor - bay.serviceFloor) > (length - 3) * 0.05) continue;
+      if (!sample(outer, landing, p => reach(p) >= radius - 1.4)) continue;
+      if (!segments.every(([a, b]) => {
+        const span = distance(a, b), dx = b[0] - a[0], dz = b[1] - a[1];
+        if (span < 0.25) return false;
+        const off = [-dz * width / (2 * span), dx * width / (2 * span)],
+          corners = [a.map((v, i) => v + off[i]), b.map((v, i) => v + off[i]),
+            b.map((v, i) => v - off[i]), a.map((v, i) => v - off[i])];
+        if (water.overlapsFootprint(corners) || context?.(corners, Math.min(floor, bay.serviceFloor) - 0.22,
+          Math.max(floor, bay.serviceFloor) + 2.52)) return false;
+        return sample(a, b, p => siteTerrainHeight(terrain, ...p) < Math.min(floor, bay.serviceFloor) + 0.28 &&
+          !poles.some(pole => distance(p, pole) < width / 2 + 0.66) &&
+          !(moat && reach(p) >= moat.inner - width / 2 && reach(p) <= moat.outer + width / 2));
+      })) continue;
+      best = { slot, angle, side, station: hallStation, path, width, length, area: length * width, cost };
+    }
+  }
+  return best;
+}
 
 function siteBoatBankSamples(triangles, position, reach) {
   const edges = new Map(), coord = ([x, z]) => `${x.toFixed(4)}/${z.toFixed(4)}`;
@@ -32,11 +117,11 @@ function siteBoatBankSamples(triangles, position, reach) {
   return samples.sort((a, b) => a.distance - b.distance);
 }
 
-function siteFirehallBoatBay(model, position, surface, terrain, accessAngle, boatCapacity) {
+function siteFirehallBoatBay(model, position, surface, terrain, accessAngle, boatCapacity, { floor, context }) {
   if (!surface?.proposed?.length) return null;
   const capacity = Number(boatCapacity) === 6 ? 6 : 3,
     moduleEdge = model.R + BUILD_SECTION.dockGap + MODULE.depth + 3,
-    protectedRadius = Math.max(moduleEdge, model.crane?.extent ?? 0) + 1.5,
+    protectedRadius = moduleEdge + 1.5,
     reach = protectedRadius + 120,
     district = siteFoundationWater(surface, position, reach + 50),
     canal = siteFoundationWater({ proposed: surface.proposed }, position, reach + 50),
@@ -53,7 +138,9 @@ function siteFirehallBoatBay(model, position, surface, terrain, accessAngle, boa
     entryHalf = Math.max(5, ...approaches.map(({ width, courtWidth }) => (courtWidth ?? width ?? 0) / 2 + 1));
   district.level = level;
   district.clearance = 2.2;
-  let best = null, fallback = null;
+  const portals = siteFirehallPortals(model, position, bearing, district);
+  if (!portals.length) return null;
+  let best = null;
   for (const { origin, angle: normal, distance } of siteBoatBankSamples(surface.proposed, position, reach)) {
     if (distance < protectedRadius || distance > (best?.score ?? Infinity)) continue;
     for (const variation of [0, -Math.PI / 15, Math.PI / 15, -Math.PI / 8, Math.PI / 8]) {
@@ -93,17 +180,39 @@ function siteFirehallBoatBay(model, position, surface, terrain, accessAngle, boa
         score = distance + 2 * Math.abs(variation) + 6 * (serviceFloor - deck) + separation * 0.23,
         crewSide = Math.sign(localOffset(position)) || 1;
       if (score >= (best?.score ?? Infinity)) continue;
-      const bay = { angle, at, point, back, serviceBack, quayBack, rim, end, halfWidth, level, deck, serviceFloor,
+      const bay = { origin, angle, at, point, back, serviceBack, quayBack, rim, end, halfWidth, level, deck, serviceFloor,
         ceiling, capacity, slipCenters, crewSide, crewOffset: crewSide * (halfWidth - 2.1), berthWidth: SITE_BOAT_SLIP, boat: SITE_FIREBOAT,
         triangles: [[a, b, c], [a, c, d]], area: (rim - serviceBack) * 2 * halfWidth,
         maintenanceArea: (quayBack - serviceBack) * 2 * halfWidth,
         contextReach: Math.max(...bounds.map(([x, z]) => Math.hypot(x - position[0], z - position[1]))) + 8,
         protectedRadius, score };
-      if (siteBoatCrewAccess(bay, terrain, district, position)) best = bay;
-      else if (score < (fallback?.score ?? Infinity)) fallback = bay;
+      const { crane } = model,
+        pierConflict = crane?.runway === 'elevated' && elevatedRunwaySupports(crane).some(axis => [-1, 1].some(side => {
+          const p = siteLine(position, axis + bearing)(crane.tower + side * crane.groundGauge / 2);
+          return localStation(p) > serviceBack - 1 && localStation(p) < rim + 1 && Math.abs(localOffset(p)) < halfWidth + 1;
+        })),
+        nearer = point(clamp(localStation(position), serviceBack, rim), clamp(localOffset(position), -halfWidth, halfWidth)),
+        radialExtent = Math.max(...[serviceBack, rim].flatMap(s => [-halfWidth, halfWidth].map(x =>
+          Math.hypot(...sub(point(s, x), position))))),
+        crossesElevatedRail = crane?.runway === 'elevated' && radialExtent > crane.tower - crane.groundGauge / 2 - 0.6 &&
+          Math.hypot(...sub(nearer, position)) < crane.tower + crane.groundGauge / 2 + 0.6;
+      if (pierConflict || crossesElevatedRail || context?.([
+          point(serviceBack, -halfWidth), point(rim, -halfWidth), point(rim, halfWidth), point(serviceBack, halfWidth)
+        ], deck - 0.3, ceiling + 1.3)) continue;
+      const connection = siteFirehallConnection(bay, portals, position, terrain, district, floor, moduleEdge, crane, bearing, context);
+      if (connection && score + connection.cost * 1.5 < (best?.score ?? Infinity))
+        best = { ...bay, connection, score: score + connection.cost * 1.5 };
     }
   }
-  return best ?? fallback;
+  return best;
+}
+
+function siteHydrateFirehall(data) {
+  if (!data) return null;
+  const [x, z] = data.origin, c = Math.cos(data.angle), s = Math.sin(data.angle),
+    point = (station, across = 0) => [x + station * c - across * s, z + station * s + across * c],
+    sectionCenter = data.slipCenters[Math.floor((data.capacity - 1) / 2)];
+  return { ...data, point, at: (station) => point(station, sectionCenter) };
 }
 
 function siteBoatCrewAccess(bay, terrain, water, position) {
@@ -185,11 +294,25 @@ function drawSiteFirehallBoatHall(mesh, bay, terrain, concrete, steel, paving) {
 
   mesh.mark('Site_Firehall_Boat_Structure', 'Portal frames, insulated hall and independent steel door guides');
   for (const side of [-1, 1]) {
-    longitudinal(serviceBack, rim, side * (halfWidth - 0.13), deck - 0.12, 0.26, 3.04, siding);
-    longitudinal(serviceBack, rim, side * (halfWidth - 0.13), deck + 2.92, 0.19, 1.0, glass);
-    longitudinal(serviceBack, rim, side * (halfWidth - 0.13), deck + 3.92, 0.26, ceiling - deck - 3.92, siding);
+    const connection = bay.connection?.side === side ? bay.connection : null,
+      cross = side * (halfWidth - 0.13),
+      opening = connection && [connection.station - connection.width / 2, connection.station + connection.width / 2],
+      bands = [[deck - 0.12, deck + 2.92, 0.26, siding], [deck + 2.92, deck + 3.92, 0.19, glass],
+        [deck + 3.92, ceiling, 0.26, siding]];
+    for (const [low, high, depth, color] of bands) {
+      const runs = opening ? [[serviceBack, opening[0]], [opening[1], rim]] : [[serviceBack, rim]];
+      for (const [from, to] of runs) longitudinal(from, to, cross, low, depth, high - low, color);
+      const head = serviceFloor + 2.36;
+      if (!opening) continue;
+      if (head < high) longitudinal(...opening, cross, Math.max(low, head), depth, high - Math.max(low, head), color);
+    }
+    if (opening) {
+      box(connection.station, cross, serviceFloor + 2.23, connection.width, 0.13, 0.30, steel);
+      for (const jamb of opening) box(jamb, cross, serviceFloor, 0.09, 2.34, 0.30, steel);
+    }
     for (let station = serviceBack + 0.7; station < rim - 0.12; station += 3.4)
-      box(station, side * (halfWidth - 0.13), deck + 2.92, 0.32, 1.0, 0.12, steel);
+      if (!opening || station < opening[0] - 0.1 || station > opening[1] + 0.1)
+        box(station, cross, deck + 2.92, 0.32, 1.0, 0.12, steel);
   }
   for (const station of frames) {
     transverse(station, -halfWidth, halfWidth, ceiling - 0.41, 0.35, 0.41, steel);
@@ -243,5 +366,50 @@ function drawSiteFirehallBoatHall(mesh, bay, terrain, concrete, steel, paving) {
     box(center + 3.08, offset, level + 0.58, 0.27, 0.51, 0.30, steel);
     box(center + 3.21, offset, level + 1.03, 0.18, 0.15, 0.49, red);
     for (const cross of [-0.72, 0.72]) box(center - 4.17, offset + cross, level + 0.19, 0.52, 0.74, 0.81, dark);
+  }
+}
+
+function siteFirehallLinkCrossSections(path) {
+  const directions = path.slice(1).map(([x, , z], i) => {
+    const dx = x - path[i][0], dz = z - path[i][2], distance = Math.hypot(dx, dz);
+    return [-dz / distance, dx / distance];
+  });
+  return path.map((point, i) => {
+    const a = directions[Math.max(0, i - 1)], b = directions[Math.min(i, directions.length - 1)],
+      scale = 1 / Math.max(0.6, 1 + a[0] * b[0] + a[1] * b[1]);
+    return (side, y) => [point[0] + side * (a[0] + b[0]) * scale, point[1] + y,
+      point[2] + side * (a[1] + b[1]) * scale];
+  });
+}
+
+function drawSiteFirehallLink(mesh, bay, floor, terrain, concrete, steel, paving) {
+  const path = siteFirehallLinkLevels(bay, floor), half = bay.connection.width / 2,
+    cross = siteFirehallLinkCrossSections(path),
+    roof = rgb('#50615b'), glass = rgb('#9eb7b3'), siding = rgb('#a36051');
+  mesh.mark('Site_Firehall_Boat_Core_Link', 'Enclosed crew gallery from the core to the marine workshop');
+  for (let i = 1; i < cross.length; i++) {
+    const a = cross[i - 1], b = cross[i];
+    for (const [y, color] of [[0, paving], [-0.22, concrete], [2.52, roof], [2.36, roof]])
+      mesh.quad(a(-half, y), a(half, y), b(half, y), b(-half, y), color);
+    for (const edge of [-half, half]) {
+      for (const [low, high, color] of [[-0.22, 0.93, siding], [0.93, 2.13, glass], [2.13, 2.52, roof]])
+        mesh.quad(a(edge, low), b(edge, low), b(edge, high), a(edge, high), color);
+      const span = Math.hypot(...sub(path[i], path[i - 1])), steps = Math.ceil(span / 3.1);
+      for (let j = 0; j < steps; j++) {
+        const p = a(edge, 0), q = b(edge, 0), t = j / steps,
+          [x, y, z] = p.map((value, axis) => value + (q[axis] - value) * t);
+        mesh.box(x, y + 0.93, z, 0.10, 1.2, 0.10, 0, steel);
+      }
+    }
+  }
+  mesh.mark('Site_Firehall_Boat_Link_Supports', 'Independent crew gallery supports and pinned connection to the core');
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i], steps = Math.ceil(Math.hypot(...sub(b, a)) / 5.4);
+    for (let j = i === 1 ? 1 : 0; j < steps; j++) for (const side of [-1, 1]) {
+      const p = cross[i - 1](side * (half - 0.35), 0), q = cross[i](side * (half - 0.35), 0),
+        [x, y, z] = p.map((value, axis) => value + (q[axis] - value) * j / steps),
+        base = Math.min(siteTerrainHeight(terrain, x, z) - 0.24, y - 0.28);
+      mesh.box(x, base, z, 0.36, y - base - 0.20, 0.36, 0, concrete);
+    }
   }
 }

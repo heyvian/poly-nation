@@ -4,7 +4,7 @@
 const WEST_VILLAGE_PLAN = {
   frame: [28, 67, 1168, 658],
   limits: [93, 222, 1130, 569],
-  defaultPin: [332, 388],
+  defaultPin: [353, 366],
   // Sites are numbered on 5000-labelled-parcels.pdf. The northern boundary follows
   // the vector shoreline in that sheet, with sub-point simplification in PDF units.
   parcel: [
@@ -37,6 +37,35 @@ const WEST_VILLAGE_LANDMARKS = [
   { label: 'Former Greyhound Station · northeast corner', page: [770.7353, 382.987],
     gps: [51.046849659262335, -114.09870863269303] }
 ];
+
+// Existing theatre outline from the Master Plan and labelled-parcels vector sheets.
+const WEST_VILLAGE_PUMPHOUSE = {
+  name: 'Pumphouse Theatre',
+  height: 9, // Provisional extrusion above grade in metres. The plan documents the footprint only.
+  footprint: [[328.897, 434.200], [319.658, 437.765], [309.327, 410.997], [317.967, 407.662],
+    [317.899, 407.484], [321.070, 406.260], [322.877, 410.941], [319.109, 412.395],
+    [319.749, 414.053], [320.907, 413.607], [322.598, 417.988], [325.468, 416.881],
+    [327.578, 422.349], [326.122, 422.911], [327.439, 426.321], [326.061, 426.853]]
+};
+
+function westVillagePumphouse(registration) {
+  return WEST_VILLAGE_PUMPHOUSE.footprint.map(point => westVillageToGround(point, registration));
+}
+
+function westVillagePumphouseVolume(registration, terrain) {
+  const footprint = westVillagePumphouse(registration),
+    grades = footprint.map(([x, z]) => siteTerrainHeight(terrain, x, z)).sort((a, b) => a - b);
+  return extrudePolygon(footprint, grades[0] - 0.2, grades[Math.floor(grades.length / 2)] + WEST_VILLAGE_PUMPHOUSE.height);
+}
+
+function westVillagePumphouseDistance(position, registration) {
+  const outline = westVillagePumphouse(registration);
+  return Math.min(...outline.map((a, i) => {
+    const edge = sub(outline[(i + 1) % outline.length], a), offset = sub(position, a),
+      along = clamp(dot(edge, offset) / dot(edge, edge), 0, 1);
+    return Math.hypot(offset[0] - edge[0] * along, offset[1] - edge[1] * along);
+  }));
+}
 
 // The nominal fit is the fallback when landmark or bridge registration is unavailable.
 const WEST_VILLAGE_NOMINAL = {

@@ -206,6 +206,18 @@ function siteCanalOpening(plan) {
   } };
 }
 
+function drawSitePumphouse(mesh, terrain, registration, bounds) {
+  const volume = westVillagePumphouseVolume(registration, terrain), roof = Math.max(...volume.flat().map(([, , y]) => y)),
+    topColor = rgb('#b29d80'), wallColor = rgb('#a3886d');
+  mesh.mark('Site_District_Pumphouse_Theatre', 'Existing Pumphouse Theatre · approximate 9 m massing');
+  for (const face of volume) {
+    const top = face.every(([, , y]) => y === roof),
+      polygon = face.map(([x, z, y]) => [x, y, z]).reverse(),
+      clipped = bounds ? trimDrawingFace(polygon, bounds) : polygon;
+    for (let i = 1; i < clipped.length - 1; i++) mesh.tri(clipped[0], clipped[i], clipped[i + 1], top ? topColor : wallColor);
+  }
+}
+
 function siteAssemblyMesh(
   assembly,
   terrain,
@@ -225,6 +237,7 @@ function siteAssemblyMesh(
     model = null,
     includeTerrain = true,
     includeDistrictPaths = includeTerrain,
+    includeContextBuildings = includeTerrain || includeDistrictPaths,
     registration = null,
     includeFoundations = true
   } = {}
@@ -341,7 +354,7 @@ function siteAssemblyMesh(
       });
     } else if (includeTerrain) addSiteWater(mesh, finishedTerrain, clipWater(study), { showWater, canalDepth });
     if (includeDistrictPaths)
-      districtPaths = drawSiteDistrictPaths(mesh, finishedTerrain, registration, surface, { model, supportPlan, bounds });
+      districtPaths = drawSiteDistrictPaths(mesh, finishedTerrain, registration, surface, { model, supportPlan, bounds, bridgeTerrain: terrain });
     if (includeTerrain && natural?.trees.length) {
       mesh.mark('OpenStreetMap mapped trees');
       const bark = rgb('#7e7057'),
@@ -376,7 +389,8 @@ function siteAssemblyMesh(
   }
   if (terrain && includeDistrictPaths && !districtPaths)
     districtPaths = drawSiteDistrictPaths(mesh, finishedTerrain, registration, supportPlan?.surface ?? water,
-      { model, supportPlan, bounds });
+      { model, supportPlan, bounds, bridgeTerrain: terrain });
+  if (terrain && registration && includeContextBuildings) drawSitePumphouse(mesh, terrain, registration, bounds);
   const [siteX, siteZ] = position,
     foundation = supportPlan?.foundation ?? (terrain ? siteTerrainHeight(terrain, siteX, siteZ) : 0) + grade,
     angle = (bearing * Math.PI) / 180,

@@ -992,17 +992,18 @@ function refineRoomPlacement(layers, { width: corridorWidth, regions }, favorJun
   }
 }
 // Keep manual room assignments at the same physical location when the ring resizes.
-function assignRoomPrograms(rooms) {
+function assignRoomPrograms(rooms, marineStudy = false) {
   const used = new Set();
   for (const room of rooms) {
     room.editKey = [state.seed, room.f, room.band, room.start.toFixed(5), room.end.toFixed(5)].join(
       ':'
     );
-    if (!Object.hasOwn(state.roomPrograms, room.editKey)) continue;
+    if (!Object.hasOwn(state.roomPrograms, room.editKey) || marineStudy && state.roomPrograms[room.editKey] === FIREHALL) continue;
     room.id = state.roomPrograms[room.editKey];
     used.add(room);
   }
   for (const [key, program] of Object.entries(state.roomPrograms)) {
+    if (marineStudy && program === FIREHALL) continue;
     if (rooms.some((room) => room.editKey === key)) continue;
     const [seed, floor, band, start, end] = key.split(':').map(Number);
     if (seed !== state.seed) continue;
@@ -1026,7 +1027,7 @@ function assignRoomPrograms(rooms) {
 }
 
 // Pack the usable ring area into program rooms while keeping the floor plates and reservations fixed.
-function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0) {
+function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0, marineStudy = false) {
   const rng = random((state.seed + attempt) ^ 0x719ae321),
     leftAll = areas.slice(),
     rooms = [],
@@ -1195,7 +1196,7 @@ function roomLayout(areas, r, R, floors, lobby, circulation, attempt = 0) {
   rooms.length = 0;
   for (const layer of layers) for (const list of layer) rooms.push(...list);
   // Resolve manual programs before carving lobbies or routing the slide.
-  assignRoomPrograms(rooms);
+  assignRoomPrograms(rooms, marineStudy);
   circulation.roomPacking = { minimum: state.minRoomArea, merged, alcoves, alcoveArea };
   circulation.hubs = [];
   circulation.hubArea = 0;
@@ -1755,18 +1756,29 @@ function designClimbing(R, slotN, lobby, floorH, site) {
     rear = lobbyBays(lobby)[1],
     // Keep the climbing face beside the rear lobby instead of across its opening.
     preferred = mod(lobby.angle + Math.PI + (rear ? rear.span / 2 + half + 1.6 / face : 0), TAU),
-    blocked = new Set(),
+    blocked = new Set(), height = Math.min(19.8, state.floors * floorH),
     pad = Math.atan((MODULE.width / 2 + 1) / (R + 0.65));
-  const angle = site
-    ? Array.from({ length: slotN * 2 }, (_, i) =>
-        mod(preferred + Math.ceil(i / 2) * (i % 2 ? 1 : -1) * Math.PI / slotN, TAU)
-      ).find((heading) =>
-        lobbyBays(lobby).every((bay) => angDist(heading, bay.angle) >= bay.span / 2 + half + 1.4 / face) &&
-        [-1, -0.5, 0, 0.5, 1].every((edge) => site.dryWalk(heading + edge * half, face - 0.1, face + 5, width / 4))
-      )
-    : preferred;
+  let angle = preferred;
+  if (site) {
+    const candidates = Array.from({ length: slotN * 2 }, (_, i) =>
+      mod(preferred + Math.ceil(i / 2) * (i % 2 ? 1 : -1) * Math.PI / slotN, TAU));
+    let reclaimed = -1;
+    angle = null;
+    for (const heading of candidates) {
+      const reusable = [...(site.contextBays ?? [])].filter(id => Math.floor(id / slotN) * floorH < height &&
+        angDist((id % slotN) * TAU / slotN, heading) <= half + pad).length;
+      if (reusable <= reclaimed || lobbyBays(lobby).some(bay => angDist(heading, bay.angle) < bay.span / 2 + half + 1.4 / face)) continue;
+      if (![-1, -0.5, 0, 0.5, 1].every(edge => {
+        const axis = heading + edge * half;
+        return site.dryWalk(axis, face - 0.1, face + 5, width / 4) &&
+          (site.clearContext?.(axis, face - 0.1, face + 5, width / 4, 0, height + 0.35) ?? true);
+      })) continue;
+      angle = heading;
+      reclaimed = reusable;
+      if (!site.contextBays?.size) break;
+    }
+  }
   if (angle == null) return null;
-  const height = Math.min(19.8, state.floors * floorH);
   for (let f = 0; f < state.floors && f * floorH < height; f++)
     for (let j = 0; j < slotN; j++)
       if (angDist((j * TAU) / slotN, angle) <= half + pad) blocked.add(f * slotN + j);
@@ -1884,8 +1896,11 @@ function designRideAndSlide(layout, R, r, slotN, lobby, floorH, site) {
           const steps = Math.max(24, Math.ceil(approx)),
             route = Array.from({ length: steps + 1 }, (_, i) => slidePoint(a.angle, arc, i / steps)),
             stations = slideStations(route), end = stations.at(-1);
-          if (route.some(([x, , z], i) => site.foundation + topY - drop * stations[i] / end - tubeRadius
-            < site.surfaceBelow(x, z, tubeRadius) + 0.2)) continue;
+          if (route.some(([x, , z], i) => {
+            const y = topY - drop * stations[i] / end;
+            return site.foundation + y - tubeRadius < site.surfaceBelow(x, z, tubeRadius) + 0.2 ||
+              site.clearsPoint?.(x, z, tubeRadius + 0.15, y) === false;
+          })) continue;
         }
         best = { a, b, arc, topY, bottomY, drop, score };
       }
@@ -2281,11 +2296,14 @@ function autoGeometry(coreTotal, rinseCore) {
 }
 // Regenerate the architectural model from state. Fit floor area, reserve features, and then place the inventory.
 function derive(dockVariant = state.dockVariant, siteContext =
-  typeof siteWorkspace === 'undefined' ? null : siteWorkspace.designConstraints?.()) {
+  typeof siteWorkspace === 'undefined' ? null : siteWorkspace.designConstraints?.(), reserveMarine = true) {
   const floorHeight = floorPitch(state.slabThickness),
     sum = (a) => a.reduce((x, y) => x + y, 0),
     retailWant = (n) => apportion(state.vacancy, Math.max(0, n))[3],
     hasRepel = Object.values(state.relations).includes('repel'),
+    marineStudy = Boolean(siteContext?.marineStudy),
+    marineReserve = reserveMarine ? siteContext?.marineReserve ?? 0 : 0,
+    marineDock = Number(marineReserve > 0),
     requestedRooms = Object.keys(state.roomPrograms).filter((key) =>
       key.startsWith(String(state.seed) + ':')
     ).length;
@@ -2304,8 +2322,8 @@ function derive(dockVariant = state.dockVariant, siteContext =
       width = clamp(state.ringWidth, 0.01, R - MIN_COURT_RADIUS),
       r = R - width;
     const A = Math.PI * (state.floors * (R * R - r * r) + r * r);
-    if (A > state.areaCap - 600) {
-      const scale = Math.sqrt((state.areaCap - 600) / A);
+    if (A > state.areaCap - 600 - marineReserve) {
+      const scale = Math.sqrt((state.areaCap - 600 - marineReserve) / A);
       R *= scale;
       r *= scale;
       width *= scale;
@@ -2336,7 +2354,7 @@ function derive(dockVariant = state.dockVariant, siteContext =
       counts = inventory(n, goals);
       count = sum(counts);
       required = goals.map((a, i) => a - counts[i] * MODULE.area);
-      A = state.areaCap - (count + k) * MODULE.area - roofBudget + voidBudget;
+      A = state.areaCap - (count + k) * MODULE.area - roofBudget + voidBudget - marineReserve;
       if (
         required[0] < Math.PI * MIN_COURT_RADIUS ** 2 - 1e-7 ||
         A < Math.PI * MIN_COURT_RADIUS ** 2 + 0.01
@@ -2379,11 +2397,12 @@ function derive(dockVariant = state.dockVariant, siteContext =
     }
     const { R, r, width } = geom,
       site = siteContext?.resolve(R, r, slotN, state.coreEnvelope),
+      siteBlocks = new Set([...(site?.wetBays ?? []), ...(site?.contextBays ?? [])]),
       court = Math.PI * r * r - (site?.cutCourt ?? 0),
       ringArea = ringPer * state.floors - lobby.voidArea - (site?.cutRing ?? 0),
       programRing = ringArea - l,
       rawMax = slotN * state.floors;
-    if (count + k > rawMax - (site?.wetBays.size ?? 0)) return null;
+    if (count + k > rawMax - siteBlocks.size) return null;
     if (site && (site.cutRing || site.wetBays.size)) {
       lobby.angle = siteLobbyHeading(site, preferredLobbyAngle, R, lobby.span);
       lobby.bays = [lobby.angle, lobby.angle + Math.PI].map((angle) => ({ angle, span: lobby.span / 2 }));
@@ -2393,7 +2412,7 @@ function derive(dockVariant = state.dockVariant, siteContext =
     if (
       !roofPlan ||
       count + k > rawMax ||
-      ringArea + circulation.bridgeArea + court + (count + k) * MODULE.area + roofPlan.area >
+      ringArea + circulation.bridgeArea + court + (count + k) * MODULE.area + roofPlan.area + marineReserve >
         state.areaCap + 1e-6 ||
       programRing < 0
     )
@@ -2410,7 +2429,7 @@ function derive(dockVariant = state.dockVariant, siteContext =
           )
             lobby.blocked.add(f * slotN + j);
     const available = Math.max(0, circulation.roomCapacity),
-      ringDesired = required.map((a, i) => Math.max(0, a - (i === 0 ? court : 0))),
+      ringDesired = required.map((a, i) => marineStudy && i === FIREHALL ? 0 : Math.max(0, a - (i === 0 ? court : 0))),
       wanted = sum(ringDesired),
       factor = wanted ? Math.min(1, available / wanted) : 0,
       ring = ringDesired.map((x) => x * factor);
@@ -2423,7 +2442,7 @@ function derive(dockVariant = state.dockVariant, siteContext =
         state.floors,
         lobby,
         { ...circulation, regions: circulation.regions.slice() },
-        attempt
+        attempt, marineStudy
       );
     let layout = pack(0);
     const activeClusters = PROGRAMS.map((_, id) => id).filter((id) => state.cluster[id]);
@@ -2478,21 +2497,21 @@ function derive(dockVariant = state.dockVariant, siteContext =
       ride.roofLevel = ride.roofPitch.canopyRidgeY - 0.16;
       connectSlide(roomPlan, feature, R, slotN);
       const blocked = new Set([
-        ...(site?.wetBays ?? []),
+        ...siteBlocks,
         ...feature.blocked,
         ...lobby.blocked,
         ...(feature.climbing?.blocked || [])
       ]);
       // Keep the ordinary fit available so junction placement cannot cost
       // inventory or replace two workable lobbies with a single preferred one.
-      const budget = rawMax - count - k,
+      const budget = rawMax - count - k - marineDock,
         junctionPlan = Object.values(state.relations).includes('attract') ? structuredClone(roomPlan) : null;
       formSharedLobbies(roomPlan, slotN, blocked, budget, false, site);
       reserveDocksWithoutClearApproach(roomPlan.circulation, R, width, slotN, blocked);
       const hubs = roomPlan.circulation.hubs;
       if (junctionPlan && hubs.length >= 2) {
         const junctionBlocks = new Set([
-          ...(site?.wetBays ?? []),
+          ...siteBlocks,
           ...feature.blocked,
           ...lobby.blocked,
           ...(feature.climbing?.blocked || [])
@@ -2589,12 +2608,12 @@ function derive(dockVariant = state.dockVariant, siteContext =
       roofPlan
     };
     if (site) result.siteGeometry = {
-      wetBays: site.wetBays, canalArea: site.cutRing + site.cutCourt,
+      wetBays: site.wetBays, contextBays: site.contextBays, canalArea: site.cutRing + site.cutCourt,
       ringCutArea: site.cutRing, atriumCutArea: site.cutCourt,
       ground: siteContext.ground, floor: site.floor, position: siteContext.position, angle: siteContext.angle
     };
     const max = rawMax - blocked.size;
-    if (count + k > max) return null;
+    if (count + k > max - marineDock) return null;
     return { ...result, ...layout, feature, blocked, max };
   }
   let best = null;
@@ -2602,6 +2621,7 @@ function derive(dockVariant = state.dockVariant, siteContext =
     best = candidate(n, 0);
     if (best) break;
   }
+  if (!best && marineDock) return derive(dockVariant, siteContext, false);
   if (!best) throw Error('No feasible core geometry');
   function addRetail(base) {
     const upper = Math.min(
@@ -2672,7 +2692,7 @@ function derive(dockVariant = state.dockVariant, siteContext =
     ring,
     counts,
     slotN,
-    max,
+    max: availableBays,
     count,
     required,
     goals,
@@ -2701,10 +2721,28 @@ function derive(dockVariant = state.dockVariant, siteContext =
         p: EMPTY,
         blocked: blocked.has(i),
         use: blocked.has(i) ? 'blocked' : null,
-        ...(f === 0 && siteGeometry?.wetBays.has(j) ? { siteReserved: true } : {})
+        ...(f === 0 && siteGeometry?.wetBays.has(j) ? { siteReserved: true } : {}),
+        ...(siteGeometry?.contextBays?.has(i) ? { contextReserved: true } : {})
       });
     }
-  const activeSlots = slots.filter((s) => !s.blocked);
+  let marineHall = null;
+  if (marineDock) {
+    const probe = { R, r, width, slots, slotN, circulation, blocked, lobby, feature, roofPlan, floorHeight,
+      slabThickness: state.slabThickness, coreEnvelope: state.coreEnvelope };
+    probe.crane = planModuleCrane(probe, state.craneRunway);
+    probe.plaza = designPlaza(R, lobby, slots, feature.climbing, probe.crane);
+    marineHall = siteContext.fitFirehall(probe, siteGeometry.floor);
+    if (!marineHall) return derive(dockVariant, siteContext, false);
+    const portal = slots[marineHall.connection.slot];
+    blocked.add(portal.i);
+    Object.assign(portal, { blocked: true, use: 'blocked', firehallPortal: true });
+    core[FIREHALL] = marineHall.area;
+    circulation.marineLinkArea = marineHall.connection.area;
+    circulation.area += circulation.marineLinkArea;
+    circulation.corridorArea += circulation.marineLinkArea;
+    circulation.total += circulation.marineLinkArea;
+  }
+  const max = availableBays - Number(Boolean(marineHall)), activeSlots = slots.filter((s) => !s.blocked);
   counts.push(0);
   const pins = new Map();
   const pinnedEdits = [];
@@ -2737,7 +2775,8 @@ function derive(dockVariant = state.dockVariant, siteContext =
     requestedCounts,
     rooms,
     pins,
-    (state.seed + dockVariant) >>> 0
+    (state.seed + dockVariant) >>> 0,
+    marineHall?.connection.angle
   );
   counts.fill(0);
   activeSlots.forEach((slot, i) => {
@@ -2749,7 +2788,8 @@ function derive(dockVariant = state.dockVariant, siteContext =
     retail = vacancyCounts[3] * MODULE.area,
     outdoor = (vacancyCounts[1] + vacancyCounts[2]) * MODULE.area,
     primary =
-      ringArea + circulation.bridgeArea + court + count * MODULE.area + roofPlan.serviceArea,
+      ringArea + circulation.bridgeArea + court + count * MODULE.area + roofPlan.serviceArea +
+      (marineHall?.area ?? 0) + (circulation.marineLinkArea ?? 0),
     total = primary + retail + roofPlan.retailArea;
   if (state.bridgeSeating && circulation.bridges.length) circulation.bridgeLoungeSeed = state.seed;
   const layout = {
@@ -2795,7 +2835,7 @@ function derive(dockVariant = state.dockVariant, siteContext =
     lobby,
     blocked,
     circulation,
-    ...(siteGeometry ? { siteGeometry } : {}),
+    ...(siteGeometry ? { siteGeometry, marineStudy, marineHall } : {}),
     greenhouse: designGreenhouse(r, lobby, feature.ride),
     atriumEnvelope: atriumEnvelopeOptions(),
     roofPlan
@@ -2899,7 +2939,8 @@ function applyAllocationMoves(original, moves, dockVariant) {
     counts,
     layout.rooms,
     pins,
-    (state.seed + dockVariant) >>> 0
+    (state.seed + dockVariant) >>> 0,
+    layout.marineHall?.connection.angle
   );
   if (conflicts || firehall.unplaced || firehall.omitted.size) return null;
 
@@ -3038,7 +3079,7 @@ function designPlaza(R, lobby, slots, climb, crane, seed = state.seed) {
 }
 // Firehall docks start at grade. Higher floors are limited by both their own available
 // docks and the number on the floor below. A manual upper dock also reserves capacity below.
-function planFirehall(slots, columns, count, pins, dockConflicts) {
+function planFirehall(slots, columns, count, pins, dockConflicts, connectionAngle) {
   const floors = Array.from({ length: state.floors }, () => []);
   const byDock = new Map(slots.map((slot, i) => [slot.i, i]));
   const eligible = slots.map((slot, i) => {
@@ -3097,14 +3138,16 @@ function planFirehall(slots, columns, count, pins, dockConflicts) {
     // Any chosen dock can move within its floor during the topology passes.
     const ordered = free
       .slice()
-      .sort((a, b) => +(slots[b].anchor === FIREHALL) - +(slots[a].anchor === FIREHALL) || a - b);
+      .sort((a, b) => connectionAngle == null
+        ? +(slots[b].anchor === FIREHALL) - +(slots[a].anchor === FIREHALL) || a - b
+        : angDist(slots[a].angle, connectionAngle) - angDist(slots[b].angle, connectionAngle) || a - b);
     for (const i of ordered.slice(0, target - pinnedCount)) assigned.add(i);
   }
   return { assigned, eligible, omitted, unplaced: count - plannedCount };
 }
 
 // SEEDED TOPOLOGY SOLVER — fixed inventory; swap labels including vacancies; local pair energy.
-function place(slots, n, counts, rooms = [], pins = new Map(), seed = state.seed) {
+function place(slots, n, counts, rooms = [], pins = new Map(), seed = state.seed, firehallAngle = null) {
   const N = slots.length,
     rng = random(seed),
     a = Array(N).fill(EMPTY),
@@ -3122,6 +3165,7 @@ function place(slots, n, counts, rooms = [], pins = new Map(), seed = state.seed
       }
       centers[id] = Math.hypot(x, z) > 1e-7 ? mod(Math.atan2(z, x), TAU) : clusterAngle(id);
     }
+  if (firehallAngle != null) centers[FIREHALL] = firehallAngle;
   // One same-floor conflict outweighs every soft score changed by a single swap.
   const separationCost = 100;
   const hasRepel = Object.values(state.relations).includes('repel');
@@ -3148,7 +3192,7 @@ function place(slots, n, counts, rooms = [], pins = new Map(), seed = state.seed
   const pinnedFirehall = [...pins.values()].filter((program) => program === FIREHALL).length;
   const firehallDemand = Math.max(counts[FIREHALL], pinnedFirehall);
   const firehallBudget = Math.min(firehallDemand, inventoryTotal - pins.size + pinnedFirehall);
-  const firehall = planFirehall(slots, n, firehallBudget, fixed, dockConflicts);
+  const firehall = planFirehall(slots, n, firehallBudget, fixed, dockConflicts, firehallAngle);
   firehall.unplaced += firehallDemand - firehallBudget;
 
   // Reserve explicit edits and Firehall floor counts, then fill the remaining docks.
@@ -3221,7 +3265,8 @@ function place(slots, n, counts, rooms = [], pins = new Map(), seed = state.seed
     if (center == null) return relationship;
     const angularCost = 12 * angDist(slot.angle, center);
     const alignmentBonus = program === slot.anchor ? 4 : 0;
-    return relationship + clusteringStrength * (angularCost - alignmentBonus);
+    const strength = program === FIREHALL && firehallAngle != null && !state.cluster[FIREHALL] ? 0.45 : clusteringStrength;
+    return relationship + strength * (angularCost - alignmentBonus);
   }
   function edgeCost(k) {
     const edge = edges[k],

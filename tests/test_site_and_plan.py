@@ -391,8 +391,6 @@ with serve_lab(root) as url, sync_playwright() as p:
         dry = siteFoundationPlan(building, terrain, { position, bearing, grade: 5.5, water: null }),
         elevated = siteFoundationPlan({ ...model, crane: planModuleCrane(model, 'elevated') }, terrain,
           { position, bearing, grade: 0, water }),
-        six = siteFoundationPlan(building, terrain, { position, bearing, grade: 0, water, boatCapacity: 6 }),
-        shallow = siteFoundationPlan(building, terrain, { position, bearing, grade: 0, water, canalDepth: 1.5 }),
         mesh = meshBuilder();
       drawCraneInfrastructure(mesh, building, crane, rgb('#5d7971'), true);
       const scene = siteAssemblyMesh({ ...mesh, H: 60, extent: 120, craneMoat: craneMoatBounds(crane) }, terrain,
@@ -403,17 +401,13 @@ with serve_lab(root) as url, sync_playwright() as p:
           .filter((_, j) => j % 10 === 1);
       };
       const moatHeights = waterHeights('Site moat water'), canalHeights = waterHeights('Site canal water'),
-        bay = plan.boatBay, cuts = siteSectionCuts(plan).map(({ kind }) => kind);
+        cuts = siteSectionCuts(plan).map(({ kind }) => kind);
       return plan.moat.connected && !dry.moat.connected && moatHeights.length && canalHeights.length &&
         [...moatHeights, ...canalHeights].every((y) => Math.abs(y - (water.level - terrain.datum)) < 1e-5) &&
-        bay?.capacity === 3 && bay.boat.length >= 11 && bay.boat.beam < bay.berthWidth && bay.maintenanceArea >= 120 &&
-        !shallow.boatBay && !shallow.surface.garage && six.boatBay?.capacity === 6 &&
-        six.boatBay.slipCenters.length === 6 && six.boatBay.area > bay.area &&
-        plan.water.overlaps(bay.at(bay.back + 0.2)) && elevated.runway.spans.length > 0 &&
+        !plan.boatBay && elevated.runway.spans.length > 0 &&
         elevated.runway.poles.every((azimuth) => elevated.runway.radii.every((radius) =>
           !elevated.water.overlaps(siteLine(position, azimuth)(radius), 1.1))) &&
-        scene.groups.some(({ layer }) => layer === 'Site_Firehall_Rescue_Boat') &&
-        cuts.includes('boat-garage') && cuts.includes('boat-hall-cross') &&
+        !cuts.includes('boat-garage') &&
         dry.lowerRooms.length && dry.lowerRooms.every(({ ceiling, level }) => ceiling - level >= 2.7) &&
         JSON.stringify(model.layers) === layers;
     }''')
@@ -522,6 +516,50 @@ with serve_lab(root) as url, sync_playwright() as p:
     pdf = page.pdf(prefer_css_page_size=True, print_background=True)
     assert b'/MediaBox [0 0 1224 792]' in pdf and b'/Subtype /Image' not in pdf
     page.evaluate('window.dispatchEvent(new Event("afterprint"))')
+    linked = browser.new_page()
+    linked.add_init_script("""localStorage.setItem('poly-nation-west-village-terrain-v1', JSON.stringify({
+      count: 17, elevations: Array(289).fill(1040), datum: 1040, provider: 'Fixture'
+    }));""")
+    linked.goto(url + '/')
+    for capacity in [3, 6]:
+        if capacity == 6:
+            linked.evaluate("() => { $('siteBoatCapacity').value = '6'; $('siteBoatCapacity').onchange(); }")
+        linked.wait_for_function('capacity => model.marineHall?.capacity === capacity', arg=capacity, timeout=25000)
+        assert linked.evaluate('''() => {
+          const placed = siteWorkspace.designModel(model), plan = placed.sitePlan, bay = plan.boatBay,
+            nav = buildNavigation(placed), hall = nav.nodes.find(node => node.kind === 'firehall'),
+            modules = nav.nodes.filter(node => node.kind === 'module' && node.program === FIREHALL),
+            linked = new Set([hall.id]), queue = [hall.id],
+            cuts = siteSectionCuts(plan).map(cut => cut.kind),
+            volumes = studyFloor(placed, 0, 'program').filter(shape => shape.siteAnnex),
+            mesh = meshBuilder();
+          while (queue.length) for (const {to} of nav.edges[queue.pop()]) if (!linked.has(to)) {
+            linked.add(to); queue.push(to);
+          }
+          drawSitePumphouse(mesh, plan.originalTerrain, siteWorkspace.registration);
+          drawSiteFirehallLink(mesh, bay, plan.floor, plan.terrain, rgb('#aaaabb'), rgb('#778877'), rgb('#abbaaa'));
+          const blocked = model.slots.filter(slot => slot.contextReserved),
+            tall = blocked.some(slot => slot.f > 0),
+            wallAxis = Math.round(mod(model.lobby.angle + Math.PI / 2, TAU) / TAU * model.slotN) % model.slotN,
+            reusable = new Set([wallAxis, wallAxis + model.slotN]),
+            wall = designClimbing(model.R, model.slotN, model.lobby, model.floorHeight,
+              { contextBays: reusable, dryWalk: () => true, clearContext: () => true });
+          return bay.boat.length >= 11 && bay.slipCenters.length === bay.capacity &&
+            bay.maintenanceArea >= 120 && plan.water.overlaps(bay.at(bay.back + 0.2)) &&
+            model.rooms.every(room => room.id !== FIREHALL) && model.core[FIREHALL] === bay.area &&
+            model.circulation.marineLinkArea === bay.connection.area && model.total <= state.areaCap + 1e-6 &&
+            model.slots[bay.connection.slot].firehallPortal && nav.edges[hall.id].length === 1 &&
+            modules.length === model.counts[FIREHALL] && modules.every(node => linked.has(node.id)) &&
+            tall && blocked.every(slot => slot.blocked && slot.p === EMPTY) &&
+            [...reusable].every(id => wall.blocked.has(id)) &&
+            cuts.includes('boat-garage') && cuts.includes('boat-hall-cross') &&
+            volumes.length === 2 && mesh.solid.length > 1800 && mesh.solid.every(Number.isFinite) &&
+            mesh.groups.some(group => group.layer === 'Site_Firehall_Boat_Core_Link');
+        }''')
+    linked.evaluate("() => { $('siteCanalDepth').value = '1.5'; $('siteCanalDepth').onchange(); }")
+    linked.wait_for_function('model.marineStudy && !model.marineHall')
+    assert linked.evaluate('!siteWorkspace.designModel(model).sitePlan.surface.garage')
+    linked.close()
     mobile = browser.new_page(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
     mobile.goto(url + '/')
     mobile.locator('#openSite').click()

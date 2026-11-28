@@ -7,6 +7,54 @@ let camera = { az: -0.84, el: 0.57, zoom: 1, pan: 0 },
   gpu = null,
   software = null,
   softwareMesh = null;
+function polygonTurn(a, b, c) {
+  return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+}
+
+// Cut a simple outline into triangles once. Both caps share the sidewall vertices.
+function extrudePolygon(outline, z0, z1) {
+  const tolerance = 1e-8;
+  if (!(z1 > z0)) throw Error('An extrusion needs a positive height.');
+  const points = outline.filter(([x, y], i) => {
+    const last = outline[(i + outline.length - 1) % outline.length];
+    return Math.hypot(x - last[0], y - last[1]) > tolerance;
+  });
+  for (let i = points.length - 1; i >= 0 && points.length > 3; i--) {
+    const n = points.length;
+    if (Math.abs(polygonTurn(points[(i + n - 1) % n], points[i], points[(i + 1) % n])) <= tolerance)
+      points.splice(i, 1);
+  }
+  const area = points.reduce((total, [x, y], i) => {
+    const [u, v] = points[(i + 1) % points.length];
+    return total + x * v - y * u;
+  }, 0);
+  if (points.length < 3 || Math.abs(area) < tolerance) throw Error('A polygon has no area.');
+  if (area < 0) points.reverse();
+  const remaining = points.map((_, i) => i), cap = [];
+  while (remaining.length > 3) {
+    const ear = remaining.findIndex((b, i) => {
+      const a = remaining[(i + remaining.length - 1) % remaining.length], c = remaining[(i + 1) % remaining.length];
+      if (polygonTurn(points[a], points[b], points[c]) <= tolerance) return false;
+      return !remaining.some(j => j !== a && j !== b && j !== c &&
+        polygonTurn(points[a], points[b], points[j]) >= -tolerance &&
+        polygonTurn(points[b], points[c], points[j]) >= -tolerance &&
+        polygonTurn(points[c], points[a], points[j]) >= -tolerance);
+    });
+    if (ear < 0) throw Error('A polygon could not be triangulated.');
+    cap.push([remaining[(ear + remaining.length - 1) % remaining.length], remaining[ear],
+      remaining[(ear + 1) % remaining.length]]);
+    remaining.splice(ear, 1);
+  }
+  cap.push(remaining);
+  const low = points.map(([x, y]) => [x, y, z0]), high = points.map(([x, y]) => [x, y, z1]);
+  const faces = cap.flatMap(([a, b, c]) => [[low[c], low[b], low[a]], [high[a], high[b], high[c]]]);
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    faces.push([low[i], low[j], high[j]], [low[i], high[j], high[i]]);
+  }
+  return faces;
+}
+
 function rgb(hex) {
   return [
     parseInt(hex.slice(1, 3), 16) / 255,
@@ -1469,8 +1517,10 @@ function coreFacadeSpans(
     fullHeightHoles = lobbyHoles(model.lobby, floor),
     doorHoles = [];
   for (const slot of model.slots)
-    if (slot.f === floor && !slot.blocked)
-      doorHoles.push([slot.angle, dockBayOpening(model, slot).half]);
+    if (slot.f === floor) {
+      if (slot.firehallPortal) doorHoles.push([slot.angle, Math.atan(model.marineHall.connection.width / (2 * model.R))]);
+      else if (!slot.blocked) doorHoles.push([slot.angle, dockBayOpening(model, slot).half]);
+    }
   for (const connection of model.feature.slide?.connections || []) {
     if (connection.floor !== floor) continue;
     const portal = slidePortals?.find((entry) => entry.floor === floor);

@@ -524,14 +524,16 @@ function siteCoreBearings(model, terrain, position, bearing, water, radius, rows
 }
 
 function siteFoundationPlan(model, terrain, {
-  position, bearing, grade, water: districtSurface, lookout = 'atrium', boatCapacity = 3, canalDepth = 2
+  position, bearing, grade, water: districtSurface, lookout = 'atrium', canalDepth = 2
 }) {
   const storey = buildStorey(model, 0), base = storey.base, pitch = modelFloorPitch(model), angle = bearing * Math.PI / 180,
     radius = model.R + 3.15, reach = Math.max(110, radius * 2.6),
     envelope = Math.max(radius, Math.hypot(model.R + BUILD_SECTION.dockGap + MODULE.depth + 2.05, MODULE.width / 2 + 0.4)),
     accessAngle = model.lobby.angle + angle,
-    boatBay = canalDepth >= SITE_MIN_FIREBOAT_DEPTH
-      ? siteFirehallBoatBay(model, position, districtSurface, terrain, accessAngle, boatCapacity) : null,
+    matchedDesign = model.siteGeometry?.position?.every((coord, i) => Math.abs(coord - position[i]) < 1e-6) &&
+      Math.abs(model.siteGeometry.angle - angle) < 1e-6,
+    boatBay = matchedDesign && canalDepth >= SITE_MIN_FIREBOAT_DEPTH && districtSurface?.proposed?.length
+      ? siteHydrateFirehall(model.marineHall) : null,
     surface = boatBay ? { ...districtSurface, garage: boatBay.triangles } : districtSurface,
     water = siteFoundationWater(surface, position, Math.max(270 + radius, reach + radius)),
     district = boatBay ? siteFoundationWater(districtSurface, position, reach + radius) : water,
@@ -563,9 +565,9 @@ function siteFoundationPlan(model, terrain, {
     runway = crane?.runway === 'elevated' ? siteRunwaySupports(crane, position, angle, water, 12) : null,
     moatBounds = craneMoatBounds(crane),
     moatContact = siteMoatPlan(moatBounds, position, surface, terrain, water, Infinity),
-    floor = Math.max((ground && crosses ? ground.near + 0.22 : groundAtPin + base) + grade,
+    floor = Math.max(matchedDesign ? model.siteGeometry.floor : Math.max((ground && crosses ? ground.near + 0.22 : groundAtPin + base) + grade,
       ground && crosses ? ground.peak - 2.0 : (ground ? ground.peak : siteTerrainMaximum(terrain, position, envelope)) + 0.24,
-      crosses ? water.level + 0.25 : -Infinity,
+      crosses ? water.level + 0.25 : -Infinity),
       moatContact?.connected ? water.level + base + 0.65 : -Infinity),
     foundation = floor - base,
     crossingDeck = floor + (crosses ? pitch : 0),
@@ -637,7 +639,7 @@ function siteFoundationPlan(model, terrain, {
     crossingOffset, anchor, crossingDeck, crossingSoffit, lookouts,
     omitted: ground?.omitted ?? new Set(), wetBays: ground?.wetBays ?? new Set(), mastCrossing, mastRadius, mastSeats,
     grid, columns, lateralBays, transferredColumns, foundationRings, crane,
-    terrain: finishedTerrain, gradeReach, surface, accesses, accessAngle, moat, perimeter, runway, boatBay, lowerRooms,
+    terrain: finishedTerrain, originalTerrain: terrain, gradeReach, surface, accesses, accessAngle, moat, perimeter, runway, boatBay, lowerRooms,
     contextReach: Math.max(envelope, model.crane?.extent ?? 0, boatBay?.contextReach ?? 0,
       ...(model.plaza.arrivals ?? []).map(({ end }) => end)),
     unresolved: rows.some((row) => row.unresolved) || [...columns, ...lateralBays.flatMap(({ ends }) => ends)]
@@ -901,6 +903,7 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
   }
   const { boatBay } = plan;
   drawSiteFirehallBoatHall(mesh, boatBay, terrain, concrete, steel, paving);
+  if (boatBay?.connection) drawSiteFirehallLink(mesh, boatBay, plan.floor, terrain, concrete, steel, paving);
   for (const access of plan.accesses) {
     mesh.mark('Site_Access_Lobby_Walks', 'Graded approaches to the ground-floor lobbies');
     for (const route of access.innerWalk ? [access.innerWalk, access] : [access]) {
@@ -998,9 +1001,10 @@ function siteFoundationAxo(model, plan, surface, canalDepth, registration) {
     addSiteWater(mesh, plan.terrain, { faces, banks }, { showWater: true, canalDepth });
   }
   drawSiteFoundations(mesh, model, plan, false, canalDepth, siteCanalOpening(plan));
-  if (registration) drawSiteDistrictPaths(mesh, plan.terrain, registration, surface, {
-    model, supportPlan: plan, bounds: limits
-  });
+  if (registration) {
+    drawSiteDistrictPaths(mesh, plan.terrain, registration, surface, { model, supportPlan: plan, bounds: limits, bridgeTerrain: plan.originalTerrain });
+    drawSitePumphouse(mesh, plan.originalTerrain, registration, limits);
+  }
 
   mesh.mark('Site axonometric grade', 'Dashed local grade at the concrete stem walls');
   const grade = rgb('#6d6757');
@@ -1174,7 +1178,7 @@ function siteSectionCuts(plan, dockStructure = 'side-truss') {
   if (plan.boatBay) {
     const bay = plan.boatBay, across = (station) => bay.point((bay.back + bay.rim) / 2, station);
     cuts.push({ kind: 'boat-garage', title: 'Firehall · Wet berth and marine workshop',
-      note: `${bay.capacity} covered slips for ${bay.boat.length} m response craft, with a continuous transfer quay and ${Math.round(bay.maintenanceArea)} m² for marine gear and servicing. The launch apron connects to the canal.`,
+      note: `${bay.capacity} covered slips for ${bay.boat.length} m response craft and ${Math.round(bay.maintenanceArea)} m² for servicing. The workshop connects to the core via the enclosed crew gallery.`,
       at: bay.at, angle: bay.angle, from: bay.serviceBack - 4, to: bay.end + 8, crown: bay.ceiling + 1.65,
       recede: bay.berthWidth / 2 + 0.9,
       labels: [

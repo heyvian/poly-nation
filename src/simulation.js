@@ -346,25 +346,34 @@ function buildNavigation(m, includeBridgeSeats = true) {
     list.sort((a, b) => a.f - b.f);
     for (let i = 1; i < list.length; i++) connect(list[i - 1].id, list[i].id, null, 'lift');
   }
+  function dockCorridor(floor, angle, radius) {
+    return cells.filter(c => c.f === floor && c.kind === 'corridor' && c.R >= radius && c.r < radius &&
+      [angle, angle + TAU, angle - TAU].some(t => t >= c.start - 1e-6 && t <= c.end + 1e-6))
+      .sort((a, b) => angDist((a.start + a.end) / 2, angle) - angDist((b.start + b.end) / 2, angle))[0];
+  }
+  if (site?.boatBay?.connection) {
+    const bay = site.boatBay, { angle } = bay.connection,
+      radius = m.R - Math.max(0.55, facadeThickness(m) + 0.018), corridor = dockCorridor(0, angle, radius);
+    if (corridor) {
+      const cos = Math.cos(site.angle), sin = Math.sin(site.angle), [sx, sz] = site.position,
+        toLocal = ([x, y, z]) => [(x - sx) * cos + (z - sz) * sin,
+          y - site.foundation + 0.01, -(x - sx) * sin + (z - sz) * cos],
+        route = siteFirehallLinkLevels(bay, site.floor).map(toLocal),
+        [x, z] = bay.point(bay.connection.station, bay.connection.side * (bay.halfWidth - 1.0)),
+        inside = toLocal([x, bay.serviceFloor, z]),
+        hall = node(inside, 'firehall', { f: 0, program: FIREHALL });
+      connect(corridor.node, hall, [...pathWithin(corridor, angle, radius), ...route, inside], 'firehallLink');
+    }
+  }
   // Occupied modules and adaptive public decks are accessible destinations through their dock doors.
   for (const slot of dockSealMode(m) === 'secured' ? [] : m.slots) {
     if (slot.blocked || !dockInUse(slot)) continue;
     const a = slot.angle,
       f = slot.f,
       cr = m.R - Math.max(0.55, facadeThickness(m) + 0.018), foot = dockFootRadius(m);
-    const portal = cells.filter(
-      (c) =>
-        c.f === f &&
-        c.kind === 'corridor' &&
-        c.R >= cr &&
-        c.r < cr &&
-        [a, a + TAU, a - TAU].some((t) => t >= c.start - 1e-6 && t <= c.end + 1e-6)
-    );
-    if (!portal.length) continue;
-    const c = portal.sort(
-        (x, y) => angDist((x.start + x.end) / 2, a) - angDist((y.start + y.end) / 2, a)
-      )[0],
-      kind =
+    const c = dockCorridor(f, a, cr);
+    if (!c) continue;
+    const kind =
         slot.p !== EMPTY
           ? 'module'
           : slot.use === 'retail'

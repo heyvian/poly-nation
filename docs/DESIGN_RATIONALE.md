@@ -118,7 +118,7 @@ At a West Village placement, the designer asked the dry ground floor to sit near
 
 The student marked three GPS corners on the district plan and identified Parcel 4 as the site. The orange routes serve walking, cycling, rolling and other non-motorized travel, including along the broad boulevards. Pedestrian bridges carry the network across the mapped waterways.
 
-The designer treats terrain and canals as inputs to the building study. Ground docks intersecting water are reserved before allocation. Ground rooms and circulation fit the remaining dry ring. The climbing wall and slide are checked again for the new ground conditions. The same programme and structure carry through the assembly, drawings and cross-pollination study.
+The designer treats terrain, canals and existing site context as inputs to the building study. Ground docks intersecting water are reserved before allocation. On each floor, dock envelopes intersecting a mapped pedestrian bridge or the Pumphouse Theatre massing are also left out. Ground rooms and circulation fit the remaining dry ring. The climbing wall can use the façade freed up by those reservations where the landing and fall zone are clear. The same programme and structure carry through the assembly, drawings and cross-pollination study.
 
 The designer asked for public access above the canal and views down to the water. Inside the atrium, projecting bays extend an existing public bridge or ring landing at the first elevated floor. The open-air option uses an available dock on that floor to bring the public corridor out over the water. Both use framed glass flush with a solid walking surface. The interior frame returns to the adjoining floor structure, and the outside deck uses the permanent dock.
 
@@ -126,7 +126,7 @@ The canal can open to the atrium or pass beneath a sloped glazed enclosure. Wher
 
 The flat faces of the modules can meet flat collars on the round ring or a continuous faceted wall. Folding bay shutters secure the long-term opening and fit above the threshold when raised. Smaller weather seals belong to the individual modules and to the public garden and balcony entrances. The crane runway stays circular and follows the same column grid.
 
-The firehall studies pair three or six enclosed parallel wet berths with a continuous service quay and maintenance space. The hall connects directly to the canal where its layout fits. The student's firehall plans informed the slip and quay arrangement. The hall adds to the site programme while the attached firehall modules house crew quarters and social spaces.
+The Firehall pairs three or six enclosed parallel wet berths with a continuous service quay and a marine workshop. The canal feeds the slips and an enclosed crew gallery connects the workshop to the ring corridor. The marine hall provides the permanent Firehall area. Crew quarters and social spaces stay in the removable modules, with ground-floor assignments favoured near the core connection. The student's firehall plans informed the slip and quay arrangement.
 
 ### A public roof
 

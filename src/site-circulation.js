@@ -51,22 +51,54 @@ function siteDistrictIndex(regions, step = 32) {
   };
 }
 
-function siteDistrictReservedLand(model, plan) {
+function siteDistrictObstacles(registration, terrain, surface) {
+  const theatre = westVillagePumphouseVolume(registration, terrain), elevations = theatre.flat().map(p => p[2]),
+    base = Math.min(...elevations), roof = Math.max(...elevations),
+    context = theatre.filter(face => face.every(p => p[2] === roof)).map(face => ({
+      ...siteDistrictRegion(face.map(([x, z]) => [x, z])), bottom: () => base, top: () => roof
+    }));
+  if (surface) {
+    const vectors = siteDistrictVectors(registration, WEST_VILLAGE_CIRCULATION),
+      bridges = siteDistrictBridgeCandidates(vectors, terrain, surface, [], null).bridges;
+    for (const bridge of bridges) for (const part of bridge.parts) {
+      const deckHeight = p => bridge.height(part.station(p));
+      context.push({ ...part, bottom: p => part.deck ? deckHeight(p) - bridge.depth : siteTerrainHeight(terrain, p[0], p[2]),
+        top: p => deckHeight(p) + (part.deck ? 1.20 : 0.06) });
+    }
+  }
+  const query = siteDistrictIndex(context);
+  return (corners, lower = -Infinity, upper = Infinity) => {
+    const footprint = siteDistrictRegion(corners);
+    if (!footprint) return false;
+    const points = corners.map(([x, z]) => [x, 0, z]);
+    return query(footprint).some(({ planes, bottom, top }) => {
+      const overlap = trimDrawingFace(points, planes);
+      return overlap.length >= 3 && Math.min(...overlap.map(bottom)) < upper + 0.10 &&
+        Math.max(...overlap.map(top)) > (typeof lower === 'function' ? Math.min(...overlap.map(lower)) : lower) - 0.10;
+    });
+  };
+}
+
+function siteDistrictReservedLand(model, plan, includeModules = true) {
   if (!model || !plan) return [];
   const { position, angle } = plan, [x, z] = position, radius = model.R + 0.35,
     core = Array.from({ length: 36 }, (_, i) => {
       const azimuth = i * TAU / 36;
       return [x + radius * Math.cos(azimuth), z + radius * Math.sin(azimuth)];
     }),
-    modules = model.slots.filter((slot) => !slot.f && !slot.blocked && dockInUse(slot) && !plan.omitted?.has(slot.i))
-      .map((slot) => siteModuleFootprint(model, slot, position, angle).corners), boat = plan.boatBay,
+    modules = includeModules ? model.slots.filter((slot) => !slot.f && !slot.blocked && dockInUse(slot) && !plan.omitted?.has(slot.i))
+      .map((slot) => siteModuleFootprint(model, slot, position, angle).corners) : [], boat = plan.boatBay,
     hall = boat ? [boat.point(boat.serviceBack, -boat.halfWidth), boat.point(boat.rim, -boat.halfWidth),
       boat.point(boat.rim, boat.halfWidth), boat.point(boat.serviceBack, boat.halfWidth)] : null,
+    link = boat?.connection && includeModules ? siteFirehallLinkCrossSections(siteFirehallLinkLevels(boat, plan.floor)) : [],
+    half = (boat?.connection?.width ?? 0) / 2,
+    galleries = link.slice(1).map((next, i) => [link[i](-half, 0), next(-half, 0), next(half, 0), link[i](half, 0)]
+      .map(([x, , z]) => [x, z])),
     runwayPiers = plan.runway?.poles.flatMap((azimuth) => plan.runway.radii.map((radius) => {
       const left = siteLine(position, azimuth, -0.68), right = siteLine(position, azimuth, 0.68);
       return [left(radius - 0.68), left(radius + 0.68), right(radius + 0.68), right(radius - 0.68)];
     })) ?? [];
-  return [core, ...modules, ...runwayPiers, ...(hall ? [hall] : [])].map(siteDistrictRegion).filter(Boolean);
+  return [core, ...modules, ...runwayPiers, ...galleries, ...(hall ? [hall] : [])].map(siteDistrictRegion).filter(Boolean);
 }
 
 // Each segment keeps its original bearing. Station variables are actual metres along the traced path.
@@ -284,13 +316,13 @@ function siteDistrictDrape(polygon, terrain, add) {
 }
 
 function drawSiteDistrictPaths(mesh, terrain, registration, surface, {
-  model = null, supportPlan = null, bounds = null,
+  model = null, supportPlan = null, bounds = null, bridgeTerrain = terrain,
   source = typeof WEST_VILLAGE_CIRCULATION === 'undefined' ? null : WEST_VILLAGE_CIRCULATION
 } = {}) {
   if (!terrain || !registration || !source || !surface) return { bridges: [], interruptions: [] };
   const vectors = siteDistrictVectors(registration, source), reserved = siteDistrictReservedLand(model, supportPlan),
     moat = supportPlan?.moat,
-    plan = siteDistrictBridgeCandidates(vectors, terrain, surface, reserved, moat),
+    plan = siteDistrictBridgeCandidates(vectors, bridgeTerrain, surface, siteDistrictReservedLand(model, supportPlan, false), moat),
     waterRegions = [...(surface.existing ?? []), ...(surface.proposed ?? []), ...(surface.garage ?? []),
       ...(moat?.triangles ?? [])].map(siteDistrictRegion).filter(Boolean),
     cutsAt = siteDistrictIndex([...waterRegions, ...reserved]),

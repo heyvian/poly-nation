@@ -1,5 +1,10 @@
 # Changelog
 
+## Connected Firehall and site clearances
+
+- Fit an enclosed crew gallery between the core and the marine workshop. Count the hall as permanent Firehall programme and the gallery in the circulation schedule. Favour nearby bays in the Firehall's ground-first module allocation.
+- Show Pumphouse Theatre in plan and 3D using the registered vector footprint and a provisional 9 m height. Omit docks where the theatre or a mapped pedestrian bridge intersects their floor-specific envelope. Prefer those blank façade spans for climbing where clearance and dry access permit.
+
 ## Parcel 4 site registration and paths
 
 - Align the West Village sheets to the three supplied PumpHouse Theatre and former Greyhound station GPS controls.

@@ -198,8 +198,8 @@ const siteWorkspace = (() => {
   // The fit only needs local measurements. The full site mesh is assembled after allocation.
   function designConstraints() {
     if (!linked()) return null;
-    const { position, bearing, grade, canalDepth, water: districtWater } = sceneOptions(),
-      key = [...position, bearing, grade, canalDepth].join('/');
+    const { position, bearing, grade, canalDepth, boatCapacity, water: districtWater } = sceneOptions(),
+      key = [...position, bearing, grade, canalDepth, boatCapacity].join('/');
     if (design?.terrain === terrain && design?.surface === districtWater && design.key === key)
       return design.constraints;
     const angle = bearing * Math.PI / 180,
@@ -208,11 +208,21 @@ const siteWorkspace = (() => {
       water = siteFoundationWater(districtWater, position, 340),
       level = (districtWater?.level ?? terrain.datum) - terrain.datum,
       point = (x, z) => [position[0] + x * cos - z * sin, position[1] + x * sin + z * cos],
+      context = siteDistrictObstacles(registration, terrain, districtWater),
       fits = new Map();
+    const marineStudy = Boolean(districtWater?.proposed?.length);
     const constraints = {
-      position, angle, ground,
+      position, angle, ground, marineStudy,
+      marineReserve: marineStudy && canalDepth >= SITE_MIN_FIREBOAT_DEPTH ? siteFirehallReserve(boatCapacity) : 0,
+      fitFirehall(building, floor) {
+        const bay = siteFirehallBoatBay(building, position, districtWater, terrain,
+          building.lobby.angle + angle, boatCapacity, { floor, context });
+        if (!bay) return null;
+        const { at, point, ...geometry } = bay;
+        return geometry;
+      },
       resolve(R, r, slotN, coreEnvelope) {
-        const fitKey = [R, r, slotN, coreEnvelope].join('/');
+        const fitKey = [R, r, slotN, coreEnvelope, state.floors, state.slabThickness, state.craneRunway].join('/');
         if (fits.has(fitKey)) return fits.get(fitKey);
         const core = { R, r, slotN, coreEnvelope },
           cutRadius = (radius, azimuth) => coreBoundaryRadius(core, radius, azimuth),
@@ -225,8 +235,9 @@ const siteWorkspace = (() => {
           cutsCore = reachesWater && water.overlaps(position, coreReach),
           arcCache = new Map(),
           areaCache = new Map();
-        if (reachesWater) for (let j = 0; j < slotN; j++) {
-          const footprint = siteModuleFootprint(core, { angle: TAU * j / slotN }, position, angle);
+        const dockFootprints = Array.from({ length: slotN }, (_, j) =>
+          siteModuleFootprint(core, { angle: TAU * j / slotN }, position, angle));
+        if (reachesWater) for (const [j, footprint] of dockFootprints.entries()) {
           if (water.overlapsFootprint(footprint.corners)) wetBays.add(j);
         }
         function dryArcs(lo, hi, start, end) {
@@ -261,15 +272,36 @@ const siteWorkspace = (() => {
         }
         const crosses = reachesWater && Boolean(water.anchor(R + 3.15)),
           base = BUILD_SECTION.slabBase + BUILD_SECTION.slabThickness,
-          bankElevations = crosses ? Array.from({ length: 72 }, (_, i) =>
-            siteLine(position, i * TAU / 72)(R + 3.15))
-            .filter((at) => !water.overlaps(at, 0.5))
-            .map((at) => siteTerrainHeight(terrain, ...at)).sort((a, b) => a - b) : [],
-          near = bankElevations[Math.floor(bankElevations.length * 0.20)] ?? ground,
-          floor = Math.max((crosses ? near + 0.22 : ground + base) + grade,
-            crosses ? level + 0.25 : -Infinity);
+          envelope = Math.max(R + 3.15, Math.hypot(R + BUILD_SECTION.dockGap + MODULE.depth + 2.05, MODULE.width / 2 + 0.4)),
+          groundSlots = dockFootprints.map((_, j) => ({ f: 0, j, i: j, angle: TAU * j / slotN })),
+          gradeFit = reachesWater ? siteGroundStorey({ ...core, slots: groundSlots }, terrain, position, angle, R + 3.15, water) : null,
+          floor = Math.max((gradeFit && crosses ? gradeFit.near + 0.22 : ground + base) + grade,
+            gradeFit && crosses ? gradeFit.peak - 2 : (gradeFit?.peak ?? siteTerrainMaximum(terrain, position, envelope)) + 0.24,
+            crosses ? level + 0.25 : -Infinity),
+          floorHigh = state.craneRunway === 'moat' ? Math.max(floor, level + base + 0.65) : floor,
+          contextBays = new Set(), pitch = floorPitch(state.slabThickness);
+        for (const [j, footprint] of dockFootprints.entries()) {
+          if (!context(footprint.corners)) continue;
+          const cosDock = Math.cos(footprint.angle), sinDock = Math.sin(footprint.angle);
+          for (let f = 0; f < state.floors; f++) {
+            const y = floor + f * pitch,
+              lower = ([x, , z]) => {
+                const station = (x - position[0]) * cosDock + (z - position[1]) * sinDock;
+                return y - dockTrussDepth(clamp((station - R) / (MODULE.depth + BUILD_SECTION.dockGap), 0, 1)) - 0.15;
+              };
+            if (context(footprint.corners, lower, floorHigh + f * pitch + MODULE.height + 0.22)) contextBays.add(f * slotN + j);
+          }
+        }
         const fit = {
-          wetBays, cutRing: wetArea(r, R), cutCourt: wetArea(0, r), dryArcs, wetArea,
+          wetBays, contextBays, cutRing: wetArea(r, R), cutCourt: wetArea(0, r), dryArcs, wetArea,
+          clearContext(azimuth, from, to, width, low, high) {
+            const left = siteLine(position, angle + azimuth, -width / 2), right = siteLine(position, angle + azimuth, width / 2);
+            return !context([left(from), left(to), right(to), right(from)], floor - base + low, floorHigh - base + high);
+          },
+          clearsPoint(x, z, radius, y) {
+            return !context([point(x - radius, z - radius), point(x + radius, z - radius),
+              point(x + radius, z + radius), point(x - radius, z + radius)], floor - base + y - radius, floorHigh - base + y + radius);
+          },
           dryWalk(azimuth, from, to, width) {
             return !reachesWater || siteDryWalk(water, position, angle + azimuth, from, to, width);
           },
@@ -328,9 +360,12 @@ const siteWorkspace = (() => {
   }
 
   function fitCurrentView() {
+    const nearbyTheatre = building && westVillagePumphouseDistance(sceneOptions().position, registration) <
+      (building.crane?.extent ?? building.R + MODULE.depth) + 40;
     const modelStart = (group) =>
-      !group.layer.startsWith('Site ') && !group.layer.startsWith('Site_District_') &&
-      group.layer !== 'OpenStreetMap mapped trees';
+      (nearbyTheatre && group.layer === 'Site_District_Pumphouse_Theatre') ||
+      (!group.layer.startsWith('Site ') && !group.layer.startsWith('Site_District_') &&
+        group.layer !== 'OpenStreetMap mapped trees');
     const districtStart = (group) => group.layer === 'Site_District_Paths';
     const start = focusBuilding ? modelStart : scene?.groups.some(districtStart) ? districtStart : undefined;
     fitModel(scene, view, canvas, start);
@@ -372,16 +407,22 @@ const siteWorkspace = (() => {
             : ' The lobby approaches need a different alignment to meet dry grade.',
           dryArea = supports.lowerRooms.reduce((total, room) => total + room.area, 0),
           dry = dryArea > 0 ? ` ${Math.round(dryArea)} m² of additional lower-level programme.` : '',
-          boat = supports.boatBay ? ` The marine hall houses ${supports.boatBay.capacity} boats and ${Math.round(supports.boatBay.maintenanceArea)} m² of landward servicing space.` +
-            (supports.boatBay.route ? '' : ' The service entrance needs a dry approach.')
+          boat = supports.boatBay ? ` A ${Math.round(supports.boatBay.connection.length)} m enclosed crew gallery connects the core to the ${supports.boatBay.capacity}-boat Firehall.`
             : condition.value !== 'proposed' ? '' : sceneOptions().canalDepth < SITE_MIN_FIREBOAT_DEPTH
               ? ` The fireboat hall needs at least ${SITE_MIN_FIREBOAT_DEPTH.toFixed(2)} m of modeled water for draft and under-keel clearance.`
-              : ` No dry bank fits the selected ${boatCapacity.value}-boat hall and its launch apron at this placement.`,
+              : !linked() ? ' Link the site to the design to fit the Firehall and its core connection.'
+                : ` The ${boatCapacity.value}-boat Firehall needs a canal bank with room for an enclosed route to the core.`,
           clearBays = supports.omitted.size ? ` ${supports.omitted.size} ground-level dock bays reserved over water.` : '',
+          contextDocks = building.siteGeometry?.contextBays?.size ?? 0,
+          contextNote = contextDocks ? ` ${contextDocks} dock positions are unavailable where they intersect the mapped bridges or theatre.` : '',
           moat = supports.moat?.connected ? ' The moat shares the district water level.' : '',
-          runway = (supports.runway ?? supports.moat?.runway)?.unresolved ? ' Long runway crossings need a separate span study.' : '';
+          runway = (supports.runway ?? supports.moat?.runway)?.unresolved ? ' Long runway crossings need a separate span study.' : '',
+          theatreDistance = westVillagePumphouseDistance(position, registration),
+          theatre = theatreDistance < building.R + 0.35 ? ' The core overlaps Pumphouse Theatre at this pin.'
+            : theatreDistance < (building.crane?.extent ?? building.R + MODULE.depth)
+              ? ' The project envelope reaches the existing Pumphouse Theatre at this pin.' : '';
         supportStatus.textContent = (supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' : structure) +
-          lookouts + access + forecourts + clearBays + dry + boat + moat + runway;
+          lookouts + access + forecourts + clearBays + contextNote + dry + boat + moat + runway + theatre;
       }
     } else {
       delete $('sitePlacementStatus').dataset.elevation;
@@ -464,6 +505,8 @@ const siteWorkspace = (() => {
     $('sitePlanHelp').textContent = [
       'Click inside Parcel 4 to place the building. Arrow keys move it 5 m.',
       pastParcel && 'The projected project envelope extends past the parcel boundary.',
+      westVillagePumphouseDistance(westVillageToGround(pin, registration), registration) < edge * scale &&
+        'The project envelope reaches the existing Pumphouse Theatre.',
       conflicts && (terrain ? 'Open 3D terrain to inspect the water crossing.'
         : 'Load terrain to study the water crossing.')
     ].filter(Boolean).join(' ');
@@ -595,6 +638,8 @@ const siteWorkspace = (() => {
   const [left, top, width, height] = frame,
     [west, north, east, south] = limits;
   plan.setAttribute('viewBox', frame.join(' '));
+  $('sitePumphouseFootprint').setAttribute('points', WEST_VILLAGE_PUMPHOUSE.footprint.map(point => point.join(',')).join(' '));
+  $('sitePumphouseHeight').textContent = `${WEST_VILLAGE_PUMPHOUSE.name} uses the mapped footprint and an estimated ${WEST_VILLAGE_PUMPHOUSE.height} m height.`;
   $('siteParcelBoundary')?.setAttribute('points', parcel.map((point) => point.join(',')).join(' '));
   $('siteParcelLabel')?.setAttribute('x', '329');
   $('siteParcelLabel')?.setAttribute('y', '492');
@@ -777,7 +822,7 @@ const siteWorkspace = (() => {
         overview = buildMesh(placed, false, { ...view, floors: model.layers.length, inspect: 0, grid: false,
           xray: false, programEditing: false, showRooms: false, showFacade: true, showModules: true,
           roof: true, showRoofDeck: true, supports: false }),
-        context = siteAssemblyMesh(overview, terrain, { ...placement, includeFoundations: false }),
+        context = siteAssemblyMesh(overview, terrain, { ...placement, includeContextBuildings: true }),
         district = siteDistrictCut(plan, plan.surface, registration);
       return { plan, mesh, structure, context, district, dockStructure, registration,
         surface: plan.surface, canalDepth: placement.canalDepth };

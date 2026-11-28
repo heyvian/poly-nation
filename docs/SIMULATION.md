@@ -48,3 +48,7 @@ Points = base weight × credited seconds/10 × applicable multipliers. Different
 
 ## Known limitations
 Heuristic topology and room connectivity, schematic ride loading and elevator use, no validated pedestrian accessibility, wildlife ethology, crowd capacity or ride safety. Score threshold and weights selected by AI to operationalize student priorities, not calibrated by data. Need sensitivity analysis and real-world evidence for any performance claim. Current code is authority if docs and implementation diverge; reconcile openly rather than silently changing model.
+
+## Connected Firehall
+
+At a linked site, the marine workshop connects to the ground-floor ring corridor through the crew gallery. Staff can reach Firehall modules through the same dock and lift network used elsewhere in the core. The workshop is outside the simulated public destination pool.

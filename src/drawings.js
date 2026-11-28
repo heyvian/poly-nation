@@ -984,7 +984,7 @@ const openDrawingWorkspace = (() => {
         ...(plan.mastRadius && !plan.mastCrossing ? [['#7f9185', 'Independent mast cap and piles']] : []),
         ...(plan.accesses.length ? [['#c7c0aa', 'Step-free lobby walks']] : []),
         ...(plan.lowerRooms.length ? [['#ac8d6f', 'Dry lower-level programme']] : []),
-        ...(plan.boatBay?.contextReach <= reach ? [['#935b4c', 'Fireboat hall']] : []),
+        ...(plan.boatBay ? [['#935b4c', 'Fireboat hall and crew gallery']] : []),
         ...(mesh.groups.some(({ layer }) => layer === 'Site_District_Paths') ? [['#e2a66c', 'Walking and cycling routes']] : []),
         ...(mesh.groups.some(({ layer }) => layer === 'Site_District_Pedestrian_Bridge_Decks') ? [['#edbc87', 'Pedestrian bridge deck']] : []),
         ...(mesh.groups.some(({ layer }) => layer === 'Site Bow River water') ? [['#4a939e', 'Modeled water']] : [])
@@ -1012,7 +1012,7 @@ const openDrawingWorkspace = (() => {
         include: ({ layer }) => !/^(?:Crane_Traveling_|Swing_Crown|Site terrain|Site (?:Bow|canal|moat|water))/.test(layer)
       }),
       contextGeometry = drawingGeometry(context, sourceModel, {
-        include: ({ layer }) => /^(Core_L\d+_Slab|Facade_|Modules_L|Module_Balconies|Roof_(Public_Deck|Lift_|Commercial_Retail)|Atrium_(Glass|Roof_Ridge)|Swing_(Tower|Crown|Boarding)|Crane_(Traveling_Gantry|Roof_|Elevated_Runway|Moat_Runway)|Infinite_Rinse_Water_Slide)/.test(layer)
+        include: ({ layer }) => /^(Core_L\d+_Slab|Facade_|Modules_L|Module_Balconies|Roof_(Public_Deck|Lift_|Commercial_Retail)|Atrium_(Glass|Roof_Ridge)|Swing_(Tower|Crown|Boarding)|Crane_(Traveling_Gantry|Roof_|Elevated_Runway|Moat_Runway)|Infinite_Rinse_Water_Slide|Site_District_Pumphouse_Theatre|Site_Firehall_Boat_(?:Garage|Structure|Core_Link))/.test(layer)
       }),
       cuts = siteSectionCuts(plan, dockStructure),
       contextTop = plan.foundation + contextGeometry.points.reduce((peak, point) => Math.max(peak, point[1]), 0),

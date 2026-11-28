@@ -425,6 +425,22 @@ function studyFloor(model, floor, kind) {
       programme ? code : ''
     );
   }
+  const site = model.sitePlan, bay = site?.boatBay;
+  if (floor === 0 && bay?.connection) {
+    const [sx, sz] = site.position, c = Math.cos(site.angle), s = Math.sin(site.angle),
+      local = ([x, z]) => [(x - sx) * c + (z - sz) * s, (z - sz) * c - (x - sx) * s],
+      out = (points, color, height, code) => shapes.push({ points: points.map(local), color, height, code, siteAnnex: true }),
+      half = bay.connection.width / 2,
+      sections = siteFirehallLinkCrossSections(siteFirehallLinkLevels(bay, site.floor)),
+      gallery = side => sections.map(section => {
+        const [x, , z] = section(side * half, 0);
+        return [x, z];
+      });
+    out([...gallery(1), ...gallery(-1).reverse()], CIRCULATION_COLOURS.corridor, 2.52, '');
+    out([bay.point(bay.serviceBack, -bay.halfWidth), bay.point(bay.rim, -bay.halfWidth),
+      bay.point(bay.rim, bay.halfWidth), bay.point(bay.serviceBack, bay.halfWidth)],
+      programme ? PROGRAMS[FIREHALL].color : '#e1e5dc', bay.ceiling - site.floor, programme ? 'FH' : '');
+  }
   return shapes;
 }
 
@@ -505,11 +521,10 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
     };
   const building = floor === 0 ? studyCanalPlan(svg, model, project, planRadius ?? Math.max(Math.abs(minX), Math.abs(maxX),
     Math.abs(minY), Math.abs(maxY))) : svg;
-  function polygon(points, fill, opacity = 1) {
-    studyMark(building, 'polygon', {
+  function polygon(points, fill, target = building) {
+    studyMark(target, 'polygon', {
       points: points.map(([x, y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' '),
       fill,
-      'fill-opacity': opacity,
       stroke: '#526a5d',
       'stroke-width': plan ? 0.65 : 0.8,
       'stroke-linejoin': 'round'
@@ -550,14 +565,15 @@ function studyModelFigure(model, kind, { floor, azimuth = -Math.PI / 4, exploded
         }
       }
       const points = shape.points.map((point) => project(point, roofHeight));
-      polygon(points, shape.color);
+      const target = shape.siteAnnex ? svg : building;
+      polygon(points, shape.color, target);
       if (plan && shape.code) {
         const [x, y] = points
           .reduce(([sx, sy], [px, py]) => [sx + px, sy + py], [0, 0])
           .map((sum) => sum / points.length);
         if (shape.points.length === 4 || points.some(([px]) => Math.abs(px - x) > 12))
           studyMark(
-            building,
+            target,
             'text',
             {
               x,
@@ -824,7 +840,8 @@ function drawingSetPages(name, model, assignments) {
         marine = site.boatBay?.area ?? 0;
       note.textContent = `West Village · ${(site.terrain.datum + site.floor).toFixed(2)} m ground floor elevation` +
         `${model.siteGeometry?.canalArea ? ` · ${fmt(model.siteGeometry.canalArea)} m² of ground plate open at the water` : ''}` +
-        (dry + marine ? `. The separate site area schedule includes ${fmt(dry)} m² of dry space and ${fmt(marine)} m² of marine space.` : '.');
+        (marine ? `. The ${fmt(marine)} m² marine hall is the permanent Firehall programme. Its enclosed crew gallery is counted under circulation.` : '.') +
+        (dry ? ` The separate site area schedule records ${fmt(dry)} m² of dry lower-level space.` : '');
       page.append(note);
     }
     const exploded = add(
@@ -835,7 +852,9 @@ function drawingSetPages(name, model, assignments) {
     exploded.append(studyModelFigure(model, 'program', { exploded: true }), legend(programmes));
 
     // Fit every plan to the full module envelope so paired levels and the roof share a scale.
-    const planRadius = Math.hypot(model.R + BUILD_SECTION.dockGap + MODULE.depth, MODULE.width / 2);
+    const planRadius = Math.max(Math.hypot(model.R + BUILD_SECTION.dockGap + MODULE.depth, MODULE.width / 2),
+      ...studyFloor(model, 0, 'program').filter(shape => shape.siteAnnex)
+        .flatMap(shape => shape.points.map(point => Math.hypot(...point))));
     for (let first = 0; first <= model.layers.length; first += 2) {
       const roofOnly = first === model.layers.length,
         last = Math.min(first + 1, model.layers.length), pair = document.createElement('div'),

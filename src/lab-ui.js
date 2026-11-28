@@ -587,6 +587,7 @@ function applyProgramEdit(selection, program) {
   const { room, slot } = selection;
   const adding = slot?.p === EMPTY;
   if (!Number.isInteger(program) || !PROGRAMS[program]) return 'Select a valid program.';
+  if (room && before.marineStudy && program === FIREHALL) return 'The marine hall contains the permanent Firehall programme.';
   if (slot?.blocked) return 'This dock is reserved for another building feature.';
   if (room?.id === program || slot?.p === program) return '';
   state = {
@@ -807,12 +808,14 @@ function upload(m) {
   const siteStatus = $('designSiteStatus');
   siteStatus.hidden = placed === m;
   if (placed !== m) {
-    const { wetBays, canalArea } = m.siteGeometry,
+    const { wetBays, contextBays, canalArea } = m.siteGeometry,
       { terrain, floor, boatBay, lowerRooms } = placed.sitePlan,
-      extra = lowerRooms.reduce((area, room) => area + room.area, boatBay?.area ?? 0);
+      extra = lowerRooms.reduce((area, room) => area + room.area, 0);
     siteStatus.textContent = `West Village placement linked. Ground floor at ${(terrain.datum + floor).toFixed(1)} m.` +
       (wetBays.size ? ` ${wetBays.size} ground-floor docks reserved over water.` : '') +
+      (contextBays?.size ? ` ${contextBays.size} dock positions reserved for site context.` : '') +
       (canalArea > 0.5 ? ` ${fmt(canalArea)} m² of ground floor opens to water.` : '') +
+      (boatBay ? ` The connected marine hall supplies ${fmt(boatBay.area)} m² of permanent Firehall programme.` : '') +
       (extra > 0.5 ? ` ${fmt(extra)} m² of additional site programme outside the area budget.` : '');
   }
   const mesh = siteWorkspace.composeDesign(buildMesh(placed, false, massingView()), m);
@@ -1163,7 +1166,7 @@ function rebuildDesign({ preserveAllocation = false } = {}) {
   );
   PROGRAMS.forEach((p, i) => {
     $('actual' + i).textContent =
-      `Adjusted goal: ${fmt(m.goals[i])} m² · Actual: ${fmt(m.core[i])} m² core · ${m.counts[i]} pods (${fmt(m.counts[i] * 81)} m²)`;
+      `Adjusted goal: ${fmt(m.goals[i])} m² · Actual: ${fmt(m.core[i])} m² permanent · ${m.counts[i]} pods (${fmt(m.counts[i] * 81)} m²)`;
   });
   $('diameter').textContent = (m.R * 2).toFixed(1) + ' m';
   $('ringArea').textContent = fmt(m.ringPer) + ' m²';
@@ -1200,7 +1203,8 @@ function rebuildDesign({ preserveAllocation = false } = {}) {
   );
   $('totalArea').textContent = fmt(m.total);
   $('coreArea').textContent = fmt(
-    m.ringArea + m.circulation.bridgeArea + m.court + m.roofPlan.area
+    m.ringArea + m.circulation.bridgeArea + m.court + m.roofPlan.area +
+    (m.marineHall?.area ?? 0) + (m.circulation.marineLinkArea ?? 0)
   );
   $('moduleArea').textContent = fmt(m.count * 81);
   $('totalModules').textContent = m.count;
@@ -1248,7 +1252,8 @@ function rebuildDesign({ preserveAllocation = false } = {}) {
   }
   if (m.circulation.total) {
     for (const [name, value, color] of [
-      ['Corridors / links', m.circulation.corridorArea - m.circulation.bridgeArea, '#eee9da'],
+      ['Corridors / links', m.circulation.corridorArea - m.circulation.bridgeArea - (m.circulation.marineLinkArea ?? 0), '#eee9da'],
+      ['Firehall crew gallery', m.circulation.marineLinkArea ?? 0, '#a36051'],
       ['Atrium bridges / stairs', m.circulation.bridgeArea, '#d9bb87'],
       ['Elevator blocks', m.circulation.elevatorArea, '#777a91'],
       ['Shared lobbies', m.circulation.hubArea, '#80509e']
@@ -1355,9 +1360,11 @@ $('export').onclick = () => {
       ...(m.siteGeometry && { siteGeometry: {
         ...m.siteGeometry,
         wetBays: [...m.siteGeometry.wetBays],
+        contextBays: [...(m.siteGeometry.contextBays ?? [])],
         groundFloorElevation: site ? site.terrain.datum + site.floor : null,
         additionalDryArea: site?.lowerRooms.reduce((sum, room) => sum + room.area, 0) ?? 0,
-        additionalMarineArea: site?.boatBay?.area ?? 0
+        permanentFirehallArea: m.marineHall?.area ?? 0,
+        firehallLinkArea: m.circulation.marineLinkArea ?? 0
       } }),
       geometry: {
         outerFootprint: Math.PI * m.R * m.R,
@@ -1389,7 +1396,8 @@ $('export').onclick = () => {
         color: p.color,
         goal: p.goal,
         adjustedGoal: m.goals[i] ?? 0,
-        coreArea: m.core[i],
+        coreArea: i === FIREHALL && m.marineStudy ? 0 : m.core[i],
+        permanentArea: m.core[i],
         moduleCount: m.counts[i],
         actualArea: m.core[i] + m.counts[i] * 81
       })),

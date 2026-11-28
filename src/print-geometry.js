@@ -6,53 +6,7 @@ const PRINT_SCALES = [100, 150, 200, 250, 300, 400, 500];
 const printPolar = (radius, angle) => [radius * Math.cos(angle), -radius * Math.sin(angle)];
 const printTransform = (triangles, transform) => triangles.map(face => face.map(transform));
 
-function printTurn(a, b, c) {
-  return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-}
-
-// Cut a simple outline into triangles once. Both caps share the sidewall vertices.
-function printExtrude(outline, z0, z1) {
-  const tolerance = 1e-8;
-  if (!(z1 > z0)) throw Error('An extrusion needs a positive height.');
-  const points = outline.filter(([x, y], i) => {
-    const last = outline[(i + outline.length - 1) % outline.length];
-    return Math.hypot(x - last[0], y - last[1]) > tolerance;
-  });
-  for (let i = points.length - 1; i >= 0 && points.length > 3; i--) {
-    const n = points.length;
-    if (Math.abs(printTurn(points[(i + n - 1) % n], points[i], points[(i + 1) % n])) <= tolerance)
-      points.splice(i, 1);
-  }
-  const area = points.reduce((total, [x, y], i) => {
-    const [u, v] = points[(i + 1) % points.length];
-    return total + x * v - y * u;
-  }, 0);
-  if (points.length < 3 || Math.abs(area) < tolerance) throw Error('A part outline has no area.');
-  if (area < 0) points.reverse();
-  const remaining = points.map((_, i) => i), cap = [];
-  while (remaining.length > 3) {
-    const ear = remaining.findIndex((b, i) => {
-      const a = remaining[(i + remaining.length - 1) % remaining.length], c = remaining[(i + 1) % remaining.length];
-      if (printTurn(points[a], points[b], points[c]) <= tolerance) return false;
-      return !remaining.some(j => j !== a && j !== b && j !== c &&
-        printTurn(points[a], points[b], points[j]) >= -tolerance &&
-        printTurn(points[b], points[c], points[j]) >= -tolerance &&
-        printTurn(points[c], points[a], points[j]) >= -tolerance);
-    });
-    if (ear < 0) throw Error('A part outline could not be triangulated.');
-    cap.push([remaining[(ear + remaining.length - 1) % remaining.length], remaining[ear],
-      remaining[(ear + 1) % remaining.length]]);
-    remaining.splice(ear, 1);
-  }
-  cap.push(remaining);
-  const low = points.map(([x, y]) => [x, y, z0]), high = points.map(([x, y]) => [x, y, z1]);
-  const faces = cap.flatMap(([a, b, c]) => [[low[c], low[b], low[a]], [high[a], high[b], high[c]]]);
-  for (let i = 0; i < points.length; i++) {
-    const j = (i + 1) % points.length;
-    faces.push([low[i], low[j], high[j]], [low[i], high[j], high[i]]);
-  }
-  return faces;
-}
+const printExtrude = extrudePolygon;
 
 function printBox(x0, y0, z0, x1, y1, z1) {
   return printExtrude([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], z0, z1);
