@@ -224,11 +224,14 @@ function siteAssemblyMesh(
     supportPlan = null,
     model = null,
     includeTerrain = true,
+    includeDistrictPaths = includeTerrain,
+    registration = null,
     includeFoundations = true
   } = {}
 ) {
   const mesh = meshBuilder(), siteMoat = supportPlan?.moat, finishedTerrain = supportPlan?.terrain ?? terrain,
     bounds = contextRadius ? siteDiskPlanes(position, contextRadius) : null;
+  let districtPaths = null;
   function clipWater(study) {
     if (!bounds || !study) return study;
     const faces = study.faces.map((face) => ({ ...face, polygon: trimDrawingFace(face.polygon, bounds) }))
@@ -337,6 +340,8 @@ function siteAssemblyMesh(
         showWater, canalDepth, includeTerrain, color: siteMoat.connected ? '#4a939e' : '#79a8b0'
       });
     } else if (includeTerrain) addSiteWater(mesh, finishedTerrain, clipWater(study), { showWater, canalDepth });
+    if (includeDistrictPaths)
+      districtPaths = drawSiteDistrictPaths(mesh, finishedTerrain, registration, surface, { model, supportPlan, bounds });
     if (includeTerrain && natural?.trees.length) {
       mesh.mark('OpenStreetMap mapped trees');
       const bark = rgb('#7e7057'),
@@ -345,6 +350,7 @@ function siteAssemblyMesh(
         cell = (value) => clamp(Math.floor((0.5 - value / size) * cells), 0, cells - 1);
       for (const { x, z, height } of natural.trees) {
         if (bounds && Math.hypot(x - position[0], z - position[1]) > contextRadius) continue;
+        if (districtPaths?.coversGround?.(x, z)) continue;
         if (
           waterPlanes(cell(z) * cells + cell(x))?.some((planes) =>
             planes.every((plane) => plane.x * x + plane.z * z <= plane.level)
@@ -368,6 +374,9 @@ function siteAssemblyMesh(
       }
     }
   }
+  if (terrain && includeDistrictPaths && !districtPaths)
+    districtPaths = drawSiteDistrictPaths(mesh, finishedTerrain, registration, supportPlan?.surface ?? water,
+      { model, supportPlan, bounds });
   const [siteX, siteZ] = position,
     foundation = supportPlan?.foundation ?? (terrain ? siteTerrainHeight(terrain, siteX, siteZ) : 0) + grade,
     angle = (bearing * Math.PI) / 180,
@@ -441,6 +450,10 @@ function siteAssemblyMesh(
   }
   return {
     ...mesh,
+    ...(districtPaths ? { districtCirculation: {
+      bridges: districtPaths.bridges.length, interrupted: districtPaths.interruptions.length,
+      steepApproaches: districtPaths.bridges.filter((bridge) => bridge.grade > 0.051).length
+    } } : {}),
     H: assembly.H + (relative ? 0 : Math.max(0, foundation)),
     extent: contextRadius || !includeTerrain ? assembly.extent : Math.max(assembly.extent, (terrain?.size ?? 0) / 2),
     ...(buildingCoordinates ? { firstBuildingGroup, northAzimuth: -Math.PI / 2 - angle } : {}),

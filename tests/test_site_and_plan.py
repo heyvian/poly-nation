@@ -1,6 +1,7 @@
 """Exercise the PDF-led West Village study, terrain providers and overhead cameras."""
 
 import os
+import re
 import shutil
 import struct
 import xml.etree.ElementTree as ET
@@ -145,7 +146,24 @@ with serve_lab(root) as url, sync_playwright() as p:
     svg = page.locator('#sitePlacementPlan')
     footprint = page.locator('#siteFootprint')
     expect(svg).to_be_visible()
-    expect(footprint).to_have_attribute('data-water', 'false')
+    expect(page.locator('#siteParcelBoundary')).to_have_attribute('points', re.compile(r'\d'))
+    expect(page.locator('#sitePlanSource')).to_have_value('combined')
+    expect(page.locator('#siteRegistration')).to_contain_text('Three GPS landmarks')
+    assert page.evaluate('''() => {
+      const pairs = WEST_VILLAGE_LANDMARKS.map(({gps}) => gps), fit = westVillageLandmarkRegistration(pairs),
+        {project} = siteCoordinates(WEST_VILLAGE_PLAN.terrainCentre);
+      return fit.controlCount === 3 && fit.rms < 0.4 && fit.a < 0 &&
+        WEST_VILLAGE_LANDMARKS.every(({page, gps: [lat, lon]}) =>
+          Math.hypot(...sub(westVillageToGround(page, fit), project({lat, lon}))) < 0.5);
+    }''')
+    assert page.evaluate('''() => {
+      const fit = westVillageLandmarkRegistration(WEST_VILLAGE_LANDMARKS.map(({gps}) => gps)),
+        flat = { size: WEST_VILLAGE_PLAN.terrainSize, count: 17, datum: 1040, elevations: Array(289).fill(1040) },
+        paths = siteDistrictVectors(fit, WEST_VILLAGE_CIRCULATION),
+        bridges = (proposed) => siteDistrictBridgeCandidates(paths, flat,
+          westVillageWaterFromPlan(flat, fit, proposed), [], null).bridges;
+      return bridges(false).length === 2 && bridges(true).length === 38;
+    }''')
 
     def pick(x, y):
         point = svg.evaluate('(node, [x, y]) => {const p = new DOMPoint(x, y).matrixTransform(node.getScreenCTM()); return [p.x, p.y]}',
@@ -154,16 +172,17 @@ with serve_lab(root) as url, sync_playwright() as p:
 
     start = footprint.get_attribute('transform')
     pick(140, 120)
-    expect(page.locator('#sitePlacementStatus')).to_contain_text('inside the dashed')
+    expect(page.locator('#sitePlacementStatus')).to_contain_text('inside Parcel 4')
     expect(footprint).to_have_attribute('transform', start)
-    pick(740, 423)
+    pick(335, 407)
     pin = footprint.get_attribute('transform')
     assert pin != start
     svg.press('ArrowRight')
     pin = footprint.get_attribute('transform')
-    for sheet in ['water', 'circulation', 'master']:
+    for sheet, asset in [('water', 'water'), ('circulation', 'circulation'), ('parcels', 'parcels'),
+                         ('combined', 'water-circulation'), ('master', 'master')]:
         page.locator('#sitePlanSource').select_option(sheet)
-        expect(page.locator('#sitePlanImage')).to_have_attribute('href', f'assets/site/{sheet}.webp')
+        expect(page.locator('#sitePlanImage')).to_have_attribute('href', f'assets/site/{asset}.webp')
         expect(footprint).to_have_attribute('transform', pin)
     page.locator('#siteTerrainMode').click()
     expect(page.locator('#siteTerrainEmpty')).to_be_visible()
@@ -178,9 +197,11 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(page.locator('#appWorking')).to_be_hidden()
     expect(page.locator('#sitePlacementStatus')).to_contain_text('Ground at pin 1040.0 m')
     expect(page.locator('#siteWaterStatus')).to_contain_text('Bow River study level 1040.0 m')
-    expect(page.locator('#siteWaterStatus')).to_contain_text('Approximate plan registration')
+    expect(page.locator('#siteWaterStatus')).to_contain_text('Registered to the three GPS landmarks')
     expect(page.locator('#siteTerrainEmpty')).to_be_hidden()
     expect(page.locator('#siteCanvas')).to_be_visible()
+    page.wait_for_function("window.paintedGroups.includes('Site_District_Paths') && "
+                           "window.paintedGroups.includes('Site_District_Pedestrian_Bridge_Decks')")
     verify_plan(page, '#sitePlan')
     page.locator('#siteAxo').click()
     page.locator('#siteFit').click()
@@ -424,8 +445,10 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(page.locator('#documentPages svg[data-site-section=foundation]')).to_have_count(1, timeout=30000)
     district = page.locator('#documentPages svg[data-site-section=district]')
     expect(district).to_contain_text('North–south section looking west')
-    expect(district).to_contain_text('10 Avenue SW')
+    expect(district).to_have_attribute('data-site-parcel', '4')
+    expect(district).to_contain_text('Parcel 4')
     expect(district).to_contain_text('Bow River')
+    expect(district.locator('[data-site-parcel-locator="4"] polygon')).to_be_attached()
     expect(district.locator('[data-site-context=overlay] path').first).to_be_attached()
     expect(page.locator('#documentPages svg[data-site-section=piled-detail]')).to_contain_text('Pile lengths are shown schematically')
     loadpath = page.locator('#documentPages svg[data-site-section=structural-axis]')
@@ -466,10 +489,10 @@ with serve_lab(root) as url, sync_playwright() as p:
     page.locator('#loadSite').click()
     expect(page.locator('#siteStatus')).to_contain_text('Open-Meteo (coarser fallback)', timeout=20000)
     expect(page.locator('#siteWaterStatus')).to_contain_text('Bow River study level 1042.0 m')
-    expect(page.locator('#siteWaterStatus')).to_contain_text('Matched at two Bow River crossings')
+    expect(page.locator('#siteWaterStatus')).to_contain_text('Registered to the three GPS landmarks')
     assert elevation_requests == [100, 100, 89], elevation_requests
     page.locator('#siteVegetation').check()
-    expect(page.locator('#siteWaterStatus')).to_contain_text('Mapped vegetation is shown.')
+    expect(page.locator('#siteWaterStatus')).to_contain_text('Mapped vegetation is shown.', timeout=30000)
     page.locator('#siteVegetation').uncheck()
     page.route(fallback, lambda route: route.abort())
     page.locator('#loadSite').click()
@@ -479,7 +502,7 @@ with serve_lab(root) as url, sync_playwright() as p:
     page.locator('#sitePlaceMode').click()
     expect(footprint).to_have_attribute('transform', pin)
     svg.scroll_into_view_if_needed()
-    pick(660, 387)
+    pick(338, 456)
     page.wait_for_function('''() => model.siteGeometry.canalArea > 0 && model.siteGeometry.wetBays.size > 0 &&
       model.slots.filter(({ siteReserved }) => siteReserved).every(({ f, blocked, p, use }) =>
         f === 0 && blocked && p === EMPTY && use === 'blocked') &&

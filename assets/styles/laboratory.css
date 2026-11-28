@@ -823,6 +823,10 @@ body.dr-open .header-actions > :not(.workspace-nav){display:none}
 .site-control-group .hint:empty { display: none; }
 .site-control-group input, .site-control-group select { min-width: 0; }
 .site-sources .hint { margin: 7px 0; }
+.site-landmarks { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.site-landmarks input { width: 100%; min-width: 0; }
+.site-landmarks .actions { flex-wrap: wrap; }
+.site-landmarks .hint:empty { display: none; }
 .site-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .site-toolbar-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .site-modes { display: flex; gap: 5px; }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Parcel 4 site registration and paths
+
+- Align the West Village sheets to the three supplied PumpHouse Theatre and former Greyhound station GPS controls.
+- Highlight Parcel 4 for placement and use it as the origin of the west-facing district section.
+- Bring in the combined water and circulation sheet and the labelled parcel sheet. Draw the non-motorized paths at their mapped widths and add pedestrian bridges at water crossings.
+
 ## 3D Print kits
 
 - Generate scaled Massing, Assembly and Structure kits from the current model. Preview the assembled parts and their bed orientations, and download individual STLs or the numbered ZIP with vector assembly and clear-sheet cut guides.

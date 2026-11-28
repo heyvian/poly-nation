@@ -1,23 +1,44 @@
 'use strict';
 
-// All three supplied sheets share this PDF frame, in points with y increasing down.
+// The supplied sheets share this PDF frame, in points with y increasing down.
 const WEST_VILLAGE_PLAN = {
   frame: [28, 67, 1168, 658],
   limits: [93, 222, 1130, 569],
-  defaultPin: [740, 430],
+  defaultPin: [332, 388],
+  // Sites are numbered on 5000-labelled-parcels.pdf. The northern boundary follows
+  // the vector shoreline in that sheet, with sub-point simplification in PDF units.
+  parcel: [
+    [284.971, 371.786], [289.834, 367.870], [301.814, 359.920], [302.397, 355.920],
+    [307.363, 350.019], [313.722, 344.662], [324.444, 334.558], [333.843, 329.284],
+    [346.565, 324.145], [379.391, 315.445], [381.685, 315.127],
+    [356.257, 568.798], [303.905, 568.798]
+  ],
   // 10 Avenue SW traced on the studio master plan and identified on City ARP Map 1.6.
   tenthAvenue: [[451, 529], [557, 531], [669, 532], [784, 533], [931, 534], [1069, 538], [1170, 541]],
   terrainCentre: { latitude: 51.049, longitude: -114.103 },
   terrainSize: 2800,
   sources: {
     master: { title: 'Master Plan 1-5000.pdf', image: 'assets/site/master.webp' },
-    water: { title: '5000-water.pdf', image: 'assets/site/water.webp' },
-    circulation: { title: '5000-circulation.pdf', image: 'assets/site/circulation.webp' }
+    water: { title: '5000-water.pdf', image: 'assets/site/water.webp', proposedWater: true, existing: 'master' },
+    circulation: { title: '5000-circulation.pdf', image: 'assets/site/circulation.webp' },
+    combined: { title: 'Water and circulation', image: 'assets/site/water-circulation.webp',
+      proposedWater: true, existing: 'circulation' },
+    parcels: { title: '5000-labelled-parcels.pdf', image: 'assets/site/parcels.webp' }
   }
 };
 
-// The nominal fit is a district-scale starting point. A live match replaces it when
-// both crossings can be located, while the chosen point on the studio sheets stays fixed.
+// The landmark points are the exact vector corners identified on the marked reference.
+// GPS pairs are latitude and longitude in that order.
+const WEST_VILLAGE_LANDMARKS = [
+  { label: 'PumpHouse Theatre · north corner', page: [321.0699, 406.2604],
+    gps: [51.04657408143171, -114.10994351062043] },
+  { label: 'PumpHouse Theatre · south corner', page: [319.6578, 437.7654],
+    gps: [51.0460840124423, -114.11000040885965] },
+  { label: 'Former Greyhound Station · northeast corner', page: [770.7353, 382.987],
+    gps: [51.046849659262335, -114.09870863269303] }
+];
+
+// The nominal fit is the fallback when landmark or bridge registration is unavailable.
 const WEST_VILLAGE_NOMINAL = {
   a: -(5000 * 0.0254) / 72,
   b: 0,
@@ -25,6 +46,41 @@ const WEST_VILLAGE_NOMINAL = {
   ground: [0, 0],
   matched: false
 };
+
+// A similarity fit preserves right angles and a common metres-per-point scale.
+// Using the centred control pairs avoids making one corner the fixed origin.
+function westVillageLandmarkRegistration(coordinates) {
+  if (!Array.isArray(coordinates) || coordinates.length !== WEST_VILLAGE_LANDMARKS.length) return null;
+  const { project } = siteCoordinates(WEST_VILLAGE_PLAN.terrainCentre),
+    pairs = WEST_VILLAGE_LANDMARKS.flatMap(({ page }, i) => {
+      const coordinate = coordinates[i];
+      if (!Array.isArray(coordinate) || coordinate.length !== 2) return [];
+      const [lat, lon] = coordinate;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) >= 90 || Math.abs(lon) > 180) return [];
+      const ground = project({ lat, lon });
+      return Math.hypot(...ground) <= WEST_VILLAGE_PLAN.terrainSize / 2 ? [{ page, ground }] : [];
+    });
+  if (pairs.length !== WEST_VILLAGE_LANDMARKS.length) return null;
+  const centre = (key) => [0, 1].map((axis) => pairs.reduce((sum, pair) => sum + pair[key][axis], 0) / pairs.length),
+    page = centre('page'), ground = centre('ground');
+  let scaleSquared = 0, dotProduct = 0, crossProduct = 0;
+  for (const { page: [px, py], ground: [gx, gz] } of pairs) {
+    const x = px - page[0], y = py - page[1], u = gx - ground[0], v = gz - ground[1];
+    scaleSquared += x * x + y * y;
+    dotProduct += x * u + y * v;
+    crossProduct += x * v - y * u;
+  }
+  const a = dotProduct / scaleSquared, b = crossProduct / scaleSquared,
+    registration = { a, b, page, ground, method: 'landmarks', matched: true, controlCount: pairs.length },
+    scale = westVillageScale(registration),
+    errors = pairs.map(({ page, ground }) => {
+      const [x, z] = westVillageToGround(page, registration);
+      return Math.hypot(x - ground[0], z - ground[1]);
+    }),
+    rms = Math.hypot(...errors) / Math.sqrt(pairs.length);
+  if (a >= 0 || !(scale >= 1.25 && scale <= 2.3) || rms > 15) return null;
+  return { ...registration, rms };
+}
 
 function westVillageScale(registration) {
   return Math.hypot(registration.a, registration.b);
@@ -44,12 +100,29 @@ function westVillageToPage([x, z], { a, b, page, ground }) {
   return [page[0] + (dx * a + dz * b) / square, page[1] + (dz * a - dx * b) / square];
 }
 
-function westVillageInside(pin) {
-  const [x, y] = pin,
-    [left, top, right, bottom] = WEST_VILLAGE_PLAN.limits;
-  return (
-    Number.isFinite(x) && Number.isFinite(y) && x >= left && x <= right && y >= top && y <= bottom
-  );
+function westVillageParcel(registration) {
+  return WEST_VILLAGE_PLAN.parcel.map((point) => westVillageToGround(point, registration));
+}
+
+function westVillageParcelEdge([x, y]) {
+  const { parcel } = WEST_VILLAGE_PLAN;
+  return Math.min(...parcel.map(([ax, ay], i) => {
+    const [bx, by] = parcel[(i + 1) % parcel.length], dx = bx - ax, dy = by - ay,
+      t = clamp(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy), 0, 1);
+    return Math.hypot(x - ax - t * dx, y - ay - t * dy);
+  }));
+}
+
+function westVillageInside([x, y]) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+  if (westVillageParcelEdge([x, y]) < 1e-6) return true;
+  const { parcel } = WEST_VILLAGE_PLAN;
+  let inside = false;
+  for (let i = 0; i < parcel.length; i++) {
+    const [ax, ay] = parcel[i], [bx, by] = parcel[(i + 1) % parcel.length];
+    if ((ay > y) !== (by > y) && x < ax + (bx - ax) * (y - ay) / (by - ay)) inside = !inside;
+  }
+  return inside;
 }
 
 function westVillageTenthAvenue(x, registration) {

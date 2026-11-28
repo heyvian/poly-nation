@@ -906,11 +906,34 @@ const openDrawingWorkspace = (() => {
     return { preview, vector };
   }
 
+  function renderSiteParcelLocator(svg, cut, left, top) {
+    const width = 238, height = 150, padding = 16, parcel = cut.polygon,
+      eastWest = parcel.map(([x]) => x), northSouth = parcel.map(([, z]) => z),
+      minX = Math.min(...eastWest), maxX = Math.max(...eastWest),
+      minZ = Math.min(...northSouth), maxZ = Math.max(...northSouth),
+      scale = Math.min((width - 62) / (maxX - minX), (height - 55) / (maxZ - minZ)),
+      x = value => left + width / 2 + ((minX + maxX) / 2 - value) * scale,
+      y = value => top + 35 + (maxZ - value) * scale,
+      group = studyMark(svg, 'g', { 'data-site-parcel-locator': '4', fill: '#223b35', 'font-size': 12 });
+    studyMark(group, 'rect', { x: left, y: top, width, height, fill: '#fffdf8', stroke: '#a9b9b3' });
+    studyMark(group, 'text', { x: left + padding, y: top + 20, 'font-weight': 650 }, 'Parcel 4 · Section locator');
+    studyMark(group, 'polygon', {
+      points: parcel.map(([a, b]) => `${x(a).toFixed(2)},${y(b).toFixed(2)}`).join(' '),
+      fill: '#e8eee5', stroke: '#668074', 'stroke-width': 1
+    });
+    const north = left + width - padding, cutX = x(cut.cutX);
+    studyMark(group, 'path', { d: `M${cutX} ${top + 29}V${top + height - 13}`, fill: 'none',
+      stroke: '#223b35', 'stroke-width': 1.4, 'stroke-dasharray': '4 2' });
+    studyMark(group, 'path', { d: `M${north} ${top + 69}v-20m-4 5 4-5 4 5`, fill: 'none', stroke: '#223b35' });
+    studyMark(group, 'text', { x: north, y: top + 43, 'text-anchor': 'middle' }, 'N');
+    studyMark(group, 'text', { x: cutX + 5, y: top + height - 5 }, 'Section');
+  }
+
   function renderSiteFoundationAxo(study, context, scales, pale, index) {
-    const paper = SITE_SECTION_PAPER, { plan, surface, canalDepth } = study,
+    const paper = SITE_SECTION_PAPER, { plan, surface, canalDepth, registration } = study,
       w = paper.width * DRAWING_PIXELS_PER_INCH, h = paper.height * DRAWING_PIXELS_PER_INCH,
       margin = 48, right = 1070, ink = '#223b35', rule = '#a9b9b3', top = 143,
-      { mesh, reach } = siteFoundationAxo(sourceModel, plan, surface, canalDepth),
+      { mesh, reach } = siteFoundationAxo(sourceModel, plan, surface, canalDepth, registration),
       layers = drawingGeometry(mesh, sourceModel, {
         include: ({ layer }) => !/^(Site_Foundation_Platform|Site_Atrium_)/.test(layer)
       }),
@@ -936,6 +959,7 @@ const openDrawingWorkspace = (() => {
     svg.setAttribute('height', paper.height + 'in');
     svg.setAttribute('font-family', 'system-ui, sans-serif');
     svg.dataset.siteSection = 'axo';
+    svg.dataset.siteParcel = '4';
     studyMark(svg, 'rect', { width: w, height: h, fill: '#ffffff' });
     svg.append(main, key);
     const text = (x, y, content, size, options = {}) => studyMark(svg, 'text', {
@@ -945,7 +969,7 @@ const openDrawingWorkspace = (() => {
         const indicator = studyMark(svg, 'g', { fill: ink, 'font-size': 13 });
         drawScaleIndicator(indicator, view.denominator, end, baseline, ink, north ? view.basis : null);
       };
-    text(margin, 40, 'POLY NATION  /  WEST VILLAGE SITE SECTIONS', 15, { 'font-weight': 700, 'letter-spacing': 1.4 });
+    text(margin, 40, 'POLY NATION  /  WEST VILLAGE  /  PARCEL 4', 15, { 'font-weight': 700, 'letter-spacing': 1.4 });
     text(margin, 78, title, 32, { 'font-weight': 680 });
     text(margin, 106, 'The ground and deck are cut away to expose the supporting walls, girders and piles.', 15);
     text(w - margin, 40, 'PN–SI–' + String(index + 1).padStart(2, '0'), 16, { 'text-anchor': 'end' });
@@ -961,6 +985,8 @@ const openDrawingWorkspace = (() => {
         ...(plan.accesses.length ? [['#c7c0aa', 'Step-free lobby walks']] : []),
         ...(plan.lowerRooms.length ? [['#ac8d6f', 'Dry lower-level programme']] : []),
         ...(plan.boatBay?.contextReach <= reach ? [['#935b4c', 'Fireboat hall']] : []),
+        ...(mesh.groups.some(({ layer }) => layer === 'Site_District_Paths') ? [['#e2a66c', 'Walking and cycling routes']] : []),
+        ...(mesh.groups.some(({ layer }) => layer === 'Site_District_Pedestrian_Bridge_Decks') ? [['#edbc87', 'Pedestrian bridge deck']] : []),
         ...(mesh.groups.some(({ layer }) => layer === 'Site Bow River water') ? [['#4a939e', 'Modeled water']] : [])
       ];
     for (const [i, [fill, label]] of legend.entries()) {
@@ -1028,6 +1054,7 @@ const openDrawingWorkspace = (() => {
       svg.setAttribute('height', paper.height + 'in');
       svg.setAttribute('font-family', 'system-ui, sans-serif');
       svg.dataset.siteSection = cut.kind;
+      svg.dataset.siteParcel = '4';
       studyMark(svg, 'rect', { width: w, height: h, fill: '#ffffff' });
 
       function project(view, station, height) {
@@ -1041,7 +1068,7 @@ const openDrawingWorkspace = (() => {
       for (const surface of surfaces) studyMark(ground, 'polygon', { points: coordinates(surface), fill: water });
       studyMark(ground, 'polyline', { points: coordinates(profile), fill: 'none', stroke: '#746d55', 'stroke-width': 1.4 });
 
-      if (district)
+      if (district && cut.avenue !== null)
         studyMark(ground, 'polyline', { points: coordinates([cut.avenue - 6, cut.avenue, cut.avenue + 6].map((station) =>
           [station, siteTerrainHeight(plan.terrain, ...at(station)) + 0.05])), fill: 'none', stroke: '#777873', 'stroke-width': 2.4 });
 
@@ -1111,18 +1138,34 @@ const openDrawingWorkspace = (() => {
         text(px + 9, (top + lower) / 2 + 5, `${height.toFixed(1)} m clear`, 15, { 'font-weight': 650 });
       }
       if (district) {
-        for (const [station, height, label, align] of [
-          [cut.avenue, siteTerrainHeight(plan.terrain, ...at(cut.avenue)), 'S · 10 Avenue SW', 'start'],
-          [cut.river, plan.water.level, 'Bow River · N', 'end']
-        ]) {
+        const south = cut.avenue ?? cut.south,
+          markers = [
+            [south, siteTerrainHeight(plan.terrain, ...at(south)), cut.avenue === null ? 'S · Parcel 4 boundary' : 'S · 10 Avenue SW', 'start'],
+            [cut.river, plan.water.level, 'Bow River · N', 'end']
+          ];
+        for (const [station, height, label, align] of markers) {
           const [x, y] = project(frame, station, height), px = x + margin, py = y + drawingY;
           studyMark(svg, 'line', { x1: px, y1: py - 3, x2: px, y2: py - 26, stroke: rule });
           text(px, py - 33, label, 14, { 'text-anchor': align, 'font-weight': 650 });
         }
+        const parcelAxis = studyMark(svg, 'g', { 'data-site-parcel-span': '4' }),
+          longest = cut.parcel.reduce((widest, span) => span[1] - span[0] > widest[1] - widest[0] ? span : widest);
+        for (const span of cut.parcel) {
+          const [a, y] = project(frame, span[0], bottom), [b] = project(frame, span[1], bottom),
+            left = margin + Math.min(a, b), right = margin + Math.max(a, b), py = drawingY + y + 13;
+          studyMark(parcelAxis, 'path', { d: `M${left} ${py - 6}v6H${right}v-6`,
+            fill: 'none', stroke: '#547468', 'stroke-width': 1.3 });
+          if (span === longest)
+            studyMark(parcelAxis, 'text', { x: (left + right) / 2, y: py + 17, fill: ink, 'font-size': 13,
+              'font-weight': 650, 'text-anchor': 'middle' }, `Parcel 4 · ${Math.round(span[1] - span[0])} m along cut`);
+        }
+        renderSiteParcelLocator(svg, cut, w - margin - 238, 149);
       }
-      text(margin, 40, 'POLY NATION  /  WEST VILLAGE SITE SECTIONS', 15, { 'font-weight': 700, 'letter-spacing': 1.4 });
+      text(margin, 40, 'POLY NATION  /  WEST VILLAGE  /  PARCEL 4', 15, { 'font-weight': 700, 'letter-spacing': 1.4 });
       text(margin, 78, title, 32, { 'font-weight': 680 });
       text(margin, 106, note, 15);
+      if (district && cut.avenue === null)
+        text(margin, 145, 'The mapped 10 Avenue SW alignment lies outside this section line.', 13);
       text(w - margin, 40, sheetNumber, 16, { 'text-anchor': 'end' });
       for (const y of [125, h - 65]) studyMark(svg, 'line', { x1: margin, y1: y, x2: w - margin, y2: y, stroke: rule });
       const elevations = (marine ? `Crew quay ${(plan.boatBay.deck + plan.terrain.datum).toFixed(2)} m` :

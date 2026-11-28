@@ -978,7 +978,7 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
   drawCanalAtriumEnclosure(mesh, plan);
 }
 
-function siteFoundationAxo(model, plan, surface, canalDepth) {
+function siteFoundationAxo(model, plan, surface, canalDepth, registration) {
   const mesh = meshBuilder(), [x, z] = plan.position,
     reach = Math.max(plan.radius, ...plan.rows.flatMap((row) => row.transfers.flatMap(({ from, to }) =>
       [Math.hypot(row.offset, from), Math.hypot(row.offset, to)]))) + 9,
@@ -998,6 +998,9 @@ function siteFoundationAxo(model, plan, surface, canalDepth) {
     addSiteWater(mesh, plan.terrain, { faces, banks }, { showWater: true, canalDepth });
   }
   drawSiteFoundations(mesh, model, plan, false, canalDepth, siteCanalOpening(plan));
+  if (registration) drawSiteDistrictPaths(mesh, plan.terrain, registration, surface, {
+    model, supportPlan: plan, bounds: limits
+  });
 
   mesh.mark('Site axonometric grade', 'Dashed local grade at the concrete stem walls');
   const grade = rgb('#6d6757');
@@ -1218,24 +1221,56 @@ function siteSectionCuts(plan, dockStructure = 'side-truss') {
   })];
 }
 
+function siteParcelCutSpans(polygon, meridian, datum) {
+  const stations = [];
+  for (const [i, a] of polygon.entries()) {
+    const b = polygon[(i + 1) % polygon.length];
+    if ((a[0] <= meridian) === (b[0] <= meridian)) continue;
+    const t = (meridian - a[0]) / (b[0] - a[0]);
+    stations.push(a[1] + t * (b[1] - a[1]) - datum);
+  }
+  stations.sort((a, b) => a - b);
+  return stations.flatMap((station, i) =>
+    i % 2 === 0 && stations[i + 1] - station > 0.02 ? [[station, stations[i + 1]]] : []);
+}
+
 function siteDistrictCut(plan, surface, registration) {
   if (!surface) return null;
-  const [x, z] = plan.position, [cutX, avenueZ] = westVillageTenthAvenue(x, registration),
-    angle = Math.PI / 2, offset = x - cutX, at = siteLine(plan.position, angle, offset),
-    avenue = avenueZ - z, half = plan.terrain.size / 2,
+  const [x, z] = plan.position, polygon = westVillageParcel(registration), angle = Math.PI / 2,
+    half = plan.terrain.size / 2, low = -half - z, high = half - z,
     water = siteFoundationWater(surface, plan.position, plan.terrain.size * 2),
-    river = siteFoundationWater({ existing: surface.existing }, plan.position, plan.terrain.size * 2)
-      .spans(at, Math.max(avenue, -half - z), half - z)
+    bow = siteFoundationWater({ existing: surface.existing }, plan.position, plan.terrain.size * 2),
+    meridians = polygon.map(([x]) => x),
+    minimum = Math.min(...meridians), maximum = Math.max(...meridians),
+    pinInside = westVillageInside(westVillageToPage(plan.position, registration)),
+    anchor = pinInside ? x : (minimum + maximum) / 2,
+    alternatives = Array.from({ length: 32 }, (_, i) => minimum + (maximum - minimum) * (i + 0.5) / 32)
+      .sort((a, b) => Math.abs(a - anchor) - Math.abs(b - anchor));
+  let span;
+  for (const cutX of [anchor, ...alternatives]) {
+    const [avenueX, avenueZ] = westVillageTenthAvenue(cutX, registration),
+      parcel = siteParcelCutSpans(polygon, cutX, z),
+      at = siteLine(plan.position, angle, x - cutX);
+    if (!parcel.length) continue;
+    const south = parcel[0][0], parcelMiddle = (south + parcel.at(-1)[1]) / 2,
+      avenue = Math.abs(cutX - avenueX) <= 0.02 && avenueZ - z > low && avenueZ - z < parcelMiddle ? avenueZ - z : null,
+      river = bow.spans(at, Math.max(low, Math.min(avenue ?? south, south)), high)
+        .filter(([start, end]) => (start + end) / 2 > parcelMiddle)
       .sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))[0];
-  if (!river) return null;
+    if (river) {
+      span = { cutX, at, avenue, south, parcel, river };
+      break;
+    }
+  }
+  if (!span) return null;
+  const { cutX, at, avenue, south, parcel, river } = span, throughPin = pinInside && Math.abs(x - cutX) < 0.02;
   water.level = plan.water.level;
-  const shifted = Math.abs(offset) > 0.1;
   return {
-    kind: 'district', title: 'Bow River to 10 Avenue SW',
-    note: `North–south section looking west${shifted ? ' through the nearest mapped avenue crossing' : ' through the building placement'}.`,
-    at, angle, water, avenue, river: (river[0] + river[1]) / 2,
-    from: Math.max(-half - z, Math.min(avenue - 22, -plan.contextReach - 8)),
-    to: Math.min(half - z, Math.max(river[1] + 22, plan.contextReach + 8))
+    kind: 'district', title: `Parcel 4 · Bow River to ${avenue === null ? 'south boundary' : '10 Avenue SW'}`,
+    note: `North–south section looking west through Parcel 4${throughPin ? ' at the building placement' : ' along a mapped parcel meridian'}.`,
+    at, angle, water, avenue, south, river: (river[0] + river[1]) / 2, cutX, throughPin, parcel, polygon,
+    from: Math.max(low, Math.min((avenue ?? south) - 22, south - 8, -plan.contextReach - 8)),
+    to: Math.min(high, Math.max(river[1] + 22, parcel.at(-1)[1] + 8, plan.contextReach + 8))
   };
 }
 

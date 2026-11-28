@@ -1,7 +1,6 @@
 'use strict';
 
-// Pin and study options are stored in PDF coordinates. Loading the DEM or matching
-// geographic controls can refine the geographic position without moving the plan pin.
+// The footprint stays in PDF coordinates while the survey landmarks register the sheets to the DEM.
 const siteWorkspace = (() => {
   const panel = $('sitePhase'),
     canvas = $('siteCanvas'),
@@ -22,6 +21,10 @@ const siteWorkspace = (() => {
     status = $('siteStatus'),
     dataStatus = $('siteWaterStatus'),
     registrationStatus = $('siteRegistration'),
+    landmarkStatus = $('siteLandmarkStatus'),
+    landmarkFields = ['siteLandmarkPumpTop', 'siteLandmarkPumpSouth', 'siteLandmarkGreyhound'].map($),
+    defaultLandmarks = WEST_VILLAGE_LANDMARKS.map(({ gps }) => gps),
+    defaultRegistration = westVillageLandmarkRegistration(defaultLandmarks) ?? WEST_VILLAGE_NOMINAL,
     massingControls = [
       [linkDesign, $('designSiteLink')],
       [bearing, $('designSiteBearing')],
@@ -35,9 +38,10 @@ const siteWorkspace = (() => {
     terrainKey = 'poly-nation-west-village-terrain-v1',
     supportCache = new WeakMap(),
     view = { az: -0.84, el: 0.57, zoom: 1, pan: 0, panX: 0 },
-    { frame, limits, defaultPin, terrainCentre, terrainSize, sources } = WEST_VILLAGE_PLAN;
+    { frame, limits, defaultPin, parcel, terrainCentre, terrainSize, sources } = WEST_VILLAGE_PLAN;
   let pin = [...defaultPin],
-    registration = WEST_VILLAGE_NOMINAL,
+    landmarks = defaultLandmarks,
+    registration = defaultRegistration,
     terrain = null,
     surface = null,
     mapped = null,
@@ -59,12 +63,16 @@ const siteWorkspace = (() => {
     lastDesign = null;
   let focusBuilding = false;
 
+  sourcePicker.value = 'combined';
   try {
     const saved = JSON.parse(localStorage.getItem(key));
     if (saved) {
-      if (Array.isArray(saved.pin) && westVillageInside(saved.pin)) pin = saved.pin;
+      if (Array.isArray(saved.pin)) {
+        if (westVillageInside(saved.pin)) pin = saved.pin;
+        else directions = 'The saved pin was outside Parcel 4. The current pin starts inside Parcel 4.';
+      }
       condition.value = saved.condition === 'existing' ? 'existing' : 'proposed';
-      sourcePicker.value = Object.hasOwn(sources, saved.plan) ? saved.plan : 'master';
+      sourcePicker.value = Object.hasOwn(sources, saved.plan) ? saved.plan : 'combined';
       depth.value = clamp(Number(saved.depth) || 2, 0.5, 8);
       bearing.value = mod(Number(saved.bearing) || 0, 360);
       grade.value = clamp(Number(saved.grade) || 0, -20, 20);
@@ -75,19 +83,14 @@ const siteWorkspace = (() => {
       waterToggle.checked = saved.water !== false;
       vegetation.checked = saved.vegetation === true;
       mode = saved.mode === 'terrain' ? 'terrain' : 'plan';
-      const match = saved.registration;
-      if (
-        match?.matched &&
-        Number.isFinite(westVillageScale(match)) &&
-        westVillageScale(match) >= 1.25 &&
-        westVillageScale(match) <= 2.3 &&
-        [...(match.page ?? []), ...(match.ground ?? [])].length === 4 &&
-        [...match.page, ...match.ground].every(Number.isFinite)
-      )
+      const match = westVillageLandmarkRegistration(saved.landmarks);
+      if (match) {
+        landmarks = saved.landmarks;
         registration = match;
+      }
     } else {
       // Keep a prior point if it belongs to the new study. The former GPS form accepted
-      // arbitrary sites, so out-of-district points leave the starter pin in place.
+      // arbitrary sites, so points outside Parcel 4 leave the starter pin in place.
       const previous = JSON.parse(localStorage.getItem('poly-nation-site-v1'));
       if (previous) {
         const [latitude, longitude] = (previous.coordinates ?? '').split(',').map(Number);
@@ -124,6 +127,7 @@ const siteWorkspace = (() => {
           plan: sourcePicker.value,
           mode,
           registration,
+          landmarks,
           depth: depth.value,
           grade: grade.value,
           lookout: lookout.value,
@@ -158,6 +162,7 @@ const siteWorkspace = (() => {
   function sceneOptions() {
     return {
       position: westVillageToGround(pin, registration),
+      registration,
       grade: clamp(Number(grade.value) || 0, -20, 20),
       bearing: mod(Number(bearing.value) || 0, 360),
       lookout: lookout.value,
@@ -309,6 +314,14 @@ const siteWorkspace = (() => {
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
     scene = siteAssemblyMesh(assembly, terrain, { ...sceneOptions(), model: building, supportPlan: plan });
+    const circulation = scene.districtCirculation, circulationStatus = $('siteCirculationStatus');
+    circulationStatus.hidden = !circulation;
+    if (circulation) {
+      const { bridges, interrupted, steepApproaches } = circulation;
+      circulationStatus.textContent = `${bridges} mapped pedestrian ${bridges === 1 ? 'bridge' : 'bridges'}.` +
+        (interrupted ? ` ${interrupted} ${interrupted === 1 ? 'crossing is' : 'crossings are'} interrupted by the project footprint.` : '') +
+        (steepApproaches ? ` ${steepApproaches} ${steepApproaches === 1 ? 'bridge has an approach' : 'bridges have approaches'} above the 5% study grade.` : '');
+    }
     if (renderer) uploadWebGLMesh(context, renderer, scene);
     if (fit) fitCurrentView();
     present();
@@ -316,8 +329,11 @@ const siteWorkspace = (() => {
 
   function fitCurrentView() {
     const modelStart = (group) =>
-      !group.layer.startsWith('Site ') && group.layer !== 'OpenStreetMap mapped trees';
-    fitModel(scene, view, canvas, focusBuilding ? modelStart : undefined);
+      !group.layer.startsWith('Site ') && !group.layer.startsWith('Site_District_') &&
+      group.layer !== 'OpenStreetMap mapped trees';
+    const districtStart = (group) => group.layer === 'Site_District_Paths';
+    const start = focusBuilding ? modelStart : scene?.groups.some(districtStart) ? districtStart : undefined;
+    fitModel(scene, view, canvas, start);
   }
 
   function syncStatus() {
@@ -369,19 +385,21 @@ const siteWorkspace = (() => {
       }
     } else {
       delete $('sitePlacementStatus').dataset.elevation;
-      $('sitePlacementStatus').textContent = 'The pin is saved in the studio plan.';
+      $('sitePlacementStatus').textContent = 'The project pin is inside Parcel 4.';
     }
     if (directions) $('sitePlacementStatus').textContent = directions;
-    registrationStatus.textContent = registration.matched
-      ? 'The studio plan is matched to the Crowchild Trail and 14 Street Bow River crossings.'
-      : 'The studio plan uses an approximate district registration at its nominal scale. Live bridge controls refine it when available.';
+    else if (footprint.dataset.pastParcel === 'true')
+      $('sitePlacementStatus').textContent += ' The projected project envelope extends past the parcel boundary.';
+    registrationStatus.textContent = registration.method === 'landmarks'
+      ? `Three GPS landmarks register the plan. The control points differ from the fitted plan by ${registration.rms.toFixed(2)} m RMS.`
+      : 'The studio plan is shown at its nominal scale. Enter the landmark coordinates to register it to the terrain.';
     if (terrain) {
       const { elevations, provider, fromCache } = terrain,
         relief = Math.max(...elevations) - Math.min(...elevations);
       if (!load.disabled && !terrainError)
         status.textContent = `${provider} · ${relief.toFixed(1)} m of relief${fromCache ? ' · cached elevations' : ''}.`;
-      const method = registration.matched
-        ? 'Matched at two Bow River crossings.'
+      const method = registration.method === 'landmarks'
+        ? 'Registered to the three GPS landmarks.'
         : 'Approximate plan registration.';
       const trees = vegetation.checked
         ? natural?.count
@@ -404,27 +422,34 @@ const siteWorkspace = (() => {
   }
 
   function updatePlan() {
-    const source = sources[sourcePicker.value],
-      showOverlays = sourcePicker.value !== 'water';
-    $('sitePlanImage').setAttribute('href', source.image);
-    $('siteSheetName').textContent = source.title + (showOverlays ? '' : ' · Full proposal');
+    const source = sources[sourcePicker.value] ?? sources.combined,
+      proposed = condition.value === 'proposed',
+      existing = !proposed && source.existing ? sources[source.existing] : null,
+      showOverlays = Boolean(existing) || !source.proposedWater;
+    $('sitePlanImage').setAttribute('href', (existing ?? source).image);
+    $('siteSheetName').textContent = source.title + (existing ? ' · Existing ground' : showOverlays ? '' : ' · Full proposal');
     $('sitePlanRiver').style.display = showOverlays ? '' : 'none';
     $('sitePlanCanals').style.display =
-      showOverlays && condition.value === 'proposed' ? '' : 'none';
-    $('siteWaterKey').hidden = !showOverlays;
+      showOverlays && proposed ? '' : 'none';
+    const withPaths = sourcePicker.value === 'combined' || sourcePicker.value === 'circulation',
+      pathKey = $('sitePathKey');
+    $('siteWaterKey').hidden = !showOverlays && !withPaths;
+    if (pathKey) pathKey.hidden = !withPaths;
     $('siteProposedKey').hidden = condition.value !== 'proposed';
     $('siteDepthField').hidden = condition.value !== 'proposed';
     const scale = westVillageScale(registration),
       radius = (building?.R ?? 35) / scale,
       edge = building
-        ? Math.max(building.R + MODULE.depth + 2, building.plaza.outer) / scale
+        ? Math.max(building.R + MODULE.depth + 2, building.plaza.outer, building.crane?.extent ?? 0) / scale
         : radius,
       conflicts =
         westVillageOverlaps(pin, edge, WEST_VILLAGE_WATER.river) ||
-        (condition.value === 'proposed' &&
+        (proposed &&
           westVillageOverlaps(pin, edge, WEST_VILLAGE_WATER.canals));
     footprint.setAttribute('transform', `translate(${pin.join(' ')})`);
     footprint.dataset.water = String(conflicts);
+    const pastParcel = edge > westVillageParcelEdge(pin);
+    footprint.dataset.pastParcel = String(pastParcel);
     $('siteFootprintCore').setAttribute('r', radius);
     $('siteFootprintExtent').setAttribute('r', edge);
     $('siteFootprintAxis').setAttribute(
@@ -436,10 +461,12 @@ const siteWorkspace = (() => {
       'transform',
       `rotate(${sceneOptions().bearing - adjustment})`
     );
-    $('sitePlanHelp').textContent = conflicts
-      ? terrain ? 'The footprint overlaps a waterway. Open 3D terrain to inspect the crossing supports.'
-        : 'The footprint overlaps a waterway. Load the terrain to study the crossing supports.'
-      : 'Click inside the dashed boundary to place the building. Arrow keys move it 5 m.';
+    $('sitePlanHelp').textContent = [
+      'Click inside Parcel 4 to place the building. Arrow keys move it 5 m.',
+      pastParcel && 'The projected project envelope extends past the parcel boundary.',
+      conflicts && (terrain ? 'Open 3D terrain to inspect the water crossing.'
+        : 'Load terrain to study the water crossing.')
+    ].filter(Boolean).join(' ');
   }
 
   function changed({ refreshWater = false, fit = false } = {}) {
@@ -457,13 +484,14 @@ const siteWorkspace = (() => {
   }
 
   let queuedChange;
-  function queueChange({ refreshWater = false } = {}) {
-    if (!terrain) return changed({ refreshWater });
+  function queueChange({ refreshWater = false, fit = false } = {}) {
+    if (!terrain) return changed({ refreshWater, fit });
     if (queuedChange) {
       queuedChange.refreshWater ||= refreshWater;
+      queuedChange.fit ||= fit;
       return;
     }
-    queuedChange = { refreshWater };
+    queuedChange = { refreshWater, fit };
     return appWork.run('Updating the site and building…', () => {
       const options = queuedChange;
       queuedChange = null;
@@ -478,6 +506,7 @@ const siteWorkspace = (() => {
     $('siteTerrainMode').setAttribute('aria-pressed', String(!showPlan));
     $('sitePlanPanel').hidden = $('sitePlanField').hidden = !showPlan;
     $('siteTerrainPanel').hidden = showPlan;
+    $('siteCirculationStatus').hidden = true;
     $('siteTerrainEmpty').hidden = Boolean(terrain);
     $('siteViewport').hidden = !terrain;
     if (draw && !showPlan && terrain) appWork.run('Preparing the site view…', () => {
@@ -488,37 +517,29 @@ const siteWorkspace = (() => {
 
   async function lookupMap() {
     if (mapLookup) return mapLookup;
+    if (!vegetation.checked || mapped) return null;
     const controller = new AbortController(),
-      timeout = setTimeout(() => controller.abort(), 23000),
-      includeVegetation = vegetation.checked;
+      timeout = setTimeout(() => controller.abort(), 23000);
     mapLookup = (async () => {
       try {
-        const elements = await fetchSiteNaturalFeatures(
+        mapped = await fetchSiteNaturalFeatures(
           terrainCentre,
           terrainSize,
-          true,
-          controller.signal,
-          includeVegetation
+          false,
+          controller.signal
         );
-        const match = matchWestVillagePlan(elements),
-          relocated = match && JSON.stringify(match) !== JSON.stringify(registration);
         function applyMap() {
-          if (relocated) registration = match;
-          if (includeVegetation) {
-            mapped = elements;
-            if (terrain) natural = siteNaturalOverlay(mapped, terrain);
-          }
-          changed({ refreshWater: relocated });
+          if (!vegetation.checked) return;
+          natural = siteNaturalOverlay(mapped, terrain);
+          changed();
         }
-        if (terrain && (relocated || includeVegetation)) await appWork.run('Updating the site map…', applyMap);
-        else if (relocated || includeVegetation) applyMap();
+        if (terrain && vegetation.checked) await appWork.run('Updating mapped vegetation…', applyMap);
       } catch {
-        // The material supplied for the studio already contains the river and canal outlines.
+        // The registered studio sheets still supply the district and waterway geometry.
       } finally {
         clearTimeout(timeout);
         mapLookup = null;
         if (terrain) syncStatus();
-        if (!includeVegetation && vegetation.checked) lookupMap();
       }
     })();
     return mapLookup;
@@ -532,8 +553,7 @@ const siteWorkspace = (() => {
     status.textContent = 'Loading live terrain…';
     const controller = new AbortController(),
       timeout = setTimeout(() => controller.abort(), 26000);
-    // Map alignment runs independently. An unavailable map provider cannot withhold
-    // the elevation surface or delete the river that is already on the studio plan.
+    // Optional vegetation loads separately from the elevations and GPS registration.
     lookupMap();
     try {
       await appWork.run('Loading terrain and updating the building…', async () => {
@@ -561,7 +581,7 @@ const siteWorkspace = (() => {
 
   function place(point) {
     if (!westVillageInside(point)) {
-      directions = 'Choose a point inside the dashed West Village boundary.';
+      directions = 'Choose a point inside Parcel 4.';
       syncStatus();
       return;
     }
@@ -575,6 +595,9 @@ const siteWorkspace = (() => {
   const [left, top, width, height] = frame,
     [west, north, east, south] = limits;
   plan.setAttribute('viewBox', frame.join(' '));
+  $('siteParcelBoundary')?.setAttribute('points', parcel.map((point) => point.join(',')).join(' '));
+  $('siteParcelLabel')?.setAttribute('x', '329');
+  $('siteParcelLabel')?.setAttribute('y', '492');
   for (const [id, x, y, w, h] of [
     ['sitePlanImage', left, top, width, height],
     ['siteStudyLimits', west, north, east - west, south - north]
@@ -613,6 +636,33 @@ const siteWorkspace = (() => {
     updatePlan();
     save();
   };
+  function syncLandmarkFields() {
+    landmarkFields.forEach((field, i) => {
+      if (field) field.value = landmarks[i].join(', ');
+    });
+  }
+  function setLandmarks(coordinates, message) {
+    const fit = westVillageLandmarkRegistration(coordinates);
+    if (!fit) {
+      landmarkStatus.textContent = 'Enter three distinct Calgary latitude and longitude pairs in the order shown.';
+      return;
+    }
+    landmarks = coordinates;
+    registration = fit;
+    directions = null;
+    landmarkStatus.textContent = message;
+    syncLandmarkFields();
+    queueChange({ refreshWater: true, fit: true });
+  }
+  const applyLandmarks = $('siteApplyLandmarks'), resetLandmarks = $('siteResetLandmarks');
+  if (applyLandmarks && resetLandmarks && landmarkFields.every(Boolean)) {
+    applyLandmarks.onclick = () => setLandmarks(landmarkFields.map((field) => {
+      const values = field.value.trim().replace(/^@\s*/, '').replace(/−/g, '-').split(/[\s,]+/);
+      return values.length === 2 && values.every(Boolean) ? values.map(Number) : null;
+    }), 'GPS registration updated.');
+    resetLandmarks.onclick = () => setLandmarks(defaultLandmarks, 'Supplied landmark coordinates restored.');
+    syncLandmarkFields();
+  }
   condition.onchange = () => queueChange({ refreshWater: true });
   lookout.onchange = boatCapacity.onchange = linkDesign.onchange = () => queueChange();
   depth.onchange =
@@ -689,6 +739,9 @@ const siteWorkspace = (() => {
     get drawingBearing() {
       return sceneOptions().bearing;
     },
+    get registration() {
+      return registration;
+    },
     placedModel,
     designModel(model) {
       return linked() ? placedModel(model) : model;
@@ -697,7 +750,7 @@ const siteWorkspace = (() => {
       if (!linked()) return mesh;
       const support = supportPlan(model);
       return siteAssemblyMesh(mesh, terrain, { ...sceneOptions(), model, supportPlan: support,
-        buildingCoordinates: true, includeTerrain,
+        buildingCoordinates: true, includeTerrain, includeDistrictPaths: false,
         contextRadius: Math.max(support.gradeReach, support.contextReach) + 25 });
     },
     composeDrawing(mesh, model, includeTerrain = true) {
@@ -717,7 +770,7 @@ const siteWorkspace = (() => {
         building = buildAssemblyMesh(placed, layers, Math.min(2, model.layers.length),
           { assignments, view, craneSettings: view }),
         placement = { ...sceneOptions(), relativeToBuilding: true, includeTerrain: false, model, supportPlan: plan },
-        mesh = siteAssemblyMesh(building, terrain, placement),
+        mesh = siteAssemblyMesh(building, terrain, { ...placement, registration, includeDistrictPaths: true }),
         frame = buildAssemblyMesh(placed, { ...layers, facade: false, modules: false }, 0,
           { assignments, view, craneSettings: view }),
         structure = siteAssemblyMesh(frame, terrain, placement),
@@ -726,7 +779,8 @@ const siteWorkspace = (() => {
           roof: true, showRoofDeck: true, supports: false }),
         context = siteAssemblyMesh(overview, terrain, { ...placement, includeFoundations: false }),
         district = siteDistrictCut(plan, plan.surface, registration);
-      return { plan, mesh, structure, context, district, dockStructure, surface: plan.surface, canalDepth: placement.canalDepth };
+      return { plan, mesh, structure, context, district, dockStructure, registration,
+        surface: plan.surface, canalDepth: placement.canalDepth };
     },
     open(model, assignments) {
       const modelChanged = building !== model;

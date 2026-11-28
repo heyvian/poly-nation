@@ -17,8 +17,8 @@
 | `print-geometry.js`, `print-building.js`, `print-atrium.js`, `print-gantry.js`, `print-package.js`, `print-workspace.js` | Printable part generation, fit and mesh checks, previews, STL and ZIP exports, assembly and clear-sheet guides |
 | `drawing-geometry.js`, `drawing-documents.js`, `drawings.js` | Projected geometry, architectural and Illustrator exports, drawing controls |
 | `connection-details.js` | Scaled connection contexts, exterior fitting profiles and demand annotations shared by both drawing outputs |
-| `site-plan.js`, `site-maps.js`, `site.js` | West Village plan coordinates, optional bridge registration and vegetation, placement, study controls and persistence |
-| `site-terrain.js`, `site-water.js` | Elevation sources, district mesh, proposed excavation and shared water surface |
+| `site-plan.js`, `site-maps.js`, `site.js` | West Village landmark registration, Parcel 4 placement, optional vegetation, study controls and persistence |
+| `site-terrain.js`, `site-water.js`, `site-circulation.js` | Elevation sources, district mesh, proposed excavation, shared water surface and non-motorized paths and bridges |
 | `site-foundation.js`, `site-boat-hall.js` | Site grades and approach walks, canal transfer spans, fitted marine hall and section geometry |
 | `rationale.js`, `rationale-page.js` | Shared deck controls and the standalone page entry point |
 
@@ -34,7 +34,7 @@
 - `floorPitch` adds slab depth while preserving typical clear height. `derive` shares that pitch with the level-dependent model features, and `buildStorey` computes slab and soffit datums from it. `buildGravityStudy` compares dock reactions and the core slab strip. `drawSharedDockSupports` places the roof-hung return below the deck.
 - `drawingGeometry` carries model-layer names into drawing components and identifies surface-joint strokes. `renderDrawing` finds visible strokes, assigns physical pen widths and adds sketch marks. `traceDrawingFills` traces visible colour regions into closed paths. `vectorDrawingSheet` moves the drawing into named root groups with independent crops and keeps each floor-plan tile aligned. The optional Illustrator script promotes the named groups while preserving their stack order.
 - `drawConnectionContext` draws the 1:25 context. `drawFittingPanels` uses the same exterior profiles in the scaled connection sheets and the printed structure set. `dockSupportDemand` feeds Build and the drawing annotations from one service-load estimate.
-- `westVillageToGround` maps the saved PDF pin into the district terrain. `matchWestVillagePlan` optionally refines that registration using two Bow River crossings. `loadWestVillageTerrain` requests Mapzen tiles with an Open-Meteo fallback. `terrainOutsideSiteWater` cuts the DEM along the digitized channel boundaries. `siteAssemblyMesh` places the building and can shift the combined scene to the building datum for Drawings.
+- `westVillageLandmarkRegistration` fits a uniform scale and rotation from the three supplied GPS controls. `westVillageToGround` maps the saved Parcel 4 pin into the district terrain. `loadWestVillageTerrain` requests Mapzen tiles with an Open-Meteo fallback. `terrainOutsideSiteWater` cuts the DEM along the digitized channel boundaries. `siteAssemblyMesh` places the building and can shift the combined scene to the building datum for Drawings.
 - `initRationaleSlides` gives each jury topic its own view. Print styles show the full deck. Keep the embedded and standalone deck content synchronized with the Markdown companion.
 
 Exact controls, default paths and export semantics should be verified against source and tested after changes. No major framework migration was performed in the handoff.

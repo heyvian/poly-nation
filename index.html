@@ -993,9 +993,9 @@
 <section id="sitePhase" class="drawing-workspace site-workspace" hidden aria-labelledby="siteTitle">
  <aside class="drawing-controls site-controls">
   <h2 id="siteTitle" tabindex="-1">West Village</h2>
-  <p class="hint">Place the building on your studio plan, then load elevation data for the district.</p>
+  <p class="hint">Place the building in Parcel 4, then load elevation data for the district.</p>
   <section class="site-control-group" aria-labelledby="sitePlacementTitle">
-   <h3 id="sitePlacementTitle">Building placement</h3>
+   <h3 id="sitePlacementTitle">Parcel 4 placement</h3>
    <label class="drawing-view-field">Rotation from north (°)
     <input id="siteBearing" type="number" min="0" max="359" value="0">
    </label>
@@ -1036,11 +1036,29 @@
    <label class="check"><input id="siteVegetation" type="checkbox"> Mapped vegetation</label>
    <p id="siteStatus" role="status" class="hint">Live elevations are loaded on request.</p>
    <p id="siteWaterStatus" class="hint"></p>
+   <p id="siteCirculationStatus" class="hint" hidden></p>
   </section>
   <details class="calc-details site-sources">
    <summary>Sources and registration</summary>
    <p id="siteRegistration" class="hint"></p>
+   <div class="site-landmarks">
+    <label class="drawing-view-field">PumpHouse Theatre · north corner
+     <input id="siteLandmarkPumpTop" type="text" spellcheck="false" placeholder="Latitude, longitude">
+    </label>
+    <label class="drawing-view-field">PumpHouse Theatre · south corner
+     <input id="siteLandmarkPumpSouth" type="text" spellcheck="false" placeholder="Latitude, longitude">
+    </label>
+    <label class="drawing-view-field">Former Greyhound station · northeast corner
+     <input id="siteLandmarkGreyhound" type="text" spellcheck="false" placeholder="Latitude, longitude">
+    </label>
+    <div class="actions">
+     <button id="siteApplyLandmarks" type="button">Align to landmarks</button>
+     <button id="siteResetLandmarks" type="button">Restore plan alignment</button>
+    </div>
+    <p id="siteLandmarkStatus" class="hint" role="status"></p>
+   </div>
    <p class="hint">The study uses the supplied Bow River and canal outlines with one estimated water level. Foundations, canal clearance and entrance grades are schematic.</p>
+   <p class="hint">Orange routes are shared-use paths. Pedestrian bridges carry the mapped paths over the river and canals.</p>
    <p class="hint"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen Terrain Tiles</a> · <a href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener">Open-Meteo elevation fallback</a></p>
    <p class="hint">Map alignment and optional vegetation © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></p>
   </details>
@@ -1053,18 +1071,20 @@
    </div>
    <div class="site-toolbar-actions">
     <label class="site-plan-select" id="sitePlanField">Source plan
-     <select id="sitePlanSource"><option value="master">Master plan</option><option value="water">Water</option><option value="circulation">Circulation</option></select>
+     <select id="sitePlanSource"><option value="combined" selected>Water and circulation</option><option value="parcels">Labelled parcels</option><option value="master">Master plan</option><option value="water">Water</option><option value="circulation">Circulation</option></select>
     </label>
     <button type="button" class="primary" id="loadSite">Load live terrain</button>
    </div>
   </div>
   <div class="site-plan-panel" id="sitePlanPanel">
    <div class="site-plan-sheet">
-    <svg id="sitePlacementPlan" tabindex="0" role="img" aria-label="West Village plan with movable building footprint" aria-describedby="sitePlanHelp" xmlns="http://www.w3.org/2000/svg">
+    <svg id="sitePlacementPlan" tabindex="0" role="img" aria-label="West Village Parcel 4 with movable building footprint" aria-describedby="sitePlanHelp" xmlns="http://www.w3.org/2000/svg">
      <image id="sitePlanImage"></image>
      <path id="sitePlanRiver" fill="#76aebc" fill-opacity="0.68" pointer-events="none"></path>
      <path id="sitePlanCanals" fill="#53a095" fill-opacity="0.82" pointer-events="none"></path>
      <rect id="siteStudyLimits" fill="none" stroke="#344b3d" stroke-width="1.5" stroke-dasharray="6 4" pointer-events="none"></rect>
+     <polygon id="siteParcelBoundary" fill="#ecdb9f" fill-opacity="0.22" stroke="#625527" stroke-width="1.9" stroke-dasharray="5 2" pointer-events="none"></polygon>
+     <text id="siteParcelLabel" fill="#423816" stroke="#fffafa" stroke-width="2.8" paint-order="stroke" font-size="11" font-weight="700" text-anchor="middle" pointer-events="none">Parcel 4</text>
      <g id="siteFootprint" pointer-events="none">
       <circle id="siteFootprintExtent" fill="#397358" fill-opacity="0.16" stroke="#397358" stroke-dasharray="3 2"></circle>
       <circle id="siteFootprintCore" fill="#fbfaf0" fill-opacity="0.72" stroke="#204938" stroke-width="2"></circle>
@@ -1074,8 +1094,8 @@
     </svg>
    </div>
    <div class="site-plan-caption">
-    <p id="sitePlanHelp" class="hint">Click inside the dashed boundary to place the building. Arrow keys move it 5 m.</p>
-    <div class="site-plan-key" id="siteWaterKey" aria-label="Waterway colours"><span><i class="dot" style="background:#76aebc"></i>Bow River</span><span id="siteProposedKey"><i class="dot" style="background:#53a095"></i>Proposed canals</span></div>
+    <p id="sitePlanHelp" class="hint">Click inside Parcel 4 to place the building. Arrow keys move it 5 m.</p>
+    <div class="site-plan-key" id="siteWaterKey" aria-label="Site plan colours"><span><i class="dot" style="background:#76aebc"></i>Bow River</span><span id="siteProposedKey"><i class="dot" style="background:#53a095"></i>Proposed canals</span><span id="sitePathKey"><i class="dot" style="background:#edb178"></i>Shared-use paths</span></div>
     <span id="siteSheetName"></span>
    </div>
   </div>
@@ -1245,9 +1265,11 @@
 <script defer src="src/build.js"></script>
 <script defer src="src/render.js"></script>
 <script defer src="assets/data/west-village-water.js"></script>
+<script defer src="assets/data/west-village-circulation.js"></script>
 <script defer src="src/site-plan.js"></script>
 <script defer src="src/site-maps.js"></script>
 <script defer src="src/site-water.js"></script>
+<script defer src="src/site-circulation.js"></script>
 <script defer src="src/site-terrain.js"></script>
 <script defer src="src/site-boat-hall.js"></script>
 <script defer src="src/site-foundation.js"></script>
