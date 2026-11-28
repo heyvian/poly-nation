@@ -1056,8 +1056,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     drawSlideLandings(mesh, model, slideTube, floors, slabThickness);
   }
   if (crane) {
-    const paint = rgb(cranePaint(preview.assignments));
-    drawCraneInfrastructure(mesh, model, crane, paint, full, cutY, cranePose, false, !layers.frame);
+    const paint = rgb(cranePaint(preview.assignments)),
+      infrastructurePose = cranePose ?? (crane.runway === 'moat'
+        ? moduleCranePose(model, crane, { ...preview.craneSettings, craneStage: 'parked' }) : null);
+    drawCraneInfrastructure(mesh, model, crane, paint, full, cutY, infrastructurePose, false, !layers.frame);
     if (cranePose) drawCraneGantry(mesh, crane, cranePose, paint);
   }
   const H = layers.swings && full ? ride.height : crane && full ? crane.head + crane.depth : (floors + Number(full)) * floorHeight;

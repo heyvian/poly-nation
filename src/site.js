@@ -210,7 +210,9 @@ const siteWorkspace = (() => {
             supports.crossingSoffit - depth - supports.water.level))) : 0,
           structure = spans ? `The level above spans the canal with ${clearance.toFixed(1)} m minimum study clearance.${landward}`
             : piled ? 'Landward stem walls bear on schematic piles.' : 'Footings follow the local grade.',
-          access = supports.accesses.length < 4 ? ' Some lobby approaches need a different alignment to reach dry grade.' : '',
+          access = supports.accesses.length === 2 ? ' Both lobbies have step-free walks from grade.' : supports.accesses.length === 1
+            ? ' One lobby has a step-free walk from grade. The other needs a different alignment.'
+            : ' The lobby approaches need a different alignment to meet dry grade.',
           dryArea = supports.lowerRooms.reduce((total, room) => total + room.area, 0),
           dry = dryArea > 0 ? ` ${Math.round(dryArea)} m² of additional lower-level programme.` : '',
           boat = supports.boatBay ? ` ${Math.round(supports.boatBay.area)} m² covered firehall boat bay.` +
@@ -493,7 +495,8 @@ const siteWorkspace = (() => {
       const placed = sitePlacementModel(model, plan), { dockStructure, slabThickness } = buildViewLayers(),
         layers = { dockStructure, slabThickness, slabs: true, frame: true, facade: true,
           docks: true, modules: true, crane: Boolean(plan.crane), swings: true, moduleInteriors: false },
-        view = { ...state, craneStage: 'parked' },
+        view = { ...state, craneStage: 'parked',
+          craneBearing: plan.moat ? model.lobby.angle * 180 / Math.PI + 90 : state.craneBearing },
         building = buildAssemblyMesh(placed, layers, Math.min(2, model.layers.length),
           { assignments, view, craneSettings: view }),
         placement = { ...sceneOptions(), relativeToBuilding: true, includeTerrain: false, model, supportPlan: plan },

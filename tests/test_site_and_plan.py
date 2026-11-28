@@ -255,7 +255,9 @@ with serve_lab(root) as url, sync_playwright() as p:
         proposed: [[[-6,-100], [6,-100], [6,100]], [[-6,-100], [6,100], [-6,100]]]};
       const plan = siteFoundationPlan(model, terrain, { position: [0,0], bearing: 24, grade: 0, water });
       const spans = plan.rows.flatMap(row => row.transfers);
-      const ramps = plan.accesses.filter(route => route.kind === 'ramp');
+      const flat = siteFoundationPlan(model, { ...terrain, elevations: Array(81).fill(1040) },
+        { position: [0, 0], bearing: 24, grade: 0, water: null });
+      const blocked = siteLobbyWalk(flat.terrain, plan.water, [0, 80], 0, 0, 0, flat.floor, 3.8);
       const mesh = meshBuilder();
       drawSiteFoundations(mesh, model, plan, false);
       const landward = mesh.groups.flatMap((group, i) => {
@@ -293,8 +295,11 @@ with serve_lab(root) as url, sync_playwright() as p:
         plan.rows.some(row => row.supports.some(support => support.bank && plan.water.overlaps(row.at(support.at), 5))) &&
         plan.rows.every(row => row.supports.every(support => !plan.water.overlaps(row.at(support.at), 1.3))) &&
         spans.every(span => plan.crossingSoffit - span.depth > plan.water.level + 2.7) &&
-        ramps.length > 0 && ramps.every(({ nodes }) => nodes.slice(1).every(([station, y], i) =>
-          Math.abs(y - nodes[i][1]) <= (station - nodes[i][0]) / 20 + 1e-6)) &&
+        !blocked && flat.accesses.length === 2 && [flat, plan].every((site) =>
+          site.accesses.every(({ at, threshold, kind, nodes }) => kind === 'walk' &&
+            Math.abs(nodes[0][1] - site.floor) < 1e-6 &&
+            Math.abs(siteTerrainHeight(site.terrain, ...at(threshold)) - site.floor) < 0.04 &&
+            nodes.slice(1).every(([station, y], i) => Math.abs(y - nodes[i][1]) <= (station - nodes[i][0]) / 20 + 1e-6))) &&
         cuts.some(cut => cut.kind === 'canal-detail') &&
         cuts.some(cut => cut.kind === 'piled-detail');
     }''')

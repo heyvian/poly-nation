@@ -955,7 +955,7 @@ const openDrawingWorkspace = (() => {
         ...(hasGradeLines || plan.perimeter.runs.length ? [['#b3b1a1', 'Concrete stem walls and piles']] : []),
         ...(crossing ? [['#546e65', 'Canal transfer girders']] : []),
         ...(plan.mastRadius && !plan.mastCrossing ? [['#7f9185', 'Independent mast cap and piles']] : []),
-        ...(plan.accesses.length ? [['#c7c0aa', 'Entry stairs and ramps']] : []),
+        ...(plan.accesses.length ? [['#c7c0aa', 'Step-free lobby walks']] : []),
         ...(plan.lowerRooms.length ? [['#ac8d6f', 'Dry lower-level programme']] : []),
         ...(plan.boatBay ? [['#935b4c', 'Firehall boat garage']] : []),
         ...(mesh.groups.some(({ layer }) => layer === 'Site Bow River water') ? [['#4a939e', 'Modeled water']] : [])

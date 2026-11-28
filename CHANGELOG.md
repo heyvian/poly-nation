@@ -1,5 +1,8 @@
 # Changelog
 
+## Ground-floor lobby entries
+- Grade the dry public lobby approaches to meet the ground floor with level landings and a maximum 1:20 study slope. Show those walks in the site sections and flag entrances needing realignment.
+
 ## Continuous structural load paths
 - Share dock-divider axes between the straight radial frame, roof crane bents and site bearings. Dock collectors, roof tie-backs and paired lift cores show the vertical and lateral load paths.
 - Keep canal-interrupted stacks on steel crossheads and bank-to-bank girders. Give the dry mast a separate anchored pile-cap study and the greenhouse a ground-bearing slab on granular subbase.
