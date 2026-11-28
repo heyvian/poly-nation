@@ -114,7 +114,7 @@ The public realm runs around the building, through its greenhouse and over its r
 
 The designer expanded the entrance plaza into a promenade connecting the two lobbies and the climbing approach. Patios, seating, planting, sports and gathering areas occupy islands along the loop. Nearby programmes inform the activity mix.
 
-At a West Village placement, the designer asked the ground floor to rise above the terrain and span any canal beneath the core with at least 5 m between the study water level and the underside of the crossing. Close to the channel, the lower deck stays open on piers and deeper girders carry the crossing between bank bearings. Where the foundation sits beyond a 5 m horizontal setback from modeled water, concrete stem walls and piled grade beams form a more continuous base. The piles are a schematic way to illustrate deep support in the district's alluvial soils. The suitability of the installation method and the founding depth depend on soil, groundwater and contamination at the placement. A raised promenade meets the lobby doors, with stair and ramp approaches to local grade. A west-facing section locates the project between the Bow River and 10 Avenue SW.
+At a West Village placement, the designer asked the dry ground floor to sit near grade and leave a one-storey opening where the canal crosses. The first elevated deck spans between dry-bank bearings and the intersecting ground-level docks are removed. Where the foundation sits beyond a 5 m horizontal setback from modeled water, concrete stem walls and grade beams follow the inner and outer column lines. The piles illustrate a deep foundation option in the district's alluvial soils. The installation method and founding depth depend on soil, groundwater, contamination and load conditions at the placement. The greenhouse has a separate ground-bearing build-up. The mast bears on an anchored cap and its own pile group, or a bank-to-bank transfer grillage where the channel passes beneath it. A west-facing section locates the project between the Bow River and 10 Avenue SW.
 
 ### A public roof
 
@@ -216,7 +216,7 @@ The designer sketched a two-leaf closure that drops to seal an empty bay and fol
 
 ### A wall face and a load path
 
-The baseline model uses paired tapered side trusses. The designer questioned how their depth and diagonals compete with windows. The study compares open-panel side frames, a shallow box floor, same-storey cable stays, roof-hung rods and outer posts. Deep underfloor options were removed after they occupied the bays below. Side truss receivers meet the perimeter frame. The floor grid carries the return into the ring, and diagonal core bracing stays at the lift enclosures to keep the rooms and lobbies clear.
+The baseline model uses paired tapered side trusses. The designer questioned how their depth and diagonals compete with windows. The study compares open-panel side frames, a shallow box floor, same-storey cable stays, roof-hung rods and outer posts. Deep underfloor options were removed after they occupied the bays below. The designer asked for the dock jambs, roof crane posts and foundations to line up. Short links carry the dock reactions into the perimeter columns on the bay dividers. Straight radial beams connect those columns to an inner stack on the same axis. Ring girders bridge local gaps, and the floor diaphragm takes lateral loads to braced bays or shear walls at the two lift enclosures.
 
 ### The same-storey stay
 

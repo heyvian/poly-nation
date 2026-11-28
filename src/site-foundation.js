@@ -150,12 +150,6 @@ function siteGirderRow(position, angle, offset, radius, water, terrain, reach) {
     span.depth = clamp((span.to - span.from) / 20, 0.44, 1.35);
     supports.push({ at: span.from, bank: true }, { at: span.to, bank: true });
   }
-  const count = Math.ceil(half * 2 / 7.5);
-  for (let i = 0; i <= count; i++) {
-    const station = (half - 0.85) * (2 * i / count - 1);
-    if (dry(station) && transfers.every(({ from, to }) => station < from - 1.8 || station > to + 1.8))
-      supports.push({ at: station, bank: false });
-  }
   return { at, angle, offset, half, transfers, supports, unresolved };
 }
 
@@ -291,16 +285,16 @@ function siteRunwaySupports(crane, position, angle, water, pitch) {
   return { radii, poles, spans, unresolved: poles.length < 3 || spans.some(({ length }) => length > 42) };
 }
 
-function siteLowerRooms(model, terrain, position, floor, perimeter, rows, water, accessAngle, moat, boatBay) {
-  const { radius } = perimeter, outer = radius - 0.20, inner = Math.max(model.r + 1.35, outer - 6.4),
+function siteLowerRooms(model, terrain, position, floor, perimeter, rows, water, accessAngle, moat, boatBay, bearing, innerRing) {
+  const { radius } = perimeter, outer = radius - 0.20, inner = Math.max(innerRing + 0.55, model.r + 1.35, outer - 6.4),
     bayLength = (outer - inner) * 1.42, half = bayLength / (2 * radius),
     ceiling = floor - SITE_PLATFORM_BEAM_TOP - SITE_DRY_BEAM_DEPTH,
     limit = moat ? moat.inner - radius - 1 : 36, options = [];
   if (outer - inner < 3.1) return [];
   for (let i = 0; i < 96; i++) {
-    const angle = i * TAU / 96, from = angle - half, to = angle + half;
+    const local = i * TAU / 96, angle = local + bearing, from = angle - half, to = angle + half;
     if (Math.sin(angDist(angle, accessAngle)) * radius < bayLength / 2 + 4) continue;
-    const station = radius * angle, width = 1.9;
+    const station = radius * local, width = 1.9;
     if (!perimeter.runs.some((run) => station - half * radius >= run.from && station + half * radius <= run.to)) continue;
     if (boatBay && angDist(angle, boatBay.angle) * radius < bayLength / 2 + boatBay.halfWidth + 3) continue;
     const samples = [inner, (inner + outer) / 2, outer].flatMap((r) =>
@@ -407,11 +401,49 @@ function siteTerraceProfile(ground, [x, z], radius, floor) {
 }
 
 function sitePlacementModel(model, plan) {
-  if (!plan || (!plan.wetBays.size && !plan.runway?.lift)) return model;
+  if (!plan) return model;
   const slots = plan.omitted.size ? model.slots.map((slot) =>
       plan.omitted.has(slot.i) ? { ...slot, blocked: true, p: EMPTY, use: 'empty' } : slot) : model.slots,
     crane = plan.runway?.lift ? { ...model.crane, groundRail: model.crane.groundRail + plan.runway.lift } : model.crane;
-  return { ...model, crane, slots, siteWetBays: plan.wetBays };
+  const cos = Math.cos(plan.angle), sin = Math.sin(plan.angle), [x, z] = plan.position;
+  return { ...model, crane, slots, siteWetBays: plan.wetBays, siteTransferredColumns: plan.transferredColumns,
+    siteTransferredLifts: new Set(plan.lateralBays.filter(({ wet }) => wet).map(({ key }) => key)),
+    siteGroundAt: (px, pz) => siteTerrainHeight(plan.terrain, x + px * cos - pz * sin, z + px * sin + pz * cos) - plan.foundation };
+}
+
+function siteCoreBearings(model, terrain, position, bearing, water, radius, rows, rowAngle, reach) {
+  const grid = buildSupportGrid(model), c = Math.cos(rowAngle), s = Math.sin(rowAngle),
+    columns = grid.axes.flatMap((axis) => ['inner', 'outer'].flatMap((side) => {
+      if (!axis.active[side]) return [];
+      const angle = axis.angle + bearing, at = siteLine(position, angle)(grid[side]);
+      return [{ key: `${axis.j}/${side}`, axis, side, at, angle, station: grid[side] * axis.angle,
+        size: coreColumnSize(grid, model.crane, axis, side), wet: water.overlaps(at, 1.45) }];
+    })),
+    lateralBays = coreLateralBays(model, 0).map((bay) => {
+      const { radius: r, start, end } = bay,
+        points = Array.from({ length: 5 }, (_, i) => siteLine(position, start + bearing + (end - start) * i / 4)(r)),
+        ends = [start, end].map((angle, i) => ({ key: `${bay.key}/${i}`, at: points[i * 4], angle: angle + bearing,
+          size: 0.6, wet: water.overlaps(points[i * 4], 1.45) }));
+      return { ...bay, wet: points.some((point) => water.overlaps(point, 1.45)), ends };
+    });
+  for (const column of [...columns, ...lateralBays.flatMap(({ ends }) => ends)].filter(({ wet }) => wet)) {
+    const dx = column.at[0] - position[0], dz = column.at[1] - position[1],
+      station = dx * c + dz * s, offset = dz * c - dx * s;
+    function find() {
+      return rows.flatMap((row) => {
+        const span = row.transfers.find(({ from, to }) => station >= from && station <= to);
+        return span ? [{ row, span, distance: Math.abs(row.offset - offset) }] : [];
+      }).sort((a, b) => a.distance - b.distance)[0];
+    }
+    let support = find();
+    if (!support || support.distance > 5.5) {
+      const row = siteGirderRow(position, rowAngle, offset, radius, water, terrain, reach);
+      if (row.transfers.length) rows.push(row);
+      support = find();
+    }
+    if (support) column.transfer = { at: support.row.at(station), depth: support.span.depth };
+  }
+  return { grid, columns, lateralBays, transferredColumns: new Set(columns.filter(({ wet }) => wet).map(({ key }) => key)) };
 }
 
 function siteFoundationPlan(model, terrain, { position, bearing, grade, water: districtSurface }) {
@@ -437,10 +469,11 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
     else offsets.push(crossingOffset);
   }
   const mastRadius = model.feature.ride?.towerRadius ?? 0,
-    mastCrossing = mastRadius > 0 && water.overlaps(position, mastRadius + 0.25);
+    mastCrossing = mastRadius > 0 && water.overlaps(position, mastRadius + 1.65);
   if (mastCrossing) for (const offset of [-mastRadius, mastRadius])
     if (!offsets.some((station) => Math.abs(station - offset) < 0.5)) offsets.push(offset);
-  const rows = offsets.map((offset) => siteGirderRow(position, rowAngle, offset, radius, water, terrain, reach)),
+  const rows = (anchor ? offsets : [0]).map((offset) => siteGirderRow(position, rowAngle, offset, radius, water, terrain, reach)),
+    { grid, columns, lateralBays, transferredColumns } = siteCoreBearings(model, terrain, position, angle, water, radius, rows, rowAngle, reach),
     crosses = Boolean(anchor),
     ground = water.overlaps(position, envelope) ? siteGroundStorey(model, terrain, position, angle, radius, water) : null,
     groundAtPin = siteTerrainHeight(terrain, ...position), crane = model.crane,
@@ -456,13 +489,12 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
     crossingSoffit = crossingDeck - (storey.base - storey.underside),
     moat = moatContact && { ...moatContact, level: moatContact.connected ? water.level : Math.min(moatContact.level, foundation + MOAT_WATER_LEVEL),
       runway: siteRunwaySupports(crane, position, angle, water, 4.8) },
-    coreRadius = buildRingFrame(model).outside, perimeterLength = TAU * coreRadius,
-    perimeterAt = (station) => {
-      const theta = station / coreRadius;
-      return [position[0] + coreRadius * Math.cos(theta), position[1] + coreRadius * Math.sin(theta)];
-    },
-    perimeter = { at: perimeterAt, radius: coreRadius, length: perimeterLength,
-      runs: siteLandwardRuns(perimeterAt, 0, perimeterLength, water) },
+    coreRadius = grid.outer,
+    foundationRings = ['inner', 'outer'].map((side) => {
+      const radius = grid[side], length = TAU * radius, at = (station) => siteLine(position, station / radius + angle)(radius);
+      return { side, radius, length, at, runs: siteLandwardRuns(at, 0, length, water) };
+    }),
+    perimeter = foundationRings[1],
     accesses = [], gradeReach = ground && crosses ? envelope + 6 : 0,
     finishedTerrain = gradeReach ? { ...terrain, groundProfile: siteTerraceProfile(ground, position, radius, floor) } : terrain;
   if (runway) {
@@ -494,12 +526,25 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
   }
   const crew = boatBay && siteBoatCrewAccess(boatBay, finishedTerrain, water, position, crossingDeck, moat);
   if (crew) Object.assign(boatBay, { crewSide: crew.side, route: crew.route, landing: crew.landing, gangway: crew.gangway });
-  const lowerRooms = siteLowerRooms(model, terrain, position, floor, perimeter, rows, water, accessAngle, moat, boatBay);
-  return { position, angle, radius, foundation, floor, groundAtPin, water, rows, crossingOffset, anchor, crossingDeck, crossingSoffit,
-    omitted: ground?.omitted ?? new Set(), wetBays: ground?.wetBays ?? new Set(), mastCrossing, mastRadius,
+  const lowerRooms = siteLowerRooms(model, terrain, position, floor, perimeter, rows, water, accessAngle, moat, boatBay, angle, grid.inner),
+    mastSeats = mastCrossing ? rows.filter((row) => Math.abs(row.offset) <= mastRadius + 0.5 &&
+      row.transfers.some(({ from, to }) => from < 0 && to > 0)) : [];
+  const dockFloors = new Map();
+  for (const slot of model.slots) {
+    if (slot.blocked || ground?.omitted.has(slot.i)) continue;
+    const floors = dockFloors.get(slot.j) ?? [];
+    floors.push(slot.f);
+    dockFloors.set(slot.j, floors);
+  }
+  return { position, angle, radius, foundation, floor, pitch, roofLevel: model.roofPlan.y, dockFloors, groundAtPin, water, rows,
+    crossingOffset, anchor, crossingDeck, crossingSoffit,
+    omitted: ground?.omitted ?? new Set(), wetBays: ground?.wetBays ?? new Set(), mastCrossing, mastRadius, mastSeats,
+    grid, columns, lateralBays, transferredColumns, foundationRings, crane,
     terrain: finishedTerrain, gradeReach, surface, accesses, accessAngle, moat, perimeter, runway, boatBay, lowerRooms,
     contextReach: Math.max(envelope, model.crane?.extent ?? 0),
-    unresolved: rows.some((row) => row.unresolved) };
+    unresolved: rows.some((row) => row.unresolved) || [...columns, ...lateralBays.flatMap(({ ends }) => ends)]
+      .some(({ wet, transfer }) => wet && !transfer) ||
+      mastCrossing && mastSeats.length < 2 };
 }
 
 function sitePileStations({ from, to }) {
@@ -507,9 +552,9 @@ function sitePileStations({ from, to }) {
   return Array.from({ length: count }, (_, i) => from + (to - from) * (i + 0.5) / count);
 }
 
-function drawSitePile(mesh, x, z, high, concrete) {
-  const low = high - SITE_PILE_DISPLAY_LENGTH,
-    ring = (j, y) => [x + 0.25 * Math.cos(j * TAU / 12), y, z + 0.25 * Math.sin(j * TAU / 12)];
+function drawSitePile(mesh, x, z, high, concrete, length = SITE_PILE_DISPLAY_LENGTH, radius = 0.25) {
+  const low = high - length,
+    ring = (j, y) => [x + radius * Math.cos(j * TAU / 12), y, z + radius * Math.sin(j * TAU / 12)];
   for (let j = 0; j < 12; j++) {
     mesh.quad(ring(j, low), ring(j, high), ring(j + 1, high), ring(j + 1, low), concrete);
     mesh.tri([x, high, z], ring(j + 1, high), ring(j, high), concrete);
@@ -517,7 +562,7 @@ function drawSitePile(mesh, x, z, high, concrete) {
   }
 }
 
-function drawSitePiledWall(mesh, at, tangent, run, terrain, top, concrete, cap, openings = []) {
+function drawSitePiledWall(mesh, at, tangent, run, terrain, top, concrete, cap, openings = [], bearings = []) {
   const level = (station) => Math.min(top - 0.18, siteTerrainHeight(terrain, ...at(station)) - SITE_PILE_CAP_COVER);
   function ribbon(width, bottom, crown, colour, { from, to } = run) {
     if (to - from < 0.001) return;
@@ -552,19 +597,19 @@ function drawSitePiledWall(mesh, at, tangent, run, terrain, top, concrete, cap, 
   mesh.mark('Site_Foundation_Pile_Caps', 'Continuous grade beam over piles');
   ribbon(SITE_PILE_CAP_WIDTH, (station) => level(station) - SITE_PILE_CAP_DEPTH, level, cap);
   mesh.mark('Site_Foundation_Piles', 'Schematic bored pile shafts below grade');
-  for (const station of sitePileStations(run)) {
+  const stations = [...bearings, ...sitePileStations(run).filter((station) => bearings.every((axis) => Math.abs(axis - station) > 1.6))];
+  for (const station of stations) {
     const [x, z] = at(station);
     drawSitePile(mesh, x, z, level(station) - SITE_PILE_CAP_DEPTH, concrete);
   }
 }
 
 function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth = 2, dryGeometry = null) {
-  const { floor, foundation, terrain, water, radius, position, rows } = plan,
+  const { floor, foundation, terrain, water, radius, position, rows, columns, foundationRings } = plan,
     concrete = rgb('#b3b1a1'), stone = rgb('#a6a28f'), steel = rgb('#546e65'), paving = rgb('#c7c0aa'),
     rail = rgb('#475e57'), beamTop = floor - SITE_PLATFORM_BEAM_TOP;
   function pier([x, z], angle, top, piled = false, width = 0.56, ground = siteTerrainHeight(terrain, x, z)) {
-    const footing = ground - 0.58, cap = piled ? 0.48 : 0.34, size = width + 0.62;
-    if (top <= footing) return;
+    const footing = Math.min(ground - 0.58, top - 0.18), cap = piled ? 0.48 : 0.34, size = width + 0.62;
     mesh.box(x, footing - cap, z, piled ? 2.15 : size, cap, size, angle, stone, true);
     mesh.box(x, footing, z, width, top - footing, width, angle, concrete, true);
     if (piled) for (const side of [-1, 1])
@@ -576,14 +621,6 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
     mesh.box(x, top - depth, z, depth > SITE_DRY_BEAM_DEPTH ? 0.72 : 0.39,
       depth, to - from, row.angle, colour, true);
   }
-  function dryGirders(row, from, to) {
-    if (to <= from) return;
-    let start = from;
-    for (const [edge, bank] of [...water.spans(row.at, from, to), [to, to]]) {
-      girder(row, start, edge, SITE_DRY_BEAM_DEPTH, concrete);
-      start = bank;
-    }
-  }
   function sector(inner, outer, bottom, depth, colour, from = 0, to = TAU) {
     const first = mesh.solid.length;
     mesh.sector(inner, outer, from, to, bottom, depth, colour);
@@ -592,46 +629,117 @@ function drawSiteFoundations(mesh, model, plan, showRunwaySupports, canalDepth =
       mesh.solid[i + 2] += position[1];
     }
   }
+  function crosshead({ at: [x, z], angle, size, key, transfer }) {
+    const top = plan.crossingSoffit, [px, pz] = transfer.at, depth = Math.min(0.52, transfer.depth);
+    mesh.mark('Site_Core_Transfer_Crossheads', key);
+    mesh.box(x, top - 0.18, z, size + 0.24, 0.18, size + 0.24, angle, steel, true);
+    if (Math.hypot(px - x, pz - z) > 0.018)
+      drawAssemblyMember(mesh, [x, top - depth / 2, z], [px, top - depth / 2, pz], size + 0.18, steel, depth);
+  }
   const platformStart = mesh.solid.length;
   mesh.mark('Site_Foundation_Platform', 'Dry ground floor and arrival promenade');
   const storey = buildStorey(model, 0);
-  sector(0, model.R, beamTop, SITE_PLATFORM_BEAM_TOP - (storey.base - storey.underside), concrete);
+  sector(model.r, model.R, beamTop, SITE_PLATFORM_BEAM_TOP - (storey.base - storey.underside), concrete);
   sector(model.R, radius, beamTop, SITE_PLATFORM_BEAM_TOP - 0.012, paving);
   if (dryGeometry) dryGeometry.trimMesh(mesh, platformStart);
-  const ring = buildRingFrame(model), ringsStart = mesh.solid.length;
+  if (model.greenhouse) {
+    const start = mesh.solid.length, underside = foundation + storey.underside;
+    mesh.mark('Site_Atrium_Subbase', 'Slab-on-grade on compacted granular base');
+    sector(0, model.r, underside - 0.31, 0.31, stone);
+    if (dryGeometry) dryGeometry.trimMesh(mesh, start);
+    const fillStart = mesh.solid.length, top = underside - 0.31,
+      boundary = Array.from({ length: 96 }, (_, i) => siteLine(position, i * TAU / 96)(model.r)),
+      at = ([x, z]) => [x, top, z], grade = ([x, z]) => [x, Math.min(top - 0.015, siteTerrainHeight(terrain, x, z)), z],
+      centre = at(position), centreGrade = grade(position), gravel = rgb('#a79d84');
+    mesh.mark('Site_Atrium_Engineered_Fill', 'Localized fill brings solid ground up to the subbase');
+    for (let i = 0; i < boundary.length; i++) {
+      const a = boundary[i], b = boundary[(i + 1) % boundary.length];
+      mesh.tri(at(b), at(a), centre, gravel);
+      mesh.tri(grade(a), grade(b), centreGrade, gravel);
+      mesh.quad(at(a), at(b), grade(b), grade(a), gravel);
+    }
+    if (dryGeometry) dryGeometry.trimMesh(mesh, fillStart);
+  }
+  const ringsStart = mesh.solid.length;
   mesh.mark('Site_Foundation_Ring_Girders', 'Annular collectors below the permanent core');
-  for (const r of [ring.inside, ring.outside])
+  for (const { radius: r } of foundationRings)
     sector(r - 0.24, r + 0.24, beamTop - 0.25, 0.25, concrete);
   if (dryGeometry) dryGeometry.trimMesh(mesh, ringsStart);
-  if (plan.mastCrossing && rows.filter((row) => Math.abs(row.offset) <= plan.mastRadius + 0.5 &&
-      row.transfers.some(({ from, to }) => from < 0 && to > 0)).length >= 2) {
-    mesh.mark('Site_Mast_Transfer', 'Mast seat above the open canal on the bank-to-bank grid');
-    sector(0, plan.mastRadius + 0.45, plan.crossingSoffit - 0.18, 0.26, steel);
+  const radialsStart = mesh.solid.length;
+  mesh.mark('Site_Foundation_Radials', 'Straight ground deck beams between the two grade beam rings');
+  for (const axis of plan.grid.axes) {
+    const angle = axis.angle + plan.angle, reach = plan.grid.outer - plan.grid.inner,
+      [x, z] = siteLine(position, angle)(plan.grid.inner + reach / 2);
+    mesh.box(x, beamTop - SITE_DRY_BEAM_DEPTH, z, 0.24, SITE_DRY_BEAM_DEPTH, reach, angle, concrete);
   }
-  const perimeter = plan.perimeter;
-  for (const run of perimeter.runs)
-    drawSitePiledWall(mesh, perimeter.at, (station) => station / perimeter.radius + Math.PI / 2,
-      run, terrain, beamTop - 0.25, concrete, stone, plan.lowerRooms.map(({ door }) => door)
-        .filter(({ from, to }) => from >= run.from && to <= run.to).sort((a, b) => a.from - b.from));
+  if (dryGeometry) dryGeometry.trimMesh(mesh, radialsStart);
+  if (plan.mastRadius && !plan.mastCrossing) {
+    const capRadius = plan.mastRadius + 1.25, capDepth = 1.22, foot = foundation - capDepth - 0.27;
+    mesh.mark('Site_Mast_Pile_Cap', 'Independent reinforced cap and mast anchor ring');
+    sector(0, capRadius, foot, capDepth, concrete);
+    sector(plan.mastRadius * 0.70, plan.mastRadius + 0.36, foundation - 0.27, 0.30, steel);
+    mesh.mark('Site_Mast_Piles', 'Schematic group for mast gravity, overturning and uplift');
+    for (let k = 0; k < 8; k++) {
+      const [x, z] = siteLine(position, k * TAU / 8)(capRadius - 0.69);
+      drawSitePile(mesh, x, z, foot, concrete, 5.4, 0.36);
+    }
+  } else if (plan.mastCrossing && plan.mastSeats.length >= 2) {
+      const [x, z] = position, top = plan.crossingSoffit;
+      mesh.mark('Site_Mast_Transfer', 'Mast anchor ring and transverse grillage carried to dry banks');
+      sector(0, plan.mastRadius + 0.45, top - 0.18, 0.26, steel);
+      for (const row of plan.mastSeats) {
+        const [px, pz] = row.at(0);
+        if (Math.hypot(px - x, pz - z) > 0.02)
+          drawAssemblyMember(mesh, [x, top - 0.23, z], [px, top - 0.23, pz], 0.55, steel, 0.42);
+      }
+  }
+  for (const ring of foundationRings) for (const run of ring.runs) {
+    const bearings = columns.filter(({ side, station }) => side === ring.side && station >= run.from && station <= run.to),
+      doors = ring.side === 'outer' ? plan.lowerRooms.map(({ door }) => door)
+        .filter(({ from, to }) => from >= run.from && to <= run.to).sort((a, b) => a.from - b.from) : [];
+    drawSitePiledWall(mesh, ring.at, (station) => plan.angle + station / ring.radius + Math.PI / 2,
+      run, terrain, beamTop - 0.25, concrete, stone, doors, bearings.map(({ station }) => station));
+  }
+  for (const column of columns) {
+    const { at: [x, z], angle, size, side, station, transfer } = column;
+    if (transfer) {
+      crosshead(column);
+    } else if (!column.wet) {
+      mesh.mark('Site_Foundation_Column_Bearings', column.key);
+      const ring = foundationRings.find((ring) => ring.side === side),
+        continuous = ring.runs.some(({ from, to }) => station >= from && station <= to);
+      if (continuous) {
+        const bottom = Math.min(beamTop - 0.25, foundation - 0.12);
+        mesh.box(x, bottom, z, size + 0.10, foundation - bottom + 0.04, size + 0.10, angle, concrete, true);
+      } else {
+        pier([x, z], angle, foundation + 0.04, true, size + 0.14);
+      }
+    }
+  }
+  if (plan.crane?.runway === 'cantilever') {
+    mesh.mark('Site_Foundation_Hold_Down_Ties', 'Radial ties between piled crane compression and hold-down bearings');
+    for (const axis of plan.grid.axes.filter(({ angle }) => plan.crane.supports.includes(angle))) {
+      const legs = columns.filter((column) => column.axis === axis);
+      if (legs.length !== 2 || legs.some(({ wet }) => wet)) continue;
+      const [a, b] = legs.map(({ at: [x, z] }) => [x, Math.min(foundation - 0.55, siteTerrainHeight(terrain, x, z) - 0.75), z]);
+      drawAssemblyMember(mesh, a, b, 0.82, concrete, 0.59);
+    }
+  }
+  for (const { radius, start, end, wet, ends } of plan.lateralBays) {
+    const top = wet ? plan.crossingSoffit : foundation, depth = wet ? 0.46 : 0.63;
+    mesh.mark('Site_Foundation_Lateral_Cores', wet ? 'Transfer collector under the lateral bay' : 'Piled grade beam below the lateral bay');
+    sector(radius - 0.38, radius + 0.38, top - depth, depth, wet ? steel : concrete, start + plan.angle, end + plan.angle);
+    for (const leg of ends) {
+      if (leg.transfer) crosshead(leg);
+      else if (!leg.wet) pier(leg.at, leg.angle, top - depth + 0.02, true, 0.67);
+    }
+  }
   for (const row of rows) {
-    mesh.mark('Site_Foundation_Girders', 'Underfloor beam grid');
-    let station = -row.half;
     for (const span of row.transfers) {
-      dryGirders(row, station, Math.min(span.from, row.half));
       mesh.mark('Site_Transfer_Girders', 'Bank-to-bank transfer span');
       girder(row, span.from, span.to, span.depth, steel, plan.crossingSoffit);
-      mesh.mark('Site_Foundation_Girders', 'Underfloor beam grid');
-      station = span.to;
-    }
-    dryGirders(row, station, row.half);
-    for (const run of row.landward)
-      drawSitePiledWall(mesh, row.at, () => row.angle, run, terrain, beamTop - SITE_DRY_BEAM_DEPTH, concrete, stone);
-    for (const support of row.supports) {
-      mesh.mark(support.bank ? 'Site_Foundation_Bank_Bents' : 'Site_Foundation_Piers',
-        support.bank ? 'Dry-bank bearings on schematic capped piles' : 'Footings stepped to local grade');
-      const span = row.transfers.find(({ from, to }) => support.at === from || support.at === to);
-      pier(row.at(support.at), row.angle, span ? plan.crossingSoffit - span.depth : beamTop - SITE_DRY_BEAM_DEPTH,
-        support.bank, support.bank ? 0.69 : 0.56);
+      mesh.mark('Site_Foundation_Bank_Bents', 'Dry-bank bearings on schematic capped piles');
+      for (const at of [span.from, span.to]) pier(row.at(at), row.angle, plan.crossingSoffit - span.depth, true, 0.69);
     }
   }
   const { moat } = plan;
@@ -840,11 +948,11 @@ function siteFoundationAxo(model, plan, surface, canalDepth) {
 
   mesh.mark('Site axonometric grade', 'Dashed local grade at the concrete stem walls');
   const grade = rgb('#6d6757');
-  for (const row of plan.rows) {
-    for (const { from, to } of row.landward) {
+  for (const ring of plan.foundationRings) {
+    for (const { from, to } of ring.runs) {
       const at = (station, side) => {
-        const [x, z] = row.at(station), px = x - side * 0.20 * Math.sin(row.angle),
-          pz = z + side * 0.20 * Math.cos(row.angle);
+        const [x, z] = ring.at(station), angle = station / ring.radius + plan.angle,
+          px = x + side * 0.20 * Math.cos(angle), pz = z + side * 0.20 * Math.sin(angle);
         return [px, siteTerrainHeight(plan.terrain, px, pz) + 0.025, pz];
       };
       for (let station = from; station < to - 0.15; station += 1.3)
@@ -861,7 +969,66 @@ function siteFoundationAxo(model, plan, surface, canalDepth) {
   return { mesh, reach };
 }
 
-function siteSectionCuts(plan) {
+function siteStructuralCut(plan, dockStructure) {
+  const { grid, crane, floor, foundation, roofLevel } = plan,
+    ranked = grid.axes.filter(({ active }) => active.inner && active.outer).map((axis) => {
+      const bearings = plan.columns.filter((column) => column.axis === axis),
+        wet = bearings.filter(({ wet }) => wet).length,
+        bent = Boolean(crane?.supports.includes(axis.angle)), floors = plan.dockFloors.get(axis.j) ?? [],
+        dockFloor = floors.includes(1) ? 1 : floors[0];
+      return { axis, bearings, wet, bent, dockFloor, rank: wet * 4 + Number(!bent) * 2 + Number(dockFloor === undefined) };
+    }).sort((a, b) => a.rank - b.rank)[0];
+  if (!ranked) return null;
+  const { axis, bearings, wet, bent, dockFloor } = ranked, angle = axis.angle + plan.angle,
+    roof = foundation + (bent ? crane.roofRail : roofLevel), top = roof + 0.55,
+    deck = floor + (dockFloor ?? 0) * plan.pitch,
+    dockPaths = {
+      'side-truss': ['Side truss roots feed the jambs.', 'The chord couple resolves into the', 'two floor rings and radial beams.'],
+      'side-portal': ['Portal frames feed the dock jambs.', 'Rigid frame joints carry shear and', 'return the root moment into the ring.'],
+      'box-floor': ['The box floor returns shear and', 'bending through its root seats into', 'the perimeter and radial beam grid.'],
+      'cable-stayed': ['The upper anchor takes tension.', 'The lower seat returns compression.', 'Both meet the diaphragm at the jamb.'],
+      'roof-hung': ['The hangers lift the dock tips.', 'Roof backspans return the reaction', 'to the inner and outer stacks.'],
+      columns: ['Tip posts bear at the plaza edge.', 'Roots take lateral loads into the core.', 'Wet bays use side trusses.']
+    },
+    notes = [
+      ['Roof and columns', ...(bent ? ['Roof rail loads land on this bent.', 'The posts share the dock-jamb axes.'] :
+        ['Inner and perimeter stacks share', 'a single dock-divider axis.'])],
+      ['Dock reactions', ...dockPaths[dockStructure]],
+      ['Lateral load path', 'Radial beams tie the ring girders.', 'Slab diaphragms carry sideways', 'forces to the paired lift cores.'],
+      [wet ? 'Canal transfer' : 'Foundation', ...(wet ? ['Interrupted stacks bear on steel', 'crossheads and dry-bank girders.'] :
+        ['Aligned bases bear on grade beams', 'or individual caps over study piles.'])]
+    ];
+  if (bent && crane.runway === 'cantilever') notes[0].push('The inner rail picks up uplift.');
+  else if (bent) notes[0].push('The outboard rail has its own piers.');
+  const from = -Math.max(5, plan.mastRadius + 2.2), to = crane?.groundRail != null
+    ? crane.tower + 5 : grid.outer + BUILD_SECTION.dockGap + MODULE.depth + 5;
+  const arrows = bearings.flatMap(({ side, wet }) => {
+    const r = grid[side], foot = wet ? plan.crossingSoffit : foundation - 0.28, x = r + (side === 'inner' ? -0.62 : 0.62),
+      uplift = bent && side === 'inner' && crane.runway === 'cantilever';
+    const arrow = (a, b) => uplift ? [b, a, 'lateral'] : [a, b, 'gravity'];
+    return [arrow([x, roof - 0.24], [x, roof - 3.3]), arrow([x, foot + 2.5], [x, foot - 0.14])];
+  });
+  const dockTip = grid.outer + BUILD_SECTION.dockGap + MODULE.depth - 0.5, dockMiddle = (dockTip + grid.outer) / 2;
+  arrows.push([[grid.outer - 0.8, deck - 0.55], [grid.inner + 0.6, deck - 0.55], 'lateral']);
+  if (dockFloor !== undefined) {
+    arrows.push([[dockMiddle, deck + 2.5], [dockMiddle, deck + 0.75], 'gravity']);
+    if (dockStructure === 'cable-stayed')
+      arrows.push([[dockTip - 1.6, deck + 0.2], [grid.outer + 0.8, deck + plan.pitch - 0.65], 'lateral']);
+    else if (dockStructure === 'roof-hung') {
+      const collector = foundation + roofLevel - 0.62;
+      arrows.push([[dockTip, deck + 0.45], [dockTip, collector + 0.8], 'lateral'],
+        [[grid.outer - 0.9, collector], [grid.inner + 0.55, collector], 'lateral']);
+    } else if (dockStructure === 'columns' && !plan.wetBays.has(axis.j)) {
+      const tipGrade = siteTerrainHeight(plan.terrain, ...siteLine(plan.position, angle)(dockTip));
+      arrows.push([[dockTip, Math.max(deck - 0.32, tipGrade + 0.65)], [dockTip, tipGrade - 0.24], 'gravity']);
+    } else arrows.push([[dockMiddle - 0.5, deck - 0.48], [grid.outer + 0.55, deck - 0.48], 'lateral']);
+  }
+  return { kind: 'structural-axis', title: 'Structural load path · Dock, runway and core',
+    note: `Section on dock-divider axis ${axis.j + 1}. Arrows show the direction of load transfer.`,
+    at: siteLine(plan.position, angle), angle, from, to, crown: top, belowGrade: SITE_PILE_DISPLAY_LENGTH + 2.3, notes, arrows };
+}
+
+function siteSectionCuts(plan, dockStructure = 'side-truss') {
   const { rows, crossingOffset, radius, accesses } = plan,
     row = rows.find((item) => item.offset === crossingOffset && item.transfers.length) ??
       rows.find((item) => item.transfers.length) ?? rows.find((item) => item.offset === crossingOffset) ?? rows[0],
@@ -886,24 +1053,48 @@ function siteSectionCuts(plan) {
       at: row.at, angle: row.angle, from: span.from - 8, to: span.to + 8, crown: plan.crossingDeck + 1.55,
       clearance: { station: (a + b) / 2, underside, height: clearance } });
   }
-  const piled = [row, ...rows.filter((candidate) => candidate !== row)]
-    .flatMap((candidate) => candidate.landward.map((run) => ({ row: candidate, run })))
-    .sort((a, b) => (b.run.to - b.run.from) - (a.run.to - a.run.from))[0];
-  if (piled) {
-    const { run, row } = piled, through = (run.from + run.to) / 2,
-      from = Math.max(run.from - 3, through - 9), to = Math.min(run.to + 3, through + 9),
-      edge = Math.min(run.to, to), shaft = sitePileStations(run).findLast((station) => station <= to - 0.25),
-      grade = (station) => siteTerrainHeight(plan.terrain, ...row.at(station)),
-      cap = (station) => Math.min(plan.floor - SITE_PLATFORM_BEAM_TOP - SITE_DRY_BEAM_DEPTH - 0.18,
-        grade(station) - SITE_PILE_CAP_COVER),
-      capY = cap(edge) - SITE_PILE_CAP_DEPTH / 2;
+  const structural = siteStructuralCut(plan, dockStructure);
+  if (structural) cuts.push(structural);
+  const bearing = plan.columns.find(({ wet, side, station }) => !wet && side === 'outer' &&
+    plan.perimeter.runs.some(({ from, to }) => station >= from + 0.3 && station <= to - 0.3));
+  if (bearing) {
+    const { angle } = bearing, at = siteLine(plan.position, angle), edge = plan.grid.outer,
+      crown = plan.floor - SITE_PLATFORM_BEAM_TOP - 0.25,
+      cap = Math.min(crown - 0.18, siteTerrainHeight(plan.terrain, ...bearing.at) - SITE_PILE_CAP_COVER),
+      capY = cap - SITE_PILE_CAP_DEPTH / 2;
     cuts.push({ kind: 'piled-detail', title: 'Landward foundation · Stem wall and piles',
-      note: 'A continuous grade beam carries the stem wall. Pile lengths are shown schematically below local grade.',
-      at: row.at, angle: row.angle, from, to, crown: plan.floor + 1.55, belowGrade: SITE_PILE_DISPLAY_LENGTH + 1.7,
+      note: 'A piled grade beam receives the column on the same axis. Pile lengths are shown schematically.',
+      at, angle, from: edge - 8, to: edge + 7, crown: plan.floor + 2.25, belowGrade: SITE_PILE_DISPLAY_LENGTH + 1.8,
       labels: [
-        [edge, (cap(edge) + plan.floor - SITE_PLATFORM_BEAM_TOP - SITE_DRY_BEAM_DEPTH) / 2, 'Concrete stem wall'],
+        [edge, plan.floor + 1.25, 'Stacked dock-jamb column'],
+        [edge, (cap + crown) / 2, 'Concrete stem wall'],
         [edge, capY, 'Pile-supported grade beam'],
-        [shaft + 0.25, cap(shaft) - SITE_PILE_CAP_DEPTH - SITE_PILE_DISPLAY_LENGTH / 2, 'Schematic pile shaft']
+        [edge, cap - SITE_PILE_CAP_DEPTH - SITE_PILE_DISPLAY_LENGTH / 2, 'Schematic pile shaft']
+      ] });
+  }
+  if (plan.mastRadius > 0) {
+    const mastRow = [...plan.mastSeats].sort((a, b) => Math.abs(a.offset) - Math.abs(b.offset))[0],
+      at = mastRow?.at ?? siteLine(plan.position, 0), angle = mastRow?.angle ?? 0,
+      span = mastRow?.transfers.find(({ from, to }) => from < 0 && to > 0),
+      reaches = [plan.grid.inner + 4, Math.abs(span?.from ?? 0) + 4, (span?.to ?? 0) + 4],
+      mastBase = plan.mastCrossing ? plan.crossingSoffit : plan.foundation, unresolved = plan.mastCrossing && plan.mastSeats.length < 2,
+      atrium = [-0.67, 0.67, 0.83, -0.83].map((part) => plan.grid.inside * part)
+        .find((station) => !plan.water.overlaps(at(station), 0.5)),
+      bank = span?.to ?? 0, pileLabel = plan.mastCrossing && span
+        ? siteTerrainHeight(plan.terrain, ...at(bank)) - 2.1 : mastBase - 4.7;
+    cuts.push({ kind: 'mast-foundation', title: 'Swing mast and greenhouse foundations',
+      note: unresolved ? 'This placement still needs a transfer span to support the mast from the dry banks.'
+        : plan.mastCrossing ? 'The mast transfers across the open channel to the dry banks. The atrium slab bears on dry ground.'
+        : 'The mast has its own anchored cap. The greenhouse floor bears on compacted granular fill.',
+      at, angle, from: -Math.max(reaches[0], reaches[1]), to: Math.max(reaches[0], reaches[2]),
+      crown: Math.max(plan.floor, mastBase) + 4.25, belowGrade: 7.9,
+      labels: [
+        [0, mastBase + 2.0, 'Fixed steel mast'],
+        ...(!unresolved ? [
+          [plan.mastRadius, mastBase - 0.08, plan.mastCrossing ? 'Mast seat and transfer grillage' : 'Anchor ring on independent cap'],
+          [bank, pileLabel, plan.mastCrossing ? 'Dry-bank pile group' : 'Schematic mast pile group']
+        ] : []),
+        ...(atrium === undefined ? [] : [[atrium, plan.floor - 0.27, 'Atrium slab and granular subbase', -25]])
       ] });
   }
   if (plan.boatBay) {

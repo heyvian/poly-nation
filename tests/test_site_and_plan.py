@@ -274,7 +274,17 @@ with serve_lab(root) as url, sync_playwright() as p:
       const lower = clipped.solid.slice(0, clipped.groups[1].solid), placed = sitePlacementModel(model, plan);
       const exactModules = placed.slots.every((slot, i) => plan.omitted.has(slot.i)
         ? slot.f === 0 && slot.blocked && slot.p === EMPTY : slot === model.slots[i]);
+      const railStacks = model.crane.supports.every((azimuth) => plan.grid.axes.some(({ angle, active }) =>
+        azimuth === angle && active.inner && active.outer));
+      const bearingGeometry = plan.columns.every(({ at, angle, side }) => {
+        const r = plan.grid[side];
+        return Math.hypot(at[0] - Math.cos(angle) * r, at[1] - Math.sin(angle) * r) < 1e-6;
+      });
       return plan.floor < plan.water.level + 2 && Math.abs(plan.crossingDeck - plan.floor - modelFloorPitch(model)) < 1e-6 &&
+        railStacks && bearingGeometry && plan.foundationRings.length === 2 && plan.mastCrossing &&
+        mesh.groups.some(({ layer }) => layer === 'Site_Mast_Transfer') &&
+        plan.columns.some(({ wet, transfer }) => wet && transfer) &&
+        plan.columns.filter(({ wet }) => wet).every(({ key }) => placed.siteTransferredColumns.has(key)) &&
         exactModules && plan.omitted.size > 0 && spans.length > 0 && lower.length > 0 &&
         plan.runway.lift > 0 && Math.abs(placed.crane.groundRail + plan.foundation - plan.runway.head) < 1e-6 &&
         lower.every((x, i) => i % 10 || Math.abs(x) >= 6 - 1e-6 || lower[i + 1] >= plan.crossingSoffit - 1e-6) &&
@@ -337,6 +347,10 @@ with serve_lab(root) as url, sync_playwright() as p:
     expect(district).to_contain_text('Bow River')
     expect(district.locator('[data-site-context=overlay] path').first).to_be_attached()
     expect(page.locator('#documentPages svg[data-site-section=piled-detail]')).to_contain_text('Pile lengths are shown schematically')
+    loadpath = page.locator('#documentPages svg[data-site-section=structural-axis]')
+    expect(loadpath).to_contain_text('Lateral load path')
+    expect(loadpath.locator('[data-load-path] polygon').first).to_be_attached()
+    expect(page.locator('#documentPages svg[data-site-section=mast-foundation]')).to_contain_text('Swing mast and greenhouse foundations')
     axo = page.locator('#documentPages svg[data-site-section=axo]')
     expect(axo).to_have_attribute('width', '17in')
     expect(axo).to_have_attribute('height', '11in')

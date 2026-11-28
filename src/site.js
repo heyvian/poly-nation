@@ -492,18 +492,21 @@ const siteWorkspace = (() => {
       if (!plan) return null;
       const placed = sitePlacementModel(model, plan), { dockStructure, slabThickness } = buildViewLayers(),
         layers = { dockStructure, slabThickness, slabs: true, frame: true, facade: true,
-          docks: true, modules: true, crane: Boolean(plan.moat || plan.runway), moduleInteriors: false },
+          docks: true, modules: true, crane: Boolean(plan.crane), swings: true, moduleInteriors: false },
         view = { ...state, craneStage: 'parked' },
         building = buildAssemblyMesh(placed, layers, Math.min(2, model.layers.length),
           { assignments, view, craneSettings: view }),
         placement = { ...sceneOptions(), relativeToBuilding: true, includeTerrain: false, model, supportPlan: plan },
         mesh = siteAssemblyMesh(building, terrain, placement),
+        frame = buildAssemblyMesh(placed, { ...layers, facade: false, modules: false }, 0,
+          { assignments, view, craneSettings: view }),
+        structure = siteAssemblyMesh(frame, terrain, placement),
         overview = buildMesh(placed, false, { ...view, floors: model.layers.length, inspect: 0, grid: false,
           xray: false, programEditing: false, showRooms: false, showFacade: true, showModules: true,
           roof: true, showRoofDeck: true, supports: false }),
         context = siteAssemblyMesh(overview, terrain, { ...placement, includeFoundations: false }),
         district = siteDistrictCut(plan, plan.surface, registration);
-      return { plan, mesh, context, district, surface: plan.surface, canalDepth: placement.canalDepth };
+      return { plan, mesh, structure, context, district, dockStructure, surface: plan.surface, canalDepth: placement.canalDepth };
     },
     open(model, assignments) {
       const modelChanged = building !== model;

@@ -1,5 +1,10 @@
 # Changelog
 
+## Continuous structural load paths
+- Share dock-divider axes between the straight radial frame, roof crane bents and site bearings. Dock collectors, roof tie-backs and paired lift cores show the vertical and lateral load paths.
+- Keep canal-interrupted stacks on steel crossheads and bank-to-bank girders. Give the dry mast a separate anchored pile-cap study and the greenhouse a ground-bearing slab on granular subbase.
+- Add vector site sheets for the dock-to-foundation section and the greenhouse and mast foundation detail. The support grid drawing shows active stacks and roof runway bents.
+
 ## One-storey canal crossing
 - Set the dry ground floor near grade. Open its footprint over the canal and move the bank-to-bank transfer grid to the first elevated deck.
 - Clear intersecting ground-level dock bays in Site and site-inclusive drawings. Show the measured opening in the vector section set.

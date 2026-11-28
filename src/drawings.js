@@ -908,7 +908,9 @@ const openDrawingWorkspace = (() => {
       w = paper.width * DRAWING_PIXELS_PER_INCH, h = paper.height * DRAWING_PIXELS_PER_INCH,
       margin = 48, right = 1070, ink = '#223b35', rule = '#a9b9b3', top = 143,
       { mesh, reach } = siteFoundationAxo(sourceModel, plan, surface, canalDepth),
-      layers = drawingGeometry(mesh, sourceModel, { include: ({ layer }) => layer !== 'Site_Foundation_Platform' }),
+      layers = drawingGeometry(mesh, sourceModel, {
+        include: ({ layer }) => !/^(Site_Foundation_Platform|Site_Atrium_)/.test(layer)
+      }),
       crossing = plan.rows.find((row) => row.transfers.length),
       camera = { az: (crossing?.angle ?? plan.accessAngle) + 0.92, el: 0.46 },
       planes = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].map((normal) => ({ normal, offset: reach })),
@@ -948,10 +950,11 @@ const openDrawingWorkspace = (() => {
     studyMark(svg, 'line', { x1: right - 12, y1: 142, x2: right - 12, y2: h - 86, stroke: rule });
     text(right + 8, top + 26, 'Building context', 16, { 'font-weight': 680 });
     scale(overview, w - margin, top + 394);
-    const hasGradeLines = plan.rows.some((row) => row.landward.length),
+    const hasGradeLines = plan.foundationRings.some((ring) => ring.runs.length),
       legend = [
         ...(hasGradeLines || plan.perimeter.runs.length ? [['#b3b1a1', 'Concrete stem walls and piles']] : []),
         ...(crossing ? [['#546e65', 'Canal transfer girders']] : []),
+        ...(plan.mastRadius && !plan.mastCrossing ? [['#7f9185', 'Independent mast cap and piles']] : []),
         ...(plan.accesses.length ? [['#c7c0aa', 'Entry stairs and ramps']] : []),
         ...(plan.lowerRooms.length ? [['#ac8d6f', 'Dry lower-level programme']] : []),
         ...(plan.boatBay ? [['#935b4c', 'Firehall boat garage']] : []),
@@ -971,12 +974,15 @@ const openDrawingWorkspace = (() => {
   function renderSiteSections() {
     const study = siteWorkspace.sectionStudy(sourceModel, sourceAssignments);
     if (!study) return [];
-    const { plan, mesh, context, district, canalDepth } = study, paper = SITE_SECTION_PAPER,
+    const { plan, mesh, structure, context, district, canalDepth, dockStructure } = study, paper = SITE_SECTION_PAPER,
       geometry = drawingGeometry(mesh, sourceModel),
+      structureGeometry = drawingGeometry(structure, sourceModel, {
+        include: ({ layer }) => !/^(?:Crane_Traveling_|Swing_Crown|Site terrain|Site (?:Bow|canal|moat|water))/.test(layer)
+      }),
       contextGeometry = drawingGeometry(context, sourceModel, {
         include: ({ layer }) => /^(Core_L\d+_Slab|Facade_|Modules_L|Module_Balconies|Roof_(Public_Deck|Lift_|Commercial_Retail)|Atrium_(Glass|Roof_Ridge)|Swing_(Tower|Crown|Boarding)|Crane_(Traveling_Gantry|Roof_|Elevated_Runway|Moat_Runway)|Infinite_Rinse_Water_Slide)/.test(layer)
       }),
-      cuts = siteSectionCuts(plan),
+      cuts = siteSectionCuts(plan, dockStructure),
       contextTop = plan.foundation + contextGeometry.points.reduce((peak, point) => Math.max(peak, point[1]), 0),
       w = paper.width * DRAWING_PIXELS_PER_INCH, h = paper.height * DRAWING_PIXELS_PER_INCH,
       margin = 48, ink = '#223b35', rule = '#9aaea1', water = '#83afb8', earth = '#e6decb',
@@ -987,7 +993,9 @@ const openDrawingWorkspace = (() => {
     if (district) cuts.unshift(district);
     const sections = cuts.map((cut, index) => {
       const { title, note, at, angle, from, to, kind } = cut, [cx, cz] = plan.position,
-        detail = ['canal-detail', 'piled-detail', 'approach', 'boat-garage', 'lower-programme'].includes(kind), district = kind === 'district',
+        loadPath = kind === 'structural-axis', mast = kind === 'mast-foundation',
+        detail = ['canal-detail', 'piled-detail', 'approach', 'boat-garage', 'lower-programme'].includes(kind) || mast,
+        district = kind === 'district',
         point = (station, height) => { const [x, z] = at(station); return [x - cx, height - plan.foundation, z - cz]; },
         along = [Math.cos(angle), 0, Math.sin(angle)], normal = [-along[2], 0, along[0]],
         offset = dot(point(0, 0), normal), plane = { normal, offset },
@@ -996,11 +1004,11 @@ const openDrawingWorkspace = (() => {
         bottom = Math.min(...profile.map(([, y]) => y), plan.floor - 1.5) - (cut.belowGrade ?? 2.2),
         upper = cut.crown ?? plan.floor + Math.min(kind === 'canal-detail' ? 1.55 : 6.4,
           modelFloorPitch(sourceModel) * sourceModel.layers.length),
-        focus = [from, to].flatMap((station) => [bottom, detail ? upper : Math.max(upper, contextTop + 3)].map((y) => point(station, y))),
+        focus = [from, to].flatMap((station) => [bottom, detail || loadPath ? upper : Math.max(upper, contextTop + 3)].map((y) => point(station, y))),
         drawingY = detail ? 414 : 142,
-        region = { width: w - 2 * margin - (cut.labels ? 280 : 0), height: h - drawingY - 65 },
-        frame = renderDrawing(geometry, camera, [
-          plane, { normal, offset: offset - (kind === 'boat-garage' ? 1.55 : 5), flip: true },
+        region = { width: w - 2 * margin - (cut.notes ? 315 : cut.labels ? 280 : 0), height: h - drawingY - 65 },
+        frame = renderDrawing(loadPath || mast ? structureGeometry : geometry, camera, [
+          plane, { normal, offset: offset - (kind === 'boat-garage' ? 1.55 : mast ? 2.5 : loadPath ? 3.8 : 5), flip: true },
           { normal: along, offset: to }, { normal: along, offset: from, flip: true },
           { normal: [0, 1, 0], offset: upper - plan.foundation }
         ], paper, 'auto', false, centeredPlacement(), false, pens, { region, focus, cutFill: true, scales }),
@@ -1058,11 +1066,33 @@ const openDrawingWorkspace = (() => {
       }
       area.prepend(ground);
       svg.append(tile);
-      for (const [station, height, label] of cut.labels ?? []) {
+      if (cut.notes) {
+        const panelX = w - margin - 285, gravity = '#98503b', lateral = '#336666';
+        studyMark(svg, 'line', { x1: panelX - 15, y1: 153, x2: panelX - 15, y2: h - 90, stroke: rule });
+        for (const [i, [heading, ...lines]] of cut.notes.entries()) {
+          const y = 197 + i * 137;
+          text(panelX, y, heading, 17, { 'font-weight': 650 });
+          for (const [j, line] of lines.entries()) text(panelX, y + 27 + 22 * j, line, 14);
+        }
+        for (const [i, [label, color]] of [['Gravity', gravity], ['Lateral force or uplift', lateral]].entries()) {
+          const y = h - 193 + i * 34;
+          studyMark(svg, 'line', { x1: panelX, y1: y - 4, x2: panelX + 23, y2: y - 4, stroke: color, 'stroke-width': 2.5 });
+          text(panelX + 32, y, label, 14);
+        }
+        const forceMarks = studyMark(area, 'g', { 'data-load-path': '' });
+        for (const [a, b, type] of cut.arrows) {
+          const [x1, y1] = project(frame, ...a), [x2, y2] = project(frame, ...b),
+            angle = Math.atan2(y2 - y1, x2 - x1), fill = type === 'gravity' ? gravity : lateral,
+            tip = [x2, y2], back = (angle) => [x2 - 9 * Math.cos(angle), y2 - 9 * Math.sin(angle)];
+          studyMark(forceMarks, 'line', { x1, y1, x2, y2, stroke: fill, 'stroke-width': 2.1 });
+          studyMark(forceMarks, 'polygon', { points: [tip, back(angle - 0.47), back(angle + 0.47)].map((p) => p.join(',')).join(' '), fill });
+        }
+      }
+      for (const [station, height, label, dy = 0] of cut.labels ?? []) {
         const [x, y] = project(frame, station, height), py = y + drawingY, start = x + margin,
           end = Math.max(start + 40, w * 0.73);
-        studyMark(svg, 'line', { x1: start, x2: end, y1: py, y2: py, stroke: rule });
-        text(end + 8, py + 4, label, 13);
+        studyMark(svg, 'path', { d: `M${start} ${py}H${start + 10}L${start + 31} ${py + dy}H${end}`, fill: 'none', stroke: rule });
+        text(end + 8, py + dy + 4, label, 13);
       }
       if (cut.clearance) {
         const { station, underside, height } = cut.clearance,

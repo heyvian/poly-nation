@@ -58,21 +58,17 @@ function planModuleCrane(model, runway = 'elevated') {
     swingHalf = Math.atan2(2.65, r),
     roofObstacles = [...roofPlan.pavilions, ...roofPlan.lifts, ...roofPlan.garden.filter((zone) => zone.kind === 'gazebo')],
     approaches = model.circulation.regions.filter((zone) => zone.kind === 'bridgeAccess' || zone.kind === 'elevator'),
-    lobbyOpenings = lobbyHoles(model.lobby, 1),
     blockedPost = (radius, angle) => roofObstacles.some((zone) => craneTouchesZone(zone, radius, angle, 0.79)) ||
       cantilever && (approaches.some((zone) => craneTouchesZone(zone, radius, angle, 0.52)) ||
         model.circulation.doors.some((door) => Math.abs(door.r - radius) < 0.72 && angDist(door.angle, angle) * radius < 1.40));
   if (roofOuter - roofInner < 1.8 || roofInner < 3.18) return null;
-  for (let j = 0; j < slotN; j++) {
-    const angle = ((j + 0.5) * TAU) / slotN;
+  for (const { j, angle, active } of buildSupportGrid(model, roofInner).axes) {
     // Choose piers between docking bays and route the ring beams over atrium
     // openings. The roof stairs share the inner edge at the swing axis.
     if (j % 2 && slotN >= 16) continue;
     // High-level ties continue between the rings even where a post would obstruct an opening.
     roofTies.push(angle);
-    if (angDist(angle, swingAngle) < swingHalf ||
-        lobbyOpenings.some(([a, half]) => angDist(a, angle) < half + 0.028) ||
-        slide?.connections?.some((room) => angDist(room.angle, angle) < 1.22 / R) ||
+    if (!active.inner || !active.outer || angDist(angle, swingAngle) < swingHalf ||
         [roofInner, roofOuter].some((radius) => blockedPost(radius, angle))) continue;
     supports.push(angle);
   }
@@ -158,22 +154,24 @@ function craneFrame(mesh, angle) {
   return { point, block, member };
 }
 
-function drawCraneInfrastructure(mesh, model, crane, paint, roofVisible, cutY = Infinity, pose = null, animate = false) {
+function drawCraneInfrastructure(mesh, model, crane, paint, roofVisible, cutY = Infinity, pose = null, animate = false, showCore = true) {
   const { sector, mark } = mesh,
     { roofInner, roofOuter, roofRail, supports, roofTies } = crane,
-    tread = rgb('#3e5552'), concrete = rgb('#aeb7aa'), cantilever = crane.runway === 'cantilever';
+    tread = rgb('#3e5552'), cantilever = crane.runway === 'cantilever';
   if (crane.runway === 'moat') drawCraneMoat(mesh, model, crane, paint, pose?.angle ?? 316 * Math.PI / 180, animate);
   if (crane.runway === 'elevated') drawElevatedCraneRunway(mesh, crane, paint, cutY);
-  // Both raised rails sit over the primary annular support lines. A second
-  // belt at the roof picks up the pier loads through breaks in the columns.
-  if (cantilever) drawCantileverAnchorage(mesh, model, crane, paint, cutY);
-  else {
+  // The full Build frame already contains these column stacks. Massing shows only the crane's stacks.
+  if (cantilever) drawCantileverAnchorage(mesh, model, crane, paint, cutY, showCore);
+  else if (showCore) {
     mark('Crane_Core_Piers', 'Runway load path to the core foundations');
-    for (const angle of supports) {
+    for (const axis of buildSupportGrid(model, roofInner).axes.filter(({ angle }) => supports.includes(angle))) {
+      const { angle } = axis;
       const { block } = craneFrame(mesh, angle);
       for (const radius of [roofInner, roofOuter]) {
-        block(radius, 0, 0.02, 0.83, 0.28, 0.88, concrete);
-        block(radius, 0, 0.30, 0.51, Math.min(model.roofPlan.y - 0.30, cutY - 0.30), 0.48, paint);
+        const side = radius === roofInner ? 'inner' : 'outer';
+        const bottom = model.siteTransferredColumns?.has(`${axis.j}/${side}`) ? buildStorey(model, 1).underside : 0,
+          top = Math.min(model.roofPlan.y, cutY);
+        if (top > bottom) block(radius, 0, bottom, 0.54, top - bottom, 0.54, paint);
       }
     }
   }
@@ -220,7 +218,7 @@ function drawCraneInfrastructure(mesh, model, crane, paint, roofVisible, cutY = 
   }
 }
 
-function drawCantileverAnchorage(mesh, model, crane, paint, cutY) {
+function drawCantileverAnchorage(mesh, model, crane, paint, cutY, showCore) {
   const { roofInner, roofOuter, supports } = crane,
     concrete = rgb('#aab0a3'), steel = rgb('#526663');
   mesh.mark('Crane_Cantilever_Pile_Caps', 'Tied pile caps beneath both annular load paths');
@@ -232,18 +230,21 @@ function drawCantileverAnchorage(mesh, model, crane, paint, cutY) {
     for (const radius of [roofInner, roofOuter]) for (const side of [-1, 1])
       block(radius, side * 0.46, -2.50, 0.42, 1.85, 0.42, concrete);
   }
+  if (!showCore) return;
   mesh.mark('Crane_Cantilever_Core_Frames', 'Outer compression piers and inner tension frames tied into the floor levels');
   const top = Math.min(model.roofPlan.y, cutY);
   if (top <= 0) return;
-  for (const angle of supports) {
+  for (const axis of buildSupportGrid(model, roofInner).axes.filter(({ angle }) => supports.includes(angle))) {
+    const { angle } = axis;
     const { block, member } = craneFrame(mesh, angle);
-    block(roofOuter, 0, 0, 0.88, top, 0.94, paint, true);
-    block(roofInner, 0, 0, 0.54, top, 0.56, paint, true);
-    for (const side of [-1, 1])
-      block(roofInner, side * 0.34, -0.58, 0.11, top + 0.58, 0.11, steel);
-    for (let y = modelFloorPitch(model); y < top; y += modelFloorPitch(model))
-      for (const radius of [roofInner, roofOuter])
-        block(radius, 0, y - 0.13, 0.94, 0.25, 0.99, paint);
+    const inner = model.siteTransferredColumns?.has(`${axis.j}/inner`) ? buildStorey(model, 1).underside : 0,
+      outer = model.siteTransferredColumns?.has(`${axis.j}/outer`) ? buildStorey(model, 1).underside : 0;
+    if (top > outer) block(roofOuter, 0, outer, 0.83, top - outer, 0.83, paint, true);
+    if (top > inner) {
+      block(roofInner, 0, inner, 0.62, top - inner, 0.62, paint, true);
+      for (const side of [-1, 1])
+        block(roofInner, side * 0.34, inner, 0.11, top - inner, 0.11, steel);
+    }
     if (top !== model.roofPlan.y) continue;
     const z = Math.max(top - 1.7, 0.4), gauge = roofOuter - roofInner;
     member([roofInner, 0, z], [roofInner + Math.min(1.65, gauge / 3), 0, top - 0.26], 0.31, paint);

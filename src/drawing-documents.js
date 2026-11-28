@@ -591,10 +591,8 @@ function structuralStudyFigure(model, layers, section) {
   const thickness = layers.slabThickness,
     structure = layers.dockStructure,
     floors = model.layers.length,
-    width = model.R - model.r,
-    innerOffset = Math.min(0.42, width * 0.16),
-    outerOffset = Math.min(0.48, width * 0.16),
-    radialSpan = width - innerOffset - outerOffset,
+    grid = buildSupportGrid(model), { inner, outer } = grid,
+    radialSpan = outer - inner,
     dockLength = BUILD_SECTION.dockGap + MODULE.depth;
   if (section) {
     const floorSpace = Math.min(59, 242 / floors),
@@ -631,6 +629,16 @@ function structuralStudyFigure(model, layers, section) {
           '#91aba0'
         );
     }
+    if (model.crane) {
+      for (const x of [xInner, xOuter]) {
+        const holdDown = x === xInner && model.crane.runway === 'cantilever';
+        line(x, top - 28, x, top, green, 4);
+        line(x - 20, top - 28, x + 20, top - 28, green, 4);
+        if (holdDown) arrow(x, top + 4, x, top - 19, green);
+        else arrow(x, top - 50, x, top - 19);
+      }
+    }
+    arrow(xOuter - 14, top + 32, xInner + 9, top + 32, green);
     box(xOuter + 9, deck - 30, xTip - xOuter - 8, 30, '#e2e7da');
     [xOuter + 44, xOuter + 111, xOuter + 180].forEach((x) => arrow(x, deck - 49, x, deck - 3));
     line(xOuter, deck + 4, xTip, deck + 4, green, 5);
@@ -683,28 +691,24 @@ function structuralStudyFigure(model, layers, section) {
         stroke: STUDY_INK,
         'stroke-width': radius === model.R ? 1.8 : 1
       });
-    for (let j = 0; j < model.slotN * 2; j++) {
-      const angle = ((j + 1) * TAU) / (model.slotN * 2),
-        [x1, y1] = at(model.r + innerOffset, angle),
-        [x2, y2] = at(model.R - outerOffset, angle);
-      line(x1, y1, x2, y2, '#a2b3a6', 0.8);
-      if (j % 2 === 0) {
-        for (const [x, y] of [
-          [x1, y1],
-          [x2, y2]
-        ])
-          studyMark(svg, 'circle', { cx: x, cy: y, r: 2.7, fill: green });
-      }
+    for (const axis of grid.axes) {
+      const [x1, y1] = at(inner, axis.angle), [x2, y2] = at(outer, axis.angle),
+        [sx, sy] = at(grid.inside, axis.angle + grid.pitch / 2), [ex, ey] = at(outer, axis.angle + grid.pitch / 2),
+        crane = model.crane?.supports.includes(axis.angle);
+      line(sx, sy, ex, ey, '#c4cec4', 0.55);
+      line(x1, y1, x2, y2, green, axis.active.inner && axis.active.outer ? 1.1 : 0.65, axis.active.inner && axis.active.outer ? 'none' : '3 2');
+      for (const [x, y, active] of [[x1, y1, axis.active.inner], [x2, y2, axis.active.outer]])
+        if (active) studyMark(svg, 'circle', { cx: x, cy: y, r: crane ? 3.6 : 2.1, fill: crane ? red : green });
     }
-    const a = Math.PI,
-      [aX, aY] = at(model.r + innerOffset, a),
-      [bX, bY] = at(model.R - outerOffset, a),
+    const a = grid.axes.find((axis) => axis.active.inner && axis.active.outer)?.angle ?? Math.PI,
+      [aX, aY] = at(inner, a),
+      [bX, bY] = at(outer, a),
       [cX, cY] = at(model.R, a),
       [dX, dY] = at(model.R + dockLength, a);
     line(aX, aY, bX, bY, green, 3);
     line(cX, cY, dX, dY, red, 3, '5 3');
     label(488, 98, 'Typical support grid', 650);
-    label(488, 128, 'Dots mark aligned column positions.');
+    label(488, 128, 'Dots mark stacked column positions.');
     label(488, 155, `${radialSpan.toFixed(2)} m radial beam between ring supports`);
     label(
       488,
@@ -712,7 +716,8 @@ function structuralStudyFigure(model, layers, section) {
       `${((Math.PI * model.R) / model.slotN).toFixed(2)} m outer slab strip between radial beams`
     );
     label(488, 234, `${dockLength.toFixed(2)} m dock projection`);
-    label(488, 269, 'Check local transfers around openings.');
+    label(488, 269, 'Red dots also carry the roof runway.');
+    label(488, 301, 'Dashed lines mark local ring transfers.');
   }
   return svg;
 }
@@ -831,14 +836,14 @@ function drawingSetPages(name, model, assignments) {
       wetMoment = slabMoment + (water * slabSpan ** 2) / 8;
     const section = add(
       'Structure · Radial load-path section',
-      'A typical bay shows loads entering the core slab and dock, moving through the frame and down to foundations.'
+      'Runway and dock reactions enter the same stacked frame. The floor diaphragms bring lateral loads to the paired lift bays.'
     );
     const dockNote = document.createElement('p');
     dockNote.textContent = `Across the ${span.toFixed(2)} m dock, the ${governing.label.toLowerCase()} case gives ${Math.round(governing.shear)} kN total service gravity load and ${(governing.rootMoment / 1000).toFixed(1)} MN·m about the core face before crediting tip supports.`;
     section.append(structuralStudyFigure(model, layers, true), dockNote);
     const page = add(
       'Structure · Support grid and spans',
-      'Typical grid shown before local interruptions at the entrances and slide. The radial beams transfer slab loads to the ring girders and columns.'
+      'The active support grid and its local openings. Straight radial beams connect the two primary rings.'
     );
     page.append(structuralStudyFigure(model, layers, false));
     const note = document.createElement('p');

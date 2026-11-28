@@ -13,6 +13,44 @@ function buildRingFrame(model) {
   };
 }
 
+function buildSupportGrid(model, inner = model.crane?.roofInner ?? buildRingFrame(model).inside) {
+  const { inside, outside } = buildRingFrame(model), lobby = lobbyHoles(model.lobby, 0),
+    slide = model.feature.slide?.connections ?? [],
+    landings = model.circulation.regions.filter(({ kind }) => kind === 'bridgeAccess' || kind === 'elevator'),
+    width = Math.min(0.38, (model.R - model.r) * 0.30), pitch = TAU / model.slotN;
+  const axes = Array.from({ length: model.slotN }, (_, j) => {
+    const angle = (j + 0.5) * pitch, inLobby = lobby.some(([a, half]) => angDist(a, angle) < half + 0.30 / inner),
+      active = {
+        inner: !inLobby && !landings.some((zone) => craneTouchesZone(zone, inner, angle, 0.29)),
+        outer: !inLobby && !slide.some((portal) => angDist(portal.angle, angle) * outside < 2.50)
+      };
+    return { j, angle, active };
+  });
+  return { inside, inner, outer: outside, axes, width, pitch };
+}
+
+function dockSupportAxis(grid, slot, side) {
+  return grid.axes[mod(slot.j + (side < 0 ? -1 : 0), grid.axes.length)];
+}
+
+function coreSupportPoint(grid, axis, side, y) {
+  return [grid[side] * Math.cos(axis.angle), y, grid[side] * Math.sin(axis.angle)];
+}
+
+function coreColumnSize(grid, crane, axis, side) {
+  const bent = crane?.supports.includes(axis.angle);
+  if (bent && crane.runway === 'cantilever') return side === 'inner' ? 0.62 : 0.83;
+  return bent ? 0.54 : grid.width;
+}
+
+function coreLateralBays(model, floor) {
+  return model.circulation.regions.flatMap((lift) => {
+    if (lift.f !== floor || lift.kind !== 'elevator' || lift.R - lift.r < 0.5) return [];
+    const radius = lift.r + 0.28, inset = 0.24 / radius, start = lift.start + inset, end = lift.end - inset;
+    return end > start ? [{ key: mod((lift.start + lift.end) / 2, TAU).toFixed(5), radius, start, end }] : [];
+  });
+}
+
 function buildStorey(model, floor, thickness = model.slabThickness ?? BUILD_SECTION.slabThickness) {
   const { slabBase, slabThickness } = BUILD_SECTION,
     floorHeight = modelFloorPitch(model);
@@ -352,7 +390,7 @@ function drawBuildBoardingStairs(mesh, model) {
 }
 
 // The removable module sits between permanent side trusses, clear of the bay below.
-function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, openPanels = false, seat = 0.05) {
+function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, openPanels = false, seat = 0.05, grid = null) {
   const { dockGap, chordWidth, chordDepth, dockRailOffset, dockRootPlateWidth, dockRootPlateDepth } = BUILD_SECTION,
     { box, mark } = mesh,
     span = dockGap + MODULE.depth,
@@ -412,18 +450,25 @@ function drawDockFrame(mesh, model, slot, storey, layer, showReturns = false, op
       for (const height of [0, dockTrussDepth(0)])
         member(point(side, jamb, height), point(side, -span, height), 0.23, steel, 0.23);
     }
+    mark(`Assembly_Dock_Node_Links_L${slot.f + 1}`, `Slot_${slot.j}`);
+    for (const side of [-sideOffset, sideOffset]) {
+      const axis = dockSupportAxis(grid, slot, side), node = -span + dockPerimeterFaces(model, side).outer - 0.04;
+      for (const height of [0, dockTrussDepth(0)]) {
+        const root = point(side, node, height);
+        member(root, coreSupportPoint(grid, axis, 'outer', root[1]), 0.24, steel, 0.24);
+      }
+    }
   }
 }
 
 // Study alternatives retain the docking pitch, door and deck height of the baseline.
-function drawAlternativeDock(mesh, model, slot, storey, structure, seat = null) {
+function drawAlternativeDock(mesh, model, slot, storey, structure, seat = null, grid = buildSupportGrid(model)) {
   const { dockGap } = BUILD_SECTION,
     { mark, box } = mesh,
     span = dockGap + MODULE.depth,
     point = moduleTipPoint(model, slot, storey.base),
     steel = rgb('#657b76'),
-    cable = rgb('#3b5753'),
-    back = Math.min(3.5, (model.R - model.r) * 0.6);
+    cable = rgb('#3b5753');
   const member = (a, b, width, color = steel, depth) =>
     drawAssemblyMember(mesh, a, b, width, color, depth, slot.angle);
   mark('Assembly_Dock_Connections', 'L' + (slot.f + 1) + '_Slot_' + slot.j);
@@ -431,8 +476,10 @@ function drawAlternativeDock(mesh, model, slot, storey, structure, seat = null) 
     const { depth } = DOCK_STRUCTURES[structure];
     const [x, y, z] = point(0, -span / 2, -depth - (seat ?? 0));
     box(x, y, z, 3.8, depth, span, slot.angle, steel);
-    for (const offset of [-1.72, 1.72])
-      member(point(offset, -span, -0.16), point(offset, -span - back, -0.16), 0.27);
+    for (const offset of [-1.72, 1.72]) {
+      const axis = dockSupportAxis(grid, slot, offset), root = point(offset, -span, -0.16);
+      member(root, coreSupportPoint(grid, axis, 'outer', root[1]), 0.27);
+    }
     return;
   }
 
@@ -444,6 +491,14 @@ function drawAlternativeDock(mesh, model, slot, storey, structure, seat = null) 
   for (const depth of [-span + dockGap, -span / 2, -0.6])
     member(point(-side, depth, -(seat ?? 0.01) - 0.10),
       point(side, depth, -(seat ?? 0.01) - 0.10), 0.17, steel, 0.2);
+  mark(`Assembly_Dock_Node_Links_L${slot.f + 1}`, `Slot_${slot.j}`);
+  for (const offset of [-side, side]) {
+    const axis = dockSupportAxis(grid, slot, offset), connection = -span + dockPerimeterFaces(model, offset).outer;
+    for (const height of stay ? [railY, stay.upper] : [railY]) {
+      const root = point(offset, stay ? connection : -span, height);
+      member(root, coreSupportPoint(grid, axis, 'outer', root[1]), 0.23);
+    }
+  }
   if (!stay) return;
   mark('Assembly_Dock_Stays_L' + (slot.f + 1), 'Slot_' + slot.j);
   for (const offset of [-side, side])
@@ -479,11 +534,11 @@ function drawAlternativeDock(mesh, model, slot, storey, structure, seat = null) 
 }
 
 // One shared pair of posts or hangers carries all active decks in a stacked dock line.
-function drawSharedDockSupports(mesh, model, slots, structure, slabThickness) {
+function drawSharedDockSupports(mesh, model, slots, structure, slabThickness, grid) {
   const { mark, box } = mesh,
     roof = model.roofPlan.y,
     span = BUILD_SECTION.dockGap + MODULE.depth,
-    stacks = new Map();
+    stacks = new Map(), roofReturns = new Set();
   for (const slot of slots) {
     const pair = stacks.get(slot.j) ?? [slot, slot];
     pair[1] = slot;
@@ -499,15 +554,16 @@ function drawSharedDockSupports(mesh, model, slots, structure, slabThickness) {
       if (structure === 'columns') {
         const height = buildStorey(model, top.f, slabThickness).base - 0.13;
         const [x, , z] = point(offset, -0.6, 0);
-        box(x, 0, z, 0.95, 0.14, 0.95, bottom.angle, steel);
-        member(point(offset, -0.6, 0.14), point(offset, -0.6, height), 0.28);
+        const grade = model.siteGroundAt?.(x, z), foot = grade ?? 0.14;
+        if (grade === undefined) box(x, 0, z, 0.95, foot, 0.95, bottom.angle, steel);
+        else box(x, grade - 0.56, z, 1.2, 0.56, 1.2, bottom.angle, rgb('#a6a28f'), true);
+        if (height > foot) member(point(offset, -0.6, foot), point(offset, -0.6, height), 0.28);
         continue;
       }
       const bottomDeck = buildStorey(model, bottom.f, slabThickness).base - 0.13,
         anchor = roof + 0.44,
         mast = roof + 3.25,
         root = -span + 0.28,
-        back = -span - (model.R - model.r) + Math.min(0.45, (model.R - model.r) * 0.19),
         collector = roof - slabThickness - buildGirderDepth(model) * 0.65;
       member(point(offset, -0.6, bottomDeck), point(offset, -0.6, anchor), 0.085);
       member(point(offset, root, anchor), point(offset, -0.6, anchor), 0.26, 0.38);
@@ -516,8 +572,14 @@ function drawSharedDockSupports(mesh, model, slots, structure, slabThickness) {
       // Return the moment into the roof framing below the public deck. The perimeter root is
       // schematic and would need a designed moment joint and an inboard tie to the core.
       mark('Assembly_Dock_Roof_Backspan', 'Dock_' + bottom.j);
-      member(point(offset, root, collector), point(offset, back, collector), 0.37, 0.48);
-      member(point(offset, back, collector - 0.55), point(offset, back, collector), 0.26);
+      const axis = dockSupportAxis(grid, bottom, offset), outer = coreSupportPoint(grid, axis, 'outer', collector),
+        inner = coreSupportPoint(grid, axis, 'inner', collector);
+      member(point(offset, root, collector), outer, 0.37, 0.48);
+      if (!roofReturns.has(axis.j)) {
+        roofReturns.add(axis.j);
+        member(outer, inner, 0.37, 0.48);
+        member(inner, [inner[0], collector - 0.55, inner[2]], 0.26);
+      }
       mark('Assembly_Dock_Stack_Supports', 'Dock_' + bottom.j);
     }
   }
@@ -591,8 +653,8 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     { dockGap } = BUILD_SECTION,
     floorHeight = modelFloorPitch(model),
     slabThickness = layers.slabThickness ?? model.slabThickness ?? BUILD_SECTION.slabThickness,
-    width = model.R - model.r,
-    { inside, outside, ringWidth } = buildRingFrame(model),
+    grid = buildSupportGrid(model), { inside, inner, outer: outside, width: column } = grid,
+    { ringWidth } = buildRingFrame(model),
     concrete = rgb('#c7c8bd'),
     partition = rgb('#e1dacc');
   const coreValues = materialValues(preview.assignments, 'core'),
@@ -634,16 +696,16 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     );
   }
   if (layers.slabs && model.greenhouse) {
-    const ground = buildStorey(model, 0, slabThickness).base;
+    const { base: ground, underside } = buildStorey(model, 0, slabThickness);
     mark('Assembly_Greenhouse_Ground');
-    sector(0, model.r, 0, TAU, 0.19, ground - 0.265, rgb('#c8d7c2'));
+    sector(0, model.r, 0, TAU, underside, slabThickness, rgb('#c8d7c2'));
     drawGreenhouseGround(mesh, model, ground);
   }
-  // The radial grid puts columns between docks and secondary beams on the dock axes.
+  // The divider axes are shared by docks, columns and the roof runway. Mid-bay beams share the slab strip.
   const bayCount = model.slotN;
   const girderDepth = buildGirderDepth(model);
   function floorFrame(y, openings, gallery, floor) {
-    for (const radius of [inside, outside]) {
+    for (const radius of new Set([inside, inner, outside])) {
       const arcs = openArcs(gallery && radius >= gallery ? [] : openings);
       for (const arc of arcs)
         sector(
@@ -675,10 +737,11 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       const axis = (i + 1) % (2 * bayCount),
         angle = (axis * TAU) / (2 * bayCount),
         open = openings.some(([a, half]) => angDist(a, angle) < half + 0.015),
-        inner = open ? gallery : inside;
-      if (!inner || inner >= outside) continue;
+        main = axis % 2 !== 0,
+        bearing = open ? gallery : main ? inner : inside;
+      if (!bearing || bearing >= outside) continue;
       // Stop at the ring faces so the two beam systems do not share the same top surface.
-      const start = stayAxes ? inner + (open ? 0.24 : ringWidth / 2) : inner,
+      const start = stayAxes ? bearing + (open ? 0.24 : ringWidth / 2) : bearing,
         end = stayAxes ? outside - ringWidth / 2 : outside;
       if (end <= start) continue;
       if (usedAxes?.has(axis)) {
@@ -732,39 +795,27 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       mark('Assembly_Ring_Beams_' + (f + 1));
       if (f) floorFrame(y, openings, f === 1 ? model.lobby.gallery : null, f);
       mark('Assembly_Columns_' + (f + 1));
-      const column = Math.min(0.38, width * 0.3);
-      const reserved = lobbyHoles(model.lobby, f);
-      for (let j = 0; j < bayCount; j++) {
-        const angle = ((j + 0.5) * TAU) / bayCount;
-        const slidePortal =
-          slidePortals.some(
-            (door) => door.floor === f && mod(angle - door.start, TAU) < door.end - door.start
-          ) ||
-          model.feature.slide?.connections.some(
-            (door) => door.floor === f && angDist(door.angle, angle) < 1.6 / model.R
-          );
-        if (reserved.some(([a, half]) => angDist(a, angle) < half + 0.035)) continue;
-        // The wide face follows the tangent of the ring at each bay.
-        at(inside, angle, base, column * 1.2, clearHeight, column, coreFrame);
-        if (!slidePortal) at(outside, angle, base, column * 1.2, clearHeight, column, coreFrame);
+      for (const axis of grid.axes) for (const side of ['inner', 'outer']) {
+        if (!axis.active[side] || !f && model.siteTransferredColumns?.has(`${axis.j}/${side}`)) continue;
+        const bottom = f ? y : 0, size = coreColumnSize(grid, model.crane, axis, side);
+        at(grid[side], axis.angle, bottom, size, soffit - bottom, size, coreFrame);
       }
+      // Reserve the rear line of each lift for the lateral system and keep its public approach open.
+      const lateralBays = coreLateralBays(model, f).filter(({ key }) => f || !model.siteTransferredLifts?.has(key)),
+        bottom = f ? y : 0;
       if (coreSystem.frame === 'brace') {
+        mark(`Assembly_Lift_Core_Posts_L${f + 1}`);
+        for (const { radius, start, end } of lateralBays)
+          for (const angle of [start, end]) at(radius, angle, bottom, 0.25, soffit - bottom, 0.24, coreFrame);
         mark(`Assembly_Lift_Core_Bracing_L${f + 1}`);
-        for (const lift of model.circulation.regions) {
-          if (lift.f !== f || lift.kind !== 'elevator' || lift.R - lift.r < 0.5) continue;
-          // Keep diagonal members against the back of the lift enclosure. The public
-          // approach is on the opposite side, and no brace spans an occupied bay.
-          const radius = Math.min(lift.R - 0.18, lift.r + 0.28),
-            inset = 0.24 / radius,
-            width = column * 0.41;
-          if (lift.end - lift.start <= 2 * inset) continue;
-          member(
-            ringPoint(radius, lift.start + inset, base + width / 2),
-            ringPoint(radius, lift.end - inset, soffit - width / 2),
-            width,
-            coreFrame
-          );
+        for (const { radius, start, end } of lateralBays) {
+          const width = column * 0.41;
+          member(ringPoint(radius, start, base + width / 2), ringPoint(radius, end, soffit - width / 2), width, coreFrame);
         }
+      } else {
+        mark(`Assembly_Lift_Core_Shear_Walls_L${f + 1}`, 'Paired lateral cores behind the lift openings');
+        for (const { radius, start, end } of lateralBays)
+          sector(radius - 0.13, radius + 0.13, start, end, bottom, soffit - bottom, coreFrame);
       }
     }
     if (layers.facade) {
@@ -932,9 +983,10 @@ function buildAssemblyMesh(model, layers, levels, preview) {
           'Assembly_Dock_Connections',
           true,
           slotStructure === 'side-portal',
-          MODULE_CASSETTE_DEPTH
+          MODULE_CASSETTE_DEPTH,
+          grid
         );
-      else drawAlternativeDock(mesh, model, slot, storey, slotStructure, MODULE_CASSETTE_DEPTH);
+      else drawAlternativeDock(mesh, model, slot, storey, slotStructure, MODULE_CASSETTE_DEPTH, grid);
       if (crane) drawDockInsertionGuides(mesh, model, slot, base);
     }
     if (layers.facade || layers.docks) drawDockClosure(mesh, model, slot, storey);
@@ -969,7 +1021,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   }
   if (layers.docks && (dockStructure === 'roof-hung' || dockStructure === 'columns'))
     drawSharedDockSupports(mesh, model, dockStructure === 'columns' && model.siteWetBays
-      ? dockSlots.filter((slot) => !model.siteWetBays.has(slot.j)) : dockSlots, dockStructure, slabThickness);
+      ? dockSlots.filter((slot) => !model.siteWetBays.has(slot.j)) : dockSlots, dockStructure, slabThickness, grid);
 
   // The guard glazing belongs to the walking surfaces, independent of façade visibility.
   if (layers.slabs) {
@@ -1005,7 +1057,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
   }
   if (crane) {
     const paint = rgb(cranePaint(preview.assignments));
-    drawCraneInfrastructure(mesh, model, crane, paint, full, cutY, cranePose);
+    drawCraneInfrastructure(mesh, model, crane, paint, full, cutY, cranePose, false, !layers.frame);
     if (cranePose) drawCraneGantry(mesh, crane, cranePose, paint);
   }
   const H = layers.swings && full ? ride.height : crane && full ? crane.head + crane.depth : (floors + Number(full)) * floorHeight;
