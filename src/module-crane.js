@@ -688,14 +688,14 @@ function initCraneControls() {
   };
 }
 
-function prepareCraneMotion(mesh) {
-  if (!(state.craneStage === 'parked' || craneTravelStage(state.craneStage)) || !model?.crane) return;
+function prepareCraneMotion(mesh, crane = model?.crane) {
+  if (!(state.craneStage === 'parked' || craneTravelStage(state.craneStage)) || !crane) return;
   const start = mesh.groups.find((g) => g.layer === 'Crane_Traveling_Gantry'),
     end = mesh.groups.find((g) => g.layer === 'Crane_Motion_End');
   if (!start || !end) return;
   mesh.craneMotion = ['solid', 'lines'].map((kind) => ({ kind, start: start[kind],
     source: mesh[kind].slice(start[kind], end[kind]) }));
-  const crane = model.crane;
+  mesh.cranePlan = crane;
   mesh.craneBaseBearing = state.craneBearing * Math.PI / 180;
   const train = mesh.groups.find(({ layer }) => layer === 'Crane_Caterpillar_Pusher');
   if (train) mesh.craneCaterpillar = { crane, start: train.solid };
@@ -934,7 +934,7 @@ function rotateMoatGate(mesh, axis, hinge, rise, ranges, gl = null, renderer = n
 
 function moveAnimatedMoatGates(mesh, angle, gl = null, renderer = null) {
   if (!mesh.craneGateMotion) return;
-  const crane = model.crane;
+  const crane = mesh.cranePlan;
   for (const gate of mesh.craneGateMotion) {
     const height = gateLift(crane, gate.axis, angle), barrier = barrierLift(crane, gate.axis, angle);
     if (gate.rise !== height) {

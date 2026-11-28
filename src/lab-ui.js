@@ -793,29 +793,40 @@ function initProgrammingEditor() {
   });
 }
 // Replace model meshes and retain occupants for view-only changes that reuse the same derived model.
+let massingSiteRevision;
 function upload(m) {
+  const placed = siteWorkspace.designModel(m);
+  massingSiteRevision = siteWorkspace.revision;
   if (
     !occupancy ||
-    occupancy.m !== m ||
+    occupancy.m !== placed ||
     (occupancy.people.length !== state.visitorCount && occupancy.graph.entry != null)
   ) {
-    occupancy = makeOccupancy(m);
+    occupancy = makeOccupancy(placed);
     simLast = 0;
   }
   $('programHoverLabel').hidden = true;
-  const mesh = buildMesh(m, false, massingView());
+  const siteStatus = $('designSiteStatus');
+  siteStatus.hidden = placed === m;
+  if (placed !== m) {
+    const omitted = m.slots.filter((slot) => placed.sitePlan.omitted.has(slot.i) &&
+      (slot.p !== EMPTY || slot.use === 'retail')).length;
+    siteStatus.textContent = `West Village placement linked. ${omitted ? `${omitted} enclosed bays (${fmt(omitted * MODULE.area)} m²) omitted at the water. ` : ''}` +
+      'The area schedule and comparison trials use the base design.';
+  }
+  const mesh = siteWorkspace.composeDesign(buildMesh(placed, false, massingView()), m);
   if (programEditing) prepareProgramTargets(mesh);
   if (software) {
     softwareMesh = mesh;
     prepareSwingMesh(softwareMesh);
-    prepareCraneMotion(softwareMesh);
+    prepareCraneMotion(softwareMesh, placed.crane);
     refreshPopulation();
     drawSoftware();
     return;
   }
   if (!gl || !gpu) return;
   prepareSwingMesh(mesh);
-  prepareCraneMotion(mesh);
+  prepareCraneMotion(mesh, placed.crane);
   uploadWebGLMesh(gl, gpu, mesh);
   refreshPopulation();
   draw();
@@ -984,7 +995,7 @@ function bindModelCamera({
 
   const views = {
     axo: (camera) => Object.assign(camera, { az: -0.84, el: 0.57 }),
-    plan: (camera) => Object.assign(camera, { az: -Math.PI / 2, el: topView }),
+    plan: (camera) => Object.assign(camera, { az: getMesh()?.northAzimuth ?? -Math.PI / 2, el: topView }),
     side: (camera) => {
       camera.el = 0;
     },
@@ -1630,7 +1641,7 @@ $('importFile').onchange = async () => {
 window.addEventListener('pagehide', saveNow);
 // Native Rhino export: shared semantic geometry, meters, right-handed Z-up.
 function exportGeometry(m) {
-  const mesh = buildMesh(m, true),
+  const mesh = siteWorkspace.composeDesign(buildMesh(siteWorkspace.designModel(m), true), m),
     groups = mesh.groups,
     objects = [];
   const point = (a, i) => [+a[i].toFixed(5), +(-a[i + 2]).toFixed(5), +a[i + 1].toFixed(5)];
@@ -2019,7 +2030,7 @@ document.addEventListener('keydown', (e) => {
 
 $('simRestart').onclick = () => {
   if (model) {
-    occupancy = makeOccupancy(model);
+    occupancy = makeOccupancy(siteWorkspace.designModel(model));
     simLast = 0;
     refreshPopulation();
     draw();

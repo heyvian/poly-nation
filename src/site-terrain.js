@@ -219,13 +219,26 @@ function siteAssemblyMesh(
     showWater = true,
     canalDepth = 2,
     relativeToBuilding = false,
+    buildingCoordinates = false,
+    contextRadius = null,
     supportPlan = null,
     model = null,
     includeTerrain = true,
     includeFoundations = true
   } = {}
 ) {
-  const mesh = meshBuilder(), siteMoat = supportPlan?.moat, finishedTerrain = supportPlan?.terrain ?? terrain;
+  const mesh = meshBuilder(), siteMoat = supportPlan?.moat, finishedTerrain = supportPlan?.terrain ?? terrain,
+    bounds = contextRadius ? siteDiskPlanes(position, contextRadius) : null;
+  function clipWater(study) {
+    if (!bounds || !study) return study;
+    const faces = study.faces.map((face) => ({ ...face, polygon: trimDrawingFace(face.polygon, bounds) }))
+      .filter(({ polygon }) => polygon.length >= 3),
+      banks = study.banks.flatMap(({ line, kind }) => {
+        const clipped = clipDrawingLine(...line, bounds);
+        return clipped ? [{ line: clipped, kind }] : [];
+      });
+    return { ...study, faces, banks };
+  }
   if (terrain && (includeTerrain || includeFoundations && siteMoat)) {
     const { size, elevations, datum } = terrain,
       count = natural?.raster ? Math.max(terrain.count, 81) : terrain.count,
@@ -288,14 +301,18 @@ function siteAssemblyMesh(
     for (let row = 0; includeTerrain && row < count - 1; row++) {
       for (let col = 0; col < count - 1; col++) {
         const i = row * count + col;
+        const [x, , z] = points[i];
+        if (bounds && Math.hypot(x - step / 2 - position[0], z - step / 2 - position[1]) >
+          contextRadius * 1.01 + step * Math.SQRT1_2) continue;
         const candidates = waterPlanes(row * (count - 1) + col);
         const emit = (triangle) => {
-          if (!candidates?.length) patch(...triangle);
-          else
-            for (const land of terrainOutsideSiteWater(triangle, candidates))
-              for (let j = 1; j + 1 < land.length; j++) patch(land[0], land[j], land[j + 1]);
+          const local = bounds && triangle.some(([x, , z]) => Math.hypot(x - position[0], z - position[1]) > contextRadius)
+            ? trimDrawingFace(triangle, bounds) : triangle;
+          if (local.length < 3) return;
+          const pieces = candidates?.length ? terrainOutsideSiteWater(local, candidates) : [local];
+          for (const land of pieces)
+            for (let j = 1; j + 1 < land.length; j++) patch(land[0], land[j], land[j + 1]);
         };
-        const [x, , z] = points[i];
         if (supportPlan?.gradeReach && Math.hypot(x - step / 2 - position[0], z - step / 2 - position[1]) <
             supportPlan.gradeReach + step * Math.SQRT1_2) {
           // Locally subdivide the DEM so that small berms and dock pads can actually follow the adjusted grades.
@@ -316,10 +333,10 @@ function siteAssemblyMesh(
       }
     }
     if (siteMoat && moat) {
-      addSiteMoat(mesh, finishedTerrain, siteMoat, moat, study, supportPlan.water, {
+      addSiteMoat(mesh, finishedTerrain, siteMoat, moat, clipWater(study), supportPlan.water, {
         showWater, canalDepth, includeTerrain, color: siteMoat.connected ? '#4a939e' : '#79a8b0'
       });
-    } else if (includeTerrain) addSiteWater(mesh, finishedTerrain, study, { showWater, canalDepth });
+    } else if (includeTerrain) addSiteWater(mesh, finishedTerrain, clipWater(study), { showWater, canalDepth });
     if (includeTerrain && natural?.trees.length) {
       mesh.mark('OpenStreetMap mapped trees');
       const bark = rgb('#7e7057'),
@@ -327,6 +344,7 @@ function siteAssemblyMesh(
         cells = count - 1,
         cell = (value) => clamp(Math.floor((0.5 - value / size) * cells), 0, cells - 1);
       for (const { x, z, height } of natural.trees) {
+        if (bounds && Math.hypot(x - position[0], z - position[1]) > contextRadius) continue;
         if (
           waterPlanes(cell(z) * cells + cell(x))?.some((planes) =>
             planes.every((plane) => plane.x * x + plane.z * z <= plane.level)
@@ -361,14 +379,21 @@ function siteAssemblyMesh(
   const dryGeometry = siteCanalOpening(supportPlan);
   if (supportPlan && includeFoundations)
     drawSiteFoundations(mesh, model, supportPlan, extendRunway || supportMoat, canalDepth, dryGeometry);
-  if (relativeToBuilding) {
-    // Drawings clip and align to the building datum, even when the wider site is visible.
+  const relative = relativeToBuilding || buildingCoordinates;
+  function toLocal([x, y, z, nx, ny, nz, r, g, b, alpha]) {
+    const px = x - siteX, pz = z - siteZ;
+    return buildingCoordinates
+      ? [cos * px + sin * pz, y - foundation, -sin * px + cos * pz, cos * nx + sin * nz, ny, -sin * nx + cos * nz, r, g, b, alpha]
+      : [px, y - foundation, pz, nx, ny, nz, r, g, b, alpha];
+  }
+  if (relative) {
+    // Design views keep moving parts and light fields on their original axes.
+    // Drawings keep north in district coordinates and use the same floor datum.
     for (const kind of ['solid', 'glass', 'lines']) {
       const target = mesh[kind];
       for (let i = 0; i < target.length; i += 10) {
-        target[i] -= siteX;
-        target[i + 1] -= foundation;
-        target[i + 2] -= siteZ;
+        const vertex = toLocal(target.slice(i, i + 10));
+        for (let j = 0; j < 6; j++) target[i + j] = vertex[j];
       }
     }
   }
@@ -376,9 +401,9 @@ function siteAssemblyMesh(
       cos * x - sin * z + siteX, y + foundation, sin * x + cos * z + siteZ,
       cos * nx - sin * nz, ny, sin * nx + cos * nz, r, g, b, alpha
     ],
-    local = relativeToBuilding ? ([x, y, z, ...rest]) => [x - siteX, y - foundation, z - siteZ, ...rest] : null,
-    keepX = relativeToBuilding ? 0 : siteX, keepY = relativeToBuilding ? 0 : foundation,
-    keepZ = relativeToBuilding ? 0 : siteZ, openingTop = supportPlan ? supportPlan.crossingSoffit - foundation - 1e-7 : 0;
+    keepX = relative ? 0 : siteX, keepY = relative ? 0 : foundation, keepZ = relative ? 0 : siteZ,
+    openingTop = supportPlan ? supportPlan.crossingSoffit - foundation - 1e-7 : 0,
+    firstBuildingGroup = mesh.groups.length;
   for (let groupIndex = 0; groupIndex < assembly.groups.length; groupIndex++) {
     const group = assembly.groups[groupIndex],
       next = assembly.groups[groupIndex + 1];
@@ -386,7 +411,7 @@ function siteAssemblyMesh(
     if (supportPlan && /^(Assembly_Foundation$|Core_Foundation$|Crane_Cantilever_Pile_Caps$|(?:Public|Entrance|Opposite_Lobby)_Plaza_|Opposite_Lobby_Promenade|Climbing_Ground_Approach)/.test(group.layer)) continue;
     if (extendRunway && group.layer === 'Crane_Elevated_Runway_Columns') continue;
     if (siteMoat && /^(Crane_Moat|Crane_Moat_Water|Crane_Moat_Runway_Piers|Crane_Moat_Guards)$/.test(group.layer)) continue;
-    mesh.mark(group.layer, group.name);
+    mesh.mark(group.layer, group.name, group.pick);
     const protectElevatedParts = /^(Crane_|Dock(?:ing)?_|Modules?_|Assembly_(?:Open_|Module_|Dock_)|Site_Canal_Lookout_)/.test(group.layer) &&
       group.layer !== 'Assembly_Dock_Stack_Supports',
       cut = dryGeometry && !protectElevatedParts,
@@ -399,7 +424,9 @@ function siteAssemblyMesh(
         const start = target.length;
         if (cut && Math.min(vertices[i + 1], vertices[i + 11], count === 3 ? vertices[i + 21] : Infinity) < openingTop) {
           const points = Array.from({ length: count }, (_, j) => world(vertices.slice(i + j * 10, i + (j + 1) * 10)));
-          dryGeometry.append(target, points, stripMast, local);
+          dryGeometry.append(target, points, stripMast, relative ? toLocal : null);
+        } else if (buildingCoordinates) {
+          for (let j = 0; j < count * 10; j++) target.push(vertices[i + j]);
         } else {
           for (let j = 0; j < count; j++) {
             const k = i + j * 10, x = vertices[k], z = vertices[k + 2], nx = vertices[k + 3], nz = vertices[k + 5];
@@ -414,10 +441,11 @@ function siteAssemblyMesh(
   }
   return {
     ...mesh,
-    H: assembly.H + Math.max(0, foundation),
-    extent: Math.max(assembly.extent, (terrain?.size ?? 0) / 2),
+    H: assembly.H + (relative ? 0 : Math.max(0, foundation)),
+    extent: contextRadius || !includeTerrain ? assembly.extent : Math.max(assembly.extent, (terrain?.size ?? 0) / 2),
+    ...(buildingCoordinates ? { firstBuildingGroup, northAzimuth: -Math.PI / 2 - angle } : {}),
     // Follow the placed assembly, independently of the district extent and drawing datum.
-    orbitPivot: relativeToBuilding
+    orbitPivot: relative
       ? [0, assembly.H * 0.47, 0]
       : [siteX, foundation + assembly.H * 0.47, siteZ],
     foundation

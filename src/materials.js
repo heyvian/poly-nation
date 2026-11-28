@@ -167,7 +167,8 @@ const materialWorkspace = (() => {
     const view = { ...study.view, showRooms: !study.structureView || study.programColors };
     // Depth testing hides seams behind overlapping walls. Keep simplified colors on Canvas.
     const preview = { ...study, finishJoints: Boolean(materialRenderer) };
-    mesh = buildMesh(study.model, false, view, preview);
+    const placed = siteWorkspace.designModel(study.model);
+    mesh = siteWorkspace.composeDesign(buildMesh(placed, false, view, preview), study.model);
     if (materialRenderer) uploadWebGLMesh(materialGL, materialRenderer, mesh);
     redraw();
   }
@@ -761,6 +762,9 @@ const materialWorkspace = (() => {
     getMesh: () => mesh,
     onChange: redraw,
     buttons: { axo: 'materialAxo', plan: 'materialPlan', side: 'materialSide', fit: 'materialFit' }
+  });
+  document.addEventListener('west-village-change', () => {
+    if (!phase.hidden && study) rebuild();
   });
 
   return {

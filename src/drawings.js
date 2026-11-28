@@ -75,7 +75,7 @@ const openDrawingWorkspace = (() => {
       craneRunway: 'design',
       craneBearing: null,
       craneSetSupport: 'all',
-      showSite: false,
+      siteTerrain: null,
       planSheet: 'single',
       glazing: false,
       selected: null,
@@ -130,7 +130,7 @@ const openDrawingWorkspace = (() => {
         sectionLens: clamp(Number(saved.sectionLens) || 35, 8, 200),
         perspectiveFade: Number.isFinite(saved.perspectiveFade) ? clamp(saved.perspectiveFade, 0, 100) : 55,
         cutFill: saved.cutFill !== false,
-        showSite: saved.showSite === true,
+        siteTerrain: typeof saved.siteTerrain === 'boolean' ? saved.siteTerrain : saved.showSite === true ? true : null,
         planSheet: saved.planSheet === 'floors' ? 'floors' : 'single',
         azimuth:
           Number.isInteger(saved.azimuth) && compassPoints[saved.azimuth] ? saved.azimuth : 5,
@@ -207,10 +207,12 @@ const openDrawingWorkspace = (() => {
       })
     );
   }
+  const siteTerrainVisible = () => siteWorkspace.hasTerrain && (settings.siteTerrain ?? siteWorkspace.linked);
+  const sitePlacementVisible = () => siteWorkspace.linked || siteTerrainVisible();
   function planeAngle(plane) {
     const hub = selectedLobby(plane);
     if (!hub) return plane.angle;
-    const bearing = settings.showSite && siteWorkspace.hasTerrain ? siteWorkspace.drawingBearing : 0;
+    const bearing = sitePlacementVisible() ? siteWorkspace.drawingBearing : 0;
     return mod((hub.layout.heading * 180) / Math.PI + 90 + bearing, 360);
   }
   function normalFor(plane) {
@@ -1369,11 +1371,11 @@ const openDrawingWorkspace = (() => {
         $('drawingDocumentStage').scrollTop = 0;
         return;
       }
-      const includeSite = settings.showSite && siteWorkspace.hasTerrain,
+      const includeSite = sitePlacementVisible(), includeTerrain = siteTerrainVisible(),
         runway = settings.craneRunway === 'design' ? sourceModel.crane?.runway : settings.craneRunway,
         caterpillar = runway === 'elevated' && state.craneStage === 'caterpillar',
         craneBearing = settings.craneBearing ?? (caterpillar ? craneCaterpillarPreview().craneBearing : state.craneBearing),
-        mode = `${settings.source}/${settings.mode}/${settings.craneRunway}/${craneBearing}/${caterpillar}/${includeSite ? siteWorkspace.revision : 'building'}`;
+        mode = `${settings.source}/${settings.mode}/${settings.craneRunway}/${craneBearing}/${caterpillar}/${includeSite ? siteWorkspace.revision : 'building'}/${includeTerrain}`;
       if (!settings.detail && (!geometry || renderedGeometryMode !== mode)) {
         const view = {
           ...state,
@@ -1407,7 +1409,7 @@ const openDrawingWorkspace = (() => {
           mesh = settings.source === 'build'
           ? buildAssemblyMesh(placed, buildViewLayers(), 0, preview)
           : buildMesh(placed, false, view, preview);
-        geometry = drawingGeometry(includeSite ? siteWorkspace.composeDrawing(mesh, model) : mesh, sourceModel);
+        geometry = drawingGeometry(includeSite ? siteWorkspace.composeDrawing(mesh, model, includeTerrain) : mesh, sourceModel);
         renderedGeometryMode = mode;
       }
       const camera = settings.detail ? null : viewCamera();
@@ -1671,7 +1673,7 @@ const openDrawingWorkspace = (() => {
     const detail = Boolean(settings.detail), loaded = siteWorkspace.hasTerrain;
     $('drawingSiteField').hidden = detail;
     $('drawingSite').disabled = detail || !loaded;
-    $('drawingSite').checked = loaded && settings.showSite;
+    $('drawingSite').checked = siteTerrainVisible();
     $('drawingSiteNote').hidden = detail || loaded;
   }
 
@@ -1799,14 +1801,14 @@ const openDrawingWorkspace = (() => {
     queueDrawing();
   };
   $('drawingSite').onchange = (event) => {
-    settings.showSite = event.target.checked;
+    settings.siteTerrain = event.target.checked;
     syncSettings();
     queueDrawing();
   };
   document.addEventListener('west-village-change', () => {
     if (panel.hidden) return;
     syncSettings();
-    if (settings.showSite || settings.document === 'site-sections') queueDrawing();
+    queueDrawing();
   });
   $('drawingDetail').onchange = (event) => {
     settings.detail = event.target.value;

@@ -114,13 +114,15 @@ const openRenderWorkspace = (() => {
         docks: modules.checked, modules: modules.checked, moduleInteriors: true, moduleRoofs: true,
         slide: true, swings: true, crane: true, roofRetail: true
       };
-    assembly = buildAssemblyMesh(source, layers, visible, {
+    const placed = siteWorkspace.designModel(source);
+    const mesh = buildAssemblyMesh(placed, layers, visible, {
       assignments,
       view: { seed: state.seed },
       craneSettings: state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : undefined,
       finishJoints: Boolean(renderer)
     });
-    drawRenderFixtures(assembly, source, lighting, visible);
+    drawRenderFixtures(mesh, placed, lighting, visible);
+    assembly = siteWorkspace.composeDesign(mesh, source);
     assembly.renderLighting = lighting;
     if (renderer) uploadWebGLMesh(context, renderer, assembly);
     if (fit) fitModel(assembly, camera, canvas);
@@ -131,6 +133,9 @@ const openRenderWorkspace = (() => {
     buttons: { axo: 'renderAxo', plan: 'renderPlan', side: 'renderSide', fit: 'renderFit' }
   });
   new ResizeObserver(present).observe(canvas);
+  document.addEventListener('west-village-change', () => {
+    if (!panel.hidden && source) rebuild();
+  });
   for (const control of [daylight, interior]) control.oninput = present;
   level.onchange = () => rebuild(true);
   modules.onchange = () => rebuild();
@@ -140,7 +145,7 @@ const openRenderWorkspace = (() => {
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
-    const next = JSON.stringify([materials, buildViewLayers().dockStructure,
+    const next = JSON.stringify([materials, siteWorkspace.revision, buildViewLayers().dockStructure,
       state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : null]);
     if (model === source && next === signature) return present();
     const changed = source !== model, previous = level.value;

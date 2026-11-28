@@ -80,7 +80,10 @@ requestAnimationFrame(animateSwingFrame);
       if (pending) update();
       siteWorkspace.open(model, materialWorkspace.assignments());
     }
-    if (workspace === 'massing') requestAnimationFrame(draw);
+    if (workspace === 'massing') {
+      if (massingSiteRevision !== siteWorkspace.revision) upload(model);
+      else requestAnimationFrame(draw);
+    }
     window.scrollTo(0, pageScroll[workspace]);
     const { title, button } = workspaces[workspace];
     // Returning to the deck should focus the visible slide and enable its keyboard controls.
@@ -93,6 +96,9 @@ requestAnimationFrame(animateSwingFrame);
 
   for (const [name, { button }] of Object.entries(workspaces))
     button.addEventListener('click', () => showWorkspace(name));
+  document.addEventListener('west-village-change', () => {
+    if (activeWorkspace === 'massing') upload(model);
+  });
   for (const id of ['drBack', 'drBottomBack'])
     $(id).addEventListener('click', () => showWorkspace(lastStudyWorkspace));
   initRationaleSlides(rationale);

@@ -1192,14 +1192,14 @@ const openBuildWorkspace = (() => {
     const layers = buildViewLayers(),
       visibleLevels = Number(level.value),
       choice = DOCK_STRUCTURES[layers.dockStructure];
-    assembly = buildAssemblyMesh(copy, layers, visibleLevels, {
+    assembly = siteWorkspace.composeDesign(buildAssemblyMesh(siteWorkspace.designModel(copy), layers, visibleLevels, {
       assignments,
       view: { seed: state.seed },
       programColors: false,
       structureView: false,
       finishJoints: Boolean(renderer),
       craneSettings: state.craneStage === 'caterpillar' ? craneCaterpillarPreview() : state
-    });
+    }), copy);
     if (renderer) uploadWebGLMesh(context, renderer, assembly);
     if (center && assembly.groups.length > 1) fitModel(assembly, view, canvas);
     let note = choice.note;
@@ -1247,6 +1247,9 @@ const openBuildWorkspace = (() => {
     buttons: { axo: 'buildAxo', plan: 'buildPlan', side: 'buildSide', fit: 'buildFit' }
   });
   new ResizeObserver(present).observe(canvas);
+  document.addEventListener('west-village-change', () => {
+    if (!panel.hidden && copy) rebuild();
+  });
 
   return (model, materialAssignments, fit = true) => {
     if (!renderer && !fallback) {
@@ -1254,7 +1257,7 @@ const openBuildWorkspace = (() => {
       renderer = createWebGLRenderer(context);
       if (!renderer) fallback = createSoftwareRenderer(canvas);
     }
-    const next = JSON.stringify([materialAssignments, state.craneStage,
+    const next = JSON.stringify([materialAssignments, siteWorkspace.revision, state.craneStage,
       state.craneStage === 'caterpillar' ? craneCaterpillarPreview().craneBearing : state.craneBearing, state.craneFloor]);
     if (source === model) {
       if (signature === next) present();

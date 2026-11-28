@@ -462,7 +462,7 @@ function sitePlacementModel(model, plan) {
     }) : model.slots,
     crane = plan.runway?.lift ? { ...model.crane, groundRail: model.crane.groundRail + plan.runway.lift } : model.crane;
   const cos = Math.cos(plan.angle), sin = Math.sin(plan.angle), [x, z] = plan.position;
-  return { ...model, crane, slots, siteWetBays: plan.wetBays, siteTransferredColumns: plan.transferredColumns,
+  return { ...model, crane, slots, sitePlan: plan, siteWetBays: plan.wetBays, siteTransferredColumns: plan.transferredColumns,
     siteCanalLookouts: plan.lookouts,
     siteTransferredLifts: new Set(plan.lateralBays.filter(({ wet }) => wet).map(({ key }) => key)),
     siteGroundAt: (px, pz) => siteTerrainHeight(plan.terrain, x + px * cos - pz * sin, z + px * sin + pz * cos) - plan.foundation };

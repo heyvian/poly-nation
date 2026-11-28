@@ -1,5 +1,9 @@
 # Changelog
 
+## Linked West Village placement
+- Carry the selected terrain and site-adapted building through Massing, Materials, Build, Render and regular Drawings.
+- Route live occupancy along the graded site walks and reserve the nominal schedule and comparison trials for the base design.
+
 ## Aligned module entrances
 - Coordinate the core jambs, folding closure, collar, level sill and module doorway across Massing, Materials, Build and Drawings.
 - Guard the public-deck thresholds and reserve bays where the circulation cannot serve the full opening.

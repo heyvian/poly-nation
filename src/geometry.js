@@ -56,7 +56,7 @@ function modelProjection(mesh, camera, aspect) {
 // Measure geometry in screen axes so a low cutaway and a tall elevation can each use
 // the available canvas. The ground plane and grid precede the architectural groups.
 function projectedModelBounds(mesh, { right, up }, startsAt = (group) => group.layer !== 'Reference') {
-  const firstGroup = mesh.groups.find(startsAt);
+  const firstGroup = mesh.groups.find((group, index) => index >= (mesh.firstBuildingGroup ?? 0) && startsAt(group));
   let minX = Infinity,
     maxX = -Infinity,
     minY = Infinity,

@@ -13,6 +13,7 @@ function buildNavigation(m, includeBridgeSeats = true) {
     liftNodes = [[], []],
     outdoor = [],
     roofWild = [],
+    site = m.sitePlan,
     floorH = modelFloorPitch(m),
     roofLevel = m.layers.length,
     walkingBase = dockWalkLevel(buildStorey(m, 0)) + 0.004,
@@ -29,6 +30,7 @@ function buildNavigation(m, includeBridgeSeats = true) {
     const path = points || [nodes[a].p, nodes[b].p],
       len = path.slice(1).reduce((s, p, i) => s + Math.hypot(...sub(p, path[i])), 0);
     if (len < 1e-6) return;
+    if (site?.anchor && path.some((p, i) => i && sitePathOverWater(site, path[i - 1], p))) return;
     edges[a].push({ to: b, path, len, kind });
     edges[b].push({ to: a, path: [...path].reverse(), len, kind });
   }
@@ -432,102 +434,120 @@ function buildNavigation(m, includeBridgeSeats = true) {
   }
   // Visitors travel through the plaza-lobby route. If there is no lobby, do not invent a doorway.
   const p = m.plaza,
-    axis = l.angle;
-  if (p && lobby != null) {
-    const arrival = p.arrivals?.[0], outer = arrival?.end ?? p.outer;
-    entry = node(xyz(outer - 0.55, axis, 0.205), 'entry', { f: 0 });
-    const mouth = node(xyz(p.mouth, axis, 0.205), 'plaza', { f: 0 }),
-      door = node(xyz(m.R + 0.09, axis, arrival ? yFor(0) : 0.3), 'plaza', { f: 0 });
-    connect(entry, mouth, arrival ? [nodes[entry].p, xyz(m.crane.tower, axis, 0.205), nodes[mouth].p] : null);
-    connect(mouth, door, arrival ? [nodes[mouth].p, xyz(m.R + 9.5, axis, 0.205), nodes[door].p] : null);
-    connect(door, lobby);
-    dest.push(mouth, door);
-    outdoor.push(entry, mouth, door);
-    for (let i = 1; i <= 4; i++) {
-      const rad = p.mouth + ((p.outer - p.mouth) * i) / 5,
-        id = node(
-          xyz(rad, axis + (i % 2 ? 1 : -1) * Math.min(0.03, p.span * 0.06), 0.205),
-          'plaza',
-          { f: 0 }
-        );
-      connect(mouth, id);
-      connect(id, entry);
+    axis = l.angle, outerWild = [];
+  if (site) {
+    for (const route of site.accesses) {
+      const lobby = lobbyNodes[route.entrance];
+      if (lobby == null) continue;
+      const azimuth = route.angle - site.angle,
+        toLocal = ([station, height]) => xyz(station, azimuth, height - site.foundation + 0.01),
+        first = route.innerWalk ?? route, [, ground] = first.nodes[0],
+        path = [nodes[lobby].p, toLocal([first.threshold, ground]), ...first.nodes.map(toLocal)];
+      if (route.innerWalk) path.push(...route.nodes.map(toLocal));
+      const landing = node(path.at(-1), entry == null ? 'entry' : 'plaza', { f: 0 });
+      connect(lobby, landing, path);
+      if (!edges[landing].length) continue;
+      if (entry == null) entry = landing;
+      else dest.push(landing);
+      outdoor.push(landing);
+      outerWild.push(landing);
+    }
+  } else {
+    if (p && lobby != null) {
+      const arrival = p.arrivals?.[0], outer = arrival?.end ?? p.outer;
+      entry = node(xyz(outer - 0.55, axis, 0.205), 'entry', { f: 0 });
+      const mouth = node(xyz(p.mouth, axis, 0.205), 'plaza', { f: 0 }),
+        door = node(xyz(m.R + 0.09, axis, arrival ? yFor(0) : 0.3), 'plaza', { f: 0 });
+      connect(entry, mouth, arrival ? [nodes[entry].p, xyz(m.crane.tower, axis, 0.205), nodes[mouth].p] : null);
+      connect(mouth, door, arrival ? [nodes[mouth].p, xyz(m.R + 9.5, axis, 0.205), nodes[door].p] : null);
+      connect(door, lobby);
+      dest.push(mouth, door);
+      outdoor.push(entry, mouth, door);
+      for (let i = 1; i <= 4; i++) {
+        const rad = p.mouth + ((p.outer - p.mouth) * i) / 5,
+          id = node(
+            xyz(rad, axis + (i % 2 ? 1 : -1) * Math.min(0.03, p.span * 0.06), 0.205),
+            'plaza',
+            { f: 0 }
+          );
+        connect(mouth, id);
+        connect(id, entry);
+        dest.push(id);
+        outdoor.push(id);
+      }
+    }
+    // A continuous outdoor promenade: same public nodes for people and wildlife.
+    const loopN = Math.max(24, Math.ceil((TAU * p.walkRadius) / 5)),
+      loop = [];
+    for (let i = 0; i < loopN; i++) {
+      const a = axis + (i * TAU) / loopN,
+        id = node(xyz(p.walkRadius, a, 0.205), 'plaza', { f: 0 });
+      loop.push(id);
+      outerWild.push(id);
+      if (i % 4 === 0) {
+        dest.push(id);
+        outdoor.push(id);
+      }
+    }
+    for (let i = 0; i < loopN; i++) {
+      const a = axis + (i * TAU) / loopN,
+        b = axis + ((i + 1) * TAU) / loopN;
+      connect(
+        loop[i],
+        loop[(i + 1) % loopN],
+        Array.from({ length: 5 }, (_, j) => xyz(p.walkRadius, a + ((b - a) * j) / 4, 0.205))
+      );
+    }
+    const nearestLoop = (a) => loop[Math.round((mod(a - axis, TAU) / TAU) * loopN) % loopN];
+    if (entry != null) connect(entry, loop[0]);
+    if (oppositeLobby != null) {
+      const rear = bays[1].angle, arrival = p.arrivals?.[1],
+        mouth = node(xyz(p.mouth, rear, 0.205), 'plaza', { f: 0 }),
+        door = node(xyz(m.R + 0.09, rear, arrival ? yFor(0) : 0.3), 'plaza', { f: 0 }),
+        near = nearestLoop(rear);
+      connect(near, mouth, [nodes[near].p, xyz(p.walkRadius, rear, 0.205), nodes[mouth].p]);
+      connect(mouth, door, arrival ? [nodes[mouth].p, xyz(m.R + 9.5, rear, 0.205), nodes[door].p] : null);
+      connect(door, oppositeLobby);
+      dest.push(mouth, door);
+      outdoor.push(mouth, door);
+      if (arrival) {
+        const forecourt = node(xyz(arrival.end - 0.55, rear, 0.205), 'plaza', { f: 0, landscape: 'forecourt' });
+        connect(mouth, forecourt, [nodes[mouth].p, xyz(m.crane.tower, rear, 0.205), nodes[forecourt].p]);
+        dest.push(forecourt);
+        outdoor.push(forecourt);
+      }
+    }
+    for (const q of p.zones) {
+      const a = q.angle,
+        near = nearestLoop(a),
+        rad = p.mouth + 8.4,
+        kind = q.kind === 'green' ? 'garden' : 'plaza',
+        id = node(xyz(rad, a, 0.205), kind, { f: 0, landscape: q.kind });
+      connect(near, id);
       dest.push(id);
       outdoor.push(id);
+      outerWild.push(id);
     }
-  }
-  // A continuous outdoor promenade: same public nodes for people and wildlife.
-  const outerWild = [],
-    loopN = Math.max(24, Math.ceil((TAU * p.walkRadius) / 5)),
-    loop = [];
-  for (let i = 0; i < loopN; i++) {
-    const a = axis + (i * TAU) / loopN,
-      id = node(xyz(p.walkRadius, a, 0.205), 'plaza', { f: 0 });
-    loop.push(id);
-    outerWild.push(id);
-    if (i % 4 === 0) {
-      dest.push(id);
-      outdoor.push(id);
+    // Climbing is a directed recreational activity, not an alternative pedestrian shortcut.
+    const climb = m.feature.climbing;
+    if (climb) {
+      const a = climb.angle,
+        near = nearestLoop(a),
+        base = node(xyz(climb.face + 1.35, a, 0.19), 'climbBase', { f: 0 });
+      connect(near, base, [
+        nodes[near].p,
+        xyz(p.walkRadius, a, 0.205),
+        xyz(p.mouth, a, 0.205),
+        nodes[base].p
+      ]);
+      const route = [nodes[base].p, xyz(climb.face + 0.5, a, 0.35)];
+      for (let y = 0.85; y < climb.height - 0.5; y += 0.5)
+        route.push(xyz(climb.face + 0.5, a + (0.18 / climb.face) * Math.sin(y * 2.6), y));
+      route.push(xyz(climb.face + 0.5, a, Math.max(0.35, climb.height - 0.5)));
+      nodes[base].climbPath = [...route, ...route.slice(0, -1).reverse()];
+      nodes[base].climbTarget = base;
+      dest.push(base);
     }
-  }
-  for (let i = 0; i < loopN; i++) {
-    const a = axis + (i * TAU) / loopN,
-      b = axis + ((i + 1) * TAU) / loopN;
-    connect(
-      loop[i],
-      loop[(i + 1) % loopN],
-      Array.from({ length: 5 }, (_, j) => xyz(p.walkRadius, a + ((b - a) * j) / 4, 0.205))
-    );
-  }
-  const nearestLoop = (a) => loop[Math.round((mod(a - axis, TAU) / TAU) * loopN) % loopN];
-  if (entry != null) connect(entry, loop[0]);
-  if (oppositeLobby != null) {
-    const rear = bays[1].angle, arrival = p.arrivals?.[1],
-      mouth = node(xyz(p.mouth, rear, 0.205), 'plaza', { f: 0 }),
-      door = node(xyz(m.R + 0.09, rear, arrival ? yFor(0) : 0.3), 'plaza', { f: 0 }),
-      near = nearestLoop(rear);
-    connect(near, mouth, [nodes[near].p, xyz(p.walkRadius, rear, 0.205), nodes[mouth].p]);
-    connect(mouth, door, arrival ? [nodes[mouth].p, xyz(m.R + 9.5, rear, 0.205), nodes[door].p] : null);
-    connect(door, oppositeLobby);
-    dest.push(mouth, door);
-    outdoor.push(mouth, door);
-    if (arrival) {
-      const forecourt = node(xyz(arrival.end - 0.55, rear, 0.205), 'plaza', { f: 0, landscape: 'forecourt' });
-      connect(mouth, forecourt, [nodes[mouth].p, xyz(m.crane.tower, rear, 0.205), nodes[forecourt].p]);
-      dest.push(forecourt);
-      outdoor.push(forecourt);
-    }
-  }
-  for (const q of p.zones) {
-    const a = q.angle,
-      near = nearestLoop(a),
-      rad = p.mouth + 8.4,
-      kind = q.kind === 'green' ? 'garden' : 'plaza',
-      id = node(xyz(rad, a, 0.205), kind, { f: 0, landscape: q.kind });
-    connect(near, id);
-    dest.push(id);
-    outdoor.push(id);
-    outerWild.push(id);
-  }
-  // Climbing is a directed recreational activity, not an alternative pedestrian shortcut.
-  const climb = m.feature.climbing;
-  if (climb) {
-    const a = climb.angle,
-      near = nearestLoop(a),
-      base = node(xyz(climb.face + 1.35, a, 0.19), 'climbBase', { f: 0 });
-    connect(near, base, [
-      nodes[near].p,
-      xyz(p.walkRadius, a, 0.205),
-      xyz(p.mouth, a, 0.205),
-      nodes[base].p
-    ]);
-    const route = [nodes[base].p, xyz(climb.face + 0.5, a, 0.35)];
-    for (let y = 0.85; y < climb.height - 0.5; y += 0.5)
-      route.push(xyz(climb.face + 0.5, a + (0.18 / climb.face) * Math.sin(y * 2.6), y));
-    route.push(xyz(climb.face + 0.5, a, Math.max(0.35, climb.height - 0.5)));
-    nodes[base].climbPath = [...route, ...route.slice(0, -1).reverse()];
-    nodes[base].climbTarget = base;
-    dest.push(base);
   }
   // Connected public destinations only. Rooms are terminal nodes, never shortcuts.
   const reachable = new Set();
@@ -571,6 +591,19 @@ function buildNavigation(m, includeBridgeSeats = true) {
     roofLevel,
     reachable
   };
+}
+
+function sitePathOverWater(site, a, b) {
+  const low = site.crossingSoffit - site.foundation - 1e-6;
+  if (Math.min(a[1], b[1]) >= low) return false;
+  const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2],
+    c = Math.cos(site.angle), s = Math.sin(site.angle), [x, z] = site.position,
+    reach = Math.hypot(dx, dz), steps = Math.max(1, Math.ceil(reach / 0.7));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps, px = a[0] + dx * t, pz = a[2] + dz * t;
+    if (a[1] + dy * t < low && site.water.overlaps([x + px * c - pz * s, z + px * s + pz * c], 0.15)) return true;
+  }
+  return false;
 }
 // Offset occupants inside their destination so members of a group do not occupy one identical point.
 function dwellPoint(n, a) {
@@ -1313,7 +1346,8 @@ function renderCrossScore() {
   if (!s) return;
   $('cpNoEntry').hidden = s.graph.entry != null;
   const status = $('cpLiveStatus');
-  status.textContent = !state.simRunning ? 'Paused' : s.clock < 15 ? 'Warming up' : 'Live';
+  const label = !state.simRunning ? 'Paused' : s.clock < 15 ? 'Warming up' : 'Live';
+  status.textContent = s.m.sitePlan ? `${label} · West Village` : label;
   status.dataset.paused = String(!state.simRunning);
   const second = Math.floor(s.clock);
   if (s === cpRendered && second === cpRenderedSecond) return;
@@ -1760,7 +1794,7 @@ function initCrossUI() {
       else state[r.key] = clamp(v, r.min, r.max);
       num.value = value();
       if (model) {
-        occupancy = makeOccupancy(model);
+        occupancy = makeOccupancy(siteWorkspace.designModel(model));
         refreshPopulation();
         draw();
       }

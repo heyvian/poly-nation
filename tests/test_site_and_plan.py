@@ -112,16 +112,21 @@ with serve_lab(root) as url, sync_playwright() as p:
     page.goto(url + '/')
     page.evaluate('''() => {
       state.simRunning = state.animateSwing = false;
+      window.designScenes = {};
       const paint = paintSoftware;
       paintSoftware = (...args) => {
         window.projectedPlan = {...args[2]};
         window.paintedGroups = args[0].groups.map(group => group.layer);
+        window.designScenes[args[1].canvas.id] = { layers: window.paintedGroups,
+          foundation: args[0].foundation, north: args[0].northAzimuth, lit: Boolean(args[0].renderLighting) };
         if (args[1].canvas.id === 'siteCanvas') window.siteOrbitScene = args[0];
         return paint(...args);
       };
+      const collect = drawingGeometry;
+      drawingGeometry = (...args) => ({ ...collect(...args), terrain: args[0].groups.some(group => group.layer === 'Site terrain') });
       const drawModel = renderDrawing;
       renderDrawing = (...args) => {
-        window.drawingIncludesTerrain = args[0].points.some(([x, , z]) => Math.hypot(x, z) > 800);
+        window.drawingIncludesTerrain = args[0].terrain;
         return drawModel(...args);
       };
     }''')
@@ -382,10 +387,25 @@ with serve_lab(root) as url, sync_playwright() as p:
         JSON.stringify(model.layers) === layers;
     }''')
 
+    page.locator('#siteBearing').fill('22')
+    page.locator('#siteBearing').press('Tab')
+    for phase, canvas_id in [('Massing', 'canvas'), ('Materials', 'materialsCanvas'),
+                             ('Build', 'buildCanvas'), ('Render', 'renderCanvas')]:
+        page.locator('#open' + phase).click()
+        page.wait_for_function('''id => designScenes[id]?.layers.includes('Site terrain') &&
+          designScenes[id].layers.includes('Site_Foundation_Platform') &&
+          Math.abs(designScenes[id].north + Math.PI / 2 + 22 * Math.PI / 180) < 1e-6''', arg=canvas_id)
+    assert page.evaluate('designScenes.renderCanvas.lit && occupancy.m === siteWorkspace.designModel(model)')
+    page.locator('#openSite').click()
+    page.locator('#siteLinkDesign').uncheck()
+    page.locator('#openMassing').click()
+    page.wait_for_function("!designScenes.canvas.layers.includes('Site terrain') && occupancy.m === model")
+    page.locator('#openSite').click()
+    page.locator('#siteLinkDesign').check()
     page.locator('#openDrawings').click()
     include_site = page.locator('#drawingSite')
     expect(include_site).to_be_enabled()
-    include_site.check()
+    expect(include_site).to_be_checked()
     page.wait_for_function('window.drawingIncludesTerrain')
     expect(page.locator('#exportDrawing')).to_be_enabled()
     include_site.uncheck()

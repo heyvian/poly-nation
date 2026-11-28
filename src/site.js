@@ -15,6 +15,7 @@ const siteWorkspace = (() => {
     bearing = $('siteBearing'),
     grade = $('siteGrade'),
     lookout = $('siteCanalLookout'),
+    linkDesign = $('siteLinkDesign'),
     load = $('loadSite'),
     sourcePicker = $('sitePlanSource'),
     status = $('siteStatus'),
@@ -22,6 +23,7 @@ const siteWorkspace = (() => {
     registrationStatus = $('siteRegistration'),
     key = 'poly-nation-west-village-v1',
     terrainKey = 'poly-nation-west-village-terrain-v1',
+    supportCache = new WeakMap(),
     view = { az: -0.84, el: 0.57, zoom: 1, pan: 0, panX: 0 },
     { frame, limits, defaultPin, terrainCentre, terrainSize, sources } = WEST_VILLAGE_PLAN;
   let pin = [...defaultPin],
@@ -37,7 +39,6 @@ const siteWorkspace = (() => {
     revision = 0,
     assembly = null,
     assemblyOptions = null,
-    supportCache = null,
     scene = null,
     building = null,
     signature = '',
@@ -56,6 +57,7 @@ const siteWorkspace = (() => {
       bearing.value = mod(Number(saved.bearing) || 0, 360);
       grade.value = clamp(Number(saved.grade) || 0, -20, 20);
       lookout.value = ['outdoor', 'both'].includes(saved.lookout) ? saved.lookout : 'atrium';
+      linkDesign.checked = saved.linkDesign !== false;
       contours.checked = saved.contours !== false;
       waterToggle.checked = saved.water !== false;
       vegetation.checked = saved.vegetation === true;
@@ -112,6 +114,7 @@ const siteWorkspace = (() => {
           depth: depth.value,
           grade: grade.value,
           lookout: lookout.value,
+          linkDesign: linkDesign.checked,
           bearing: bearing.value,
           contours: contours.checked,
           water: waterToggle.checked,
@@ -155,13 +158,20 @@ const siteWorkspace = (() => {
   function supportPlan(model) {
     if (!terrain || !model) return null;
     const options = sceneOptions(), placement = [...options.position, options.grade, options.bearing, options.lookout].join('/');
-    if (supportCache?.model !== model || supportCache.terrain !== terrain || supportCache.surface !== surface ||
-      supportCache.placement !== placement) {
+    let cached = supportCache.get(model);
+    if (cached?.terrain !== terrain || cached.surface !== surface || cached.placement !== placement) {
       const plan = siteFoundationPlan(model, terrain, options);
-      supportCache = { model, terrain, surface, placement, plan };
+      cached = { terrain, surface, placement, plan, placed: sitePlacementModel(model, plan) };
+      supportCache.set(model, cached);
     }
-    return supportCache.plan;
+    return cached.plan;
   }
+
+  function placedModel(model) {
+    return supportPlan(model) ? supportCache.get(model).placed : model;
+  }
+
+  const linked = () => Boolean(terrain && linkDesign.checked);
 
   function present() {
     if (panel.hidden || mode !== 'terrain' || !scene) return;
@@ -174,7 +184,7 @@ const siteWorkspace = (() => {
     const plan = supportPlan(building);
     if (!assembly || assembly.sitePlan !== plan) {
       const { assignments, layers, craneSettings } = assemblyOptions;
-      assembly = buildAssemblyMesh(sitePlacementModel(building, plan), layers, 0, {
+      assembly = buildAssemblyMesh(placedModel(building), layers, 0, {
         assignments, view: { seed: state.seed }, craneSettings, programColors: false, structureView: false, finishJoints: false
       });
       assembly.sitePlan = plan;
@@ -200,6 +210,9 @@ const siteWorkspace = (() => {
     const position = westVillageToGround(pin, registration);
     const supports = supportPlan(building), supportStatus = $('siteSupportStatus');
     supportStatus.hidden = !supports;
+    $('siteLinkNote').textContent = terrain
+      ? linkDesign.checked ? 'The design views use this placement and the surrounding terrain.' : 'The design views use the standalone building.'
+      : 'Load terrain to carry this placement into Massing, Materials, Build, Render and Drawings.';
     if (terrain) {
       const elevation = terrain.datum + siteTerrainHeight(terrain, ...position);
       $('sitePlacementStatus').dataset.elevation = elevation.toFixed(1);
@@ -341,13 +354,14 @@ const siteWorkspace = (() => {
           controller.signal,
           includeVegetation
         );
-        const match = matchWestVillagePlan(elements);
-        if (match) registration = match;
+        const match = matchWestVillagePlan(elements),
+          relocated = match && JSON.stringify(match) !== JSON.stringify(registration);
+        if (relocated) registration = match;
         if (includeVegetation) {
           mapped = elements;
           if (terrain) natural = siteNaturalOverlay(mapped, terrain);
         }
-        changed({ refreshWater: true });
+        changed({ refreshWater: relocated });
       } catch {
         // The material supplied for the studio already contains the river and canal outlines.
       } finally {
@@ -448,6 +462,7 @@ const siteWorkspace = (() => {
   };
   condition.onchange = () => changed({ refreshWater: true });
   lookout.onchange = () => changed();
+  linkDesign.onchange = () => changed();
   depth.onchange =
     bearing.onchange =
     grade.onchange =
@@ -490,24 +505,36 @@ const siteWorkspace = (() => {
     get hasTerrain() {
       return Boolean(terrain);
     },
+    get linked() {
+      return linked();
+    },
     get revision() {
       return revision;
     },
     get drawingBearing() {
       return sceneOptions().bearing;
     },
-    placedModel(model) {
-      return sitePlacementModel(model, supportPlan(model));
+    placedModel,
+    designModel(model) {
+      return linked() ? placedModel(model) : model;
     },
-    composeDrawing(mesh, model) {
-      return terrain
-        ? siteAssemblyMesh(mesh, terrain, { ...sceneOptions(), relativeToBuilding: true, model, supportPlan: supportPlan(model) })
-        : mesh;
+    composeDesign(mesh, model, includeTerrain = true) {
+      if (!linked()) return mesh;
+      const support = supportPlan(model);
+      return siteAssemblyMesh(mesh, terrain, { ...sceneOptions(), model, supportPlan: support,
+        buildingCoordinates: true, includeTerrain,
+        contextRadius: Math.max(support.gradeReach, support.contextReach) + 25 });
+    },
+    composeDrawing(mesh, model, includeTerrain = true) {
+      if (!terrain) return mesh;
+      const support = supportPlan(model);
+      return siteAssemblyMesh(mesh, terrain, { ...sceneOptions(), relativeToBuilding: true, includeTerrain,
+        model, supportPlan: support, contextRadius: Math.max(support.gradeReach, support.contextReach) + 25 });
     },
     sectionStudy(model, assignments) {
       const plan = supportPlan(model);
       if (!plan) return null;
-      const placed = sitePlacementModel(model, plan), { dockStructure, slabThickness } = buildViewLayers(),
+      const placed = placedModel(model), { dockStructure, slabThickness } = buildViewLayers(),
         layers = { dockStructure, slabThickness, slabs: true, frame: true, facade: true,
           docks: true, modules: true, crane: Boolean(plan.crane), swings: true, moduleInteriors: false },
         view = { ...state, craneStage: 'parked',
