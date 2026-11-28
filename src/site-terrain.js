@@ -387,9 +387,9 @@ function siteAssemblyMesh(
     if (extendRunway && group.layer === 'Crane_Elevated_Runway_Columns') continue;
     if (siteMoat && /^(Crane_Moat|Crane_Moat_Water|Crane_Moat_Runway_Piers|Crane_Moat_Guards)$/.test(group.layer)) continue;
     mesh.mark(group.layer, group.name);
-    const protectUpperDocks = /^(Crane_|Dock(?:ing)?_|Modules?_|Assembly_(?:Open_|Module_|Dock_))/.test(group.layer) &&
+    const protectElevatedParts = /^(Crane_|Dock(?:ing)?_|Modules?_|Assembly_(?:Open_|Module_|Dock_)|Site_Canal_Lookout_)/.test(group.layer) &&
       group.layer !== 'Assembly_Dock_Stack_Supports',
-      cut = dryGeometry && !protectUpperDocks,
+      cut = dryGeometry && !protectElevatedParts,
       stripMast = supportPlan?.mastCrossing && group.layer === 'Swing_Tower';
     for (const kind of ['solid', 'glass', 'lines']) {
       const vertices = assembly[kind],

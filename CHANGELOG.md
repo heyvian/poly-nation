@@ -1,5 +1,9 @@
 # Changelog
 
+## Public canal lookouts
+- Compare an atrium viewing bay, an open-air dock over the canal, or both. The solid walking strip, panels and adjoining floor share a finished level.
+- Add a vector section of each active lookout type to the West Village site set.
+
 ## Caterpillar ride and elevated-track entrances
 - Add five linked, articulated passenger cars and a pause control for the motion study on the level elevated rails.
 - Clear both lobby axes beneath the runway and extend them through planted forecourts beyond the track. Adapt the walks to dry terrain in Site.

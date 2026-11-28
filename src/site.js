@@ -14,6 +14,7 @@ const siteWorkspace = (() => {
     vegetation = $('siteVegetation'),
     bearing = $('siteBearing'),
     grade = $('siteGrade'),
+    lookout = $('siteCanalLookout'),
     load = $('loadSite'),
     sourcePicker = $('sitePlanSource'),
     status = $('siteStatus'),
@@ -54,6 +55,7 @@ const siteWorkspace = (() => {
       depth.value = clamp(Number(saved.depth) || 2, 0.5, 8);
       bearing.value = mod(Number(saved.bearing) || 0, 360);
       grade.value = clamp(Number(saved.grade) || 0, -20, 20);
+      lookout.value = ['outdoor', 'both'].includes(saved.lookout) ? saved.lookout : 'atrium';
       contours.checked = saved.contours !== false;
       waterToggle.checked = saved.water !== false;
       vegetation.checked = saved.vegetation === true;
@@ -109,6 +111,7 @@ const siteWorkspace = (() => {
           registration,
           depth: depth.value,
           grade: grade.value,
+          lookout: lookout.value,
           bearing: bearing.value,
           contours: contours.checked,
           water: waterToggle.checked,
@@ -140,6 +143,7 @@ const siteWorkspace = (() => {
       position: westVillageToGround(pin, registration),
       grade: clamp(Number(grade.value) || 0, -20, 20),
       bearing: mod(Number(bearing.value) || 0, 360),
+      lookout: lookout.value,
       showContours: contours.checked,
       showWater: waterToggle.checked,
       canalDepth: clamp(Number(depth.value) || 2, 0.5, 8),
@@ -150,7 +154,7 @@ const siteWorkspace = (() => {
 
   function supportPlan(model) {
     if (!terrain || !model) return null;
-    const options = sceneOptions(), placement = [...options.position, options.grade, options.bearing].join('/');
+    const options = sceneOptions(), placement = [...options.position, options.grade, options.bearing, options.lookout].join('/');
     if (supportCache?.model !== model || supportCache.terrain !== terrain || supportCache.surface !== surface ||
       supportCache.placement !== placement) {
       const plan = siteFoundationPlan(model, terrain, options);
@@ -210,6 +214,13 @@ const siteWorkspace = (() => {
             supports.crossingSoffit - depth - supports.water.level))) : 0,
           structure = spans ? `The level above spans the canal with ${clearance.toFixed(1)} m minimum study clearance.${landward}`
             : piled ? 'Landward stem walls bear on schematic piles.' : 'Footings follow the local grade.',
+          atrium = supports.lookouts.filter(({ type }) => type !== 'dock').length,
+          openAir = supports.lookouts.some(({ type }) => type === 'dock'),
+          lookouts = (atrium === 2 ? ' Two glazed public lookouts open off the first elevated floor inside the atrium.'
+            : atrium ? ' A glazed public lookout opens off the first elevated floor inside the atrium.'
+              : supports.anchor && lookout.value !== 'outdoor' ? ' No clear public landing overlooks the canal inside the atrium at this placement.' : '') +
+            (openAir ? ' An open-air lookout uses a public dock on the first elevated floor.'
+              : lookout.value !== 'atrium' ? ' This placement needs an available upper dock overlooking the canal for the open-air lookout.' : ''),
           arrivals = supports.accesses.filter((route) => route.arrival).length,
           forecourts = building.plaza.arrivals?.length && arrivals < building.plaza.arrivals.length
             ? ` ${arrivals ? 'One walk reaches' : 'An approach needs dry ground to reach'} beyond the elevated track.` : '',
@@ -225,7 +236,7 @@ const siteWorkspace = (() => {
           moat = supports.moat?.connected ? ' The moat shares the district water level.' : '',
           runway = (supports.runway ?? supports.moat?.runway)?.unresolved ? ' Long runway crossings need a separate span study.' : '';
         supportStatus.textContent = (supports.unresolved ? 'The footprint crosses water beyond the available bank supports.' : structure) +
-          access + forecourts + clearBays + dry + boat + moat + runway;
+          lookouts + access + forecourts + clearBays + dry + boat + moat + runway;
       }
     } else {
       delete $('sitePlacementStatus').dataset.elevation;
@@ -436,6 +447,7 @@ const siteWorkspace = (() => {
     save();
   };
   condition.onchange = () => changed({ refreshWater: true });
+  lookout.onchange = () => changed();
   depth.onchange =
     bearing.onchange =
     grade.onchange =

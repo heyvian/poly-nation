@@ -123,7 +123,7 @@ function moduleCranePose(model, crane, settings = {}) {
     install = ['pickup', 'hoist', 'transfer', 'insert'].includes(stage);
   if (!install)
     return { stage, angle: bearing, slot: null };
-  const slots = model.slots.filter((slot) => slot.f === floor && craneDockClear(model, crane, slot)),
+  const slots = model.slots.filter((slot) => slot.f === floor && !slot.siteCanalLookout && craneDockClear(model, crane, slot)),
     slot = slots.sort((a, b) => angDist(a.angle, bearing) - angDist(b.angle, bearing))[0];
   if (!slot) return { stage: 'parked', angle: bearing, slot: null, blocked: true };
   const floorY = buildStorey(model, slot.f).base, onDock = stage === 'transfer' || stage === 'insert',

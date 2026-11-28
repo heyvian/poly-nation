@@ -305,6 +305,51 @@ with serve_lab(root) as url, sync_playwright() as p:
         cuts.some(cut => cut.kind === 'piled-detail');
     }''')
     assert page.evaluate('''() => {
+      const terrain = { size: 400, count: 9, datum: 1040, elevations: Array(81).fill(1040) },
+        position = [4, -6], bearing = 26, angle = bearing * Math.PI / 180, r = model.r,
+        level = 1040, bridge = { f: 1, heading: 0.32, offset: 3.95, width: 2.2 },
+        bridgeModel = { ...model, circulation: { ...model.circulation, bridges: [bridge], stairs: [] } },
+        area = (direction, from, to, low, high) => {
+          const line = (offset) => siteLine(position, angle + direction, offset),
+            [a, b, c, d] = [line(low)(from), line(low)(to), line(high)(to), line(high)(from)];
+          return [[a, b, c], [a, c, d]];
+        },
+        canal = { level, existing: [], proposed: area(bridge.heading, -r - 18, r + 18, 6, 14) },
+        plan = siteFoundationPlan(bridgeModel, terrain, { position, bearing, grade: 0, water: canal }),
+        dry = siteFoundationPlan(model, terrain, { position, bearing, grade: 0, water: null }),
+        placed = sitePlacementModel(bridgeModel, plan), base = buildStorey(placed, 1).base,
+        mesh = buildAssemblyMesh(placed, { slabs: true }, 2, { assignments: {}, view: state }),
+        oneFloor = buildAssemblyMesh(placed, { slabs: true }, 1, { assignments: {}, view: state });
+      const panes = (source) => source.groups.flatMap(({ layer, glass }, i) => layer === 'Site_Canal_Lookout_Glazing'
+        ? source.glass.slice(glass, source.groups[i + 1]?.glass).filter((_, i) => i % 10 === 1) : []);
+      const scene = siteAssemblyMesh(mesh, terrain, { position, bearing, model: bridgeModel, supportPlan: plan, includeTerrain: false });
+      const withoutBridge = { ...model, circulation: { ...model.circulation, bridges: [], stairs: [] } },
+        link = model.circulation.regions.find((q) => q.f === 1 && q.kind === 'link' && q.r === r),
+        ring = siteFoundationPlan(withoutBridge, terrain, { position, bearing, grade: 0,
+          water: { level, existing: [], proposed: area((link.start + link.end) / 2, r - 8, r + 12, -4, 4) } }),
+        dock = model.slots.find((slot) => slot.f === 1 && !slot.blocked),
+        dockModel = { ...bridgeModel, slots: model.slots.map((slot) => slot === dock ? { ...slot, p: EMPTY, use: 'empty' } : slot) },
+        exterior = area(dock.angle, model.R + 7, model.R + 22, -3, 3),
+        outdoor = siteFoundationPlan(dockModel, terrain, { position, bearing, grade: 0, lookout: 'outdoor',
+          water: { ...canal, proposed: exterior } }),
+        both = siteFoundationPlan(dockModel, terrain, { position, bearing, grade: 0, lookout: 'both',
+          water: { ...canal, proposed: [...canal.proposed, ...exterior] } }),
+        withDock = sitePlacementModel(dockModel, outdoor),
+        dockMesh = buildAssemblyMesh(withDock, { slabs: true, facade: true }, 2, { assignments: {}, view: state });
+      return plan.lookouts.some(({ type }) => type === 'bridge') && !dry.lookouts.length &&
+        ring.lookouts.some(({ type }) => type === 'ring') && placed.siteCanalLookouts === plan.lookouts &&
+        panes(mesh).length > 0 && panes(mesh).every((y) => Math.abs(y - base) < 1e-6) &&
+        !panes(oneFloor).length && panes(scene).length === panes(mesh).length &&
+        panes(scene).every((y) => Math.abs(y - plan.crossingDeck) < 1e-6) &&
+        siteSectionCuts(plan).some(({ kind }) => kind === 'canal-lookout') &&
+        outdoor.lookouts.length === 1 && outdoor.lookouts[0].slot === dock.i &&
+        withDock.slots.find((slot) => slot.i === dock.i).siteCanalLookout &&
+        panes(dockMesh).length > 0 && panes(dockMesh).every((y) => Math.abs(y - base) < 1e-6) &&
+        dockMesh.groups.some(({ layer, name }) => layer === 'Dock_Closure_Folded_L2' && name === `Slot_${dock.j}`) &&
+        both.lookouts.some(({ type }) => type === 'bridge') && both.lookouts.some(({ type }) => type === 'dock') &&
+        siteSectionCuts(both).some(({ kind }) => kind === 'canal-lookout-open-air');
+    }''')
+    assert page.evaluate('''() => {
       const terrain = { size: 480, count: 17, datum: 1040,
         elevations: Array.from({length: 289}, (_, i) => 1040 + (i % 17 - 8) * 0.66 + (Math.floor(i / 17) - 8) * 0.15) };
       const position = [0, 0], bearing = 19, angle = model.lobby.angle + bearing * Math.PI / 180 + Math.PI / 2,

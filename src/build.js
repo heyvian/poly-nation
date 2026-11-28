@@ -586,7 +586,7 @@ function drawSharedDockSupports(mesh, model, slots, structure, slabThickness, gr
 }
 
 function drawDockClosure({ box, line, sector, mark, ringPoint }, model, slot, { base, head }) {
-  const open = slot.p !== EMPTY || slot.use !== 'empty',
+  const open = slot.siteCanalLookout || slot.p !== EMPTY || slot.use !== 'empty',
     angle = slot.angle,
     half = Math.min(0.45, 1.1 / model.R),
     height = head - base,
@@ -990,7 +990,7 @@ function buildAssemblyMesh(model, layers, levels, preview) {
       if (crane) drawDockInsertionGuides(mesh, model, slot, base);
     }
     if (layers.facade || layers.docks) drawDockClosure(mesh, model, slot, storey);
-    if (!layers.modules || cranePose?.slot?.i === slot.i) continue;
+    if (!layers.modules || cranePose?.slot?.i === slot.i || slot.siteCanalLookout) continue;
     if (!occupied) {
       if (slot.use !== 'empty') {
         const [x, , z] = location((foot + front) / 2, 0, base),
@@ -1029,8 +1029,9 @@ function buildAssemblyMesh(model, layers, levels, preview) {
     for (const bridge of model.circulation.bridges ?? []) {
       if (bridge.f >= floors) continue;
       const { base } = buildStorey(model, bridge.f, slabThickness);
-      drawAtriumBridge(mesh, model.r, bridge, base, concrete);
+      drawAtriumBridge(mesh, model.r, bridge, base, concrete, bridge.f === 1 ? model.siteCanalLookouts : undefined);
     }
+    if (floors > 1) drawCanalLookouts(mesh, model.siteCanalLookouts, buildStorey(model, 1, slabThickness).base);
     mark('Assembly_Atrium_Bearings');
     for (const bridge of model.circulation.bridges ?? []) {
       if (bridge.f >= floors) continue;

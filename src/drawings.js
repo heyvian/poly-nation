@@ -994,11 +994,12 @@ const openDrawingWorkspace = (() => {
     const sections = cuts.map((cut, index) => {
       const { title, note, at, angle, from, to, kind } = cut, [cx, cz] = plan.position,
         loadPath = kind === 'structural-axis', mast = kind === 'mast-foundation',
-        detail = ['canal-detail', 'piled-detail', 'approach', 'boat-garage', 'lower-programme'].includes(kind) || mast,
+        detail = ['canal-detail', 'canal-lookout', 'canal-lookout-open-air', 'piled-detail', 'approach', 'boat-garage', 'lower-programme'].includes(kind) || mast,
         district = kind === 'district',
         point = (station, height) => { const [x, z] = at(station); return [x - cx, height - plan.foundation, z - cz]; },
         along = [Math.cos(angle), 0, Math.sin(angle)], normal = [-along[2], 0, along[0]],
-        offset = dot(point(0, 0), normal), plane = { normal, offset },
+        stationOrigin = point(0, 0), offset = dot(stationOrigin, normal), plane = { normal, offset },
+        longitudinalOffset = dot(stationOrigin, along),
         camera = { az: angle + Math.PI / 2, el: 0 },
         { profile, surfaces } = siteSectionGround(plan, cut, canalDepth),
         bottom = Math.min(...profile.map(([, y]) => y), plan.floor - 1.5) - (cut.belowGrade ?? 2.2),
@@ -1009,7 +1010,7 @@ const openDrawingWorkspace = (() => {
         region = { width: w - 2 * margin - (cut.notes ? 315 : cut.labels ? 280 : 0), height: h - drawingY - 65 },
         frame = renderDrawing(loadPath || mast || cut.elevatedArrival ? structureGeometry : geometry, camera, [
           plane, { normal, offset: offset - (kind === 'boat-garage' ? 1.55 : mast ? 2.5 : loadPath ? 3.8 : 5), flip: true },
-          { normal: along, offset: to }, { normal: along, offset: from, flip: true },
+          { normal: along, offset: longitudinalOffset + to }, { normal: along, offset: longitudinalOffset + from, flip: true },
           { normal: [0, 1, 0], offset: upper - plan.foundation }
         ], paper, 'auto', false, centeredPlacement(), false, pens, { region, focus, cutFill: true, scales }),
         tile = floorView(frame, '', margin, drawingY), area = tile.children[0],

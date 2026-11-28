@@ -1558,6 +1558,9 @@ function atriumGuardSpans(model, floor) {
     .filter((q) => q.f === floor && q.r <= model.r + 0.001)
     .map(({ start, end }) => [(start + end) / 2, (end - start) / 2]);
   const openings = lobbyHoles(model.lobby, floor);
+  if (floor === 1) for (const q of model.siteCanalLookouts ?? []) {
+    if (q.type === 'ring') openings.push([q.angle, (q.end - q.start) / (2 * q.root)]);
+  }
   const bridge = model.circulation.bridges?.find((q) => q.f === floor);
   if (bridge) {
     // Compute both openings from the deck edges where they meet the circular slab.
@@ -1737,7 +1740,7 @@ function atriumBridgeDepth(radius, bridge) {
   return clamp(halfSpan / 25, 0.44, 1.24);
 }
 
-function drawAtriumBridge(mesh, radius, bridge, top, deck) {
+function drawAtriumBridge(mesh, radius, bridge, top, deck, lookouts = []) {
   const { quad } = mesh,
     { glassGuard } = glassGuards(mesh),
     { heading, width, offset } = bridge,
@@ -1767,7 +1770,95 @@ function drawAtriumBridge(mesh, radius, bridge, top, deck) {
       shoulderB = edge(side, end, top - 0.16);
     quad(edge(side, start, bottom), edge(side, end, bottom), shoulderB, shoulderA, boxGirder);
     quad(shoulderA, shoulderB, b, a, deck);
-    glassGuard(a, b);
+    const limit = Math.sqrt(radius ** 2 - side ** 2),
+      point = (station) => [side * cos - station * sin, top, side * sin + station * cos];
+    let from = -limit;
+    for (const q of lookouts.filter((q) => q.type === 'bridge' && q.root === side)
+      .sort((u, v) => u.start - v.start)) {
+      glassGuard(point(from), point(q.start));
+      from = q.end;
+    }
+    glassGuard(point(from), point(limit));
+  }
+}
+
+function canalLookoutPoint({ type, angle, side, root }, station, out, y) {
+  if (type === 'ring') {
+    const a = angle + station / root;
+    return [(root - out) * Math.cos(a), y, (root - out) * Math.sin(a)];
+  }
+  const r = root + side * out, c = Math.cos(angle), s = Math.sin(angle);
+  return [r * c - station * s, y, r * s + station * c];
+}
+
+function drawCanalLookouts(mesh, lookouts, top) {
+  const { box, glass, mark, line, quad } = mesh, { glassGuard } = glassGuards(mesh),
+    paving = rgb('#dad1bb'), steel = rgb('#58736e'), glassTint = rgb('#95bfc3'), frame = rgb('#6e817b');
+  for (const q of lookouts ?? []) {
+    const { start, end, depth, side } = q, outdoor = q.type === 'dock',
+      at = (station, out, y = top) => canalLookoutPoint(q, station, out, y),
+      lane = outdoor ? 1.60 : 0.18, apron = outdoor ? -0.08 : 0,
+      sill = q.glassFrom ?? 0.76, brim = q.glassTo ?? depth - 0.16,
+      glazingWidth = end - start - lane - 0.18, panes = Math.ceil(glazingWidth / 1.28), step = glazingWidth / panes,
+      boundaries = [start, ...Array.from({ length: panes + 1 }, (_, i) => start + lane + i * step), end];
+    function face(a, b, near, far, color, target, alpha) {
+      const corners = [at(a, near), at(b, near), at(b, far), at(a, far)];
+      if (side < 0) corners.reverse();
+      quad(...corners, color, target, alpha);
+    }
+    function member(a, b, near, far, width, height = width) {
+      const y = top - height / 2;
+      drawAssemblyMember(mesh, at(a, near, y), at(b, far, y), width, steel, height, q.angle);
+    }
+    mark('Site_Canal_Lookout_Frame', outdoor ? 'Deck cassette and glazing frame on the permanent dock' : 'Cantilevered transverse ribs and edge beams');
+    for (const [i, a] of boundaries.entries()) {
+      const b = boundaries[i + 1];
+      if (b === undefined) break;
+      for (const out of [0.1, sill, brim, ...(outdoor ? [depth - 0.12] : [])]) member(a, b, out, out, 0.10, 0.24);
+    }
+    for (const a of boundaries.slice(1, -1)) member(a, a, -0.30, depth - 0.06, 0.095, 0.34);
+    if (outdoor) for (const a of [start, end]) member(a, a, apron, depth, 0.14, 0.22);
+
+    mark('Site_Canal_Lookout_Deck', 'Solid walking strip flush with the first elevated floor');
+    for (const [i, a] of boundaries.slice(0, -1).entries()) {
+      const b = boundaries[i + 1];
+      if (!i || i === boundaries.length - 2) face(a, b, apron, depth, paving);
+      else {
+        face(a, b, apron, sill, paving);
+        face(a, b, brim, depth, paving);
+      }
+      quad(at(a, depth, top - 0.18), at(b, depth, top - 0.18), at(b, depth), at(a, depth), steel);
+    }
+    // The panel frames meet the solid floor at the same datum. The slab is open between them.
+    mark('Site_Canal_Lookout_Glazing', 'Framed walk-on glass panels over the canal');
+    for (let i = 1; i <= panes; i++) {
+      const a = boundaries[i], b = boundaries[i + 1];
+      face(a + 0.035, b - 0.035, sill + 0.025, brim - 0.025, glassTint, glass, 0.33);
+      for (const [x, z, near, far] of [[a, a + 0.035, sill, brim], [b - 0.035, b, sill, brim],
+        [a + 0.035, b - 0.035, sill, sill + 0.025], [a + 0.035, b - 0.035, brim - 0.025, brim]])
+        face(x, z, near, far, frame);
+    }
+    mark('Site_Canal_Lookout_Guards', 'Glass guards with a continuous handrail');
+    for (const a of [start, end]) {
+      const panels = Math.ceil(depth / 1.45);
+      for (let i = 0; i < panels; i++) {
+        const from = depth * i / panels, to = depth * (i + 1) / panels;
+        glassGuard(at(a, from), at(a, to));
+        if (outdoor) {
+          const [x, , z] = at(a, from);
+          box(x, top, z, 0.054, 1.1, 0.054, q.angle, frame);
+          quad(at(a, from, top - 0.18), at(a, to, top - 0.18), at(a, to), at(a, from), steel);
+        }
+      }
+    }
+    for (const [i, a] of boundaries.slice(0, -1).entries())
+      glassGuard(at(a, depth), at(boundaries[i + 1], depth));
+    for (const a of [start, ...boundaries.slice(2, -2), end]) {
+      const [x, , z] = at(a, depth - 0.025);
+      box(x, top, z, 0.054, 1.1, 0.054, q.angle, frame);
+    }
+    line(at(start, 0.04, top + 0.004), at(start, depth - 0.02, top + 0.004), frame);
+    line(at(end, 0.04, top + 0.004), at(end, depth - 0.02, top + 0.004), frame);
   }
 }
 
@@ -3547,7 +3638,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     if (!visible(bridge.f)) continue;
     const top = bridge.f * floorH + 0.535;
     mark(`Atrium_Bridge_L${bridge.f + 1}`);
-    drawAtriumBridge(b, rr, bridge, top, rgb('#d9bb87'));
+    drawAtriumBridge(b, rr, bridge, top, rgb('#d9bb87'), bridge.f === 1 ? m.siteCanalLookouts : undefined);
     mark(`Atrium_Bridge_Bearing_L${bridge.f + 1}`);
     drawAtriumBridgeBearing(b, rr, bridge, top, rgb('#69796d'));
   }
@@ -3562,6 +3653,10 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
     const y = floor * floorH + 0.535;
     mark(`Atrium_Edge_Railings_L${floor + 1}`);
     for (const [start, end] of atriumGuardSpans(m, floor)) curvedGlassGuard(rr, y, start, end);
+  }
+  if (view.floors > 1 && visible(1) && m.siteCanalLookouts?.length) {
+    drawCanalLookouts(b, m.siteCanalLookouts.filter(({ type }) => type !== 'dock'), floorH + 0.535);
+    drawCanalLookouts(b, m.siteCanalLookouts.filter(({ type }) => type === 'dock'), buildStorey(m, 1).base);
   }
   // Separate room thresholds and paired shared doors: diagrammatic lines, not detailed door openings.
   for (const d of circulation.doors) {
@@ -3885,7 +3980,7 @@ function buildMesh(m, exporting = false, view = state, preview = null) {
           varied || m.crane ? MODULE_CASSETTE_DEPTH : undefined);
         if (m.crane) drawDockInsertionGuides(b, m, s, storey.base);
       }
-      if (cranePose?.slot?.i === s.i) continue;
+      if (cranePose?.slot?.i === s.i || s.siteCanalLookout) continue;
       if (s.p === EMPTY && s.use === 'empty' && !view.programEditing) continue;
       const a = s.angle,
         center = m.R + BUILD_SECTION.dockGap + MODULE.depth / 2,

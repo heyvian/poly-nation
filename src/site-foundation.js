@@ -455,13 +455,96 @@ function siteTerraceProfile(ground, [x, z], radius, floor) {
 
 function sitePlacementModel(model, plan) {
   if (!plan) return model;
-  const slots = plan.omitted.size ? model.slots.map((slot) =>
-      plan.omitted.has(slot.i) ? { ...slot, blocked: true, p: EMPTY, use: 'empty' } : slot) : model.slots,
+  const outdoor = plan.lookouts.find(({ type }) => type === 'dock'),
+    slots = plan.omitted.size || outdoor ? model.slots.map((slot) => {
+      if (plan.omitted.has(slot.i)) return { ...slot, blocked: true, p: EMPTY, use: 'empty' };
+      return slot.i === outdoor?.slot ? { ...slot, siteCanalLookout: true } : slot;
+    }) : model.slots,
     crane = plan.runway?.lift ? { ...model.crane, groundRail: model.crane.groundRail + plan.runway.lift } : model.crane;
   const cos = Math.cos(plan.angle), sin = Math.sin(plan.angle), [x, z] = plan.position;
   return { ...model, crane, slots, siteWetBays: plan.wetBays, siteTransferredColumns: plan.transferredColumns,
+    siteCanalLookouts: plan.lookouts,
     siteTransferredLifts: new Set(plan.lateralBays.filter(({ wet }) => wet).map(({ key }) => key)),
     siteGroundAt: (px, pz) => siteTerrainHeight(plan.terrain, x + px * cos - pz * sin, z + px * sin + pz * cos) - plan.foundation };
+}
+
+function siteCanalLookouts(model, water, position, bearing) {
+  if (model.layers.length < 2 || !water.overlaps(position, model.r)) return [];
+  const { r, circulation } = model, depth = 2.15, c = Math.cos(bearing), s = Math.sin(bearing),
+    mast = model.feature.ride.towerRadius + 1.55;
+  const wet = (lookout) => {
+    const reach = (lookout.end - lookout.start) * 0.34, center = (lookout.start + lookout.end) / 2;
+    return [-reach, 0, reach].reduce((count, delta) => count + [1.1, 1.8].filter((out) => {
+      const [x, , z] = canalLookoutPoint(lookout, center + delta, out, 0);
+      return water.overlaps([position[0] + c * x - s * z, position[1] + s * x + c * z]);
+    }).length, 0);
+  };
+  const bridge = circulation.bridges?.find(({ f }) => f === 1), candidates = [];
+  if (bridge) for (const side of [-1, 1]) {
+    const root = bridge.offset + side * bridge.width / 2, length = 4.8,
+      edge = Math.sqrt(r ** 2 - (Math.abs(root) + depth) ** 2), limit = edge - 4;
+    for (let start = -limit; start + length <= limit; start += 0.8) {
+      const end = start + length, nearest = clamp(0, start, end);
+      if (Math.hypot(Math.min(Math.abs(root), Math.abs(root + side * depth)), nearest) < mast) continue;
+      candidates.push({ type: 'bridge', angle: bridge.heading, side, root, start, end, depth });
+    }
+  }
+  // Use a clear public landing when the regular bridge misses the water or is switched off.
+  const publicEdges = circulation.regions.filter((q) => q.f === 1 && q.r <= r + 0.001 &&
+      ['link', 'residual', 'slide_bypass', 'slide_return'].includes(q.kind)),
+    stairs = (circulation.stairs ?? []).filter(({ f }) => f === 1 || f === 2);
+  for (const [from, to] of atriumGuardSpans(model, 1)) {
+    const length = Math.min(3.8, (to - from) * r - 0.24), half = length / (2 * r);
+    if (length < 2.3) continue;
+    for (let angle = from + half + 0.1 / r; angle + half + 0.1 / r < to; angle += 0.45 / r) {
+      if (!publicEdges.some(({ start, end }) => angDist(angle, (start + end) / 2) + half + 0.08 / r <= (end - start) / 2)) continue;
+      if (stairs.some(({ top, bottom, half: landing }) =>
+        angDist(angle, (top + bottom) / 2) < Math.abs(top - bottom) / 2 + landing + half + 0.25 / r)) continue;
+      if (bridge && [-half, 0, half].some((delta) => {
+        const cos = Math.cos(angle + delta - bridge.heading), edges = [r * cos, (r - depth) * cos];
+        return Math.max(...edges) > bridge.offset - bridge.width / 2 - 0.2 &&
+          Math.min(...edges) < bridge.offset + bridge.width / 2 + 0.2;
+      })) continue;
+      candidates.push({ type: 'ring', angle, side: -1, root: r, start: -length / 2, end: length / 2, depth });
+    }
+  }
+  const lookouts = [], center = (q) => canalLookoutPoint(q, (q.start + q.end) / 2, depth / 2, 0),
+    ranked = candidates.map((q) => ({ q, views: wet(q) })).filter(({ views }) => views >= 4)
+      .sort((a, b) => (b.views - a.views) || Number(b.q.type === 'bridge') - Number(a.q.type === 'bridge'));
+  for (const { q } of ranked) {
+    const [x, , z] = center(q);
+    if (lookouts.every((other) => {
+      const [u, , v] = center(other);
+      return Math.hypot(x - u, z - v) >= 9;
+    })) lookouts.push(q);
+    if (lookouts.length === 2) break;
+  }
+  return lookouts;
+}
+
+function siteOutdoorCanalLookout(model, water, position, bearing) {
+  if (model.layers.length < 2) return null;
+  const root = model.R, depth = BUILD_SECTION.dockGap + MODULE.depth, half = MODULE.width / 2 - 0.15,
+    floorAbove = new Map(model.slots.filter(({ f }) => f === 2).map((slot) => [slot.j, slot]));
+  let best = null, bestRank = -Infinity;
+  for (const slot of model.slots) {
+    if (slot.f !== 1 || slot.blocked || slot.p !== EMPTY || slot.use === 'retail') continue;
+    const angle = slot.angle + bearing;
+    if (!water.overlaps(siteLine(position, angle)(root + depth / 2), depth * 0.54)) continue;
+    const upper = floorAbove.get(slot.j), exposed = !upper || upper.blocked || upper.p === EMPTY && upper.use === 'empty',
+      // Check the glass strip on the canal side of the solid walking lane.
+      views = [-0.32, 0.65, half - 0.26].map((offset) => siteLine(position, angle, offset));
+    for (let near = 1.55; near <= depth - 2.65; near += 0.7) {
+      const count = views.reduce((sum, at) => sum + [near + 0.24, near + 1.72]
+        .filter((distance) => water.overlaps(at(root + distance))).length, 0);
+      const rank = count * 3 + Number(exposed) * 8 + Number(slot.use === 'empty') * 2 + near / depth;
+      if (count < 4 || rank <= bestRank) continue;
+      bestRank = rank;
+      best = { type: 'dock', slot: slot.i, angle: slot.angle, side: 1, root, start: -half, end: half, depth,
+        glassFrom: near, glassTo: near + 2.0 };
+    }
+  }
+  return best;
 }
 
 function siteCoreBearings(model, terrain, position, bearing, water, radius, rows, rowAngle, reach) {
@@ -499,7 +582,7 @@ function siteCoreBearings(model, terrain, position, bearing, water, radius, rows
   return { grid, columns, lateralBays, transferredColumns: new Set(columns.filter(({ wet }) => wet).map(({ key }) => key)) };
 }
 
-function siteFoundationPlan(model, terrain, { position, bearing, grade, water: districtSurface }) {
+function siteFoundationPlan(model, terrain, { position, bearing, grade, water: districtSurface, lookout = 'atrium' }) {
   const storey = buildStorey(model, 0), base = storey.base, pitch = modelFloorPitch(model), angle = bearing * Math.PI / 180,
     radius = model.R + 3.15, reach = Math.max(110, radius * 2.6),
     envelope = Math.max(radius, Math.hypot(model.R + BUILD_SECTION.dockGap + MODULE.depth + 2.05, MODULE.width / 2 + 0.4)),
@@ -509,8 +592,11 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
     water = siteFoundationWater(surface, position, Math.max(270 + radius, reach + radius)),
     district = boatBay ? siteFoundationWater(districtSurface, position, reach + radius) : water,
     districtAnchor = district.anchor(radius), anchor = districtAnchor ?? water.anchor(radius),
+    lookouts = districtAnchor && lookout !== 'outdoor' ? siteCanalLookouts(model, district, position, angle) : [],
+    outdoor = lookout !== 'atrium' ? siteOutdoorCanalLookout(model, district, position, angle) : null,
     rowAngle = siteCrossingAngle(districtAnchor ? district : water, anchor, accessAngle + Math.PI / 2, reach),
     offsets = [-0.7, -0.35, 0, 0.35, 0.7].map((fraction) => radius * fraction);
+  if (outdoor) lookouts.push(outdoor);
   water.level = (surface?.level ?? terrain.datum) - terrain.datum;
   water.clearance = Math.max(1.8, pitch - (storey.base - storey.underside) - 1.0);
   let crossingOffset = 0;
@@ -599,7 +685,7 @@ function siteFoundationPlan(model, terrain, { position, bearing, grade, water: d
     dockFloors.set(slot.j, floors);
   }
   return { position, angle, radius, foundation, floor, pitch, roofLevel: model.roofPlan.y, dockFloors, groundAtPin, water, rows,
-    crossingOffset, anchor, crossingDeck, crossingSoffit,
+    crossingOffset, anchor, crossingDeck, crossingSoffit, lookouts,
     omitted: ground?.omitted ?? new Set(), wetBays: ground?.wetBays ?? new Set(), mastCrossing, mastRadius, mastSeats,
     grid, columns, lateralBays, transferredColumns, foundationRings, crane,
     terrain: finishedTerrain, gradeReach, surface, accesses, accessAngle, moat, perimeter, runway, boatBay, lowerRooms,
@@ -1119,6 +1205,24 @@ function siteSectionCuts(plan, dockStructure = 'side-truss') {
       note: `Study span ${(span.to - span.from).toFixed(1)} m between dry-bank bearings. Clear height above the study water level is ${clearance.toFixed(1)} m.`,
       at: row.at, angle: row.angle, from: span.from - 8, to: span.to + 8, crown: plan.crossingDeck + 1.55,
       clearance: { station: (a + b) / 2, underside, height: clearance } });
+  }
+  const indoor = plan.lookouts.find(({ type }) => type !== 'dock'), outdoor = plan.lookouts.find(({ type }) => type === 'dock'),
+    upperFloor = plan.floor + plan.pitch;
+  for (const lookout of [indoor, outdoor].filter(Boolean)) {
+    const outside = lookout === outdoor,
+      station = outside ? 0.15 : (lookout.start + lookout.end) / 2 + 0.24,
+      [x, , z] = canalLookoutPoint(lookout, station, 0, 0),
+      c = Math.cos(plan.angle), s = Math.sin(plan.angle), [px, pz] = plan.position,
+      angle = plan.angle + lookout.angle + (lookout.side < 0 ? Math.PI : 0) +
+        (lookout.type === 'ring' ? station / lookout.root : 0),
+      at = siteLine([px + x * c - z * s, pz + x * s + z * c], angle);
+    cuts.push({ kind: outside ? 'canal-lookout-open-air' : 'canal-lookout',
+      title: `${outside ? 'Open-air' : 'Atrium'} canal lookout · First elevated level`,
+      note: outside ? 'The public ring corridor opens onto an outdoor dock deck with a view to the canal.'
+        : 'The public route opens onto a flush viewing bay with framed glass over the canal.',
+      at, angle, from: -7, to: outside ? lookout.depth + 4 : 9, crown: upperFloor + 2.7,
+      labels: [[outside ? (lookout.glassFrom + lookout.glassTo) / 2 : 1.35, upperFloor, 'Walk-on glass', -40],
+        [outside ? lookout.glassFrom - 0.4 : 0.38, upperFloor - 0.24, outside ? 'Dock deck frame' : 'Cantilevered floor frame', 37]] });
   }
   const structural = siteStructuralCut(plan, dockStructure);
   if (structural) cuts.push(structural);
